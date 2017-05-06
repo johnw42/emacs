@@ -567,6 +567,17 @@ DEFUN ("cdr-safe", Fcdr_safe, Scdr_safe, 1, 1, 0,
   return CDR_SAFE (object);
 }
 
+DEFUN ("source-ref", Fsource_ref, Ssource_ref, 1, 1, 0,
+       doc: /* Return the source ref of LIST.  If arg is nil, return nil.
+Error if arg is not nil and not a cons cell.
+
+See Info node `(elisp)Cons Cells' for a discussion of related basic
+Lisp concepts such as cdr, car, cons cell and list.  */)
+  (register Lisp_Object list)
+{
+  return SOURCE_REF (list);
+}
+
 DEFUN ("setcar", Fsetcar, Ssetcar, 2, 2, 0,
        doc: /* Set the car of CELL to be NEWCAR.  Returns NEWCAR.  */)
   (register Lisp_Object cell, Lisp_Object newcar)
@@ -3650,6 +3661,7 @@ syms_of_data (void)
   defsubr (&Scdr);
   defsubr (&Scar_safe);
   defsubr (&Scdr_safe);
+  defsubr (&Ssource_ref);
   defsubr (&Ssetcar);
   defsubr (&Ssetcdr);
   defsubr (&Ssymbol_function);

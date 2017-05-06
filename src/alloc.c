@@ -2736,6 +2736,7 @@ DEFUN ("cons", Fcons, Scons, 2, 2, 0,
 
   XSETCAR (val, car);
   XSETCDR (val, cdr);
+  XSET_SOURCE_REF (val, Qnil);
   eassert (!CONS_MARKED_P (XCONS (val)));
   consing_since_gc += sizeof (struct Lisp_Cons);
   total_free_conses--;
@@ -6533,14 +6534,16 @@ mark_object (Lisp_Object arg)
 	  break;
 	CHECK_ALLOCATED_AND_LIVE (live_cons_p);
 	CONS_MARK (ptr);
-	/* If the cdr is nil, avoid recursion for the car.  */
-	if (EQ (ptr->u.cdr, Qnil))
+	/* If the cdr and srouce_ref are nil, avoid recursion for the
+           car. */
+	if (EQ (ptr->u.cdr, Qnil) && EQ (ptr->source_ref, Qnil))
 	  {
 	    obj = ptr->car;
 	    cdr_count = 0;
 	    goto loop;
 	  }
 	mark_object (ptr->car);
+        mark_object (ptr->source_ref);
 	obj = ptr->u.cdr;
 	cdr_count++;
 	if (cdr_count == mark_object_loop_halt)

@@ -325,6 +325,7 @@ error !;
 #define lisp_h_VECTORLIKEP(x) (XTYPE (x) == Lisp_Vectorlike)
 #define lisp_h_XCAR(c) XCONS (c)->car
 #define lisp_h_XCDR(c) XCONS (c)->u.cdr
+#define lisp_h_XSOURCE_REF(c) XCONS (c)->source_ref
 #define lisp_h_XCONS(a) \
    (eassert (CONSP (a)), (struct Lisp_Cons *) XUNTAG (a, Lisp_Cons))
 #define lisp_h_XHASH(a) XUINT (a)
@@ -1200,6 +1201,8 @@ struct GCALIGNED Lisp_Cons
       /* Used to chain conses on a free list.  */
       struct Lisp_Cons *chain;
     } u;
+
+    Lisp_Object source_ref;
   };
 
 /* Take the car or cdr of something known to be a cons cell.  */
@@ -1219,6 +1222,11 @@ xcdr_addr (Lisp_Object c)
 {
   return &XCONS (c)->u.cdr;
 }
+INLINE Lisp_Object *
+xsource_ref_addr (Lisp_Object c)
+{
+  return &XCONS (c)->source_ref;
+}
 
 /* Use these from normal code.  */
 
@@ -1232,6 +1240,12 @@ INLINE Lisp_Object
 (XCDR) (Lisp_Object c)
 {
   return lisp_h_XCDR (c);
+}
+
+INLINE Lisp_Object
+(XSOURCE_REF) (Lisp_Object c)
+{
+  return lisp_h_XSOURCE_REF (c);
 }
 
 /* Use these to set the fields of a cons cell.
@@ -1248,6 +1262,11 @@ XSETCDR (Lisp_Object c, Lisp_Object n)
 {
   *xcdr_addr (c) = n;
 }
+INLINE void
+XSET_SOURCE_REF (Lisp_Object c, Lisp_Object n)
+{
+  *xsource_ref_addr (c) = n;
+}
 
 /* Take the car or cdr of something whose type is not known.  */
 INLINE Lisp_Object
@@ -1261,6 +1280,13 @@ INLINE Lisp_Object
 CDR (Lisp_Object c)
 {
   return (CONSP (c) ? XCDR (c)
+	  : NILP (c) ? Qnil
+	  : wrong_type_argument (Qlistp, c));
+}
+INLINE Lisp_Object
+SOURCE_REF (Lisp_Object c)
+{
+  return (CONSP (c) ? XSOURCE_REF (c)
 	  : NILP (c) ? Qnil
 	  : wrong_type_argument (Qlistp, c));
 }
@@ -3609,6 +3635,7 @@ extern Lisp_Object list5 (Lisp_Object, Lisp_Object, Lisp_Object, Lisp_Object,
 			  Lisp_Object);
 enum constype {CONSTYPE_HEAP, CONSTYPE_PURE};
 extern Lisp_Object listn (enum constype, ptrdiff_t, Lisp_Object, ...);
+extern Lisp_Object cons_ex (Lisp_Object, Lisp_Object, Lisp_Object);
 
 /* Build a frequently used 2/3/4-integer lists.  */
 

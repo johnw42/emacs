@@ -3579,6 +3579,7 @@ read_list (bool flag, Lisp_Object readcharfun)
 {
   Lisp_Object val, tail;
   Lisp_Object elt, tem;
+  Lisp_Object source_ref = Qnil;
   /* 0 is the normal case.
      1 means this list is a doc reference; replace it with the number 0.
      2 means this list is a doc reference; replace it with the doc string.  */
@@ -3586,6 +3587,13 @@ read_list (bool flag, Lisp_Object readcharfun)
 
   /* Initialize this to 1 if we are reading a list.  */
   bool first_in_list = flag <= 0;
+
+  if (BUFFERP(readcharfun)) {
+    register struct buffer *buffer = XBUFFER (readcharfun);
+    source_ref = list2 (
+        BVAR (XBUFFER (readcharfun), filename),
+        make_number (BUF_PT (buffer)));
+  }
 
   val = Qnil;
   tail = Qnil;
@@ -3715,6 +3723,7 @@ read_list (bool flag, Lisp_Object readcharfun)
 	  invalid_syntax ("] in a list");
 	}
       tem = list1 (elt);
+      XSET_SOURCE_REF (tem, source_ref);
       if (!NILP (tail))
 	XSETCDR (tail, tem);
       else
