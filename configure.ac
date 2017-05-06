@@ -1531,6 +1531,8 @@ AC_DEFUN([EMACS_CHECK_MODULES],
       m4_default([$3], [HAVE_$1=yes])],
      [m4_default([$4], [HAVE_$1=no])])])
 
+EMACS_CHECK_MODULES(PYTHON3, python3 >= 3.4)
+
 HAVE_SOUND=no
 if test "${with_sound}" != "no"; then
   # Sound support for GNU/Linux, the free BSDs, MinGW, and Cygwin.
