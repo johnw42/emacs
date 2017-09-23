@@ -255,3 +255,25 @@ comparing the subr with a much slower lisp implementation."
          (v2 (test-bool-vector-bv-from-hex-string "0000C"))
          (v3 (bool-vector-not v1)))
     (should (equal v2 v3))))
+
+(ert-deftest source-ref-ok ()
+  (let* ((data (list 1 2 3))
+         (filename "xyzzy")
+         (line 123)
+         (column 456)
+         (ref (make-source-ref data filename line column)))
+    (should (source-ref-p ref))
+    (should (eq data (source-ref-data ref)))
+    (should (eq filename (source-ref-filename ref)))
+    (should (= line (source-ref-line ref)))
+    (should (= column (source-ref-column ref)))))
+
+(ert-deftest source-ref-fail ()
+  (condition-case err
+      (make-source-ref nil nil nil 0)
+    (error
+     (should (equal '(wrong-type-argument integerp nil) err))))
+  (condition-case err
+      (make-source-ref nil nil 0 nil)
+    (error
+     (should (equal '(wrong-type-argument integerp nil) err)))))

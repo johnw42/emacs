@@ -3723,7 +3723,6 @@ read_list (bool flag, Lisp_Object readcharfun)
 	  invalid_syntax ("] in a list");
 	}
       tem = list1 (elt);
-      XSET_SOURCE_REF (tem, source_ref);
       if (!NILP (tail))
 	XSETCDR (tail, tem);
       else

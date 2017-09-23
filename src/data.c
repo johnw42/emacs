@@ -258,6 +258,8 @@ for example, (type-of 1) returns `integer'.  */)
 	return Qfont_entity;
       if (FONT_OBJECT_P (object))
 	return Qfont_object;
+      if (SOURCE_REF_P (object))
+        return Qsource_ref;
       return Qvector;
 
     case Lisp_Float:
@@ -567,17 +569,6 @@ DEFUN ("cdr-safe", Fcdr_safe, Scdr_safe, 1, 1, 0,
   return CDR_SAFE (object);
 }
 
-DEFUN ("source-ref", Fsource_ref, Ssource_ref, 1, 1, 0,
-       doc: /* Return the source ref of LIST.  If arg is nil, return nil.
-Error if arg is not nil and not a cons cell.
-
-See Info node `(elisp)Cons Cells' for a discussion of related basic
-Lisp concepts such as cdr, car, cons cell and list.  */)
-  (register Lisp_Object list)
-{
-  return SOURCE_REF (list);
-}
-
 DEFUN ("setcar", Fsetcar, Ssetcar, 2, 2, 0,
        doc: /* Set the car of CELL to be NEWCAR.  Returns NEWCAR.  */)
   (register Lisp_Object cell, Lisp_Object newcar)
@@ -597,6 +588,66 @@ DEFUN ("setcdr", Fsetcdr, Ssetcdr, 2, 2, 0,
   XSETCDR (cell, newcdr);
   return newcdr;
 }
+
+DEFUN ("make-source-ref", Fmake_source_ref, Smake_source_ref, 4, 4, 0,
+       doc: /* TODO */)
+  (register Lisp_Object data, Lisp_Object filename, Lisp_Object line, Lisp_Object column)
+{
+  Lisp_Object val;
+  struct Lisp_Source_Ref *ref
+      = ALLOCATE_PSEUDOVECTOR (struct Lisp_Source_Ref,
+                               line, PVEC_SOURCE_REF);
+  XSETVECTOR (val, ref);
+  CHECK_NUMBER (line);
+  CHECK_NUMBER (column);
+  ref->data = data;
+  ref->filename = filename;
+  ref->line = XINT (line);
+  ref->column = XINT (column);
+  return val;
+}
+
+DEFUN ("source-ref-p", Fsource_ref_p, Ssource_ref_p, 1, 1, 0,
+       doc: /* TODO */)
+  (register Lisp_Object object)
+{
+  if (SOURCE_REF_P (object))
+    return Qt;
+  return Qnil;
+}
+
+DEFUN ("source-ref-data", Fsource_ref_data, Ssource_ref_data, 1, 1, 0,
+       doc: /* TODO */)
+  (register Lisp_Object object)
+{
+  CHECK_TYPE (SOURCE_REF_P (object), Qsource_ref_p, object);
+  return XSOURCE_REF (object)->data;
+}
+
+DEFUN ("source-ref-filename", Fsource_ref_filename, Ssource_ref_filename, 1, 1, 0,
+       doc: /* TODO */)
+  (register Lisp_Object object)
+{
+  CHECK_TYPE (SOURCE_REF_P (object), Qsource_ref_p, object);
+  return XSOURCE_REF (object)->filename;
+}
+
+DEFUN ("source-ref-line", Fsource_ref_line, Ssource_ref_line, 1, 1, 0,
+       doc: /* TODO */)
+  (register Lisp_Object object)
+{
+  CHECK_TYPE (SOURCE_REF_P (object), Qsource_ref_p, object);
+  return make_number (XSOURCE_REF (object)->line);
+}
+
+DEFUN ("source-ref-column", Fsource_ref_column, Ssource_ref_column, 1, 1, 0,
+       doc: /* TODO */)
+  (register Lisp_Object object)
+{
+  CHECK_TYPE (SOURCE_REF_P (object), Qsource_ref_p, object);
+  return make_number (XSOURCE_REF (object)->column);
+}
+
 
 /* Extract and set components of symbols.  */
 
@@ -3495,6 +3546,7 @@ syms_of_data (void)
   DEFSYM (Qtext_read_only, "text-read-only");
   DEFSYM (Qmark_inactive, "mark-inactive");
 
+  DEFSYM (Qsource_ref_p, "source-ref-p");
   DEFSYM (Qlistp, "listp");
   DEFSYM (Qconsp, "consp");
   DEFSYM (Qsymbolp, "symbolp");
@@ -3620,6 +3672,8 @@ syms_of_data (void)
 
   DEFSYM (Qdefun, "defun");
 
+  DEFSYM(Qsource_ref, "source-ref");
+
   DEFSYM (Qfont_spec, "font-spec");
   DEFSYM (Qfont_entity, "font-entity");
   DEFSYM (Qfont_object, "font-object");
@@ -3661,9 +3715,14 @@ syms_of_data (void)
   defsubr (&Scdr);
   defsubr (&Scar_safe);
   defsubr (&Scdr_safe);
-  defsubr (&Ssource_ref);
   defsubr (&Ssetcar);
   defsubr (&Ssetcdr);
+  defsubr (&Smake_source_ref);
+  defsubr (&Ssource_ref_p);
+  defsubr (&Ssource_ref_data);
+  defsubr (&Ssource_ref_filename);
+  defsubr (&Ssource_ref_line);
+  defsubr (&Ssource_ref_column);
   defsubr (&Ssymbol_function);
   defsubr (&Sindirect_function);
   defsubr (&Ssymbol_plist);

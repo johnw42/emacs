@@ -325,7 +325,7 @@ error !;
 #define lisp_h_VECTORLIKEP(x) (XTYPE (x) == Lisp_Vectorlike)
 #define lisp_h_XCAR(c) XCONS (c)->car
 #define lisp_h_XCDR(c) XCONS (c)->u.cdr
-#define lisp_h_XSOURCE_REF(c) XCONS (c)->source_ref
+// TODO?
 #define lisp_h_XCONS(a) \
    (eassert (CONSP (a)), (struct Lisp_Cons *) XUNTAG (a, Lisp_Cons))
 #define lisp_h_XHASH(a) XUINT (a)
@@ -368,6 +368,7 @@ error !;
 # define FLOATP(x) lisp_h_FLOATP (x)
 # define INTEGERP(x) lisp_h_INTEGERP (x)
 # define MARKERP(x) lisp_h_MARKERP (x)
+# define SOURCEREFP(x) lisp_h_SOURCEREFP (x)
 # define MISCP(x) lisp_h_MISCP (x)
 # define NILP(x) lisp_h_NILP (x)
 # define SET_SYMBOL_VAL(sym, v) lisp_h_SET_SYMBOL_VAL (sym, v)
@@ -462,6 +463,7 @@ enum Lisp_Misc_Type
     /* Currently floats are not a misc type,
        but let's define this in case we want to change that.  */
     Lisp_Misc_Float,
+    Lisp_Misc_SourceRef,
     /* This is not a type code.  It is for range checking.  */
     Lisp_Misc_Limit
   };
@@ -560,6 +562,7 @@ enum CHECK_LISP_OBJECT_TYPE { CHECK_LISP_OBJECT_TYPE = false };
 /* Defined in this file.  */
 union Lisp_Fwd;
 INLINE bool BOOL_VECTOR_P (Lisp_Object);
+INLINE bool SOURCE_REF_P (Lisp_Object);
 INLINE bool BUFFER_OBJFWDP (union Lisp_Fwd *);
 INLINE bool BUFFERP (Lisp_Object);
 INLINE bool CHAR_TABLE_P (Lisp_Object);
@@ -787,6 +790,7 @@ enum pvec_type
   PVEC_OTHER,
   PVEC_XWIDGET,
   PVEC_XWIDGET_VIEW,
+  PVEC_SOURCE_REF,
 
   /* These should be last, check internal_equal to see why.  */
   PVEC_COMPILED,
@@ -1090,6 +1094,13 @@ XBOOL_VECTOR (Lisp_Object a)
   return XUNTAG (a, Lisp_Vectorlike);
 }
 
+INLINE struct Lisp_Source_Ref *
+XSOURCE_REF (Lisp_Object a)
+{
+  eassert (SOURCE_REF_P (a));
+  return XUNTAG (a, Lisp_Vectorlike);
+}
+
 /* Construct a Lisp_Object from a value or address.  */
 
 INLINE Lisp_Object
@@ -1156,6 +1167,7 @@ builtin_lisp_symbol (int index)
 #define XSETCHAR_TABLE(a, b) (XSETPSEUDOVECTOR (a, b, PVEC_CHAR_TABLE))
 #define XSETBOOL_VECTOR(a, b) (XSETPSEUDOVECTOR (a, b, PVEC_BOOL_VECTOR))
 #define XSETSUB_CHAR_TABLE(a, b) (XSETPSEUDOVECTOR (a, b, PVEC_SUB_CHAR_TABLE))
+#define XSETSOURCE_REF(a, b) (XSETSOURCEREF (a, b, PVEC_SOURCE_REF))
 
 /* Efficiently convert a pointer to a Lisp object and back.  The
    pointer is represented as a Lisp integer, so the garbage collector
@@ -1201,8 +1213,6 @@ struct GCALIGNED Lisp_Cons
       /* Used to chain conses on a free list.  */
       struct Lisp_Cons *chain;
     } u;
-
-    Lisp_Object source_ref;
   };
 
 /* Take the car or cdr of something known to be a cons cell.  */
@@ -1222,11 +1232,6 @@ xcdr_addr (Lisp_Object c)
 {
   return &XCONS (c)->u.cdr;
 }
-INLINE Lisp_Object *
-xsource_ref_addr (Lisp_Object c)
-{
-  return &XCONS (c)->source_ref;
-}
 
 /* Use these from normal code.  */
 
@@ -1240,12 +1245,6 @@ INLINE Lisp_Object
 (XCDR) (Lisp_Object c)
 {
   return lisp_h_XCDR (c);
-}
-
-INLINE Lisp_Object
-(XSOURCE_REF) (Lisp_Object c)
-{
-  return lisp_h_XSOURCE_REF (c);
 }
 
 /* Use these to set the fields of a cons cell.
@@ -1262,11 +1261,6 @@ XSETCDR (Lisp_Object c, Lisp_Object n)
 {
   *xcdr_addr (c) = n;
 }
-INLINE void
-XSET_SOURCE_REF (Lisp_Object c, Lisp_Object n)
-{
-  *xsource_ref_addr (c) = n;
-}
 
 /* Take the car or cdr of something whose type is not known.  */
 INLINE Lisp_Object
@@ -1280,13 +1274,6 @@ INLINE Lisp_Object
 CDR (Lisp_Object c)
 {
   return (CONSP (c) ? XCDR (c)
-	  : NILP (c) ? Qnil
-	  : wrong_type_argument (Qlistp, c));
-}
-INLINE Lisp_Object
-SOURCE_REF (Lisp_Object c)
-{
-  return (CONSP (c) ? XSOURCE_REF (c)
 	  : NILP (c) ? Qnil
 	  : wrong_type_argument (Qlistp, c));
 }
@@ -1969,6 +1956,15 @@ struct Lisp_Hash_Table
   /* Next weak hash table if this is a weak hash table.  The head
      of the list is in weak_hash_tables.  */
   struct Lisp_Hash_Table *next_weak;
+};
+
+// TODO: move me
+struct Lisp_Source_Ref {
+  struct vectorlike_header header;
+  Lisp_Object data;
+  Lisp_Object filename;
+  int line;
+  int column;
 };
 
 
@@ -2779,6 +2775,12 @@ INLINE bool
 FRAMEP (Lisp_Object a)
 {
   return PSEUDOVECTORP (a, PVEC_FRAME);
+}
+
+INLINE bool
+SOURCE_REF_P (Lisp_Object a)
+{
+  return PSEUDOVECTORP (a, PVEC_SOURCE_REF);
 }
 
 /* Test for image (image . spec)  */
