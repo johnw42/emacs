@@ -1952,7 +1952,7 @@ readevalloop (Lisp_Object readcharfun,
 	  else
             {
 	      val = read_internal_start (readcharfun, Qnil, Qnil,
-                                         Fmake_source_ref(Qnil, sourcename, make_number(1), make_number(0)));
+                                         Qnil); // TODO
             }
 	}
 
@@ -3314,8 +3314,6 @@ substitute_object_in_subtree (Lisp_Object object, Lisp_Object placeholder)
 static Lisp_Object
 substitute_object_recurse (Lisp_Object object, Lisp_Object placeholder, Lisp_Object subtree)
 {
-  Lisp_Object subtree_deref = deref_source_ref(subtree);
-
   /* If we find the placeholder, return the target object.  */
   if (EQ (placeholder, subtree))
     return object;
@@ -3333,7 +3331,7 @@ substitute_object_recurse (Lisp_Object object, Lisp_Object placeholder, Lisp_Obj
 
   /* Recurse according to subtree's type.
      Every branch must return a Lisp_Object.  */
-  switch (XTYPE (subtree_deref))
+  switch (XTYPE (subtree))
     {
     case Lisp_Vectorlike:
       {
@@ -3764,11 +3762,13 @@ read_list (bool flag, Lisp_Object readcharfun, struct Buffer_Pos *buffer_pos_ptr
       tem = list1 (elt);
       if (STRINGP (Vload_file_name))
         {
-          tem = Fmake_source_ref (
+          Fputhash (
               tem,
-              Vload_file_name,
-              make_number (saved_buffer_pos.line),
-              make_number (saved_buffer_pos.column - 1));
+              list3(
+                  Vload_file_name,
+                  make_number (saved_buffer_pos.line),
+                  make_number (saved_buffer_pos.column - 1)),
+              source_ref_table);
         }
       if (!NILP (tail))
 	LREAD_XSETCDR (tail, tem);
@@ -4760,6 +4760,14 @@ variables, this must be set in the first line of a file.  */);
 	       doc: /* Set to non-nil when `read' encounters an old-style backquote.  */);
   Vold_style_backquotes = Qnil;
   DEFSYM (Qold_style_backquotes, "old-style-backquotes");
+
+  DEFVAR_LISP("source-ref-table", source_ref_table,
+              doc: /* TODO */);
+  source_ref_table = make_hash_table(hashtest_eq,
+                                     make_number(DEFAULT_HASH_SIZE),
+                                     make_float(DEFAULT_REHASH_SIZE),
+                                     make_float(DEFAULT_REHASH_THRESHOLD),
+                                     Qkey);
 
   DEFVAR_BOOL ("load-prefer-newer", load_prefer_newer,
                doc: /* Non-nil means `load' prefers the newest version of a file.

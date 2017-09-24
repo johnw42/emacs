@@ -309,7 +309,7 @@ error !;
 #define lisp_h_CHECK_SYMBOL(x) CHECK_TYPE (SYMBOLP (x), Qsymbolp, x)
 #define lisp_h_CHECK_TYPE(ok, predicate, x) \
    ((ok) ? (void) 0 : (void) wrong_type_argument (predicate, x))
-#define lisp_h_CONSP(x) (XTYPE (deref_source_ref(x)) == Lisp_Cons)
+#define lisp_h_CONSP(x) (XTYPE (x) == Lisp_Cons)
 #define lisp_h_EQ(x, y) (XLI (x) == XLI (y))
 #define lisp_h_FLOATP(x) (XTYPE (x) == Lisp_Float)
 #define lisp_h_INTEGERP(x) ((XTYPE (x) & (Lisp_Int0 | ~Lisp_Int1)) == Lisp_Int0)
@@ -326,7 +326,7 @@ error !;
 #define lisp_h_XCAR(c) XCONS (c)->car
 #define lisp_h_XCDR(c) XCONS (c)->u.cdr
 #define lisp_h_XCONS(a) \
-    (eassert (CONSP (a)), (struct Lisp_Cons *) XUNTAG (deref_source_ref(a), Lisp_Cons))
+    (eassert (CONSP (a)), (struct Lisp_Cons *) XUNTAG (a, Lisp_Cons))
 #define lisp_h_XHASH(a) XUINT (a)
 #ifndef GC_CHECK_CONS_LIST
 # define lisp_h_check_cons_list() ((void) 0)
@@ -555,8 +555,6 @@ typedef EMACS_INT Lisp_Object;
 enum CHECK_LISP_OBJECT_TYPE { CHECK_LISP_OBJECT_TYPE = false };
 #endif /* CHECK_LISP_OBJECT_TYPE */
 
-INLINE Lisp_Object deref_source_ref(Lisp_Object x);
-
 #define LISP_INITIALLY_ZERO LISP_INITIALLY (0)
 
 /* Forward declarations.  */
@@ -564,7 +562,6 @@ INLINE Lisp_Object deref_source_ref(Lisp_Object x);
 /* Defined in this file.  */
 union Lisp_Fwd;
 INLINE bool BOOL_VECTOR_P (Lisp_Object);
-INLINE bool SOURCE_REF_P (Lisp_Object);
 INLINE bool BUFFER_OBJFWDP (union Lisp_Fwd *);
 INLINE bool BUFFERP (Lisp_Object);
 INLINE bool CHAR_TABLE_P (Lisp_Object);
@@ -792,7 +789,6 @@ enum pvec_type
   PVEC_OTHER,
   PVEC_XWIDGET,
   PVEC_XWIDGET_VIEW,
-  PVEC_SOURCE_REF,
 
   /* These should be last, check internal_equal to see why.  */
   PVEC_COMPILED,
@@ -1096,13 +1092,6 @@ XBOOL_VECTOR (Lisp_Object a)
   return XUNTAG (a, Lisp_Vectorlike);
 }
 
-INLINE struct Lisp_Source_Ref *
-XSOURCE_REF (Lisp_Object a)
-{
-  eassert (SOURCE_REF_P (a));
-  return XUNTAG (a, Lisp_Vectorlike);
-}
-
 /* Construct a Lisp_Object from a value or address.  */
 
 INLINE Lisp_Object
@@ -1169,7 +1158,6 @@ builtin_lisp_symbol (int index)
 #define XSETCHAR_TABLE(a, b) (XSETPSEUDOVECTOR (a, b, PVEC_CHAR_TABLE))
 #define XSETBOOL_VECTOR(a, b) (XSETPSEUDOVECTOR (a, b, PVEC_BOOL_VECTOR))
 #define XSETSUB_CHAR_TABLE(a, b) (XSETPSEUDOVECTOR (a, b, PVEC_SUB_CHAR_TABLE))
-#define XSETSOURCE_REF(a, b) (XSETSOURCEREF (a, b, PVEC_SOURCE_REF))
 
 /* Efficiently convert a pointer to a Lisp object and back.  The
    pointer is represented as a Lisp integer, so the garbage collector
@@ -1248,15 +1236,6 @@ struct vectorlike_header
     ptrdiff_t size;
   };
 
-struct Lisp_Source_Ref
-  {
-    struct vectorlike_header header;
-    Lisp_Object data;
-    Lisp_Object filename;
-    EMACS_INT line;
-    EMACS_INT column;
-  };
-
 /* Take the car or cdr of something known to be a cons cell.  */
 /* The _addr functions shouldn't be used outside of the minimal set
    of code that has to know what a cons cell looks like.  Other code not
@@ -1312,39 +1291,10 @@ XSETCDR (Lisp_Object c, Lisp_Object n)
 
 /* Take the car or cdr of something whose type is not known.  */
 INLINE Lisp_Object
-CAR1 (Lisp_Object c)
-{
-  return (CONSP (c) ? XCAR (c)
-	  : NILP (c) ? Qnil
-	  : wrong_type_argument (Qlistp, c));
-}
-INLINE Lisp_Object
-CDR1 (Lisp_Object c)
-{
-  return (CONSP (c) ? XCDR (c)
-	  : NILP (c) ? Qnil
-	  : wrong_type_argument (Qlistp, c));
-}
-
-/* Take the car or cdr of something whose type is not known.  */
-INLINE Lisp_Object
-CAR_SAFE1 (Lisp_Object c)
-{
-  return CONSP (c) ? XCAR (c) : Qnil;
-}
-INLINE Lisp_Object
-CDR_SAFE1 (Lisp_Object c)
-{
-  return CONSP (c) ? XCDR (c) : Qnil;
-}
-
-/* Take the car or cdr of something whose type is not known.  */
-INLINE Lisp_Object
 CAR (Lisp_Object c)
 {
   return (CONSP (c) ? XCAR (c)
 	  : NILP (c) ? Qnil
-          : SOURCE_REF_P (c) ? CAR1 (XSOURCE_REF (c)->data)
 	  : wrong_type_argument (Qlistp, c));
 }
 INLINE Lisp_Object
@@ -1352,7 +1302,6 @@ CDR (Lisp_Object c)
 {
   return (CONSP (c) ? XCDR (c)
 	  : NILP (c) ? Qnil
-          : SOURCE_REF_P (c) ? CAR1 (XSOURCE_REF (c)->data)
 	  : wrong_type_argument (Qlistp, c));
 }
 
@@ -1360,16 +1309,12 @@ CDR (Lisp_Object c)
 INLINE Lisp_Object
 CAR_SAFE (Lisp_Object c)
 {
-  return CONSP (c) ? XCAR (c)
-      : SOURCE_REF_P (c) ? CAR_SAFE1 (XSOURCE_REF (c)->data)
-      : Qnil;
+  return CONSP (c) ? XCAR (c) : Qnil;
 }
 INLINE Lisp_Object
 CDR_SAFE (Lisp_Object c)
 {
-  return CONSP (c) ? XCDR (c)
-      : SOURCE_REF_P (c) ? CDR_SAFE1 (XSOURCE_REF (c)->data)
-      : Qnil;
+  return CONSP (c) ? XCDR (c) : Qnil;
 }
 
 /* In a string or vector, the sign bit of the `size' is the gc mark bit.  */
@@ -2817,12 +2762,6 @@ INLINE bool
 FRAMEP (Lisp_Object a)
 {
   return PSEUDOVECTORP (a, PVEC_FRAME);
-}
-
-INLINE bool
-SOURCE_REF_P (Lisp_Object a)
-{
-  return PSEUDOVECTORP (a, PVEC_SOURCE_REF);
 }
 
 /* Test for image (image . spec)  */
@@ -4761,10 +4700,6 @@ functionp (Lisp_Object object)
     }
   else
     return false;
-}
-
-INLINE Lisp_Object deref_source_ref(Lisp_Object x) {
-  return SOURCE_REF_P(x) ? XSOURCE_REF(x)->data : x;
 }
 
 INLINE_HEADER_END

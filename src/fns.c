@@ -133,8 +133,6 @@ To get the number of bytes, use `string-bytes'.  */)
 
       val = make_number (i);
     }
-  else if (SOURCE_REF_P (sequence))
-    val = Flength (XSOURCE_REF (sequence)->data);
   else if (NILP (sequence))
     XSETFASTINT (val, 0);
   else
@@ -153,9 +151,6 @@ which is at least the number of distinct elements.  */)
   Lisp_Object tail, halftail;
   double hilen = 0;
   uintmax_t lolen = 1;
-
-  if (SOURCE_REF_P (list))
-    list = XSOURCE_REF (list)->data;
 
   if (! CONSP (list))
     return make_number (0);
