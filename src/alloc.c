@@ -3483,6 +3483,24 @@ usage: (make-byte-code ARGLIST BYTE-CODE CONSTANTS DEPTH &optional DOCSTRING INT
   return val;
 }
 
+DEFUN ("make-source-ref", Fmake_source_ref, Smake_source_ref, 4, 4, 0,
+       doc: /* TODO */)
+  (register Lisp_Object data, Lisp_Object filename, Lisp_Object line, Lisp_Object column)
+{
+  Lisp_Object val;
+  struct Lisp_Source_Ref *ref;
+
+  CHECK_NUMBER (line);
+  CHECK_NUMBER (column);
+  ref = ALLOCATE_PSEUDOVECTOR (struct Lisp_Source_Ref,
+                               line, PVEC_SOURCE_REF);
+  ref->data = data;
+  ref->filename = filename;
+  ref->line = XINT(line);
+  ref->column = XINT(column);
+  XSETVECTOR (val, ref);
+  return val;
+}
 
 
 /***********************************************************************
@@ -7419,6 +7437,7 @@ The time is in seconds as a floating point value.  */);
   defsubr (&Svector);
   defsubr (&Sbool_vector);
   defsubr (&Smake_byte_code);
+  defsubr (&Smake_source_ref);
   defsubr (&Smake_list);
   defsubr (&Smake_vector);
   defsubr (&Smake_string);

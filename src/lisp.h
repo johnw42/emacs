@@ -309,7 +309,7 @@ error !;
 #define lisp_h_CHECK_SYMBOL(x) CHECK_TYPE (SYMBOLP (x), Qsymbolp, x)
 #define lisp_h_CHECK_TYPE(ok, predicate, x) \
    ((ok) ? (void) 0 : (void) wrong_type_argument (predicate, x))
-#define lisp_h_CONSP(x) (XTYPE (x) == Lisp_Cons)
+#define lisp_h_CONSP(x) (XTYPE (deref_source_ref(x)) == Lisp_Cons)
 #define lisp_h_EQ(x, y) (XLI (x) == XLI (y))
 #define lisp_h_FLOATP(x) (XTYPE (x) == Lisp_Float)
 #define lisp_h_INTEGERP(x) ((XTYPE (x) & (Lisp_Int0 | ~Lisp_Int1)) == Lisp_Int0)
@@ -325,13 +325,13 @@ error !;
 #define lisp_h_VECTORLIKEP(x) (XTYPE (x) == Lisp_Vectorlike)
 #define lisp_h_XCAR(c) XCONS (c)->car
 #define lisp_h_XCDR(c) XCONS (c)->u.cdr
-// TODO?
 #define lisp_h_XCONS(a) \
-   (eassert (CONSP (a)), (struct Lisp_Cons *) XUNTAG (a, Lisp_Cons))
+    (eassert (CONSP (a)), (struct Lisp_Cons *) XUNTAG (deref_source_ref(a), Lisp_Cons))
 #define lisp_h_XHASH(a) XUINT (a)
 #ifndef GC_CHECK_CONS_LIST
 # define lisp_h_check_cons_list() ((void) 0)
 #endif
+
 #if USE_LSB_TAG
 # define lisp_h_make_number(n) \
     XIL ((EMACS_INT) (((EMACS_UINT) (n) << INTTYPEBITS) + Lisp_Int0))
@@ -554,6 +554,8 @@ typedef EMACS_INT Lisp_Object;
 #define LISP_INITIALLY(i) (i)
 enum CHECK_LISP_OBJECT_TYPE { CHECK_LISP_OBJECT_TYPE = false };
 #endif /* CHECK_LISP_OBJECT_TYPE */
+
+INLINE Lisp_Object deref_source_ref(Lisp_Object x);
 
 #define LISP_INITIALLY_ZERO LISP_INITIALLY (0)
 
@@ -1215,6 +1217,46 @@ struct GCALIGNED Lisp_Cons
     } u;
   };
 
+/* Header of vector-like objects.  This documents the layout constraints on
+   vectors and pseudovectors (objects of PVEC_xxx subtype).  It also prevents
+   compilers from being fooled by Emacs's type punning: XSETPSEUDOVECTOR
+   and PSEUDOVECTORP cast their pointers to struct vectorlike_header *,
+   because when two such pointers potentially alias, a compiler won't
+   incorrectly reorder loads and stores to their size fields.  See
+   Bug#8546.  */
+struct vectorlike_header
+  {
+    /* The only field contains various pieces of information:
+       - The MSB (ARRAY_MARK_FLAG) holds the gcmarkbit.
+       - The next bit (PSEUDOVECTOR_FLAG) indicates whether this is a plain
+         vector (0) or a pseudovector (1).
+       - If PSEUDOVECTOR_FLAG is 0, the rest holds the size (number
+         of slots) of the vector.
+       - If PSEUDOVECTOR_FLAG is 1, the rest is subdivided into three fields:
+	 - a) pseudovector subtype held in PVEC_TYPE_MASK field;
+	 - b) number of Lisp_Objects slots at the beginning of the object
+	   held in PSEUDOVECTOR_SIZE_MASK field.  These objects are always
+	   traced by the GC;
+	 - c) size of the rest fields held in PSEUDOVECTOR_REST_MASK and
+	   measured in word_size units.  Rest fields may also include
+	   Lisp_Objects, but these objects usually needs some special treatment
+	   during GC.
+	 There are some exceptions.  For PVEC_FREE, b) is always zero.  For
+	 PVEC_BOOL_VECTOR and PVEC_SUBR, both b) and c) are always zero.
+	 Current layout limits the pseudovectors to 63 PVEC_xxx subtypes,
+	 4095 Lisp_Objects in GC-ed area and 4095 word-sized other slots.  */
+    ptrdiff_t size;
+  };
+
+struct Lisp_Source_Ref
+  {
+    struct vectorlike_header header;
+    Lisp_Object data;
+    Lisp_Object filename;
+    EMACS_INT line;
+    EMACS_INT column;
+  };
+
 /* Take the car or cdr of something known to be a cons cell.  */
 /* The _addr functions shouldn't be used outside of the minimal set
    of code that has to know what a cons cell looks like.  Other code not
@@ -1225,11 +1267,13 @@ struct GCALIGNED Lisp_Cons
 INLINE Lisp_Object *
 xcar_addr (Lisp_Object c)
 {
+  eassert (CONSP (c));
   return &XCONS (c)->car;
 }
 INLINE Lisp_Object *
 xcdr_addr (Lisp_Object c)
 {
+  eassert (CONSP (c));
   return &XCONS (c)->u.cdr;
 }
 
@@ -1238,12 +1282,14 @@ xcdr_addr (Lisp_Object c)
 INLINE Lisp_Object
 (XCAR) (Lisp_Object c)
 {
+  eassert (CONSP (c));
   return lisp_h_XCAR (c);
 }
 
 INLINE Lisp_Object
 (XCDR) (Lisp_Object c)
 {
+  eassert (CONSP (c));
   return lisp_h_XCDR (c);
 }
 
@@ -1254,24 +1300,26 @@ INLINE Lisp_Object
 INLINE void
 XSETCAR (Lisp_Object c, Lisp_Object n)
 {
+  eassert (CONSP (c));
   *xcar_addr (c) = n;
 }
 INLINE void
 XSETCDR (Lisp_Object c, Lisp_Object n)
 {
+  eassert (CONSP (c));
   *xcdr_addr (c) = n;
 }
 
 /* Take the car or cdr of something whose type is not known.  */
 INLINE Lisp_Object
-CAR (Lisp_Object c)
+CAR1 (Lisp_Object c)
 {
   return (CONSP (c) ? XCAR (c)
 	  : NILP (c) ? Qnil
 	  : wrong_type_argument (Qlistp, c));
 }
 INLINE Lisp_Object
-CDR (Lisp_Object c)
+CDR1 (Lisp_Object c)
 {
   return (CONSP (c) ? XCDR (c)
 	  : NILP (c) ? Qnil
@@ -1280,14 +1328,48 @@ CDR (Lisp_Object c)
 
 /* Take the car or cdr of something whose type is not known.  */
 INLINE Lisp_Object
-CAR_SAFE (Lisp_Object c)
+CAR_SAFE1 (Lisp_Object c)
 {
   return CONSP (c) ? XCAR (c) : Qnil;
 }
 INLINE Lisp_Object
-CDR_SAFE (Lisp_Object c)
+CDR_SAFE1 (Lisp_Object c)
 {
   return CONSP (c) ? XCDR (c) : Qnil;
+}
+
+/* Take the car or cdr of something whose type is not known.  */
+INLINE Lisp_Object
+CAR (Lisp_Object c)
+{
+  return (CONSP (c) ? XCAR (c)
+	  : NILP (c) ? Qnil
+          : SOURCE_REF_P (c) ? CAR1 (XSOURCE_REF (c)->data)
+	  : wrong_type_argument (Qlistp, c));
+}
+INLINE Lisp_Object
+CDR (Lisp_Object c)
+{
+  return (CONSP (c) ? XCDR (c)
+	  : NILP (c) ? Qnil
+          : SOURCE_REF_P (c) ? CAR1 (XSOURCE_REF (c)->data)
+	  : wrong_type_argument (Qlistp, c));
+}
+
+/* Take the car or cdr of something whose type is not known.  */
+INLINE Lisp_Object
+CAR_SAFE (Lisp_Object c)
+{
+  return CONSP (c) ? XCAR (c)
+      : SOURCE_REF_P (c) ? CAR_SAFE1 (XSOURCE_REF (c)->data)
+      : Qnil;
+}
+INLINE Lisp_Object
+CDR_SAFE (Lisp_Object c)
+{
+  return CONSP (c) ? XCDR (c)
+      : SOURCE_REF_P (c) ? CDR_SAFE1 (XSOURCE_REF (c)->data)
+      : Qnil;
 }
 
 /* In a string or vector, the sign bit of the `size' is the gc mark bit.  */
@@ -1394,37 +1476,6 @@ STRING_SET_CHARS (Lisp_Object string, ptrdiff_t newsize)
 {
   XSTRING (string)->size = newsize;
 }
-
-/* Header of vector-like objects.  This documents the layout constraints on
-   vectors and pseudovectors (objects of PVEC_xxx subtype).  It also prevents
-   compilers from being fooled by Emacs's type punning: XSETPSEUDOVECTOR
-   and PSEUDOVECTORP cast their pointers to struct vectorlike_header *,
-   because when two such pointers potentially alias, a compiler won't
-   incorrectly reorder loads and stores to their size fields.  See
-   Bug#8546.  */
-struct vectorlike_header
-  {
-    /* The only field contains various pieces of information:
-       - The MSB (ARRAY_MARK_FLAG) holds the gcmarkbit.
-       - The next bit (PSEUDOVECTOR_FLAG) indicates whether this is a plain
-         vector (0) or a pseudovector (1).
-       - If PSEUDOVECTOR_FLAG is 0, the rest holds the size (number
-         of slots) of the vector.
-       - If PSEUDOVECTOR_FLAG is 1, the rest is subdivided into three fields:
-	 - a) pseudovector subtype held in PVEC_TYPE_MASK field;
-	 - b) number of Lisp_Objects slots at the beginning of the object
-	   held in PSEUDOVECTOR_SIZE_MASK field.  These objects are always
-	   traced by the GC;
-	 - c) size of the rest fields held in PSEUDOVECTOR_REST_MASK and
-	   measured in word_size units.  Rest fields may also include
-	   Lisp_Objects, but these objects usually needs some special treatment
-	   during GC.
-	 There are some exceptions.  For PVEC_FREE, b) is always zero.  For
-	 PVEC_BOOL_VECTOR and PVEC_SUBR, both b) and c) are always zero.
-	 Current layout limits the pseudovectors to 63 PVEC_xxx subtypes,
-	 4095 Lisp_Objects in GC-ed area and 4095 word-sized other slots.  */
-    ptrdiff_t size;
-  };
 
 /* A regular vector is just a header plus an array of Lisp_Objects.  */
 
@@ -1956,15 +2007,6 @@ struct Lisp_Hash_Table
   /* Next weak hash table if this is a weak hash table.  The head
      of the list is in weak_hash_tables.  */
   struct Lisp_Hash_Table *next_weak;
-};
-
-// TODO: move me
-struct Lisp_Source_Ref {
-  struct vectorlike_header header;
-  Lisp_Object data;
-  Lisp_Object filename;
-  int line;
-  int column;
 };
 
 
@@ -4719,6 +4761,10 @@ functionp (Lisp_Object object)
     }
   else
     return false;
+}
+
+INLINE Lisp_Object deref_source_ref(Lisp_Object x) {
+  return SOURCE_REF_P(x) ? XSOURCE_REF(x)->data : x;
 }
 
 INLINE_HEADER_END

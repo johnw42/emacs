@@ -277,6 +277,8 @@ DEFUN ("consp", Fconsp, Sconsp, 1, 1, 0,
 {
   if (CONSP (object))
     return Qt;
+  if (SOURCE_REF_P (object))
+    return CONSP (XSOURCE_REF(object)->data);
   return Qnil;
 }
 
@@ -298,6 +300,8 @@ Otherwise, return nil.  */
 {
   if (CONSP (object) || NILP (object))
     return Qt;
+  if (SOURCE_REF_P (object))
+    return CONSP (XSOURCE_REF(object)->data);  /* Not LISTP! */
   return Qnil;
 }
 
@@ -306,9 +310,7 @@ DEFUN ("nlistp", Fnlistp, Snlistp, 1, 1, 0,
        attributes: const)
   (Lisp_Object object)
 {
-  if (CONSP (object) || NILP (object))
-    return Qnil;
-  return Qt;
+  return Fnull (Flistp (object));
 }
 
 DEFUN ("symbolp", Fsymbolp, Ssymbolp, 1, 1, 0,
@@ -573,9 +575,13 @@ DEFUN ("setcar", Fsetcar, Ssetcar, 2, 2, 0,
        doc: /* Set the car of CELL to be NEWCAR.  Returns NEWCAR.  */)
   (register Lisp_Object cell, Lisp_Object newcar)
 {
-  CHECK_CONS (cell);
-  CHECK_IMPURE (cell, XCONS (cell));
-  XSETCAR (cell, newcar);
+  if (SOURCE_REF_P (cell)) {
+    Fsetcar(XSOURCE_REF(cell)->data, newcar);
+  } else {
+    CHECK_CONS (cell);
+    CHECK_IMPURE (cell, XCONS (cell));
+    XSETCAR (cell, newcar);
+  }
   return newcar;
 }
 
@@ -583,30 +589,16 @@ DEFUN ("setcdr", Fsetcdr, Ssetcdr, 2, 2, 0,
        doc: /* Set the cdr of CELL to be NEWCDR.  Returns NEWCDR.  */)
   (register Lisp_Object cell, Lisp_Object newcdr)
 {
-  CHECK_CONS (cell);
-  CHECK_IMPURE (cell, XCONS (cell));
-  XSETCDR (cell, newcdr);
+  if (SOURCE_REF_P (cell)) {
+    Fsetcdr(XSOURCE_REF(cell)->data, newcdr);
+  } else {
+    CHECK_CONS (cell);
+    CHECK_IMPURE (cell, XCONS (cell));
+    XSETCDR (cell, newcdr);
+  }
   return newcdr;
 }
 
-DEFUN ("make-source-ref", Fmake_source_ref, Smake_source_ref, 4, 4, 0,
-       doc: /* TODO */)
-  (register Lisp_Object data, Lisp_Object filename, Lisp_Object line, Lisp_Object column)
-{
-  Lisp_Object val;
-  struct Lisp_Source_Ref *ref
-      = ALLOCATE_PSEUDOVECTOR (struct Lisp_Source_Ref,
-                               line, PVEC_SOURCE_REF);
-  XSETVECTOR (val, ref);
-  CHECK_NUMBER (line);
-  CHECK_NUMBER (column);
-  ref->data = data;
-  ref->filename = filename;
-  ref->line = XINT (line);
-  ref->column = XINT (column);
-  return val;
-}
-
 DEFUN ("source-ref-p", Fsource_ref_p, Ssource_ref_p, 1, 1, 0,
        doc: /* TODO */)
   (register Lisp_Object object)
@@ -896,7 +888,7 @@ Value, if non-nil, is a list (interactive SPEC).  */)
       if (spec)
 	return list2 (Qinteractive,
 		      (*spec != '(') ? build_string (spec) :
-		      Fcar (Fread_from_string (build_string (spec), Qnil, Qnil)));
+		      Fcar (Fread_from_string (build_string (spec), Qnil, Qnil, Qnil)));
     }
   else if (COMPILEDP (fun))
     {
@@ -3717,7 +3709,6 @@ syms_of_data (void)
   defsubr (&Scdr_safe);
   defsubr (&Ssetcar);
   defsubr (&Ssetcdr);
-  defsubr (&Smake_source_ref);
   defsubr (&Ssource_ref_p);
   defsubr (&Ssource_ref_data);
   defsubr (&Ssource_ref_filename);

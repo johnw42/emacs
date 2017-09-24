@@ -156,7 +156,7 @@ string_to_object (Lisp_Object val, Lisp_Object defalt)
 	val = XCAR (defalt);
     }
 
-  expr_and_pos = Fread_from_string (val, Qnil, Qnil);
+  expr_and_pos = Fread_from_string (val, Qnil, Qnil, Qnil);
   pos = XINT (Fcdr (expr_and_pos));
   if (pos != SCHARS (val))
     {

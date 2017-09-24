@@ -1352,6 +1352,8 @@ print_object (Lisp_Object obj, Lisp_Object printcharfun, bool escapeflag)
 		max (sizeof " . #" + INT_STRLEN_BOUND (printmax_t),
 		     40))];
 
+  obj = deref_source_ref(obj);
+
   QUIT;
 
   /* Detect circularities and truncate them.  */
