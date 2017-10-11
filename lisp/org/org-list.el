@@ -3281,7 +3281,7 @@ for this list."
 (defun org-list-to-generic (list params)
   "Convert a LIST parsed through `org-list-to-lisp' to a custom format.
 
-LIST is a list as returned by `org-list-to-lisp', which see.
+LIST is a list as returned by `org-list-to-lisp' (q.v.).
 PARAMS is a property list of parameters used to tweak the output
 format.
 

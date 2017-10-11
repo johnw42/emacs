@@ -3644,8 +3644,8 @@ Return PDF file's name."
   "Compile a TeX file.
 
 TEXFILE is the name of the file being compiled.  Processing is
-done through the command specified in `org-latex-pdf-process',
-which see.  Output is redirected to \"*Org PDF LaTeX Output*\"
+done through the command specified in `org-latex-pdf-process'
+(q.v.).  Output is redirected to \"*Org PDF LaTeX Output*\"
 buffer.
 
 When optional argument SNIPPET is non-nil, TEXFILE is a temporary

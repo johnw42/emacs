@@ -366,7 +366,7 @@ filesystem mounted on drive Z:, FILESYSTEM could be \"Z:\"."
                                                &rest rest)
   "DOS/Windows-specific function to print the region on a printer.
 Writes the region to the device or file which is a value of
-`printer-name' (which see), unless the value of `lpr-command'
+`printer-name' (q.v.), unless the value of `lpr-command'
 indicates a specific program should be invoked."
 
   ;; DOS printers need the lines to end with CR-LF pairs, so make
@@ -417,7 +417,7 @@ indicates a specific program should be invoked."
                                                   &rest rest)
   "DOS/Windows-specific function to print the region on a PostScript printer.
 Writes the region to the device or file which is a value of
-`ps-printer-name' (which see), unless the value of `ps-lpr-command'
+`ps-printer-name' (q.v.), unless the value of `ps-lpr-command'
 indicates a specific program should be invoked."
 
   (let ((printer (or (and (boundp 'dos-ps-printer)

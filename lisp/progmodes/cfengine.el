@@ -1296,7 +1296,7 @@ Calls `cfengine-cf-promises' with \"-s json\"."
 
 (defun cfengine3-documentation-function ()
   "Document CFengine 3 functions around point.
-Intended as the value of `eldoc-documentation-function', which see.
+Intended as the value of `eldoc-documentation-function' (q.v.).
 Use it by enabling `eldoc-mode'."
   (let ((fdef (cfengine3--current-function)))
     (when fdef
@@ -1348,7 +1348,7 @@ Use it by enabling `eldoc-mode'."
   "A function for `imenu-create-index-function'.
 Note: defun name is separated by space such as `body
 package_method opencsw' and imenu will replace spaces according
-to `imenu-space-replacement' (which see)."
+to `imenu-space-replacement' (q.v.)."
   (goto-char (point-min))
   (let ((defuns ()))
     (while (re-search-forward cfengine3-defun-full-re nil t)

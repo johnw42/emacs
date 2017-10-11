@@ -3307,7 +3307,7 @@ middle of the construct.
 Place a @code{font-lock-multiline} property on the construct.  This
 will rehighlight the whole construct if any part of it is changed.  In
 some cases you can do this automatically by setting the
-@code{font-lock-multiline} variable, which see.
+@code{font-lock-multiline} variable (q.v.).
 @item
 Make sure @code{jit-lock-contextually} is set and rely on it doing its
 job.  This will only rehighlight the part of the construct that

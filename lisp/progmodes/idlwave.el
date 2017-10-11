@@ -5821,7 +5821,7 @@ window, scrolling can be achieved by repeatedly pressing
 \\[idlwave-complete].
 
 The function also knows about object methods.  When it needs a class
-name, the action depends upon `idlwave-query-class', which see.  You
+name, the action depends upon `idlwave-query-class' (q.v.).  You
 can force IDLWAVE to ask you for a class name with a
 \\[universal-argument] prefix argument to this command.
 

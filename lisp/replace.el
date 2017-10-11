@@ -462,7 +462,7 @@ what to do with it.  For directions, type \\[help-command] at that time.
 TO-EXPR is a Lisp expression evaluated to compute each replacement.  It may
 reference `replace-count' to get the number of replacements already made.
 If the result of TO-EXPR is not a string, it is converted to one using
-`prin1-to-string' with the NOESCAPE argument (which see).
+`prin1-to-string' with the NOESCAPE argument (q.v.).
 
 For convenience, when entering TO-EXPR interactively, you can use `\\&'
 to stand for whatever matched the whole of REGEXP, and `\\N' (where
@@ -708,7 +708,7 @@ which will run faster and will not set the mark or print anything."
   "History list for some commands that read regular expressions.
 
 Maximum length of the history list is determined by the value
-of `history-length', which see.")
+of `history-length' (q.v.).")
 
 (defvar occur-collect-regexp-history '("\\1")
   "History of regexp for occur's collect operation")
@@ -2109,7 +2109,7 @@ but coerced to the correct value of INTEGERS."
 (defun replace-match-maybe-edit (newtext fixedcase literal noedit match-data
                                  &optional backward)
   "Make a replacement with `replace-match', editing `\\?'.
-FIXEDCASE, LITERAL are passed to `replace-match' (which see).
+FIXEDCASE, LITERAL are passed to `replace-match' (q.v.).
 After possibly editing it (if `\\?' is present), NEWTEXT is also
 passed to `replace-match'.  If NOEDIT is true, no check for `\\?'
 is made (to save time).

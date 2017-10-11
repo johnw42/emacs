@@ -5566,8 +5566,8 @@ it is not marked as "special".  */);
   DEFVAR_PER_BUFFER ("mode-name", &BVAR (current_buffer, mode_name),
                      Qnil,
 		     doc: /* Pretty name of current buffer's major mode.
-Usually a string, but can use any of the constructs for `mode-line-format',
-which see.
+Usually a string, but can use any of the constructs for `mode-line-format'
+(q.v.).
 Format with `format-mode-line' to produce a string value.  */);
 
   DEFVAR_PER_BUFFER ("local-abbrev-table", &BVAR (current_buffer, abbrev_table), Qnil,
@@ -5628,7 +5628,7 @@ unless some coding system is specified in `file-coding-system-alist'
 for the buffer file.
 
 If the text to be saved cannot be encoded as specified by this variable,
-an alternative encoding is selected by `select-safe-coding-system', which see.
+an alternative encoding is selected by `select-safe-coding-system' (q.v.).
 
 The variable `coding-system-for-write', if non-nil, overrides this variable.
 

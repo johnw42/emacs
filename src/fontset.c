@@ -1457,7 +1457,7 @@ TARGET may be nil.  In that case, use FONT-SPEC for any characters for
 that no FONT-SPEC is specified.
 
 FONT-SPEC may one of these:
- * A font-spec object made by the function `font-spec' (which see).
+ * A font-spec object made by the function `font-spec' (q.v.).
  * A cons (FAMILY . REGISTRY), where FAMILY is a font family name and
    REGISTRY is a font registry name.  FAMILY may contain foundry
    name, and REGISTRY may contain encoding name.

@@ -524,7 +524,7 @@ happened."
 (defun electric-pair-delete-pair (arg &optional killp)
   "When between adjacent paired delimiters, delete both of them.
 ARG and KILLP are passed directly to
-`backward-delete-char-untabify', which see."
+`backward-delete-char-untabify' (q.v.)."
   (interactive "*p\nP")
   (delete-char 1)
   (backward-delete-char-untabify arg killp))

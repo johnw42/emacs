@@ -6096,7 +6096,7 @@ x_get_focus_frame (struct frame *frame)
 }
 
 DEFUN ("xw-color-defined-p", Fxw_color_defined_p, Sxw_color_defined_p, 1, 2, 0,
-       doc: /* Internal function called by `color-defined-p', which see.
+       doc: /* Internal function called by `color-defined-p' (q.v.).
 \(Note that the Nextstep version of this function ignores FRAME.)  */)
   (Lisp_Object color, Lisp_Object frame)
 {
@@ -6112,7 +6112,7 @@ DEFUN ("xw-color-defined-p", Fxw_color_defined_p, Sxw_color_defined_p, 1, 2, 0,
 }
 
 DEFUN ("xw-color-values", Fxw_color_values, Sxw_color_values, 1, 2, 0,
-       doc: /* Internal function called by `color-values', which see.  */)
+       doc: /* Internal function called by `color-values' (q.v.).  */)
   (Lisp_Object color, Lisp_Object frame)
 {
   XColor foo;
@@ -6129,7 +6129,7 @@ DEFUN ("xw-color-values", Fxw_color_values, Sxw_color_values, 1, 2, 0,
 }
 
 DEFUN ("xw-display-color-p", Fxw_display_color_p, Sxw_display_color_p, 0, 1, 0,
-       doc: /* Internal function called by `display-color-p', which see.  */)
+       doc: /* Internal function called by `display-color-p' (q.v.).  */)
   (Lisp_Object display)
 {
   struct w32_display_info *dpyinfo = check_x_display_info (display);
@@ -10185,7 +10185,7 @@ DEFUN ("w32-notification-notify",
        doc: /* Display an MS-Windows tray notification as specified by PARAMS.
 
 Value is the integer unique ID of the notification that can be used
-to remove the notification using `w32-notification-close', which see.
+to remove the notification using `w32-notification-close' (q.v.).
 If the function fails, the return value is nil.
 
 Tray notifications, a.k.a. \"taskbar messages\", are messages that
@@ -10452,7 +10452,7 @@ When nil, Emacs will translate the Alt key to the ALT modifier, not to META.  */
 
 When non-nil, the Start menu is opened by tapping the key.
 If you set this to nil, the left \"Windows\" key is processed by Emacs
-according to the value of `w32-lwindow-modifier', which see.
+according to the value of `w32-lwindow-modifier' (q.v.).
 
 Note that some combinations of the left \"Windows\" key with other
 keys are caught by Windows at low level.  For example, <lwindow>-r
@@ -10471,7 +10471,7 @@ For Windows 98/ME, see the doc string of `w32-phantom-key-code'.  */);
 
 When non-nil, the Start menu is opened by tapping the key.
 If you set this to nil, the right \"Windows\" key is processed by Emacs
-according to the value of `w32-rwindow-modifier', which see.
+according to the value of `w32-rwindow-modifier' (q.v.).
 
 Note that some combinations of the right \"Windows\" key with other
 keys are caught by Windows at low level.  For example, <rwindow>-r

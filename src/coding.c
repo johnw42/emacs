@@ -8879,7 +8879,7 @@ DEFUN ("detect-coding-region", Fdetect_coding_region, Sdetect_coding_region,
        doc: /* Detect coding system of the text in the region between START and END.
 Return a list of possible coding systems ordered by priority.
 The coding systems to try and their priorities follows what
-the function `coding-system-priority-list' (which see) returns.
+the function `coding-system-priority-list' (q.v.) returns.
 
 If only ASCII characters are found (except for such ISO-2022 control
 characters as ESC), it returns a list of single element `undecided'
@@ -8914,7 +8914,7 @@ DEFUN ("detect-coding-string", Fdetect_coding_string, Sdetect_coding_string,
        doc: /* Detect coding system of the text in STRING.
 Return a list of possible coding systems ordered by priority.
 The coding systems to try and their priorities follows what
-the function `coding-system-priority-list' (which see) returns.
+the function `coding-system-priority-list' (q.v.) returns.
 
 If only ASCII characters are found (except for such ISO-2022 control
 characters as ESC), it returns a list of single element `undecided'
@@ -11204,7 +11204,7 @@ coding system used in each operation can't encode the text.  The
 function should take care that the buffer is not modified while
 the coding system is being selected.
 
-The default value is `select-safe-coding-system' (which see).  */);
+The default value is `select-safe-coding-system' (q.v.).  */);
   Vselect_safe_coding_system_function = Qnil;
 
   DEFVAR_BOOL ("coding-system-require-warning",

@@ -211,7 +211,7 @@ Emacs Lisp manual for more information and examples."
 
 ;;;###autoload
 (defmacro pcase-exhaustive (exp &rest cases)
-  "The exhaustive version of `pcase' (which see)."
+  "The exhaustive version of `pcase' (q.v.)."
   (declare (indent 1) (debug pcase))
   (let* ((x (gensym "x"))
          (pcase--dontwarn-upats (cons x pcase--dontwarn-upats)))

@@ -2221,7 +2221,7 @@ struct it
   enum it_method method;
 
   /* The next position at which to check for face changes, invisible
-     text, overlay strings, end of text etc., which see.  */
+     text, overlay strings, end of text etc. (q.v.).  */
   ptrdiff_t stop_charpos;
 
   /* Previous stop position, i.e. the last one before the current

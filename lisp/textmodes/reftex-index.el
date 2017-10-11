@@ -45,7 +45,7 @@ index entry.  When called with 2 `C-u' as prefix, also ask for the index
 macro and other stuff.
 When called inside TeX math mode as determined by the `texmathp.el' library
 which is part of AUCTeX, the string is first processed with the
-`reftex-index-math-format', which see."
+`reftex-index-math-format' (q.v.)."
   (interactive "P")
   (let* ((use-default (not (equal arg '(16))))  ; check for double prefix
          ;; check if we have an active selection

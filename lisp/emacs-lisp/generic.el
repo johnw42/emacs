@@ -106,7 +106,7 @@
 (defvar generic-mode-list nil
   "A list of mode names for `generic-mode'.
 Do not add entries to this list directly; use `define-generic-mode'
-instead (which see).")
+instead (q.v.).")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Functions

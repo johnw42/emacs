@@ -83,7 +83,7 @@ If N is omitted or nil, move point 1 character forward.
 
 Depending on the bidirectional context, the movement may be to the
 right or to the left on the screen.  This is in contrast with
-\\[right-char], which see.  */)
+\\[right-char] (q.v.).  */)
   (Lisp_Object n)
 {
   return move_point (n, 1);
@@ -97,7 +97,7 @@ If N is omitted or nil, move point 1 character backward.
 
 Depending on the bidirectional context, the movement may be to the
 right or to the left on the screen.  This is in contrast with
-\\[left-char], which see.  */)
+\\[left-char] (q.v.).  */)
   (Lisp_Object n)
 {
   return move_point (n, 0);

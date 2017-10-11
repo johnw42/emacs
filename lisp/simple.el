@@ -1858,7 +1858,7 @@ This is used for all minibuffer input
 except when an alternate history list is specified.
 
 Maximum length of the history list is determined by the value
-of `history-length', which see.")
+of `history-length' (q.v.).")
 (defvar minibuffer-history-sexp-flag nil
   "Control whether history list elements are expressions or strings.
 If the value of this variable equals current minibuffer depth,
@@ -3188,7 +3188,7 @@ included; callers should bind `case-fold-search' to t."
   "History list for some commands that read shell commands.
 
 Maximum length of the history list is determined by the value
-of `history-length', which see.")
+of `history-length' (q.v.).")
 
 (defvar shell-command-switch (purecopy "-c")
   "Switch used to have the shell execute its command line argument.")
@@ -5937,7 +5937,7 @@ This has no effect when the variable `line-move-visual' is non-nil."
 
 (defcustom goal-column nil
   "Semipermanent goal column for vertical motion, as set by \\[set-goal-column], or nil.
-A non-nil setting overrides the variable `line-move-visual', which see."
+A non-nil setting overrides the variable `line-move-visual' (q.v.)."
   :type '(choice integer
 		 (const :tag "None" nil))
   :group 'editing-basics)
@@ -7899,7 +7899,7 @@ To disable this warning, set `compose-mail-user-agent-warnings' to nil."
   "History of values entered with `set-variable'.
 
 Maximum length of the history list is determined by the value
-of `history-length', which see.")
+of `history-length' (q.v.).")
 
 (defun set-variable (variable value &optional make-local)
   "Set VARIABLE to VALUE.  VALUE is a Lisp object.
@@ -7909,7 +7909,7 @@ so if you want VALUE to be a string, you must surround it with doublequotes.
 VALUE is used literally, not evaluated.
 
 If VARIABLE has a `variable-interactive' property, that is used as if
-it were the arg to `interactive' (which see) to interactively read VALUE.
+it were the arg to `interactive' (q.v.) to interactively read VALUE.
 
 If VARIABLE has been defined with `defcustom', then the type information
 in the definition is used to check that VALUE is valid.
@@ -8612,7 +8612,7 @@ available on the F1 key.  You should probably not use this
 setting if you don't have both Backspace, Delete and F1 keys.
 
 Setting this variable with setq doesn't take effect.  Programmatically,
-call `normal-erase-is-backspace-mode' (which see) instead."
+call `normal-erase-is-backspace-mode' (q.v.) instead."
   :type '(choice (const :tag "Off" nil)
 		 (const :tag "Maybe" maybe)
 		 (other :tag "On" t))

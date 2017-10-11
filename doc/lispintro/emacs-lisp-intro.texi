@@ -19182,7 +19182,7 @@ text.
 
 When this command inserts killed text into the buffer, it honors
 `yank-excluded-properties' and `yank-handler' as described in the
-doc string for `insert-for-yank-1', which see.
+doc string for `insert-for-yank-1' (q.v.).
 
 See also the command `yank-pop' (\\[yank-pop])."
 @end group

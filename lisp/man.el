@@ -254,7 +254,7 @@ Used in `bookmark-set' to get the default bookmark name."
   :group 'man)
 
 (defcustom Man-untabify-command-args (list "-t" "-e")
-  "List of arguments to be passed to `Man-untabify-command' (which see)."
+  "List of arguments to be passed to `Man-untabify-command' (q.v.)."
   :type '(repeat string)
   :group 'man)
 

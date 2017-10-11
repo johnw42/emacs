@@ -927,7 +927,7 @@ This is what `(interactive \"P\")' returns.  */);
 Each command is represented as a form to evaluate.
 
 Maximum length of the history list is determined by the value
-of `history-length', which see.  */);
+of `history-length' (q.v.).  */);
   Vcommand_history = Qnil;
 
   DEFVAR_LISP ("command-debug-status", Vcommand_debug_status,

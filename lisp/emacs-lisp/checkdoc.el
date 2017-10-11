@@ -1153,13 +1153,13 @@ generating a buffered list of errors.")
 (defun checkdoc-create-error (text start end &optional unfixable)
   "Used to create the return error text returned from all engines.
 TEXT, START, END and UNFIXABLE conform to
-`checkdoc-create-error-function', which see."
+`checkdoc-create-error-function' (q.v.)."
   (funcall checkdoc-create-error-function text start end unfixable))
 
 (defun checkdoc--create-error-for-checkdoc (text start end &optional unfixable)
   "Create an error for Checkdoc.
 TEXT, START, END and UNFIXABLE conform to
-`checkdoc-create-error-function', which see."
+`checkdoc-create-error-function' (q.v.)."
   (if checkdoc-generate-compile-warnings-flag
       (progn (checkdoc-error start text)
 	     nil)

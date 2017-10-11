@@ -138,7 +138,7 @@ This variable should be set to a small positive number."
 Files in fundamental mode whose first few lines contain a match
 for this regexp, should be put into Default-Generic mode instead.
 The number of lines tested for the matches is specified by the
-value of the variable `generic-lines-to-scan', which see."
+value of the variable `generic-lines-to-scan' (q.v.)."
   :group 'generic-x
   :type  'regexp)
 

@@ -603,7 +603,7 @@ See also `tramp-yesno-prompt-regexp'."
 	  "\\)\\s-*")
   "Regular expression matching all terminal setting prompts.
 The regexp should match at end of buffer.
-The answer will be provided by `tramp-action-terminal', which see."
+The answer will be provided by `tramp-action-terminal' (q.v.)."
   :group 'tramp
   :type 'regexp
   :require 'tramp)
@@ -637,7 +637,7 @@ be ignored safely."
 In fact this expression is empty by intention, it will be used only to
 check regularly the status of the associated process.
 The answer will be provided by `tramp-action-process-alive',
-`tramp-action-out-of-band', which see."
+`tramp-action-out-of-band' (q.v.)."
   :group 'tramp
   :type 'regexp
   :require 'tramp)
@@ -646,7 +646,7 @@ The answer will be provided by `tramp-action-process-alive',
   "Prefix to use for temporary files.
 If this is a relative file name (such as \"tramp.\"), it is considered
 relative to the directory name returned by the function
-`tramp-compat-temporary-file-directory' (which see).  It may also be an
+`tramp-compat-temporary-file-directory' (q.v.).  It may also be an
 absolute file name; don't forget to include a prefix for the filename
 part, though.")
 
@@ -958,7 +958,7 @@ but for the host name.  The fifth element FILE is for the file name.
 The last element HOP is the ad-hoc hop definition, which could be a
 cascade of several hops.
 
-These numbers are passed directly to `match-string', which see.  That
+These numbers are passed directly to `match-string' (q.v.).  That
 means the opening parentheses are counted to identify the pair.
 
 See also `tramp-file-name-regexp'.")

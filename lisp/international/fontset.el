@@ -1010,7 +1010,7 @@ Internal use only.  Should be called at startup time."
 ;; "wn.tamil.1993"                                 [103]
 
 (defun set-font-encoding (pattern charset)
-  "Set arguments in `font-encoding-alist' (which see)."
+  "Set arguments in `font-encoding-alist' (q.v.)."
   (let ((slot (assoc pattern font-encoding-alist)))
     (if slot
 	(setcdr slot charset)
@@ -1280,7 +1280,7 @@ It returns a name of the created fontset.
 
 For backward compatibility, SCRIPT-NAME may be a charset name, in
 which case, the corresponding script is decided by the variable
-`charset-script-alist' (which see)."
+`charset-script-alist' (q.v.)."
   (or (string-match "^[^,]+" fontset-spec)
       (error "Invalid fontset spec: %s" fontset-spec))
   (let ((idx (match-end 0))

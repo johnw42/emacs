@@ -83,7 +83,7 @@ order summary, so the function is expected to handle its own
 output.
 
 Types defined in this variable take precedence over those defined
-in `org-columns-summary-types-default', which see."
+in `org-columns-summary-types-default' (q.v.)."
   :group 'org-properties
   :version "26.1"
   :package-version '(Org . "9.0")
@@ -1012,7 +1012,7 @@ the current buffer."
 (defun org-columns-uncompile-format (compiled)
   "Turn the compiled columns format back into a string representation.
 COMPILED is an alist, as returned by
-`org-columns-compile-format', which see."
+`org-columns-compile-format' (q.v.)."
   (mapconcat
    (lambda (spec)
      (pcase spec

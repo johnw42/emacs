@@ -295,8 +295,8 @@ a cons cell (LINE . COLUMN) or symbol `end'.  See also
 
 (defun org-src--goto-coordinates (coord beg end)
   "Move to coordinates COORD relatively to BEG and END.
-COORD are coordinates, as returned by `org-src--coordinates',
-which see.  BEG and END are buffer positions."
+COORD are coordinates, as returned by `org-src--coordinates'
+(q.v.).  BEG and END are buffer positions."
   (goto-char
    (if (eq coord 'end) (max (1- end) beg)
      ;; If BEG happens to be located outside of the narrowed part of
@@ -1024,7 +1024,7 @@ followed by a space or a newline character.
 
 A new buffer is created and the fixed-width region is copied into
 it, and the buffer is switched into the major mode defined in
-`org-edit-fixed-width-region-mode', which see.
+`org-edit-fixed-width-region-mode' (q.v.).
 
 When done, exit with `\\[org-edit-src-exit]'.  The edited text \
 will then replace

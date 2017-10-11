@@ -134,7 +134,7 @@ See `emacs-lock-unlockable-modes'."
 
 (defun emacs-lock--kill-emacs-hook ()
   "Signal an error if any buffer is exit-locked.
-Used from `kill-emacs-hook' (which see)."
+Used from `kill-emacs-hook' (q.v.)."
   (let ((locked (emacs-lock--exit-locked-buffer)))
     (when locked
       (run-hook-with-args 'emacs-lock-locked-buffer-functions locked)
@@ -143,7 +143,7 @@ Used from `kill-emacs-hook' (which see)."
 
 (defun emacs-lock--kill-emacs-query-functions ()
   "Display a message if any buffer is exit-locked.
-Return a value appropriate for `kill-emacs-query-functions' (which see)."
+Return a value appropriate for `kill-emacs-query-functions' (q.v.)."
   (let ((locked (emacs-lock--exit-locked-buffer)))
     (if (not locked)
         t
@@ -154,7 +154,7 @@ Return a value appropriate for `kill-emacs-query-functions' (which see)."
 
 (defun emacs-lock--kill-buffer-query-functions ()
   "Display a message if the current buffer is kill-locked.
-Return a value appropriate for `kill-buffer-query-functions' (which see)."
+Return a value appropriate for `kill-buffer-query-functions' (q.v.)."
   (if (or (emacs-lock--can-auto-unlock 'kill)
           (memq emacs-lock-mode '(nil exit)))
       t
@@ -194,7 +194,7 @@ positive, off otherwise.  If called from Lisp, enable the mode if
 ARG is omitted or nil.
 
 Initially, if the user does not pass an explicit locking mode, it
-defaults to `emacs-lock-default-locking-mode' (which see);
+defaults to `emacs-lock-default-locking-mode' (q.v.);
 afterwards, the locking mode most recently set on the buffer is
 used instead.
 

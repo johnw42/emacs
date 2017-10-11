@@ -1413,7 +1413,7 @@ otherwise use the browser function specified in
 @defopt idlwave-help-browser-function
 The browser function to use to display IDLWAVE HTML help.  Should be
 one of the functions available for setting
-@code{browse-url-browser-function}, which see.
+@code{browse-url-browser-function} (q.v.).
 @end defopt
 
 @defopt idlwave-help-browser-is-local

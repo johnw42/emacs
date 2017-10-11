@@ -1746,7 +1746,7 @@ an explicit filename is given as the last argument."
 
 The list element can be:
 
-   string	it should be an option for `ps-lpr-command' (which see).
+   string	it should be an option for `ps-lpr-command' (q.v.).
 		For example: \"-o Duplex=DuplexNoTumble\"
 
    symbol	it can be a function or variable symbol.  If it's a function
@@ -1760,7 +1760,7 @@ The list element can be:
 
 Any other value is silently ignored.
 
-It is recommended to set `ps-printer-name' (which see) instead of including an
+It is recommended to set `ps-printer-name' (q.v.) instead of including an
 explicit switch on this list.
 
 See `ps-lpr-command'."
@@ -1916,7 +1916,7 @@ After ps-print processing `ps-selected-pages' is set to nil.  But the
 latest `ps-selected-pages' is saved in `ps-last-selected-pages' (which
 see).  So you can restore the latest selected pages by using
 `ps-last-selected-pages' or with the `ps-restore-selected-pages'
-command (which see).
+command (q.v.).
 
 See also `ps-even-or-odd-pages'."
   :type '(repeat :tag "Selected Pages"
@@ -3006,7 +3006,7 @@ Valid values are:
 
 Any other value is ignored and black color will be used.
 
-This variable is used only when `ps-print-color-p' (which see) is neither nil
+This variable is used only when `ps-print-color-p' (q.v.) is neither nil
 nor black-white."
   :type '(choice :menu-tag "Default Foreground Gray/Color"
 		 (const :tag "Session Foreground" t)
@@ -3050,7 +3050,7 @@ Valid values are:
 
 Any other value is ignored and white color will be used.
 
-This variable is used only when `ps-print-color-p' (which see) is neither nil
+This variable is used only when `ps-print-color-p' (q.v.) is neither nil
 nor black-white.
 
 See also `ps-use-face-background'."
@@ -3095,8 +3095,8 @@ The list element valid values are:
 
 Any other value is ignored and black color will be used.
 
-This variable is used only when `ps-fg-validate-p' (which see) is non-nil and
-when `ps-print-color-p' (which see) is neither nil nor black-white."
+This variable is used only when `ps-fg-validate-p' (q.v.) is non-nil and
+when `ps-print-color-p' (q.v.) is neither nil nor black-white."
   :type '(repeat
 	  (choice :menu-tag "Foreground Gray/Color"
 		  :tag "Foreground Gray/Color"
@@ -3139,7 +3139,7 @@ If nil, we rely solely on the lists `ps-bold-faces', `ps-italic-faces', and
     (font-lock-warning-face       "black"  nil bold italic))
   "Specify list of face attributes to print colors on black/white printers.
 
-The list elements are the same as defined on `ps-extend-face' (which see).
+The list elements are the same as defined on `ps-extend-face' (q.v.).
 
 This variable is used only when `ps-print-color-p' is set to `black-white'."
   :version "21.1"
@@ -3272,7 +3272,7 @@ There are the following basic functions implemented:
    `ps-time-stamp-iso8601'		Alias for `ps-time-stamp-yyyy-mm-dd'.
 
 You can also create your own time stamp function by using `format-time-string'
-\(which see)."
+\(q.v.)."
   :type '(repeat (choice :menu-tag "Right Header"
 			 :tag "Right Header"
 			 string symbol))
@@ -3327,7 +3327,7 @@ There are the following basic functions implemented:
    `ps-time-stamp-iso8601'		Alias for `ps-time-stamp-yyyy-mm-dd'.
 
 You can also create your own time stamp function by using `format-time-string'
-\(which see)."
+\(q.v.)."
   :type '(repeat (choice :menu-tag "Right Footer"
 			 :tag "Right Footer"
 			 string symbol))
@@ -3622,7 +3622,7 @@ The table depends on the current ps-print setup."
   (ps-nb-pages nb-lines))
 
 (defvar ps-prefix-quote nil
-  "Used for `ps-print-quote' (which see).")
+  "Used for `ps-print-quote' (q.v.).")
 
 ;;;###autoload
 (defun ps-setup ()
@@ -3873,7 +3873,7 @@ It can be retrieved with `(ps-get ALIST-SYM KEY)'."
   (format-time-string "%Y-%m-%d"))
 
 
-;; Alias for `ps-time-stamp-yyyy-mm-dd' (which see).
+;; Alias for `ps-time-stamp-yyyy-mm-dd' (q.v.).
 (defalias 'ps-time-stamp-iso8601 'ps-time-stamp-yyyy-mm-dd)
 
 
@@ -4004,7 +4004,7 @@ This is in units of points (1/72 inch).")
 (defvar ps-black-white-faces-alist nil
   "Alist of symbolic faces used for black/white PostScript printers.
 An element of this list has the same form as `ps-print-face-extension-alist'
-\(which see).
+\(q.v.).
 
 Don't change this list directly; instead,
 use `ps-extend-face' and `ps-extend-face-list'.

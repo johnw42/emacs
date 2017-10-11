@@ -57,7 +57,7 @@
 ;;
 ;; When whitespace is on, it takes care of highlighting some special
 ;; characters over the default mechanism of `nobreak-char-display'
-;; (which see) and `show-trailing-whitespace' (which see).
+;; (q.v.) and `show-trailing-whitespace' (q.v.).
 ;;
 ;; The trailing spaces are not highlighted while point is at end of line.
 ;; Also the spaces at beginning of buffer are not highlighted while point is at
@@ -188,7 +188,7 @@
 ;; -------
 ;;
 ;; Whitespace's behavior can be changed with `M-x customize-group
-;; whitespace', which see for the full list of options.
+;; whitespace' (q.v. for the full list of options).
 ;;
 ;;
 ;; Hooks
@@ -366,7 +366,7 @@ It's a list containing some or all of the following values:
 
    space-after-tab		`tab-width' or more SPACEs after a TAB
 				are visualized, if `indent-tabs-mode'
-				(which see) is non-nil; otherwise,
+				(q.v.) is non-nil; otherwise,
 				the TABs are visualized via faces.
 				It has effect only if `face' (see above)
 				is present in `whitespace-style'.
@@ -382,7 +382,7 @@ It's a list containing some or all of the following values:
 				is present in `whitespace-style'.
 
    space-before-tab		SPACEs before TAB are visualized, if
-				`indent-tabs-mode' (which see) is
+				`indent-tabs-mode' (q.v.) is
 				non-nil; otherwise, the TABs are
 				visualized via faces.
 				It has effect only if `face' (see above)
@@ -1136,26 +1136,26 @@ SYMBOL	is a valid symbol associated with CHAR.
 
 (defvar whitespace-point (point)
   "Used to save locally current point value.
-Used by function `whitespace-trailing-regexp' (which see).")
+Used by function `whitespace-trailing-regexp' (q.v.).")
 (defvar-local whitespace-point--used nil
   "Region whose highlighting depends on `whitespace-point'.")
 
 (defvar whitespace-font-lock-refontify nil
   "Used to save locally the font-lock refontify state.
-Used by function `whitespace-post-command-hook' (which see).")
+Used by function `whitespace-post-command-hook' (q.v.).")
 
 (defvar whitespace-bob-marker nil
   "Used to save locally the bob marker value.
-Used by function `whitespace-post-command-hook' (which see).")
+Used by function `whitespace-post-command-hook' (q.v.).")
 
 (defvar whitespace-eob-marker nil
   "Used to save locally the eob marker value.
-Used by function `whitespace-post-command-hook' (which see).")
+Used by function `whitespace-post-command-hook' (q.v.).")
 
 (defvar whitespace-buffer-changed nil
   "Used to indicate locally if buffer changed.
 Used by `whitespace-post-command-hook' and `whitespace-buffer-changed'
-functions (which see).")
+functions (q.v.).")
 
 
 ;;;###autoload

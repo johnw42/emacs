@@ -1072,7 +1072,7 @@ OPENER is non-nil if TOKEN is an opener and nil if it's a closer."
             (list t atok (point) aend)))))))))
 
 (defun smie--matching-block-data (orig &rest args)
-  "A function suitable for `show-paren-data-function' (which see)."
+  "A function suitable for `show-paren-data-function' (q.v.)."
   (if (or (null smie-closer-alist)
           (equal (cons (point) (buffer-chars-modified-tick))
                  (car smie--matching-block-data-cache)))

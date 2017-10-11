@@ -1755,7 +1755,7 @@ calls `table-recognize-table'."
   :group 'org)
 
 (defvar-local org-link-abbrev-alist-local nil
-  "Buffer-local version of `org-link-abbrev-alist', which see.
+  "Buffer-local version of `org-link-abbrev-alist' (q.v.).
 The value of this is taken from the #+LINK lines.")
 
 (defcustom org-link-parameters
@@ -3938,7 +3938,7 @@ When using LaTeXML set this option to
 (defcustom org-preview-latex-default-process 'dvipng
   "The default process to convert LaTeX fragments to image files.
 All available processes and theirs documents can be found in
-`org-preview-latex-process-alist', which see."
+`org-preview-latex-process-alist' (q.v.)."
   :group 'org-latex
   :version "26.1"
   :package-version '(Org . "9.0")
@@ -4007,7 +4007,7 @@ PROPERTIES accepts the following attributes:
                       When nil, the fallback value is used instead, which is
                       controlled by `org-format-latex-header',
                       `org-latex-default-packages-alist' and
-                      `org-latex-packages-alist', which see.
+                      `org-latex-packages-alist' (q.v.).
   :latex-compiler     list of LaTeX commands, as strings.  Each of them is given
                       to the shell.  Place-holders \"%t\", \"%b\" and \"%o\" are
                       replaced with values defined below.
@@ -9982,7 +9982,7 @@ If optional argument MERGE is set, merge TABLE into
 (defun org-link-unescape (str)
   "Unhex hexified Unicode parts in string STR.
 E.g. `%C3%B6' becomes the german o-Umlaut.  This is the
-reciprocal of `org-link-escape', which see."
+reciprocal of `org-link-escape' (q.v.)."
   (if (org-string-nw-p str)
       (replace-regexp-in-string
        "\\(%[0-9A-Za-z]\\{2\\}\\)+" #'org-link-unescape-compound str t t)
@@ -10783,8 +10783,8 @@ when following the link.  The search string will be part of the
 file link, given after a double colon, and `org-open-at-point'
 will automatically search for it.  If special measures must be
 taken to make the search successful, another function should be
-added to the companion hook `org-execute-file-search-functions',
-which see.
+added to the companion hook `org-execute-file-search-functions'
+(q.v.).
 
 A function in this hook may also use `setq' to set the variable
 `description' to provide a suggestion for the descriptive text to
@@ -11656,7 +11656,7 @@ the *old* location.")
   "Move the entry or entries at point to another heading.
 
 The list of target headings is compiled using the information in
-`org-refile-targets', which see.
+`org-refile-targets' (q.v.).
 
 At the target location, the entry is filed as a subitem of the
 target heading.  Depending on `org-reverse-note-order', the new
@@ -13748,7 +13748,7 @@ as well.")
   "Make a compact tree which shows all matches of REGEXP.
 
 The tree will show the lines where the regexp matches, and any other context
-defined in `org-show-context-detail', which see.
+defined in `org-show-context-detail' (q.v.).
 
 When optional argument KEEP-PREVIOUS is non-nil, highlighting and exposing
 done by a previous call to `org-occur' will be kept, to allow stacking of
@@ -18867,7 +18867,7 @@ top of the fragment instead of replacing it.
 PROCESSING-TYPE is the conversion method to use, as a symbol.
 
 Some of the options can be changed using the variable
-`org-format-latex-options', which see."
+`org-format-latex-options' (q.v.)."
   (when (and overlays (fboundp 'clear-image-cache)) (clear-image-cache))
   (unless (eq processing-type 'verbatim)
     (let* ((math-regexp "\\$\\|\\\\[([]\\|^[ \t]*\\\\begin{[A-Za-z0-9*]+}")
@@ -22492,7 +22492,7 @@ ELEMENT."
 
 (defun org--align-node-property ()
   "Align node property at point.
-Alignment is done according to `org-property-format', which see."
+Alignment is done according to `org-property-format' (q.v.)."
   (when (save-excursion
 	  (beginning-of-line)
 	  (looking-at org-property-re))
@@ -23393,8 +23393,8 @@ Return a new timestamp object."
 (defun org-timestamp-translate (timestamp &optional boundary)
   "Translate TIMESTAMP object to custom format.
 
-Format string is defined in `org-time-stamp-custom-formats',
-which see.
+Format string is defined in `org-time-stamp-custom-formats'
+(q.v.).
 
 When optional argument BOUNDARY is non-nil, it is either the
 symbol `start' or `end'.  In this case, only translate the

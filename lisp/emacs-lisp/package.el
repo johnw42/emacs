@@ -621,7 +621,7 @@ EXTRA-PROPERTIES is currently unused."
 
 
 ;;; Package activation
-;; Section for functions used by `package-activate', which see.
+;; Section for functions used by `package-activate' (q.v.).
 (defun package-disabled-p (pkg-name version)
   "Return whether PKG-NAME at VERSION can be activated.
 The decision is made according to `package-load-list'.

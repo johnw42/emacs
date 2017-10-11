@@ -343,7 +343,7 @@ then `locate-post-command-hook'."
 ;;;###autoload
 (defun locate-with-filter (search-string filter &optional arg)
   "Run the executable program `locate' with a filter.
-This function is similar to the function `locate', which see.
+This function is similar to the function `locate' (q.v.).
 The difference is that, when invoked interactively, the present function
 prompts for both SEARCH-STRING and FILTER.  It passes SEARCH-STRING
 to the locate executable program.  It produces a `*Locate*' buffer

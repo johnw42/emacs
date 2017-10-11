@@ -369,7 +369,7 @@ See `allout-expose-topic' for more about the exposure process.
 
 Also, allout's mode-specific provisions will make topic prefixes default
 to the comment-start string, if any, of the language of the file.  This
-is modulo the setting of `allout-use-mode-specific-leader', which see."
+is modulo the setting of `allout-use-mode-specific-leader' (q.v.)."
   :type 'allout-layout-type
   :group 'allout)
 ;;;_  : allout-layout-type
@@ -1107,7 +1107,7 @@ invoking it directly."
 (defun allout-infer-body-reindent ()
   "Determine proper setting for `allout-reindent-bodies'.
 
-Depends on default setting of `allout-reindent-bodies' (which see)
+Depends on default setting of `allout-reindent-bodies' (q.v.)
 and presence of setting for `comment-start', to tell whether the
 file is programming code."
   (if (and allout-reindent-bodies

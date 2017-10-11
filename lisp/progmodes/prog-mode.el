@@ -243,7 +243,7 @@ the mode if ARG is omitted or nil.
 
 When Prettify Symbols mode and font-locking are enabled, symbols are
 prettified (displayed as composed characters) according to the rules
-in `prettify-symbols-alist' (which see), which are locally defined
+in `prettify-symbols-alist' (q.v.), which are locally defined
 by major modes supporting prettifying.  To add further customizations
 for a given major mode, you can modify `prettify-symbols-alist' thus:
 

@@ -2054,7 +2054,7 @@ Returns the compilation buffer created."
 move point to the error message line and type \\[compile-goto-error].
 To kill the compilation, type \\[kill-compilation].
 
-Runs `compilation-mode-hook' with `run-mode-hooks' (which see).
+Runs `compilation-mode-hook' with `run-mode-hooks' (q.v.).
 
 \\{compilation-mode-map}"
   (interactive)

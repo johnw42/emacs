@@ -2203,7 +2203,7 @@ check_tm_member (Lisp_Object obj, int offset)
 
 DEFUN ("encode-time", Fencode_time, Sencode_time, 6, MANY, 0,
        doc: /* Convert SECOND, MINUTE, HOUR, DAY, MONTH, YEAR and ZONE to internal time.
-This is the reverse operation of `decode-time', which see.
+This is the reverse operation of `decode-time' (q.v.).
 
 The optional ZONE is omitted or nil for Emacs local time, t for
 Universal Time, `wall' for system wall clock time, or a string as in
@@ -2903,7 +2903,7 @@ Any other markers at the point of insertion remain before the text.
 
 If the current buffer is multibyte and BUFFER is unibyte, or vice
 versa, strings are converted from unibyte to multibyte or vice versa
-using `string-make-multibyte' or `string-make-unibyte', which see.  */)
+using `string-make-multibyte' or `string-make-unibyte' (q.v.).  */)
   (Lisp_Object buffer, Lisp_Object start, Lisp_Object end)
 {
   register EMACS_INT b, e, temp;

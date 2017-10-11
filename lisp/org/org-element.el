@@ -4717,7 +4717,7 @@ indentation removed from its contents."
 ;;; Cache
 ;;
 ;; Implement a caching mechanism for `org-element-at-point' and
-;; `org-element-context', which see.
+;; `org-element-context' (q.v.).
 ;;
 ;; A single public function is provided: `org-element-cache-reset'.
 ;;

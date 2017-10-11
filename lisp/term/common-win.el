@@ -407,7 +407,7 @@ the operating system.")
 (defvar w32-color-map)
 
 (defun xw-defined-colors (&optional frame)
-  "Internal function called by `defined-colors', which see."
+  "Internal function called by `defined-colors' (q.v.)."
   (if (featurep 'ns)
       x-colors
     (or frame (setq frame (selected-frame)))

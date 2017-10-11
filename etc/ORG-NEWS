@@ -424,7 +424,7 @@ in addition to ~org-publish-find-title~ and ~org-publish-find-date~.
 
 *** ~org-list-to-org~
 
-It is the reciprocal of ~org-list-to-lisp~, which see.
+It is the reciprocal of ~org-list-to-lisp~ (q.v.).
 
 *** ~org-agenda-set-restriction-lock-from-agenda~
 
@@ -937,7 +937,7 @@ The variable used to be a ~defvar~, it is now a ~defcustom~.
 **** Allow custom summaries
 
 It is now possible to add new summary types, or override those
-provided by Org by customizing ~org-columns-summary-types~, which see.
+provided by Org by customizing ~org-columns-summary-types~ (q.v.).
 
 **** Allow multiple summaries for any property
 
@@ -1462,7 +1462,7 @@ which is now obsolete.  As a consequence, this change also deprecates
 Using C-c ' on an export block now opens a sub-editing buffer.  Major
 mode in that buffer is determined by export backend name (e.g.,
 "latex" \to "latex-mode").  You can define exceptions to this rule by
-configuring ~org-src-lang-modes~, which see.
+configuring ~org-src-lang-modes~ (q.v.).
 
 *** Additional =:hline= processing to ob-shell
 
@@ -3487,7 +3487,7 @@ that Calc formulas can operate on them.
 
 **** =org-list-ending-method= and =org-list-end-regexp= are now obsolete
 
-     Fall back on using =org-list-end-re= only, which see.
+     Fall back on using =org-list-end-re= only (q.v.).
 
 **** org-feed.el now expands =%(sexp)= templates
 **** New option [[doc::org-protocol-data-separator][org-protocol-data-separator]]

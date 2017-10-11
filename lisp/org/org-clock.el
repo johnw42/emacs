@@ -404,7 +404,7 @@ or `both', clocking in will replace `frame-title-format' with
 this value.  Clocking out will restore `frame-title-format'.
 
 `org-frame-title-string' is a format string using the same
-specifications than `frame-title-format', which see."
+specifications than `frame-title-format' (q.v.)."
   :version "24.1"
   :group 'org-clock
   :type 'sexp)

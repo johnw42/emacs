@@ -52,10 +52,10 @@ Used in `octave-mode' and `inferior-octave-mode' buffers.")
   "Character to start an Octave comment.")
 
 (defvar octave-comment-start (char-to-string octave-comment-char)
-  "Octave-specific `comment-start' (which see).")
+  "Octave-specific `comment-start' (q.v.).")
 
 (defvar octave-comment-start-skip "\\(^\\|\\S<\\)\\(?:%!\\|\\s<+\\)\\s-*"
-  "Octave-specific `comment-start-skip' (which see).")
+  "Octave-specific `comment-start-skip' (q.v.).")
 
 (defvar octave-function-header-regexp
   (concat "^\\s-*\\_<\\(function\\)\\_>"
@@ -455,7 +455,7 @@ Non-nil means always go to the next Octave code line after sending."
        nil))))
 
 (defun octave-indent-comment ()
-  "A function for `smie-indent-functions' (which see)."
+  "A function for `smie-indent-functions' (q.v.)."
   (save-excursion
     (back-to-indentation)
     (cond
@@ -1313,7 +1313,7 @@ The block marked is the one that contains point or follows point."
   (mark-sexp))
 
 (defun octave-beginning-of-defun (&optional arg)
-  "Octave-specific `beginning-of-defun-function' (which see)."
+  "Octave-specific `beginning-of-defun-function' (q.v.)."
   (or arg (setq arg 1))
   ;; Move out of strings or comments.
   (when (octave-in-string-or-comment-p)
@@ -1415,7 +1415,7 @@ The block marked is the one that contains point or follows point."
                         octave-reserved-words)))))
 
 (defun octave-add-log-current-defun ()
-  "A function for `add-log-current-defun-function' (which see)."
+  "A function for `add-log-current-defun-function' (q.v.)."
   (save-excursion
     (end-of-line)
     (and (beginning-of-defun)
@@ -1601,7 +1601,7 @@ code line."
   (cdr octave-eldoc-cache))
 
 (defun octave-eldoc-function ()
-  "A function for `eldoc-documentation-function' (which see)."
+  "A function for `eldoc-documentation-function' (q.v.)."
   (when (inferior-octave-process-live-p)
     (let* ((ppss (syntax-ppss))
            (paren-pos (cadr ppss))

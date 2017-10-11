@@ -945,7 +945,7 @@ hitting screen's max DCS length."
 
 This function registers the number of colors returned by `display-color-cells'
 for the currently selected frame.  The first (16) colors are taken from
-COLORS, which see, while the rest are computed assuming
+COLORS (q.v.) while the rest are computed assuming
 either the 88- or 256-color standard color scheme supported by latest
 versions of xterm."
   (let* ((ncolors (display-color-cells))

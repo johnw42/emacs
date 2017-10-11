@@ -283,7 +283,7 @@ returned unaltered."
   "Issue the DOS Int 21h with registers REGS.
 
 REGS should be a vector produced by `dos-make-register'
-and `dos-set-register-value', which see."
+and `dos-set-register-value' (q.v.)."
   (int86 33 regs))
 
 (define-obsolete-function-alias 'intdos 'dos-intdos "24.1")

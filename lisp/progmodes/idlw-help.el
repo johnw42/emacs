@@ -82,7 +82,7 @@ is used in preference to the old `idlwave-html-help-location'."
 
 (defcustom idlwave-help-browser-function browse-url-browser-function
   "Function to use to display HTML help.
-Defaults to `browse-url-browser-function', which see."
+Defaults to `browse-url-browser-function' (q.v.)."
   :group 'idlwave-online-help
   :type 'function)
 
@@ -387,7 +387,7 @@ It collects and prints the diagnostics messages."
 (defvar idlwave-executive-commands-alist)
 (defvar idlwave-system-class-info)
 (defun idlwave-do-context-help1 (&optional arg)
-  "The work-horse version of `idlwave-context-help', which see."
+  "The work-horse version of `idlwave-context-help' (q.v.)."
   (save-excursion
     (if (equal (char-after) ?/)
 	(forward-char 1)

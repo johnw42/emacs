@@ -272,7 +272,7 @@ interactively."
 (defun copyright-fix-years ()
   "Convert 2 digit years to 4 digit years.
 Uses heuristic: year >= 50 means 19xx, < 50 means 20xx.
-If `copyright-year-ranges' (which see) is non-nil, also
+If `copyright-year-ranges' (q.v.) is non-nil, also
 independently replaces consecutive years with a range."
   (interactive)
   ;; TODO there may be multiple copyrights we should fix.

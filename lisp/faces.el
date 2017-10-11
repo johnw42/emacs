@@ -62,7 +62,7 @@ This means to treat a terminal of type TYPE as if it were of type ALIAS."
 (defvar face-name-history nil
   "History list for some commands that read face names.
 Maximum length of the history list is determined by the value
-of `history-length', which see.")
+of `history-length' (q.v.).")
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

@@ -96,7 +96,7 @@ For best results make this larger than `mouse-avoidance-threshold'."
   :group 'avoid)
 
 (defcustom mouse-avoidance-nudge-var 10
-  "Variability of `mouse-avoidance-nudge-dist' (which see)."
+  "Variability of `mouse-avoidance-nudge-dist' (q.v.)."
   :type 'integer
   :group 'avoid)
 

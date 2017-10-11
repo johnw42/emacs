@@ -715,7 +715,7 @@ This function is provided for use with `diary-nongregorian-listing-hook'."
 
 ;;;###cal-autoload
 (defun diary-chinese-anniversary (month day &optional year mark)
-  "Like `diary-anniversary' (which see) but accepts Chinese date."
+  "Like `diary-anniversary' (q.v.) but accepts Chinese date."
   (pcase-let* ((ddate (diary-make-date month day year))
                (`(,dc ,dy ,dm ,dd)      ;diary chinese date
                 (if year

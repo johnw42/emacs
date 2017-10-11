@@ -200,7 +200,7 @@ document yget-buffer-pointers
   Update convenience variables with address pointers for the ARG'th buffer
   as displayed by 'ybuffer-list'.
 
-  This also sets the current buffer using 'yset-buffer' (which see).
+  This also sets the current buffer using 'yset-buffer' (q.v.).
 end
 
 define yget-current-buffer-name
@@ -242,7 +242,7 @@ document ydump-buffer
   file FILE.
 
   This is mainly used as an internal subroutine for 'ysave-buffer' and
-  'ybuffer-contents', which see.
+  'ybuffer-contents' (q.v.).
 end
 
 define ysave-buffer

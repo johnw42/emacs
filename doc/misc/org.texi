@@ -5671,7 +5671,7 @@ Numbers are right-aligned when a format specifier with an explicit width like
 
 @vindex org-columns-summary-types
 You can also define custom summary types by setting
-@code{org-columns-summary-types}, which see.
+@code{org-columns-summary-types} (q.v.).
 
 Here is an example for a complete columns definition, along with allowed
 values.

@@ -352,7 +352,7 @@ See also `ps-mule-font-info-database-bdf'.")
 ;; ID is an identification number for this FONT-SPEC and is unique in the list.
 ;;
 ;; CHARSET, FONT-SRC, FONT-NAME, ENCODING, and BYTES are the same as those in
-;; `ps-mule-font-info-database' (which see).
+;; `ps-mule-font-info-database' (q.v.).
 ;;
 ;; EXTRA-DATA is a data attached by external libraries.
 

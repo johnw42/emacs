@@ -766,7 +766,7 @@ queries of the form USER@HOST, and wants a query containing USER only."
 (defun finger (user host)
   "Finger USER on HOST.
 This command uses `finger-X.500-host-regexps'
-and `network-connection-service-alist', which see."
+and `network-connection-service-alist' (q.v.)."
   ;; One of those great interactive statements that's actually
   ;; longer than the function call! The idea is that if the user
   ;; uses a string like "pbreton@cs.umb.edu", we won't ask for the
@@ -910,7 +910,7 @@ The port is deduced from `network-connection-service-alist'."
 ;;;###autoload
 (defun network-connection-to-service (host service)
   "Open a network connection to SERVICE on HOST.
-This command uses `network-connection-service-alist', which see."
+This command uses `network-connection-service-alist' (q.v.)."
   (interactive
    (list
     (read-from-minibuffer "Host: " (net-utils-machine-at-point))
@@ -949,7 +949,7 @@ The port to use is determined from `network-connection-service-alist'."
 
 (defun network-connection-reconnect  ()
   "Reconnect a network connection, preserving the old input ring.
-This command uses `network-connection-service-alist', which see."
+This command uses `network-connection-service-alist' (q.v.)."
   (interactive)
   (let ((proc (get-buffer-process (current-buffer)))
 	(old-comint-input-ring comint-input-ring)

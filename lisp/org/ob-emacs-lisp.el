@@ -37,7 +37,7 @@
 A value of \"yes\" or t causes src blocks to be eval'd using
 lexical scoping.  It can also be an alist mapping symbols to
 their value.  It is used as the optional LEXICAL argument to
-`eval', which see.")
+`eval' (q.v.).")
 
 (defun org-babel-expand-body:emacs-lisp (body params)
   "Expand BODY according to PARAMS, return the expanded body."

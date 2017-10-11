@@ -1317,8 +1317,8 @@ instrumented, just FUNCTION is printed.
 
 If not acting on a `defun', the result of evaluation is displayed in
 the echo area.  This display is controlled by the variables
-`eval-expression-print-length' and `eval-expression-print-level',
-which see."
+`eval-expression-print-length' and `eval-expression-print-level'
+(q.v.)."
   (interactive "P")
   (cond (edebug-it
 	 (require 'edebug)
@@ -1344,7 +1344,7 @@ which see."
   2 - `function' if function args, `variable' if variable documentation.")
 
 (defun elisp-eldoc-documentation-function ()
-  "`eldoc-documentation-function' (which see) for Emacs Lisp."
+  "`eldoc-documentation-function' (q.v.) for Emacs Lisp."
   (let ((current-symbol (elisp--current-symbol))
 	(current-fnsym  (elisp--fnsym-in-current-sexp)))
     (cond ((null current-fnsym)

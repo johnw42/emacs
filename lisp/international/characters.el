@@ -1482,7 +1482,7 @@ METHOD must be one of these symbols:
                 terminals, display as 1-character space.
   `empty-box':  display an empty box.
   `acronym':    display an acronym of the character in a box.  The
-                acronym is taken from `char-acronym-table', which see.
+                acronym is taken from `char-acronym-table' (q.v.).
   `hex-code':   display the hexadecimal character code in a box.
 
 Do not set its value directly from Lisp; the value takes effect

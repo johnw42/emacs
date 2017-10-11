@@ -484,7 +484,7 @@ which lists the file name and which functions are in it, etc."
 (defun generate-file-autoloads (file)
   "Insert at point a loaddefs autoload section for FILE.
 Autoloads are generated for defuns and defmacros in FILE
-marked by `generate-autoload-cookie' (which see).
+marked by `generate-autoload-cookie' (q.v.).
 If FILE is being visited in a buffer, the contents of the buffer
 are used.
 Return non-nil in the case where no autoloads were added at point."
@@ -665,7 +665,7 @@ Don't try to split prefixes that are already longer than that.")
 (defun autoload-generate-file-autoloads (file &optional outbuf outfile)
   "Insert an autoload section for FILE in the appropriate buffer.
 Autoloads are generated for defuns and defmacros in FILE
-marked by `generate-autoload-cookie' (which see).
+marked by `generate-autoload-cookie' (q.v.).
 If FILE is being visited in a buffer, the contents of the buffer are used.
 OUTBUF is the buffer in which the autoload statements should be inserted.
 If OUTBUF is nil, it will be determined by `autoload-generated-file'.

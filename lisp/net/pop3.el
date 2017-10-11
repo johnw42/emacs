@@ -125,7 +125,7 @@ the whole thing can fall apart and leave you with a corrupt mailbox."
   "How to backup the UIDL file `pop3-uidl-file' when updating.
 If it is a list of numbers, the first one binds `kept-old-versions' and
 the other binds `kept-new-versions' to keep number of oldest and newest
-versions.  Otherwise, the value binds `version-control' (which see).
+versions.  Otherwise, the value binds `version-control' (q.v.).
 
 Note: Backup will take place whenever you check new mails on a server.
 So, you may lose the backup files having been saved before a trouble

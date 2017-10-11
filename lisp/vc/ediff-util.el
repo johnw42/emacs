@@ -1295,8 +1295,8 @@ This is especially useful when comparing buffers side-by-side."
 ;;;###autoload
 (defun ediff-toggle-multiframe ()
   "Switch from multiframe display to single-frame display and back.
-To change the default, set the variable `ediff-window-setup-function',
-which see."
+To change the default, set the variable `ediff-window-setup-function'
+(q.v.)."
   (interactive)
   (let (window-setup-func)
     (or (ediff-window-display-p)
@@ -1341,7 +1341,7 @@ which see."
 (defun ediff-toggle-use-toolbar ()
   "Enable or disable Ediff toolbar.
 Works only in versions of Emacs that support toolbars.
-To change the default, set the variable `ediff-use-toolbar-p', which see."
+To change the default, set the variable `ediff-use-toolbar-p' (q.v.)."
   (interactive)
   (if (featurep 'ediff-tbar)
       (progn

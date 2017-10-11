@@ -366,8 +366,8 @@ If NOSORT is non-nil, the list is not sorted--its order is unpredictable.
  NOSORT is useful if you plan to sort the result yourself.
 ID-FORMAT specifies the preferred format of attributes uid and gid, see
 `file-attributes' for further documentation.
-On MS-Windows, performance depends on `w32-get-true-file-attributes',
-which see.  */)
+On MS-Windows, performance depends on `w32-get-true-file-attributes'
+(q.v.).  */)
   (Lisp_Object directory, Lisp_Object full, Lisp_Object match, Lisp_Object nosort, Lisp_Object id_format)
 {
   Lisp_Object handler;
@@ -401,7 +401,7 @@ completion (in absolute form) and ignore it if PREDICATE returns nil.
 
 This function ignores some of the possible completions as determined
 by the variables `completion-regexp-list' and
-`completion-ignored-extensions', which see.  `completion-regexp-list'
+`completion-ignored-extensions' (q.v.).  `completion-regexp-list'
 is matched against file and directory names relative to DIRECTORY.  */)
   (Lisp_Object file, Lisp_Object directory, Lisp_Object predicate)
 {
@@ -429,7 +429,7 @@ DEFUN ("file-name-all-completions", Ffile_name_all_completions,
 These are all file names in directory DIRECTORY which begin with FILE.
 
 This function ignores some of the possible completions as determined
-by `completion-regexp-list', which see.  `completion-regexp-list'
+by `completion-regexp-list' (q.v.).  `completion-regexp-list'
 is matched against file and directory names relative to DIRECTORY.  */)
   (Lisp_Object file, Lisp_Object directory)
 {
@@ -897,8 +897,8 @@ Elements of the attribute list are:
 On most filesystems, the combination of the inode and the device
 number uniquely identifies the file.
 
-On MS-Windows, performance depends on `w32-get-true-file-attributes',
-which see.
+On MS-Windows, performance depends on `w32-get-true-file-attributes'
+(q.v.).
 
 On some FAT-based filesystems, only the date of last access is recorded,
 so last access time will always be midnight of that day.  */)

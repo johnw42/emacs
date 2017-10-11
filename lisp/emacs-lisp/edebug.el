@@ -431,7 +431,7 @@ Return the result of the last expression in BODY."
 
 (defun edebug--read (orig &optional stream)
   "Read one Lisp expression as text from STREAM, return as Lisp object.
-If STREAM is nil, use the value of `standard-input' (which see).
+If STREAM is nil, use the value of `standard-input' (q.v.).
 STREAM or the value of `standard-input' may be:
  a buffer (read from point and advance it)
  a marker (read from where it points and advance it)
@@ -522,7 +522,7 @@ the minibuffer."
   "Evaluate the top level form point is in, stepping through with Edebug.
 This is like `eval-defun' except that it steps the code for Edebug
 before evaluating it.  It displays the value in the echo area
-using `eval-expression' (which see).
+using `eval-expression' (q.v.).
 
 If you do this on a function definition such as a defun or defmacro,
 it defines the function and instruments its definition for Edebug,

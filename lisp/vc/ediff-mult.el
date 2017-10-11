@@ -59,7 +59,7 @@
 ;;         Typically these are directories where the files to be compared are
 ;;         found.
 ;;	   Also, keep in mind that the function ediff-prepare-meta-buffer
-;;	   (which see) prepends the session group buffer to the descriptor, so
+;;	   (q.v.) prepends the session group buffer to the descriptor, so
 ;;	   the descriptor becomes 7-long.
 ;;	   Ediff expects that your function (in 2 above) will arrange to
 ;;	   replace this prepended nil (via setcar) with the actual ediff

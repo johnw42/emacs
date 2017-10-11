@@ -1837,7 +1837,7 @@ Redefining advices affect the construction of an advised definition."
 (defun ad-read-advised-function (&optional prompt predicate default)
   "Read name of advised function with completion from the minibuffer.
 An optional PROMPT will be used to prompt for the function.  PREDICATE
-plays the same role as for `try-completion' (which see).  DEFAULT will
+plays the same role as for `try-completion' (q.v.).  DEFAULT will
 be returned on empty input (defaults to the first advised function or
 function at point for which PREDICATE returns non-nil)."
   (if (null ad-advised-functions)
@@ -2842,7 +2842,7 @@ advised definition from scratch."
 If COMPILE is non-nil and not a negative number then it returns t.
 If COMPILE is a negative number then it returns nil.
 If COMPILE is nil then the result depends on the value of
-`ad-default-compilation-action' (which see)."
+`ad-default-compilation-action' (q.v.)."
   (cond
    ;; Don't compile until the real function definition is known (bug#12965).
    ((not (ad-real-orig-definition function)) nil)
@@ -2943,7 +2943,7 @@ The optional COMPILE argument determines whether the resulting function
 or a compilable cached definition will be compiled.  If it is negative
 no compilation will be performed, if it is positive or otherwise non-nil
 the resulting function will be compiled, if it is nil the behavior depends
-on the value of `ad-default-compilation-action' (which see).
+on the value of `ad-default-compilation-action' (q.v.).
 Activation of an advised function that has an advice info but no actual
 pieces of advice is equivalent to a call to `ad-unadvise'.  Activation of
 an advised function that has actual pieces of advice but none of them are

@@ -333,8 +333,8 @@ variables.  Setting this through Custom does that automatically."
 
 (defcustom jka-compr-load-suffixes (purecopy '(".gz"))
   "List of compression related suffixes to try when loading files.
-Enabling Auto Compression mode appends this list to `load-file-rep-suffixes',
-which see.  Disabling Auto Compression mode removes all suffixes
+Enabling Auto Compression mode appends this list to `load-file-rep-suffixes'
+(q.v).  Disabling Auto Compression mode removes all suffixes
 from `load-file-rep-suffixes' that enabling added.
 
 If you set this outside Custom while Auto Compression mode is

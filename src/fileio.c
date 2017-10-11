@@ -3415,7 +3415,7 @@ This function does code conversion according to the value of
 variable `last-coding-system-used' to the coding system actually used.
 
 In addition, this function decodes the inserted text from known formats
-by calling `format-decode', which see.  */)
+by calling `format-decode' (q.v.).  */)
   (Lisp_Object filename, Lisp_Object visit, Lisp_Object beg, Lisp_Object end, Lisp_Object replace)
 {
   struct stat st;
@@ -5903,10 +5903,10 @@ syms_of_fileio (void)
 
   DEFVAR_LISP ("file-name-coding-system", Vfile_name_coding_system,
 	       doc: /* Coding system for encoding file names.
-If it is nil, `default-file-name-coding-system' (which see) is used.
+If it is nil, `default-file-name-coding-system' (q.v.) is used.
 
 On MS-Windows, the value of this variable is largely ignored if
-`w32-unicode-filenames' (which see) is non-nil.  Emacs on Windows
+`w32-unicode-filenames' (q.v.) is non-nil.  Emacs on Windows
 behaves as if file names were encoded in `utf-8'.  */);
   Vfile_name_coding_system = Qnil;
 
@@ -5921,7 +5921,7 @@ instead use `file-name-coding-system' to get a constant encoding
 of file names regardless of the current language environment.
 
 On MS-Windows, the value of this variable is largely ignored if
-`w32-unicode-filenames' (which see) is non-nil.  Emacs on Windows
+`w32-unicode-filenames' (q.v.) is non-nil.  Emacs on Windows
 behaves as if file names were encoded in `utf-8'.  */);
   Vdefault_file_name_coding_system = Qnil;
 

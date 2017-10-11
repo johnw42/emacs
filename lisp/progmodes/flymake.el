@@ -398,7 +398,7 @@ properties are:
 
 * `bitmap', an image displayed in the fringe according to
   `flymake-fringe-indicator-position'.  The value actually
-  follows the syntax of `flymake-error-bitmap' (which see).  It
+  follows the syntax of `flymake-error-bitmap' (q.v.).  It
   is overridden by any `before-string' overlay property.
 
 * `severity', a non-negative integer specifying the diagnostic's

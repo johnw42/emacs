@@ -3041,7 +3041,7 @@ its possible values is:
   Anything else -- ask for each sub-directory.
 
 TRASH non-nil means to trash the file instead of deleting, provided
-`delete-by-moving-to-trash' (which see) is non-nil."
+`delete-by-moving-to-trash' (q.v.) is non-nil."
        ;; This test is equivalent to
        ;; (and (file-directory-p fn) (not (file-symlink-p fn)))
        ;; but more efficient

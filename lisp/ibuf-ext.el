@@ -178,7 +178,7 @@ Returns (OLD-FORMAT-DETECTED . UPDATED-SAVED-FILTERS-LIST)."
 
 Each element should look like (\"NAME\" . FILTER-LIST), where
 FILTER-LIST has the same structure as the variable
-`ibuffer-filtering-qualifiers', which see. The filters defined
+`ibuffer-filtering-qualifiers' (q.v.). The filters defined
 here are joined with an implicit logical `and' and associated
 with NAME. The combined specification can be used by name in
 other filter specifications via the `saved' qualifier (again, see

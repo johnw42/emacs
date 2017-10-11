@@ -567,7 +567,7 @@ If `safe' is specified, on encoding, characters not supported by a
 coding are replaced with `?'.
 
 If `latin-extra' is specified, the code-detection routine assumes that a
-code specified in `latin-extra-code-table' (which see) is valid.
+code specified in `latin-extra-code-table' (q.v.) is valid.
 
 If `composition' is specified, an escape sequence to specify
 composition sequence is correctly decoded on decoding, and is produced
@@ -757,7 +757,7 @@ is unsuitable for the top-level media of type \"text\".
 
 VALUE must be a list of symbols that control the ISO-2022 converter.
 Each must be a member of the list `coding-system-iso-2022-flags'
-\(which see).  This attribute is meaningful only when `:coding-type'
+\(q.v.).  This attribute is meaningful only when `:coding-type'
 is `iso-2022'.
 
 `:designation'
@@ -1382,7 +1382,7 @@ Otherwise, determine it from the file contents as usual for visiting a file."
 
 (defun set-file-name-coding-system (coding-system)
   "Set coding system for decoding and encoding file names to CODING-SYSTEM.
-It actually just set the variable `file-name-coding-system' (which see)
+It actually just set the variable `file-name-coding-system' (q.v.)
 to CODING-SYSTEM."
   (interactive "zCoding system for file names (default nil): ")
   (check-coding-system coding-system)
@@ -1596,14 +1596,14 @@ in the segment.  It can be a list of character sets.
 On decoding CTEXT, all encoding names listed here are recognized.
 
 On encoding CTEXT, encoding names in the variable
-`ctext-non-standard-encodings' (which see) and in the information
+`ctext-non-standard-encodings' (q.v.) and in the information
 listed for the current language environment under the key
 `ctext-non-standard-encodings' are used.")
 
 (defvar ctext-non-standard-encodings nil
   "List of non-standard encoding names used in extended segments of CTEXT.
 Each element must be one of the names listed in the variable
-`ctext-non-standard-encodings-alist' (which see).")
+`ctext-non-standard-encodings-alist' (q.v.).")
 
 (defvar ctext-non-standard-encodings-regexp
   (purecopy
@@ -2042,7 +2042,7 @@ use \"coding: 'raw-text\" instead." :warning)
 See `find-auto-coding' for how the coding system is found.
 Return nil if an invalid coding system is found.
 
-The variable `set-auto-coding-function' (which see) is set to this
+The variable `set-auto-coding-function' (q.v.) is set to this
 function by default."
   (let ((found (find-auto-coding filename size)))
     (if (and found (coding-system-p (car found)))
@@ -2135,9 +2135,9 @@ There are three of such tables, `file-coding-system-alist',
 `process-coding-system-alist', and `network-coding-system-alist'.
 
 TARGET-TYPE specifies which of them to modify.
-If it is `file', it affects `file-coding-system-alist' (which see).
-If it is `process', it affects `process-coding-system-alist' (which see).
-If it is `network', it affects `network-coding-system-alist' (which see).
+If it is `file', it affects `file-coding-system-alist' (q.v.).
+If it is `process', it affects `process-coding-system-alist' (q.v.).
+If it is `network', it affects `network-coding-system-alist' (q.v.).
 
 REGEXP is a regular expression matching a target of I/O operation.
 The target is a file name if TARGET-TYPE is `file', a program name if
@@ -2369,7 +2369,7 @@ If the first element of ARGS is a char-table whose purpose is
 function does not bind SYMBOL.)
 
 Any other ARGS should be suitable as arguments of the function
-`make-translation-table' (which see).
+`make-translation-table' (q.v.).
 
 This function sets properties `translation-table' and
 `translation-table-id' of SYMBOL to the created table itself and the

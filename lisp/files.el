@@ -634,7 +634,7 @@ using \\[read-only-mode]."
   "History list of file names entered in the minibuffer.
 
 Maximum length of the history list is determined by the value
-of `history-length', which see.")
+of `history-length' (q.v.).")
 
 (defvar save-silently nil
   "If non-nil, avoid messages when saving files.
@@ -1586,7 +1586,7 @@ automatically choosing a major mode, use \\[find-file-literally]."
 (defun find-file-other-window (filename &optional wildcards)
   "Edit file FILENAME, in another window.
 
-Like \\[find-file] (which see), but creates a new window or reuses
+Like \\[find-file] (q.v.), but creates a new window or reuses
 an existing one.  See the function `display-buffer'.
 
 Interactively, the default if you just type RET is the current directory,
@@ -1610,7 +1610,7 @@ expand wildcards (if any) and visit multiple files."
 (defun find-file-other-frame (filename &optional wildcards)
   "Edit file FILENAME, in another frame.
 
-Like \\[find-file] (which see), but creates a new frame or reuses
+Like \\[find-file] (q.v.), but creates a new frame or reuses
 an existing one.  See the function `display-buffer'.
 
 Interactively, the default if you just type RET is the current directory,

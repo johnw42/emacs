@@ -44,7 +44,7 @@
 ;; to throw.  It assumes that you have set up the keymap, window, and
 ;; everything else: all it does is read commands and execute them -
 ;; providing error messages should one occur (if there is no loop
-;; function - which see).  The required argument is a tag which should
+;; function (q.v.)).  The required argument is a tag which should
 ;; expect a value of nil if the user decides to punt. The second
 ;; argument is the prompt to be used: if nil, use "->", if 'noprompt,
 ;; don't use a prompt, if a string, use that string as prompt, and if

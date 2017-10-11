@@ -398,7 +398,7 @@ ACCESS-TYPE if non-nil should specify the kind of access that will trigger
 (defmacro define-obsolete-variable-alias (obsolete-name current-name
 						 &optional when docstring)
   "Make OBSOLETE-NAME a variable alias for CURRENT-NAME and mark it obsolete.
-This uses `defvaralias' and `make-obsolete-variable' (which see).
+This uses `defvaralias' and `make-obsolete-variable' (q.v.).
 See the Info node `(elisp)Variable Aliases' for more details.
 
 If CURRENT-NAME is a defcustom or a defvar (more generally, any variable

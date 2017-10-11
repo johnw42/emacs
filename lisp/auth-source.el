@@ -642,7 +642,7 @@ V3 (note the match rules above).
 The return value is a list with at most :max tokens.  Each token
 is a plist with keys :backend :host :port :user, plus any other
 keys provided by the backend (notably :secret).  But note the
-exception for :max 0, which see above.
+exception for :max 0 (q.v. above).
 
 The token can hold a :save-function key.  If you call that, the
 user will be prompted to save the data to the backend.  You can't

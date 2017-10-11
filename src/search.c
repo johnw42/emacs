@@ -2194,7 +2194,7 @@ With COUNT positive, the match found is the COUNTth to last one (or
   the origin of the search; correspondingly with COUNT negative.
 
 Search case-sensitivity is determined by the value of the variable
-`case-fold-search', which see.
+`case-fold-search' (q.v.).
 
 See also the functions `match-beginning', `match-end' and `replace-match'.  */)
   (Lisp_Object string, Lisp_Object bound, Lisp_Object noerror, Lisp_Object count)
@@ -2219,7 +2219,7 @@ With COUNT positive, the match found is the COUNTth one (or first,
   origin of the search; correspondingly with COUNT negative.
 
 Search case-sensitivity is determined by the value of the variable
-`case-fold-search', which see.
+`case-fold-search' (q.v.).
 
 See also the functions `match-beginning', `match-end' and `replace-match'.  */)
   (Lisp_Object string, Lisp_Object bound, Lisp_Object noerror, Lisp_Object count)
@@ -2262,7 +2262,7 @@ With COUNT positive/negative, the match found is the COUNTth/-COUNTth
   search.
 
 Search case-sensitivity is determined by the value of the variable
-`case-fold-search', which see.
+`case-fold-search' (q.v.).
 
 See also the functions `match-beginning', `match-end', `match-string',
 and `replace-match'.  */)
@@ -2290,7 +2290,7 @@ With COUNT positive, the match found is the COUNTth to last one (or
   the origin of the search; correspondingly with COUNT negative.
 
 Search case-sensitivity is determined by the value of the variable
-`case-fold-search', which see.
+`case-fold-search' (q.v.).
 
 See also the functions `match-beginning', `match-end', `match-string',
 and `replace-match'.  */)
@@ -2318,7 +2318,7 @@ With COUNT positive, the match found is the COUNTth one (or first,
   origin of the search; correspondingly with COUNT negative.
 
 Search case-sensitivity is determined by the value of the variable
-`case-fold-search', which see.
+`case-fold-search' (q.v.).
 
 See also the functions `match-beginning', `match-end', `match-string',
 and `replace-match'.  */)

@@ -304,11 +304,11 @@ by running `custom-print-uninstall'."
   "Output the printed representation of OBJECT, any Lisp object.
 Quoting characters are printed when needed to make output that `read'
 can handle, whenever this is possible.
-Output stream is STREAM, or value of `standard-output' (which see).
+Output stream is STREAM, or value of `standard-output' (q.v.).
 
 This is the custom-print replacement for the standard `prin1'.  It
 uses the appropriate printer depending on the values of `print-level'
-and `print-circle' (which see)."
+and `print-circle' (q.v.)."
   (cust-print-top-level object stream 'cust-print-original-prin1))
 
 
@@ -316,7 +316,7 @@ and `print-circle' (which see)."
   "Output the printed representation of OBJECT, any Lisp object.
 No quoting characters are used; no delimiters are printed around
 the contents of strings.
-Output stream is STREAM, or value of `standard-output' (which see).
+Output stream is STREAM, or value of `standard-output' (q.v.).
 
 This is the custom-print replacement for the standard `princ'."
   (cust-print-top-level object stream 'cust-print-original-princ))
@@ -348,7 +348,7 @@ This is the custom-print replacement for the standard `prin1-to-string'."
   "Output the printed representation of OBJECT, with newlines around it.
 Quoting characters are printed when needed to make output that `read'
 can handle, whenever this is possible.
-Output stream is STREAM, or value of `standard-output' (which see).
+Output stream is STREAM, or value of `standard-output' (q.v.).
 
 This is the custom-print replacement for the standard `print'."
   (cust-print-original-princ "\n" stream)

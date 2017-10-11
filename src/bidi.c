@@ -2237,7 +2237,7 @@ bidi_resolve_weak (struct bidi_it *bidi_it)
 		{
 		  /* This includes the Unicode 8.0 correction for N0,
 		     due to how we set prev.type in bidi_resolve_explicit,
-		     which see.  */
+		     (q.v.).  */
 		  type = bidi_it->prev.type;
 		}
 	    }

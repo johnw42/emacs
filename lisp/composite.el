@@ -392,7 +392,7 @@ The argument is a parameterized event of the form
 	(compose-last-chars N COMPONENTS),
 where N is the number of characters before point to compose,
 COMPONENTS, if non-nil, is the same as the argument to `compose-region'
-\(which see).  If it is nil, `compose-chars-after' is called,
+\(q.v.).  If it is nil, `compose-chars-after' is called,
 and that function finds a proper rule to compose the target characters.
 This function is intended to be used from input methods.
 The global keymap binds special event `compose-last-chars' to this
@@ -798,7 +798,7 @@ into the string.  In that case, compose characters in the string.
 
 The value is a gstring containing information for shaping the characters.
 
-This function is the default value of `auto-composition-function' (which see)."
+This function is the default value of `auto-composition-function' (q.v.)."
   (let ((gstring (composition-get-gstring from to font-object string)))
     (if (lgstring-shaped-p gstring)
 	gstring

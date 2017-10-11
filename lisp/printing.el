@@ -253,7 +253,7 @@ Please send all bug fixes and enhancements to
 ;;
 ;;    Therefore, the printer `\\host\printer' is not a text printer, but a
 ;;    PostScript printer.  So, please, don't include this printer in
-;;    `pr-txt-printer-alist' (which see).
+;;    `pr-txt-printer-alist' (q.v.).
 ;;
 ;; 5. You can use gsprint instead of ghostscript to print monochrome PostScript
 ;;    files in Windows.  The gsprint utility documentation says that it is more

@@ -23,7 +23,7 @@
 ;;; Commentary:
 
 ;; This library implements linting for Org syntax.  The sole public
-;; function is `org-lint', which see.
+;; function is `org-lint' (q.v.).
 
 ;; Internally, the library defines a new structure:
 ;; `org-lint-checker', with the following slots:

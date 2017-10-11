@@ -37,7 +37,7 @@
 ;; `xref-backend-identifier-at-point',
 ;; `xref-backend-identifier-completion-table',
 ;; `xref-backend-definitions', `xref-backend-references',
-;; `xref-backend-apropos', which see.
+;; `xref-backend-apropos' (q.v.).
 ;;
 ;; A major mode would normally use `add-hook' to add the backend
 ;; constructor to `xref-backend-functions'.

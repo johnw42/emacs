@@ -1010,7 +1010,7 @@ replacing the current Image mode buffer."
 ;;;###autoload
 (defun image-bookmark-jump (bmk)
   ;; This implements the `handler' function interface for record type
-  ;; returned by `bookmark-make-record-function', which see.
+  ;; returned by `bookmark-make-record-function' (q.v.).
   (prog1 (bookmark-default-handler bmk)
     (when (not (string= image-type (bookmark-prop-get bmk 'image-type)))
       (image-toggle-display))))

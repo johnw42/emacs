@@ -148,7 +148,7 @@ This function always replaces environment variables in the new
 value when called interactively.
 
 SUBSTITUTE-ENV-VARS, if non-nil, means to substitute environment
-variables in VALUE with `substitute-env-vars', which see.
+variables in VALUE with `substitute-env-vars' (q.v.).
 This is normally used only for interactive calls.
 
 The return value is the new value of VARIABLE, or nil if

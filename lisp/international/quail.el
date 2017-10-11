@@ -242,7 +242,7 @@ Conversion keymap is a keymap used while conversion region is active
 The remaining arguments are LIBRARIES to be loaded before using the package.
 
 This activates input method defined by PACKAGE-NAME by running
-`quail-activate', which see."
+`quail-activate' (q.v.)."
   (let ((package (quail-package package-name)))
     (if (null package)
 	;; Perhaps we have not yet loaded necessary libraries.
@@ -2365,7 +2365,7 @@ Optional 6th arg IGNORES is a list of translations to ignore."
 (defun quail-insert-decode-map (decode-map)
   "Insert pairs of key sequences vs the corresponding translations.
 These are stored in DECODE-MAP using the concise format.  DECODE-MAP
-should be made by `quail-build-decode-map' (which see)."
+should be made by `quail-build-decode-map' (q.v.)."
   (setq decode-map
 	(sort (cdr decode-map)
 	      (function (lambda (x y)
@@ -2878,7 +2878,7 @@ If TRANSITION-n-m has the form RULES, the transition terminates
 when keys in RULES are input.
 
 The generated map can be set for the current Quail package by the
-function `quail-install-map' (which see)."
+function `quail-install-map' (q.v.)."
   (let ((state-alist (mapcar (lambda (x) (list (car x))) table))
 	tail elt)
     ;; STATE-ALIST is an alist of states vs the corresponding sub Quail

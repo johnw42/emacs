@@ -57,7 +57,7 @@
 ;;;###autoload
 (defun url-queue-retrieve (url callback &optional cbargs silent inhibit-cookies)
   "Retrieve URL asynchronously and call CALLBACK with CBARGS when finished.
-This is like `url-retrieve' (which see for details of the arguments),
+This is like `url-retrieve' (q.v. for details of the arguments),
 but with limits on the degree of parallelism.  The variable
 `url-queue-parallel-processes' sets the number of concurrent processes.
 The variable `url-queue-timeout' sets a timeout."

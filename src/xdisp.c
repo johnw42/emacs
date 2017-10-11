@@ -4731,14 +4731,14 @@ handle_display_prop (struct it *it)
    replace the text covered by `display' property with something else,
    such as an image or a display string.  If SPEC includes any kind or
    `(space ...) specification, the value is 2; this is used by
-   compute_display_string_pos, which see.
+   compute_display_string_pos (q.v.).
 
    See handle_single_display_spec for documentation of arguments.
    FRAME_WINDOW_P is true if the window being redisplayed is on a
    GUI frame; this argument is used only if IT is NULL, see below.
 
    IT can be NULL, if this is called by the bidi reordering code
-   through compute_display_string_pos, which see.  In that case, this
+   through compute_display_string_pos (q.v.).  In that case, this
    function only examines SPEC, but does not otherwise "handle" it, in
    the sense that it doesn't set up members of IT from the display
    spec.  */
@@ -16458,7 +16458,7 @@ set_horizontal_scroll_bar (struct window *w)
     . The text that changed since last redisplay could include the
       previous window-start position.  In that case, we try to salvage
       what we can from the current glyph matrix by calling
-      try_scrolling, which see.
+      try_scrolling (q.v.).
 
     . Some Emacs command could force us to use a specific window-start
       position by setting the window's force_start flag, or gently
@@ -32491,7 +32491,7 @@ which no explicit name has been set (see `modify-frame-parameters').  */);
   DEFVAR_LISP ("icon-title-format", Vicon_title_format,
     doc: /* Template for displaying the title bar of an iconified frame.
 \(Assuming the window manager supports this feature.)
-This variable has the same structure as `mode-line-format' (which see),
+This variable has the same structure as `mode-line-format' (q.v.),
 and is used only on frames for which no explicit name has been set
 \(see `modify-frame-parameters').  */);
   Vicon_title_format

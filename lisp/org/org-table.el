@@ -4804,7 +4804,7 @@ Valid parameters are:
 
   When non-nil, only convert rows, not the table itself.  This is
   equivalent to setting to the empty string both :tstart
-  and :tend, which see.
+  and :tend (q.v.).
 
 :skip
 

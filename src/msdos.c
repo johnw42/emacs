@@ -1824,7 +1824,7 @@ internal_terminal_init (void)
 
       reset_mouse_highlight (&the_only_display_info.mouse_highlight);
 
-      if (have_mouse)	/* detected in dos_ttraw, which see */
+      if (have_mouse)	/* detected in dos_ttraw (q.v.) */
 	{
 	  have_mouse = 1;	/* enable mouse */
 	  mouse_visible = 0;

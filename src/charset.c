@@ -1341,7 +1341,7 @@ by CHARSET's `:unify-map' property.
 
 Optional second arg UNIFY-MAP is a file name string or a vector.  It has
 the same meaning as the `:unify-map' attribute in the function
-`define-charset' (which see).
+`define-charset' (q.v.).
 
 Optional third argument DEUNIFY, if non-nil, means to de-unify CHARSET.  */)
   (Lisp_Object charset, Lisp_Object unify_map, Lisp_Object deunify)

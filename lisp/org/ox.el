@@ -4427,7 +4427,7 @@ of a reference.  See also `org-export-format-reference'."
 (defun org-export-format-reference (reference)
   "Format REFERENCE into a string.
 REFERENCE is a number representing a reference, as returned by
-`org-export-new-reference', which see."
+`org-export-new-reference' (q.v.)."
   (format "org%07x" reference))
 
 (defun org-export-get-reference (datum info)
@@ -6693,8 +6693,8 @@ back to standard interface."
 PROMPT is the displayed prompt, as a string.  ALLOWED-KEYS is
 a list of characters available at a given step in the process.
 ENTRIES is a list of menu entries.  OPTIONS, FIRST-KEY and
-EXPERTP are the same as defined in `org-export--dispatch-ui',
-which see.
+EXPERTP are the same as defined in `org-export--dispatch-ui'
+(q.v.).
 
 Toggle export options when required.  Otherwise, return value is
 a list with action as CAR and a list of interactive export

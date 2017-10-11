@@ -37,7 +37,7 @@ where CHAR is a Hanja character and STRING is the meaning of that
 character.  This variable is initialized by `hanja-init-load'.")
 
 (defun hanja-init-load ()
-  "Initialize `hanja-table' (which see)."
+  "Initialize `hanja-table' (q.v.)."
   (when (not hanja-table)
     (message "Hanja table loading...")
     (setq hanja-table (make-char-table nil))

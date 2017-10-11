@@ -496,7 +496,7 @@ print_string (Lisp_Object string, Lisp_Object printcharfun)
 
 DEFUN ("write-char", Fwrite_char, Swrite_char, 1, 2, 0,
        doc: /* Output character CHARACTER to stream PRINTCHARFUN.
-PRINTCHARFUN defaults to the value of `standard-output' (which see).  */)
+PRINTCHARFUN defaults to the value of `standard-output' (q.v.).  */)
   (Lisp_Object character, Lisp_Object printcharfun)
 {
   if (NILP (printcharfun))
@@ -602,7 +602,7 @@ DEFUN ("prin1", Fprin1, Sprin1, 1, 2, 0,
        doc: /* Output the printed representation of OBJECT, any Lisp object.
 Quoting characters are printed when needed to make output that `read'
 can handle, whenever this is possible.  For complex objects, the behavior
-is controlled by `print-level' and `print-length', which see.
+is controlled by `print-level' and `print-length' (q.v.).
 
 OBJECT is any of the Lisp data types: a number, a string, a symbol,
 a list, a buffer, a window, a frame, etc.
@@ -619,7 +619,7 @@ of these:
    - a symbol, in which case that symbol's function definition is called; or
    - t, in which case the output is displayed in the echo area.
 
-If PRINTCHARFUN is omitted, the value of `standard-output' (which see)
+If PRINTCHARFUN is omitted, the value of `standard-output' (q.v.)
 is used instead.  */)
   (Lisp_Object object, Lisp_Object printcharfun)
 {
@@ -639,7 +639,7 @@ DEFUN ("prin1-to-string", Fprin1_to_string, Sprin1_to_string, 1, 2, 0,
 OBJECT can be any Lisp object.  This function outputs quoting characters
 when necessary to make output that `read' can handle, whenever possible,
 unless the optional second argument NOESCAPE is non-nil.  For complex objects,
-the behavior is controlled by `print-level' and `print-length', which see.
+the behavior is controlled by `print-level' and `print-length' (q.v.).
 
 OBJECT is any of the Lisp data types: a number, a string, a symbol,
 a list, a buffer, a window, a frame, etc.
@@ -699,7 +699,7 @@ of these:
    - a symbol, in which case that symbol's function definition is called; or
    - t, in which case the output is displayed in the echo area.
 
-If PRINTCHARFUN is omitted, the value of `standard-output' (which see)
+If PRINTCHARFUN is omitted, the value of `standard-output' (q.v.)
 is used instead.  */)
   (Lisp_Object object, Lisp_Object printcharfun)
 {
@@ -715,7 +715,7 @@ DEFUN ("print", Fprint, Sprint, 1, 2, 0,
        doc: /* Output the printed representation of OBJECT, with newlines around it.
 Quoting characters are printed when needed to make output that `read'
 can handle, whenever this is possible.  For complex objects, the behavior
-is controlled by `print-level' and `print-length', which see.
+is controlled by `print-level' and `print-length' (q.v.).
 
 OBJECT is any of the Lisp data types: a number, a string, a symbol,
 a list, a buffer, a window, a frame, etc.
@@ -732,7 +732,7 @@ of these:
    - a symbol, in which case that symbol's function definition is called; or
    - t, in which case the output is displayed in the echo area.
 
-If PRINTCHARFUN is omitted, the value of `standard-output' (which see)
+If PRINTCHARFUN is omitted, the value of `standard-output' (q.v.)
 is used instead.  */)
   (Lisp_Object object, Lisp_Object printcharfun)
 {

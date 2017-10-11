@@ -1509,7 +1509,7 @@ This is the usual value of `rmail-insert-mime-forwarded-message-function'."
       'rmail-insert-mime-forwarded-message)
 
 (defun rmail-insert-mime-resent-message (forward-buffer)
-  "Function to set in `rmail-insert-mime-resent-message-function' (which see)."
+  "Function to set in `rmail-insert-mime-resent-message-function' (q.v.)."
   (insert-buffer-substring
    (with-current-buffer forward-buffer rmail-view-buffer))
   (goto-char (point-min))
@@ -1521,7 +1521,7 @@ This is the usual value of `rmail-insert-mime-forwarded-message-function'."
       'rmail-insert-mime-resent-message)
 
 (defun rmail-search-mime-message (msg regexp)
-  "Function to set in `rmail-search-mime-message-function' (which see)."
+  "Function to set in `rmail-search-mime-message-function' (q.v.)."
   (save-restriction
     (narrow-to-region (rmail-msgbeg msg) (rmail-msgend msg))
     (let* ((rmail-mime-searching t)	; mark inside search

@@ -119,7 +119,7 @@ The value is either a symbol, like `my-app', or a list
      "Return the property list of FRAMESET.\n
 This list is useful to store both frameset-specific and user-defined
 serializable data.  The simplest way to access and modify it is
-through `frameset-prop' (which see).\n\n(fn FRAMESET)")
+through `frameset-prop' (q.v.).\n\n(fn FRAMESET)")
 (put 'frameset-states 'function-documentation
      "Return the list of frame states of FRAMESET.\n
 A frame state is a pair (FRAME-PARAMETERS . WINDOW-STATE), where
@@ -473,7 +473,7 @@ DO NOT MODIFY.  See `frameset-filter-alist' for a full description.")
   "Alist of frame parameters and filtering functions.
 
 This alist is the default value of the FILTERS argument of
-`frameset-save' and `frameset-restore' (which see).
+`frameset-save' and `frameset-restore' (q.v.).
 
 Initially, `frameset-filter-alist' is set to, and shares the value of,
 `frameset-persistent-filter-alist'.  You can override any item in
@@ -655,7 +655,7 @@ see `frameset-filter-alist'."
 (defun frameset-filter-params (parameters filter-alist saving)
   "Filter parameter alist PARAMETERS and return a filtered alist.
 FILTER-ALIST is an alist of parameter filters, in the format of
-`frameset-filter-alist' (which see).
+`frameset-filter-alist' (q.v.).
 SAVING is non-nil while filtering parameters to save a frameset,
 nil while the filtering is done to restore it."
   (let ((filtered nil))

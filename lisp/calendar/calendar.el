@@ -732,7 +732,7 @@ calendar package is already loaded).  Rather, use either
     "List of pseudo-patterns describing the ISO style of dates.
 The defaults are: MONTH[-/]DAY; YEAR[-/]MONTH[-/]DAY; MONTHNAME DAY;
 YEAR MONTHNAME DAY; DAYNAME.  Normally you should not customize this,
-but `diary-date-forms' (which see)."
+but `diary-date-forms' (q.v.)."
     :version "23.3"                     ; bug#7377
     :type '(repeat (choice (cons :tag "Backup"
                                :value (backup . nil)
@@ -754,7 +754,7 @@ but `diary-date-forms' (which see)."
   "List of pseudo-patterns describing the American style of dates.
 The defaults are: MONTH/DAY; MONTH/DAY/YEAR; MONTHNAME DAY;
 MONTHNAME DAY, YEAR; DAYNAME.  Normally you should not customize this,
-but `diary-date-forms' (which see)."
+but `diary-date-forms' (q.v.)."
   :type '(repeat (choice (cons :tag "Backup"
                                :value (backup . nil)
                                (const backup)
@@ -775,7 +775,7 @@ but `diary-date-forms' (which see)."
   "List of pseudo-patterns describing the European style of dates.
 The defaults are: DAY/MONTH; DAY/MONTH/YEAR; DAY MONTHNAME;
 DAY MONTHNAME YEAR; DAYNAME.  Normally you should not customize this, but
-`diary-date-forms' (which see)."
+`diary-date-forms' (q.v.)."
   :type '(repeat (choice (cons :tag "Backup"
                                :value (backup . nil)
                                (const backup)
@@ -850,7 +850,7 @@ For examples of three common styles, see `diary-american-date-forms',
                                                (string-to-number day)))
   "Pseudo-pattern governing the way a date appears in the ISO style.
 Normally you should not customize this, but `calendar-date-display-form'
-\(which see)."
+\(q.v.)."
   :type 'sexp
   :risky t
   :version "23.1"
@@ -860,7 +860,7 @@ Normally you should not customize this, but `calendar-date-display-form'
   '((if dayname (concat dayname ", ")) day " " monthname " " year)
   "Pseudo-pattern governing the way a date appears in the European style.
 Normally you should not customize this, but `calendar-date-display-form'
-\(which see)."
+\(q.v.)."
   :type 'sexp
   :risky t
   :group 'calendar)
@@ -869,7 +869,7 @@ Normally you should not customize this, but `calendar-date-display-form'
   '((if dayname (concat dayname ", ")) monthname " " day ", " year)
   "Pseudo-pattern governing the way a date appears in the American style.
 Normally you should not customize this, but `calendar-date-display-form'
-\(which see)."
+\(q.v.)."
   :type 'sexp
   :risky t
   :group 'calendar)
@@ -881,7 +881,7 @@ Normally you should not customize this, but `calendar-date-display-form'
          calendar-european-date-display-form)
         (t calendar-american-date-display-form))
   "Pseudo-pattern governing the way a calendar date appears.
-Used by the function `calendar-date-string' (which see), a pseudo-pattern
+Used by the function `calendar-date-string' (q.v.), a pseudo-pattern
 is a list of expressions that can involve the keywords `month', `day',
 and `year' (all numbers in string form), and `monthname' and `dayname'
 \(both alphabetic strings).  For example, a typical American form would be

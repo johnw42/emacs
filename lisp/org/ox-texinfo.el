@@ -181,7 +181,7 @@ the string contains the special string
 
 \"AUTO\" will be replaced with the language defined in the
 buffer, through #+LANGUAGE keyword, or globally, with
-`org-export-default-language', which see.
+`org-export-default-language' (q.v.).
 
 
 The sectioning structure
@@ -1671,8 +1671,8 @@ command to convert it."
   "Compile a texinfo file.
 
 FILE is the name of the file being compiled.  Processing is done
-through the command specified in `org-texinfo-info-process',
-which see.  Output is redirected to \"*Org INFO Texinfo Output*\"
+through the command specified in `org-texinfo-info-process'
+(q.v.).  Output is redirected to \"*Org INFO Texinfo Output*\"
 buffer.
 
 Return INFO file name or an error if it couldn't be produced."

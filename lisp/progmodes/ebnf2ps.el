@@ -450,9 +450,9 @@ Please send all bug fixes and enhancements to
 ;;
 ;;		%%	prints a % character.
 ;;
-;;		%H	prints the `ebnf-eps-header' (which see) value.
+;;		%H	prints the `ebnf-eps-header' (q.v.) value.
 ;;
-;;		%F	prints the `ebnf-eps-footer' (which see) value.
+;;		%F	prints the `ebnf-eps-footer' (q.v.) value.
 ;;
 ;;		Any  other format is ignored, that is, if, for example, it's
 ;;		used %s then %s characters are stripped out from the header.
@@ -567,7 +567,7 @@ Please send all bug fixes and enhancements to
 ;; The buffer *Ebnf2ps Log* is where the ebnf2ps log messages are inserted.
 ;; These messages are intended to help debugging ebnf2ps.
 ;;
-;; The log messages are enabled by `ebnf-log' option (which see).  The default
+;; The log messages are enabled by `ebnf-log' option (q.v.).  The default
 ;; value is nil, that is, no log messages are generated.
 ;;
 ;;
@@ -1964,7 +1964,7 @@ the following formats:
 
    %H	prints the `ebnf-eps-header' value.
 
-   %F	prints the `ebnf-eps-footer' (which see) value.
+   %F	prints the `ebnf-eps-footer' (q.v.) value.
 
 Any other format is ignored, that is, if, for example, it's used %s then %s
 characters are stripped out from the header.  If header action comment is an
@@ -2022,7 +2022,7 @@ the following formats:
 
    %%	prints a % character.
 
-   %H	prints the `ebnf-eps-header' (which see) value.
+   %H	prints the `ebnf-eps-header' (q.v.) value.
 
    %F	prints the `ebnf-eps-footer' value.
 
@@ -2224,7 +2224,7 @@ These messages are intended to help debugging ebnf2ps."
 
 If DIRECTORY is nil, it's used `default-directory'.
 
-The files in DIRECTORY that matches `ebnf-file-suffix-regexp' (which see) are
+The files in DIRECTORY that matches `ebnf-file-suffix-regexp' (q.v.) are
 processed.
 
 See also `ebnf-print-buffer'."
@@ -2282,7 +2282,7 @@ Like `ebnf-print-buffer', but prints just the current region."
 
 If DIRECTORY is nil, it's used `default-directory'.
 
-The files in DIRECTORY that matches `ebnf-file-suffix-regexp' (which see) are
+The files in DIRECTORY that matches `ebnf-file-suffix-regexp' (q.v.) are
 processed.
 
 See also `ebnf-spool-buffer'."
@@ -2335,7 +2335,7 @@ Use the command `ebnf-despool' to send the spooled images to the printer."
 
 If DIRECTORY is nil, it's used `default-directory'.
 
-The files in DIRECTORY that matches `ebnf-file-suffix-regexp' (which see) are
+The files in DIRECTORY that matches `ebnf-file-suffix-regexp' (q.v.) are
 processed.
 
 See also `ebnf-eps-buffer'."
@@ -2420,7 +2420,7 @@ WARNING: This function does *NOT* ask any confirmation to override existing
 
 If DIRECTORY is nil, use `default-directory'.
 
-Only the files in DIRECTORY that match `ebnf-file-suffix-regexp' (which see)
+Only the files in DIRECTORY that match `ebnf-file-suffix-regexp' (q.v.)
 are processed.
 
 See also `ebnf-syntax-buffer'."
@@ -4960,7 +4960,7 @@ end
 
 If DIRECTORY is nil, use `default-directory'.
 
-Only files in DIRECTORY that match `ebnf-file-suffix-regexp' (which see) are
+Only files in DIRECTORY that match `ebnf-file-suffix-regexp' (q.v.) are
 processed."
   (let ((files (directory-files (or directory default-directory)
 				t ebnf-file-suffix-regexp)))

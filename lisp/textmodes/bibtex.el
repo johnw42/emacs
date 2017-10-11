@@ -92,7 +92,7 @@ If this is a function, call it to generate the initial field text."
   '(("annote" "Personal annotation (ignored)"))
   "List of optional fields the user wants to have always present.
 Entries should be of the same form as the OPTIONAL list
-in `bibtex-BibTeX-entry-alist' (which see)."
+in `bibtex-BibTeX-entry-alist' (q.v.)."
   :group 'bibtex
   :type '(repeat (group (string :tag "Field")
                         (string :tag "Comment")

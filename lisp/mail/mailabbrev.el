@@ -583,7 +583,7 @@ of a mail alias.  The value is set up, buffer-local, when first needed.")
 This only expands an abbrev (if one is present) if called with
 point at the end of a line, or on whitespace before the end of a line.
 
-In terms of line motion, this behaves like `next-line', which see."
+In terms of line motion, this behaves like `next-line' (q.v.)."
   (interactive "p")
   (if (looking-at "[ \t]*\n") (expand-abbrev))
   (setq this-command 'next-line)
@@ -594,7 +594,7 @@ In terms of line motion, this behaves like `next-line', which see."
 This only expands an abbrev (if one is present) if called with
 point at the end of a line, or on whitespace before the end of a line.
 
-In other respects, this behaves like `end-of-buffer', which see."
+In other respects, this behaves like `end-of-buffer' (q.v.)."
   (interactive "P")
   (if (looking-at "[ \t]*\n") (expand-abbrev))
   (setq this-command 'end-of-buffer)

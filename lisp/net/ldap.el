@@ -465,7 +465,7 @@ the associated values.
 If WITHDN is non-nil, each entry in the result will be prepended with
 its distinguished name WITHDN.
 Additional search parameters can be specified through
-`ldap-host-parameters-alist', which see."
+`ldap-host-parameters-alist' (q.v.)."
   (interactive "sFilter:")
   (or host
       (setq host ldap-default-host)

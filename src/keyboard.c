@@ -11717,7 +11717,7 @@ whenever `deferred-action-list' is non-nil.  */);
   DEFVAR_LISP ("delayed-warnings-list", Vdelayed_warnings_list,
                doc: /* List of warnings to be displayed after this command.
 Each element must be a list (TYPE MESSAGE [LEVEL [BUFFER-NAME]]),
-as per the args of `display-warning' (which see).
+as per the args of `display-warning' (q.v.).
 If this variable is non-nil, `delayed-warnings-hook' will be run
 immediately after running `post-command-hook'.  */);
   Vdelayed_warnings_list = Qnil;
@@ -11781,7 +11781,7 @@ just after executing the command.  */);
 
 The default value is nil, in which case point adjustments are
 suppressed only after special commands that leave
-`disable-point-adjustment' (which see) at a non-nil value.  */);
+`disable-point-adjustment' (q.v.) at a non-nil value.  */);
   Vglobal_disable_point_adjustment = Qnil;
 
   DEFVAR_LISP ("minibuffer-message-timeout", Vminibuffer_message_timeout,

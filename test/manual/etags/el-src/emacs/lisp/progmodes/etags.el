@@ -222,11 +222,11 @@ until one returns non-nil.  The function should make buffer-local bindings
 of the format-parsing tags function variables if successful.")
 
 (defvar file-of-tag-function nil
-  "Function to do the work of `file-of-tag' (which see).
+  "Function to do the work of `file-of-tag' (q.v.).
 One optional argument, a boolean specifying to return complete path (nil) or
 relative path (non-nil).")
 (defvar tags-table-files-function nil
-  "Function to do the work of function `tags-table-files' (which see).")
+  "Function to do the work of function `tags-table-files' (q.v.).")
 (defvar tags-completion-table-function nil
   "Function to build the `tags-completion-table'.")
 (defvar snarf-tag-function nil
@@ -249,11 +249,11 @@ One argument, the tag info returned by `snarf-tag-function'.")
 (defvar find-tag-next-line-after-failure-p nil
   "Flag passed to `find-tag-in-order' for finding a tag.")
 (defvar list-tags-function nil
-  "Function to do the work of `list-tags' (which see).")
+  "Function to do the work of `list-tags' (q.v.).")
 (defvar tags-apropos-function nil
-  "Function to do the work of `tags-apropos' (which see).")
+  "Function to do the work of `tags-apropos' (q.v.).")
 (defvar tags-included-tables-function nil
-  "Function to do the work of function `tags-included-tables' (which see).")
+  "Function to do the work of function `tags-included-tables' (q.v.).")
 (defvar verify-tags-table-function nil
   "Function to return t if current buffer contains valid tags file.")
 
@@ -1782,7 +1782,7 @@ Bind `case-fold-search' during the evaluation, depending on the value of
 (defun tags-loop-continue (&optional first-time)
   "Continue last \\[tags-search] or \\[tags-query-replace] command.
 Used noninteractively with non-nil argument to begin such a command (the
-argument is passed to `next-file', which see).
+argument is passed to `next-file'  (q.v.)).
 
 Two variables control the processing we do on each file: the value of
 `tags-loop-scan' is a form to be executed on each file to see if it is
@@ -2050,7 +2050,7 @@ see the doc of that variable if you want to add names to the list."
   "Perform tags completion on the text around point.
 Completes to the set of names listed in the current tags table.
 The string to complete is chosen in the same way as the default
-for \\[find-tag] (which see)."
+for \\[find-tag] (q.v.)."
   (interactive)
   (or tags-table-list
       tags-file-name

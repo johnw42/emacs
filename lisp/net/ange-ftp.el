@@ -1422,7 +1422,7 @@ only return the directory part of FILE."
 (defvar ange-ftp-ftp-name-arg "")
 (defvar ange-ftp-ftp-name-res nil)
 
-;; Parse NAME according to `ange-ftp-name-format' (which see).
+;; Parse NAME according to `ange-ftp-name-format' (q.v.).
 ;; Returns a list (HOST USER NAME), or nil if NAME does not match the format.
 (defun ange-ftp-ftp-name (name)
   (if (string-equal name ange-ftp-ftp-name-arg)

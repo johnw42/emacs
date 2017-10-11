@@ -2168,7 +2168,7 @@ really fast to reduce that impact."
 (defconst js--jsx-after-tag-re "[),]"
   "Find where JSX ends.
 This complements the assumption of where JSX appears from
-`js--jsx-before-tag-re', which see.")
+`js--jsx-before-tag-re' (q.v.).")
 
 (defun js--jsx-indented-element-p ()
   "Determine if/how the current line should be indented as JSX.

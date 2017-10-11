@@ -4176,7 +4176,7 @@ DEFUN ("font-put", Ffont_put, Sfont_put, 3, 3, 0,
 FONT is a font-spec, a font-entity, or a font-object.
 
 If FONT is a font-spec, KEY can be any symbol.  But if KEY is the one
-accepted by the function `font-spec' (which see), VAL must be what
+accepted by the function `font-spec' (q.v.), VAL must be what
 allowed in `font-spec'.
 
 If FONT is a font-entity or a font-object, KEY must not be the one

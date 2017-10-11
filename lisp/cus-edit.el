@@ -907,7 +907,7 @@ prompt for the value.  The %s escape in PROMPT-VAL is replaced with
 the name of the variable.
 
 If the variable has a `variable-interactive' property, that is used as if
-it were the arg to `interactive' (which see) to interactively read the value.
+it were the arg to `interactive' (q.v.) to interactively read the value.
 
 If the variable has a `custom-type' property, it must be a widget and the
 `:prompt-value' property of that widget will be used for reading the value.
@@ -950,7 +950,7 @@ it as the third element in the list."
   "Set VARIABLE to VALUE, and return VALUE.  VALUE is a Lisp object.
 
 If VARIABLE has a `variable-interactive' property, that is used as if
-it were the arg to `interactive' (which see) to interactively read the value.
+it were the arg to `interactive' (q.v.) to interactively read the value.
 
 If VARIABLE has a `custom-type' property, it must be a widget and the
 `:prompt-value' property of that widget will be used for reading the value.
@@ -975,7 +975,7 @@ If VARIABLE has a `custom-set' property, that is used for setting
 VARIABLE, otherwise `set-default' is used.
 
 If VARIABLE has a `variable-interactive' property, that is used as if
-it were the arg to `interactive' (which see) to interactively read the value.
+it were the arg to `interactive' (q.v.) to interactively read the value.
 
 If VARIABLE has a `custom-type' property, it must be a widget and the
 `:prompt-value' property of that widget will be used for reading the value.
@@ -1005,7 +1005,7 @@ If VARIABLE has a `custom-set' property, that is used for setting
 VARIABLE, otherwise `set-default' is used.
 
 If VARIABLE has a `variable-interactive' property, that is used as if
-it were the arg to `interactive' (which see) to interactively read the value.
+it were the arg to `interactive' (q.v.) to interactively read the value.
 
 If VARIABLE has a `custom-type' property, it must be a widget and the
 `:prompt-value' property of that widget will be used for reading the value.

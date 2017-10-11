@@ -244,7 +244,7 @@ mnemonics of the following coding systems:
 ;; MSDOS frames have window-system, but want the Fn identification.
 (defun mode-line-frame-control ()
   "Compute mode line construct for frame identification.
-Value is used for `mode-line-frame-identification', which see."
+Value is used for `mode-line-frame-identification' (q.v.)."
   (if (or (null window-system)
 	  (eq window-system 'pc))
       "-%F  "
@@ -801,7 +801,7 @@ see."
 
 Depending on the bidirectional context, this may move either forward
 or backward in the buffer.  This is in contrast with \\[forward-word]
-and \\[backward-word], which see.
+and \\[backward-word] (q.v.).
 
 Value is normally t.
 If an edge of the buffer or a field boundary is reached, point is left there
@@ -817,7 +817,7 @@ if `inhibit-field-text-motion' is non-nil."
 
 Depending on the bidirectional context, this may move either backward
 or forward in the buffer.  This is in contrast with \\[backward-word]
-and \\[forward-word], which see.
+and \\[forward-word] (q.v.).
 
 Value is normally t.
 If an edge of the buffer or a field boundary is reached, point is left there

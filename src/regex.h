@@ -181,7 +181,7 @@ typedef unsigned long reg_syntax_t;
    string; if it's nil, we are matching text in the current buffer; if
    it's t, we are matching text in a C string.
 
-   This is defined as a macro in thread.h, which see.  */
+   This is defined as a macro in thread.h (q.v.).  */
 /* extern Lisp_Object re_match_object; */
 #endif
 

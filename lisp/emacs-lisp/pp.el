@@ -81,7 +81,7 @@ to make output that `read' can handle, whenever this is possible."
   "Output the pretty-printed representation of OBJECT, any Lisp object.
 Quoting characters are printed as needed to make output that `read'
 can handle, whenever this is possible.
-Output stream is STREAM, or value of `standard-output' (which see)."
+Output stream is STREAM, or value of `standard-output' (q.v.)."
   (princ (pp-to-string object) (or stream standard-output)))
 
 (defun pp-display-expression (expression out-buffer-name)

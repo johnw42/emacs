@@ -100,7 +100,7 @@ If nil, no groups are permanently visible."
 (defcustom gnus-safe-html-newsgroups "\\`nnrss[+:]"
   "Groups in which links in html articles are considered all safe.
 The value may be a regexp matching those groups, a list of group names,
-or nil.  This overrides `mm-w3m-safe-url-regexp' (which see).  This is
+or nil.  This overrides `mm-w3m-safe-url-regexp' (q.v.).  This is
 effective only when emacs-w3m renders html articles, i.e., in the case
 `mm-text-html-renderer' is set to `w3m'."
   :version "23.2"

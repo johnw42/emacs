@@ -2034,7 +2034,7 @@ When operating on multiple or marked files, you specify a directory
 and new symbolic links are made in that directory
 with the same names that the files currently have.  The default
 suggested for the target directory depends on the value of
-`dired-dwim-target', which see.
+`dired-dwim-target' (q.v.).
 
 For relative symlinks, use \\[dired-do-relsymlink]."
   (interactive "P")
@@ -2049,7 +2049,7 @@ When operating on multiple or marked files, you specify a directory
 and new hard links are made in that directory
 with the same names that the files currently have.  The default
 suggested for the target directory depends on the value of
-`dired-dwim-target', which see."
+`dired-dwim-target' (q.v.)."
   (interactive "P")
   (dired-do-create-files 'hardlink #'dired-hardlink
 			   "Hardlink" arg dired-keep-marker-hardlink))
@@ -2068,7 +2068,7 @@ When renaming just the current file, you specify the new name.
 When renaming multiple or marked files, you specify a directory.
 This command also renames any buffers that are visiting the files.
 The default suggested for the target directory depends on the value
-of `dired-dwim-target', which see."
+of `dired-dwim-target' (q.v.)."
   (interactive "P")
   (dired-do-create-files 'move #'dired-rename-file
 			 "Move" arg dired-keep-marker-rename "Rename"))

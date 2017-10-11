@@ -1914,7 +1914,7 @@ See the command `doc-view-mode' for more information on this mode."
 ;;;###autoload
 (defun doc-view-bookmark-jump (bmk)
   ;; This implements the `handler' function interface for record type
-  ;; returned by `doc-view-bookmark-make-record', which see.
+  ;; returned by `doc-view-bookmark-make-record' (q.v.).
   (let ((page (bookmark-prop-get bmk 'page))
 	(show-fn-sym (make-symbol "doc-view-bookmark-after-jump-hook")))
     (fset show-fn-sym

@@ -112,7 +112,7 @@ fails, it returns nil."
   "Return internal representation for Library of Babel function call.
 Consider DATUM, when provided, or element at point.  Return nil
 when not on an appropriate location.  Otherwise return a list
-compatible with `org-babel-get-src-block-info', which see."
+compatible with `org-babel-get-src-block-info' (q.v.)."
   (let* ((context (or datum (org-element-context)))
 	 (type (org-element-type context)))
     (when (memq type '(babel-call inline-babel-call))

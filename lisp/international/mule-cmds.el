@@ -436,7 +436,7 @@ higher priorities.  Among them, a coding system included in the
 `coding-system' key of the current language environment has higher
 priority.  See also the documentation of `language-info-alist'.
 
-If the variable `sort-coding-systems-predicate' (which see) is
+If the variable `sort-coding-systems-predicate' (q.v.) is
 non-nil, it is used to sort CODINGS instead."
   (if sort-coding-systems-predicate
       (sort codings sort-coding-systems-predicate)
@@ -634,7 +634,7 @@ only if the user was explicitly asked and specified a coding system.")
 (defvar select-safe-coding-system-accept-default-p nil
   "If non-nil, a function to control the behavior of coding system selection.
 The meaning is the same as the argument ACCEPT-DEFAULT-P of the
-function `select-safe-coding-system' (which see).  This variable
+function `select-safe-coding-system' (q.v.).  This variable
 overrides that argument.")
 
 (defun sanitize-coding-system-list (codings)
@@ -1343,7 +1343,7 @@ This is the input method activated automatically by the command
   "History list of input methods read from the minibuffer.
 
 Maximum length of the history list is determined by the value
-of `history-length', which see.")
+of `history-length' (q.v.).")
 (make-variable-buffer-local 'input-method-history)
 (put 'input-method-history 'permanent-local t)
 
@@ -1712,7 +1712,7 @@ But, if this flag is non-nil, the input method is never back on.")
 
 When you set some hook function here, that effect usually should not
 be inherited to another language environment.  So, you had better set
-another function in `exit-language-environment-hook' (which see) to
+another function in `exit-language-environment-hook' (q.v.) to
 cancel the effect."
   :type 'hook
   :group 'mule)
@@ -1723,7 +1723,7 @@ When this hook is run, the variable `current-language-environment'
 is still bound to the language environment being exited.
 
 This hook is mainly used for canceling the effect of
-`set-language-environment-hook' (which see)."
+`set-language-environment-hook' (q.v.)."
   :type 'hook
   :group 'mule)
 
@@ -1849,7 +1849,7 @@ The default status is as follows:
 		 (coding-system-equal coding coding-system)))
 	(standard-display-european-internal)
       ;; The following 2 lines undo the 8-bit display that we set up
-      ;; in standard-display-european-internal, which see.  This is in
+      ;; in standard-display-european-internal (q.v.).  This is in
       ;; case the user has used standard-display-european earlier in
       ;; this session.
       (when standard-display-table

@@ -2881,7 +2881,7 @@ Not in rfc1459.txt"
 
 (defun rcirc-authenticate ()
   "Send authentication to process associated with current buffer.
-Passwords are stored in `rcirc-authinfo' (which see)."
+Passwords are stored in `rcirc-authinfo' (q.v.)."
   (interactive)
   (with-rcirc-server-buffer
     (dolist (i rcirc-authinfo)

@@ -145,7 +145,7 @@ subsequent arguments following.  If INTERPRETER is a function, it will
 be called with all of those arguments.  Note that interpreter
 functions should throw `eshell-replace-command' with the alternate
 command form, or they should return a value compatible with the
-possible return values of `eshell-external-command', which see."
+possible return values of `eshell-external-command' (q.v.)."
   :type '(repeat (cons (choice regexp (function :tag "Predicate"))
 		       (choice string (function :tag "Interpreter"))))
   :group 'eshell-ext)

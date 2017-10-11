@@ -885,7 +885,7 @@ includes every entry from all the other menus.  By default, the
 existing menus, including the menu in the Top node, are not
 updated according to the buffer contents, so all the menus should
 be updated first using `texinfo-make-menu' or
-`texinfo-all-menus-update', which see.  Alternatively, invoke
+`texinfo-all-menus-update' (q.v.).  Alternatively, invoke
 this function with a prefix argument, see below.
 
 Non-nil, non-numeric argument (C-u prefix, if interactive) means

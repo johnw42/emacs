@@ -493,7 +493,7 @@ compares three files simultaneously).
 Copies the current difference region (or the region specified as the prefix
 to this command) from buffer A to buffer B@.
 Ediff saves the old contents of buffer B's region; it can
-be restored via the command @kbd{rb}, which see.
+be restored via the command @kbd{rb} (q.v.).
 
 @emph{In merge sessions:}
 Copies the current difference region (or the region specified as the prefix
@@ -655,19 +655,19 @@ This command is enabled in merge sessions only.
 @kindex ra
 Restores the old contents of the current difference region in buffer A,
 which was previously saved when the user invoked one of these commands:
-@kbd{b}, @kbd{ba}, @kbd{ca}, which see.  This command is enabled in
+@kbd{b}, @kbd{ba}, @kbd{ca} (q.v.).  This command is enabled in
 comparison sessions only.
 @item rb
 @kindex rb
 Restores the old contents of the current difference region in buffer B,
 which was previously saved when the user invoked one of these commands:
-@kbd{a}, @kbd{ab}, @kbd{cb}, which see.  This command is enabled in
+@kbd{a}, @kbd{ab}, @kbd{cb} (q.v.).  This command is enabled in
 comparison sessions only.
 @item rc
 @kindex rc
 Restores the old contents of the current difference region in buffer C,
 which was previously saved when the user invoked one of these commands:
-@kbd{ac}, @kbd{bc}, which see.  This command is enabled in 3-file
+@kbd{ac}, @kbd{bc} (q.v.).  This command is enabled in 3-file
 comparison sessions only.
 
 @item ##
@@ -783,7 +783,7 @@ Modified files and the results of merges are never deleted.
 @kindex %
 Toggles narrowing in Ediff buffers.  Ediff buffers may be narrowed if you
 are comparing only parts of these buffers via the commands
-@code{ediff-windows-*} and @code{ediff-regions-*}, which see.
+@code{ediff-windows-*} and @code{ediff-regions-*} (q.v.).
 
 @item C-l
 @kindex C-l
@@ -871,7 +871,7 @@ in the window configuration.  However, redisplaying (@kbd{C-l}) or jumping
 to another difference does not affect window C's size.
 
 The split between the merge window and the variant windows is controlled by
-the variable @code{ediff-merge-window-share}, which see.
+the variable @code{ediff-merge-window-share} (q.v.).
 
 @item +
 @kindex +

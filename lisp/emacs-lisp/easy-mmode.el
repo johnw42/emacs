@@ -350,8 +350,8 @@ TURN-ON is a function that will be called with no args in every buffer
   and that should try to turn MODE on if applicable for that buffer.
 KEYS is a list of CL-style keyword arguments.  As the minor mode
   defined by this function is always global, any :global keyword is
-  ignored.  Other keywords have the same meaning as in `define-minor-mode',
-  which see.  In particular, :group specifies the custom group.
+  ignored.  Other keywords have the same meaning as in `define-minor-mode'
+  (q.v.).  In particular, :group specifies the custom group.
   The most useful keywords are those that are passed on to the
   `defcustom'.  It normally makes no sense to pass the :lighter
   or :keymap keywords to `define-globalized-minor-mode', since these

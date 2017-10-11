@@ -104,7 +104,7 @@ ARGS should take the same form as an argument list for a `defun'.
 DOCSTRING is an optional documentation string.
  If present, it should describe how to call the function.
  But documentation strings are usually not useful in nameless functions.
-INTERACTIVE should be a call to the function `interactive', which see.
+INTERACTIVE should be a call to the function `interactive' (q.v.).
 It may also be omitted.
 BODY should be a list of Lisp expressions.
 
@@ -2117,7 +2117,7 @@ function to handle the output.  BUFFER may also be nil, meaning that
 this process is not associated with any buffer.
 
 PROGRAM is the program file name.  It is searched for in `exec-path'
-\(which see).  If nil, just associate a pty with the buffer.  Remaining
+\(q.v.).  If nil, just associate a pty with the buffer.  Remaining
 arguments PROGRAM-ARGS are strings to give program as arguments.
 
 If you want to separate standard output from standard error, use
@@ -2638,14 +2638,14 @@ to `accept-change-group' or `cancel-change-group'."
     (list (cons (current-buffer) buffer-undo-list))))
 
 (defun activate-change-group (handle)
-  "Activate a change group made with `prepare-change-group' (which see)."
+  "Activate a change group made with `prepare-change-group' (q.v.)."
   (dolist (elt handle)
     (with-current-buffer (car elt)
       (if (eq buffer-undo-list t)
 	  (setq buffer-undo-list nil)))))
 
 (defun accept-change-group (handle)
-  "Finish a change group made with `prepare-change-group' (which see).
+  "Finish a change group made with `prepare-change-group' (q.v.).
 This finishes the change group by accepting its changes as final."
   (dolist (elt handle)
     (with-current-buffer (car elt)
@@ -2653,7 +2653,7 @@ This finishes the change group by accepting its changes as final."
 	  (setq buffer-undo-list t)))))
 
 (defun cancel-change-group (handle)
-  "Finish a change group made with `prepare-change-group' (which see).
+  "Finish a change group made with `prepare-change-group' (q.v.).
 This finishes the change group by reverting all of its changes."
   (dolist (elt handle)
     (with-current-buffer (car elt)
@@ -3040,7 +3040,7 @@ This function is like `insert', except it honors the variables
   (insert-for-yank-1 string))
 
 (defun insert-for-yank-1 (string)
-  "Helper for `insert-for-yank', which see."
+  "Helper for `insert-for-yank' (q.v.)."
   (let* ((handler (and (stringp string)
 		       (get-text-property 0 'yank-handler string)))
 	 (param (or (nth 1 handler) string))
@@ -4195,7 +4195,7 @@ FILE should be the name of a library, with no directory name."
 
 (defun display-delayed-warnings ()
   "Display delayed warnings from `delayed-warnings-list'.
-Used from `delayed-warnings-hook' (which see)."
+Used from `delayed-warnings-hook' (q.v.)."
   (dolist (warning (nreverse delayed-warnings-list))
     (apply 'display-warning warning))
   (setq delayed-warnings-list nil))
@@ -4203,7 +4203,7 @@ Used from `delayed-warnings-hook' (which see)."
 (defun collapse-delayed-warnings ()
   "Remove duplicates from `delayed-warnings-list'.
 Collapse identical adjacent warnings into one (plus count).
-Used from `delayed-warnings-hook' (which see)."
+Used from `delayed-warnings-hook' (q.v.)."
   (let ((count 1)
         collapsed warning)
     (while delayed-warnings-list
@@ -4958,7 +4958,7 @@ Usually the separator is \".\", but it can be any other string.")
   "Specify association between non-numeric version and its priority.
 
 This association is used to handle version string like \"1.0pre2\",
-\"0.9alpha1\", etc.  It's used by `version-to-list' (which see) to convert the
+\"0.9alpha1\", etc.  It's used by `version-to-list' (q.v.) to convert the
 non-numeric part of a version string to an integer.  For example:
 
    String Version    Integer List Version
@@ -4996,8 +4996,8 @@ The version syntax is given by the following EBNF:
 
    NUMBER ::= (0|1|2|3|4|5|6|7|8|9)+.
 
-   SEPARATOR ::= `version-separator' (which see)
-	       | `version-regexp-alist' (which see).
+   SEPARATOR ::= `version-separator' (q.v.)
+	       | `version-regexp-alist' (q.v.).
 
 The NUMBER part is optional if SEPARATOR is a match for an element
 in `version-regexp-alist'.

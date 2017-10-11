@@ -1697,7 +1697,7 @@ its current beginning instead.
 
 Return the point at the beginning of the current source block.
 Specifically at the beginning of the #+BEGIN_SRC line.  Also set
-match-data relatively to `org-babel-src-block-regexp', which see.
+match-data relatively to `org-babel-src-block-regexp' (q.v.).
 If the point is not on a source block then return nil."
   (let ((element (or src-block (org-element-at-point))))
     (when (eq (org-element-type element) 'src-block)

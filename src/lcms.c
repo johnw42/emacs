@@ -318,8 +318,8 @@ jab_to_jch (const lcmsJab_t *jab, cmsJCh *jch, double FL, double c1, double c2)
 DEFUN ("lcms-xyz->jch", Flcms_xyz_to_jch, Slcms_xyz_to_jch, 1, 3, 0,
        doc: /* Convert CIE CAM02 JCh to CIE XYZ.
 COLOR is a list (X Y Z), with Y scaled about unity.
-Optional arguments WHITEPOINT and VIEW are the same as in `lcms-cam02-ucs',
-which see.  */)
+Optional arguments WHITEPOINT and VIEW are the same as in `lcms-cam02-ucs'
+(q.v.).  */)
   (Lisp_Object color, Lisp_Object whitepoint, Lisp_Object view)
 {
   cmsViewingConditions vc;
@@ -355,8 +355,8 @@ DEFUN ("lcms-jch->xyz", Flcms_jch_to_xyz, Slcms_jch_to_xyz, 1, 3, 0,
        doc: /* Convert CIE XYZ to CIE CAM02 JCh.
 COLOR is a list (J C h), where lightness of white is equal to 100, and hue
 is given in degrees.
-Optional arguments WHITEPOINT and VIEW are the same as in `lcms-cam02-ucs',
-which see.  */)
+Optional arguments WHITEPOINT and VIEW are the same as in `lcms-cam02-ucs'
+(q.v.).  */)
   (Lisp_Object color, Lisp_Object whitepoint, Lisp_Object view)
 {
   cmsViewingConditions vc;
@@ -392,9 +392,9 @@ which see.  */)
 
 DEFUN ("lcms-jch->jab", Flcms_jch_to_jab, Slcms_jch_to_jab, 1, 3, 0,
        doc: /* Convert CIE CAM02 JCh to CAM02-UCS J'a'b'.
-COLOR is a list (J C h) as described in `lcms-jch->xyz', which see.
-Optional arguments WHITEPOINT and VIEW are the same as in `lcms-cam02-ucs',
-which see.  */)
+COLOR is a list (J C h) as described in `lcms-jch->xyz' (q.v.).
+Optional arguments WHITEPOINT and VIEW are the same as in `lcms-cam02-ucs'
+(q.v.).  */)
   (Lisp_Object color, Lisp_Object whitepoint, Lisp_Object view)
 {
   cmsViewingConditions vc;
@@ -434,8 +434,8 @@ which see.  */)
 DEFUN ("lcms-jab->jch", Flcms_jab_to_jch, Slcms_jab_to_jch, 1, 3, 0,
        doc: /* Convert CAM02-UCS J'a'b' to CIE CAM02 JCh.
 COLOR is a list (J' a' b'), where white corresponds to lightness J equal to 100.
-Optional arguments WHITEPOINT and VIEW are the same as in `lcms-cam02-ucs',
-which see.  */)
+Optional arguments WHITEPOINT and VIEW are the same as in `lcms-cam02-ucs'
+(q.v.).  */)
   (Lisp_Object color, Lisp_Object whitepoint, Lisp_Object view)
 {
   cmsViewingConditions vc;

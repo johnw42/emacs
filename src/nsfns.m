@@ -2385,7 +2385,7 @@ x_get_focus_frame (struct frame *frame)
 
 
 DEFUN ("xw-color-defined-p", Fxw_color_defined_p, Sxw_color_defined_p, 1, 2, 0,
-       doc: /* Internal function called by `color-defined-p', which see.
+       doc: /* Internal function called by `color-defined-p' (q.v.).
 \(Note that the Nextstep version of this function ignores FRAME.)  */)
      (Lisp_Object color, Lisp_Object frame)
 {
@@ -2396,7 +2396,7 @@ DEFUN ("xw-color-defined-p", Fxw_color_defined_p, Sxw_color_defined_p, 1, 2, 0,
 
 
 DEFUN ("xw-color-values", Fxw_color_values, Sxw_color_values, 1, 2, 0,
-       doc: /* Internal function called by `color-values', which see.  */)
+       doc: /* Internal function called by `color-values' (q.v.).  */)
      (Lisp_Object color, Lisp_Object frame)
 {
   NSColor * col;
@@ -2421,7 +2421,7 @@ DEFUN ("xw-color-values", Fxw_color_values, Sxw_color_values, 1, 2, 0,
 
 
 DEFUN ("xw-display-color-p", Fxw_display_color_p, Sxw_display_color_p, 0, 1, 0,
-       doc: /* Internal function called by `display-color-p', which see.  */)
+       doc: /* Internal function called by `display-color-p' (q.v.).  */)
      (Lisp_Object terminal)
 {
   NSWindowDepth depth;

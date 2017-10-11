@@ -136,7 +136,7 @@ This is a list
 This function assumes that `standard-output' is the help buffer.
 It computes a message, and applies the optional argument FUNCTION to it.
 If FUNCTION is nil, it applies `message', thus displaying the message.
-In addition, this function sets up `help-return-method', which see, that
+In addition, this function sets up `help-return-method' (q.v.) that
 specifies what to do when the user exits the help buffer.
 
 Do not call this in the scope of `with-help-window'."

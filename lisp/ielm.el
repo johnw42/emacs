@@ -479,7 +479,7 @@ nonempty, then flushes the buffer."
 
 (define-derived-mode inferior-emacs-lisp-mode comint-mode "IELM"
   "Major mode for interactively evaluating Emacs Lisp expressions.
-Uses the interface provided by `comint-mode' (which see).
+Uses the interface provided by `comint-mode' (q.v.).
 
 * \\<ielm-map>\\[ielm-send-input] evaluates the sexp following the prompt.  There must be at most
   one top level sexp per prompt.

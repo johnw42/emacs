@@ -2146,7 +2146,7 @@ This function does not move point.  */)
 
 DEFUN ("read", Fread, Sread, 0, 1, 0,
        doc: /* Read one Lisp expression as text from STREAM, return as Lisp object.
-If STREAM is nil, use the value of `standard-input' (which see).
+If STREAM is nil, use the value of `standard-input' (q.v.).
 STREAM or the value of `standard-input' may be:
  a buffer (read from point and advance it)
  a marker (read from where it points and advance it)
