@@ -230,8 +230,8 @@
 (ert-deftest cl-lib-arglist-performance ()
   ;; An `&aux' should not cause lambda's arglist to be turned into an &rest
   ;; that's parsed by hand.
-  (should (equal () (help-function-arglist 'cl-lib--con-1)))
-  (should (pcase (help-function-arglist 'cl-lib--con-2)
+  (should (equal () (get-advertised-calling-convention 'cl-lib--con-1)))
+  (should (pcase (get-advertised-calling-convention 'cl-lib--con-2)
             (`(&optional ,_) t))))
 
 (ert-deftest cl-the ()

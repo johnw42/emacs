@@ -1404,54 +1404,10 @@ ARGLIST can also be t or a string of the form \"(FUN ARG1 ARG2 ...)\"."
   "Return a formal argument list for the function DEF.
 IF PRESERVE-NAMES is non-nil, return a formal arglist that uses
 the same names as used in the original source code, when possible."
-  ;; Handle symbols aliased to other symbols.
-  (if (and (symbolp def) (fboundp def)) (setq def (indirect-function def)))
-  ;; If definition is a macro, find the function inside it.
-  (if (eq (car-safe def) 'macro) (setq def (cdr def)))
-  (cond
-   ((and (byte-code-function-p def) (listp (aref def 0))) (aref def 0))
-   ((eq (car-safe def) 'lambda) (nth 1 def))
-   ((eq (car-safe def) 'closure) (nth 2 def))
-   ((or (and (byte-code-function-p def) (integerp (aref def 0)))
-        (subrp def))
-    (or (when preserve-names
-          (let* ((doc (condition-case nil (documentation def) (error nil)))
-                 (docargs (if doc (car (help-split-fundoc doc nil))))
-                 (arglist (if docargs
-                              (cdar (read-from-string (downcase docargs)))))
-                 (valid t))
-            ;; Check validity.
-            (dolist (arg arglist)
-              (unless (and (symbolp arg)
-                           (let ((name (symbol-name arg)))
-                             (if (eq (aref name 0) ?&)
-                                 (memq arg '(&rest &optional))
-                               (not (string-match "\\." name)))))
-                (setq valid nil)))
-            (when valid arglist)))
-        (let* ((args-desc (if (not (subrp def))
-                              (aref def 0)
-                            (let ((a (subr-arity def)))
-                              (logior (car a)
-                                      (if (numberp (cdr a))
-                                          (lsh (cdr a) 8)
-                                        (lsh 1 7))))))
-               (max (lsh args-desc -8))
-               (min (logand args-desc 127))
-               (rest (logand args-desc 128))
-               (arglist ()))
-          (dotimes (i min)
-            (push (intern (concat "arg" (number-to-string (1+ i)))) arglist))
-          (when (> max min)
-            (push '&optional arglist)
-            (dotimes (i (- max min))
-              (push (intern (concat "arg" (number-to-string (+ 1 i min))))
-                    arglist)))
-          (unless (zerop rest) (push '&rest arglist) (push 'rest arglist))
-          (nreverse arglist))))
-   ((and (autoloadp def) (not (eq (nth 4 def) 'keymap)))
-    "[Arg list not available until function definition is loaded.]")
-   (t t)))
+  (let ((sig (get-advertised-calling-convention def preserve-names)))
+    (if (eq sig 'autoload)
+        "[Arg list not available until function definition is loaded.]"
+      sig)))
 
 (defun help--make-usage (function arglist)
   (cons (if (symbolp function) function 'anonymous)

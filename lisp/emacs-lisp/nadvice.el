@@ -157,14 +157,17 @@ Each element has the form (WHERE BYTECODE STACK) where:
 
 (defun advice--make-1 (byte-code stack-depth function main props)
   "Build a function value that adds FUNCTION to MAIN."
-  (let ((adv-sig (gethash main advertised-signature-table))
+  (let ((adv-sig (get-advertised-calling-convention main))
         (advice
          (apply #'make-byte-code 128 byte-code
                 (vector #'apply function main props) stack-depth nil
                 (and (or (commandp function) (commandp main))
                      (list (advice--make-interactive-form
                             function main))))))
-    (when adv-sig (puthash advice adv-sig advertised-signature-table))
+    (when (listp adv-sig)
+      ;; Don’t use set-advertised-calling-convention here; it causes
+      ;; strange problems.
+      (puthash advice adv-sig advertised-signature-table))
     advice))
 
 (defun advice--make (where function main props)

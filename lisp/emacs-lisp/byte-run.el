@@ -325,13 +325,83 @@ The return value is undefined.
 
 (defvar advertised-signature-table (make-hash-table :test 'eq :weakness 'key))
 
+(defun get-advertised-calling-convention (function &optional preserve-names)
+  "Return a formal argument list for the function FUNCTION.
+If PRESERVE-NAMES is non-nil, return a formal arglist that uses
+the same names as used in the original source code, when possible.
+
+If the function definition is an autoload, return 'autoload.
+Otherwise, if the argument list is unavailable, return t."
+
+  (let* ((def
+          ;; Handle symbols aliased to other symbols.
+          (indirect-function function))
+         (sig (gethash def advertised-signature-table t)))
+    (if (listp sig)
+        sig
+      ;; Advice wrappers have "catch all" args, so fetch the actual underlying
+      ;; function to find the real arguments.
+      (while (advice--p def) (setq def (advice--cdr def)))
+      ;; If definition is a macro, find the function inside it.
+      (if (eq (car-safe def) 'macro) (setq def (cdr def)))
+      (cond
+       ((and (byte-code-function-p def) (listp (aref def 0))) (aref def 0))
+       ((eq (car-safe def) 'lambda) (nth 1 def))
+       ((eq (car-safe def) 'closure) (nth 2 def))
+       ((or (and (byte-code-function-p def) (integerp (aref def 0)))
+            (subrp def))
+        (or (when preserve-names
+              (let* ((doc (condition-case nil (documentation def) (error nil)))
+                     (docargs (if doc (car (help-split-fundoc doc nil))))
+                     (arglist (if docargs
+                                  (cdar (read-from-string (downcase docargs)))))
+                     (valid t))
+                ;; Check validity.
+                (dolist (arg arglist)
+                  (unless (and (symbolp arg)
+                               (let ((name (symbol-name arg)))
+                                 (if (eq (aref name 0) ?&)
+                                     (memq arg '(&rest &optional))
+                                   (not (string-match "\\." name)))))
+                    (setq valid nil)))
+                (when valid arglist)))
+            (let* ((args-desc (if (not (subrp def))
+                                  (aref def 0)
+                                (let ((a (subr-arity def)))
+                                  (logior (car a)
+                                          (if (numberp (cdr a))
+                                              (lsh (cdr a) 8)
+                                            (lsh 1 7))))))
+                   (max (lsh args-desc -8))
+                   (min (logand args-desc 127))
+                   (rest (logand args-desc 128))
+                   (arglist ()))
+              (dotimes (i min)
+                (push (intern (concat "arg" (number-to-string (1+ i)))) arglist))
+              (when (> max min)
+                (push '&optional arglist)
+                (dotimes (i (- max min))
+                  (push (intern (concat "arg" (number-to-string (+ 1 i min))))
+                        arglist)))
+              (unless (zerop rest) (push '&rest arglist) (push 'rest arglist))
+              (nreverse arglist))))
+       ((and (autoloadp def) (not (eq (nth 4 def) 'keymap)))
+        'autoload)
+       (t t)))))
+
 (defun set-advertised-calling-convention (function signature _when)
   "Set the advertised SIGNATURE of FUNCTION.
 This will allow the byte-compiler to warn the programmer when she uses
 an obsolete calling convention.  WHEN specifies since when the calling
-convention was modified."
-  (puthash (indirect-function function) signature
-           advertised-signature-table))
+convention was modified.
+
+For symmetry with with `get-advertised-calling-convention', if
+SIGNATURE is not a list, the advertised signature for FUNCTION is
+removed."
+  (if (listp signature)
+      (puthash (indirect-function function) signature
+               advertised-signature-table)
+    (remhash (indirect-function function) advertised-signature-table)))
 
 (defun make-obsolete (obsolete-name current-name &optional when)
   "Make the byte-compiler warn that function OBSOLETE-NAME is obsolete.

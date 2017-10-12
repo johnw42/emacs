@@ -420,10 +420,19 @@ Subtests signal errors if something goes wrong."
       (defun def () (m))))
   (should (equal (funcall 'def) 4)))
 
+(ert-deftest bytecomp-tests--test-no-warnings-with-advice ()
+  (defun f ())
+  (define-advice f (:around (oldfun &rest args) test)
+    (apply oldfun args))
+  (with-current-buffer (get-buffer-create "*Compile-Log*")
+    (let ((inhibit-read-only t)) (erase-buffer)))
+  (test-byte-comp-compile-and-load t '(defun f ()))
+  (with-current-buffer (get-buffer-create "*Compile-Log*")
+    (goto-char (point-min))
+    (should-not (search-forward "Warning" nil t))))
 
 ;; Local Variables:
 ;; no-byte-compile: t
 ;; End:
 
 (provide 'byte-opt-testsuite)
-
