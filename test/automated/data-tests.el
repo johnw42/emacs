@@ -257,23 +257,39 @@ comparing the subr with a much slower lisp implementation."
     (should (equal v2 v3))))
 
 (ert-deftest source-ref-ok ()
-  (let* ((data (list 1 2 3))
-         (filename "xyzzy")
-         (line 123)
-         (column 456)
-         (ref (make-source-ref data filename line column)))
-    (should (source-ref-p ref))
-    (should (eq data (source-ref-data ref)))
-    (should (eq filename (source-ref-filename ref)))
-    (should (= line (source-ref-line ref)))
-    (should (= column (source-ref-column ref)))))
+  (let* ((load-file-name "xyzzy.el")
+         (data
+         (with-temp-buffer
+           (insert "
+  (defun foo (x y)
+    (list x y))
+")
+           (goto-char (point-min))
+           (read (current-buffer)))))
+    ;; Sanity check the parse.
+    (should (equal data '(defun foo (x y)
+                           (list x y))))
+    (let ((source-ref (get-source-ref data)))
+      ;; Check the the top-level source ref is what we expect.
+      (should (equal (vector load-file-name 2 2) source-ref))
+      ;; Check that every sublist shares the same source ref object.
+      (dotimes (i (length data))
+        (should (eq source-ref (get-source-ref (nthcdr i data))))))
+    ;; Check that a non-list item has no source ref.
+    (should (null (get-source-ref (car data))))
+    (should (null (get-source-ref (cadr data))))
+    ;; Check that nested sublists have correct source refs.
+    (should (equal (vector load-file-name 2 13)
+                   (get-source-ref (nth 2 data))))
+    (should (equal (vector load-file-name 3 4)
+                   (get-source-ref (nth 3 data))))))
 
-(ert-deftest source-ref-fail ()
-  (condition-case err
-      (make-source-ref nil nil nil 0)
-    (error
-     (should (equal '(wrong-type-argument integerp nil) err))))
-  (condition-case err
-      (make-source-ref nil nil 0 nil)
-    (error
-     (should (equal '(wrong-type-argument integerp nil) err)))))
+;; (ert-deftest source-ref-fail ()
+;;   (condition-case err
+;;       (make-source-ref nil nil nil 0)
+;;     (error
+;;      (should (equal '(wrong-type-argument integerp nil) err))))
+;;   (condition-case err
+;;       (make-source-ref nil nil 0 nil)
+;;     (error
+;;      (should (equal '(wrong-type-argument integerp nil) err)))))

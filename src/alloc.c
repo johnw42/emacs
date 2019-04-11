@@ -6532,8 +6532,7 @@ mark_object (Lisp_Object arg)
 	  break;
 	CHECK_ALLOCATED_AND_LIVE (live_cons_p);
 	CONS_MARK (ptr);
-	/* If the cdr and srouce_ref are nil, avoid recursion for the
-           car. */
+	/* If the cdr is nil, avoid recursion for the car. */
 	if (EQ (ptr->u.cdr, Qnil))
 	  {
 	    obj = ptr->car;

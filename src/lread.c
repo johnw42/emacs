@@ -3623,6 +3623,7 @@ read_list (bool flag, Lisp_Object readcharfun, struct Buffer_Pos *buffer_pos_ptr
 {
   Lisp_Object val, tail;
   Lisp_Object elt, tem;
+  Lisp_Object source_ref = Qnil;
   struct Buffer_Pos saved_buffer_pos = *buffer_pos_ptr;
   /* 0 is the normal case.
      1 means this list is a doc reference; replace it with the number 0.
@@ -3631,6 +3632,14 @@ read_list (bool flag, Lisp_Object readcharfun, struct Buffer_Pos *buffer_pos_ptr
 
   /* Initialize this to 1 if we are reading a list.  */
   bool first_in_list = flag <= 0;
+
+  if (STRINGP (Vload_file_name))
+    {
+      source_ref = Fmake_source_ref
+        (Vload_file_name,
+         make_number (saved_buffer_pos.line),
+         make_number (saved_buffer_pos.column - 1));
+    }
 
   val = Qnil;
   tail = Qnil;
@@ -3760,15 +3769,9 @@ read_list (bool flag, Lisp_Object readcharfun, struct Buffer_Pos *buffer_pos_ptr
 	  invalid_syntax ("] in a list");
 	}
       tem = list1 (elt);
-      if (STRINGP (Vload_file_name))
+      if (source_ref != Qnil)
         {
-          Fputhash (
-              tem,
-              list3(
-                  Vload_file_name,
-                  make_number (saved_buffer_pos.line),
-                  make_number (saved_buffer_pos.column - 1)),
-              source_ref_table);
+          Fset_source_ref(tem, source_ref);
         }
       if (!NILP (tail))
 	LREAD_XSETCDR (tail, tem);
@@ -4501,6 +4504,34 @@ dir_warning (char const *use, Lisp_Object dirname)
       SAFE_FREE ();
     }
 }
+DEFUN ("make-source-ref", Fmake_source_ref, Smake_source_ref, 3, 3, 0,
+       doc: /* TODO */)
+  (Lisp_Object file_name, Lisp_Object line_number, Lisp_Object column_number)
+{
+  // TODO: Check data types.
+  Lisp_Object data[] = {file_name, line_number, column_number};
+  return Fvector(3, data);
+}
+
+DEFUN ("set-source-ref", Fset_source_ref, Sset_source_ref, 2, 2, 0,
+       doc: /* Set the source ref for a cons cell CELL. */)
+  (Lisp_Object cell, Lisp_Object source_ref)
+{
+  if (source_ref_table != Qnil) {
+    Fputhash (cell, source_ref, source_ref_table);
+  }
+}
+
+DEFUN ("get-source-ref", Fget_source_ref, Sget_source_ref, 1, 1, 0,
+       doc: /* Get the source ref for a cons cell CELL. */)
+  (Lisp_Object cell)
+{
+  if (source_ref_table == Qnil) {
+    return Qnil;
+  }
+  return Fgethash (cell, source_ref_table, Qnil);
+}
+
 
 void
 syms_of_lread (void)
@@ -4520,6 +4551,9 @@ syms_of_lread (void)
   defsubr (&Sget_file_char);
   defsubr (&Smapatoms);
   defsubr (&Slocate_file_internal);
+  defsubr (&Smake_source_ref);
+  defsubr (&Sset_source_ref);
+  defsubr (&Sget_source_ref);
 
   DEFVAR_LISP ("obarray", Vobarray,
 	       doc: /* Symbol table for use by `intern' and `read'.

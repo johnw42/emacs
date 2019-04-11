@@ -304,7 +304,9 @@ DEFUN ("nlistp", Fnlistp, Snlistp, 1, 1, 0,
        attributes: const)
   (Lisp_Object object)
 {
-  return Fnull (Flistp (object));
+  if (CONSP (object) || NILP (object))
+    return Qnil;
+  return Qt;
 }
 
 DEFUN ("symbolp", Fsymbolp, Ssymbolp, 1, 1, 0,
