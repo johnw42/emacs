@@ -811,7 +811,7 @@ back_comment (ptrdiff_t from, ptrdiff_t from_byte, ptrdiff_t stop,
 	case Scomment_fence:
 	  c = (code == Sstring_fence ? ST_STRING_STYLE : ST_COMMENT_STYLE);
 	  FALLTHROUGH;
-	case Sstring:
+	case Semacs_string:
 	  /* Track parity of quotes.  */
 	  if (string_style == -1)
 	    /* Entering a string.  */
@@ -1052,7 +1052,7 @@ unsigned char const syntax_spec_code[0400] =
     0377, 0377, 0377, 0377, 0377, 0377, 0377, 0377,
     0377, 0377, 0377, 0377, 0377, 0377, 0377, 0377,
     0377, 0377, 0377, 0377, 0377, 0377, 0377, 0377,
-    Swhitespace, Scomment_fence, Sstring, 0377, Smath, 0377, 0377, Squote,
+    Swhitespace, Scomment_fence, Semacs_string, 0377, Smath, 0377, 0377, Squote,
     Sopen, Sclose, 0377, 0377, 0377, Swhitespace, Spunct, Scharquote,
     0377, 0377, 0377, 0377, 0377, 0377, 0377, 0377,
     0377, 0377, 0377, 0377, Scomment, 0377, Sendcomment, 0377,
@@ -1366,7 +1366,7 @@ DEFUN ("internal-describe-syntax-value", Finternal_describe_syntax_value,
       insert_string ("close"); break;
     case Squote:
       insert_string ("prefix"); break;
-    case Sstring:
+    case Semacs_string:
       insert_string ("string"); break;
     case Smath:
       insert_string ("math"); break;
@@ -2775,7 +2775,7 @@ scan_lists (EMACS_INT from, EMACS_INT count, EMACS_INT depth, bool sexpflag)
 			  make_number (last_good), make_number (from));
 	      break;
 
-	    case Sstring:
+	    case Semacs_string:
 	    case Sstring_fence:
 	      temp_pos = dec_bytepos (from_byte);
 	      stringterm = FETCH_CHAR_AS_MULTIBYTE (temp_pos);
@@ -2787,8 +2787,8 @@ scan_lists (EMACS_INT from, EMACS_INT count, EMACS_INT depth, bool sexpflag)
 		  UPDATE_SYNTAX_TABLE_FORWARD (from);
 		  c = FETCH_CHAR_AS_MULTIBYTE (from_byte);
 		  c_code = syntax_multibyte (c, multibyte_symbol_p);
-		  if (code == Sstring
-		      ? c == stringterm && c_code == Sstring
+		  if (code == Semacs_string
+		      ? c == stringterm && c_code == Semacs_string
 		      : c_code == Sstring_fence)
 		    break;
 
@@ -2965,7 +2965,7 @@ scan_lists (EMACS_INT from, EMACS_INT count, EMACS_INT depth, bool sexpflag)
 	      if (code == Sstring_fence && !depth && sexpflag) goto done2;
 	      break;
 
-	    case Sstring:
+	    case Semacs_string:
 	      stringterm = FETCH_CHAR_AS_MULTIBYTE (from_byte);
 	      while (true)
 		{
@@ -2978,7 +2978,7 @@ scan_lists (EMACS_INT from, EMACS_INT count, EMACS_INT depth, bool sexpflag)
 		      c = FETCH_CHAR_AS_MULTIBYTE (from_byte);
 		      if (c == stringterm
 			  && (syntax_multibyte (c, multibyte_symbol_p)
-			      == Sstring))
+			      == Semacs_string))
 			break;
 		    }
 		  rarely_quit (++quit_count);
@@ -3358,12 +3358,12 @@ do { prev_from = from;				\
 	  if (targetdepth == depth) goto done;
 	  break;
 
-	case Sstring:
+	case Semacs_string:
 	case Sstring_fence:
 	  state->comstr_start = from - 1;
 	  if (stopbefore) goto stop;  /* this arg means stop at sexp start */
 	  curlevel->last = prev_from;
-	  state->instring = (code == Sstring
+	  state->instring = (code == Semacs_string
 			    ? (FETCH_CHAR_AS_MULTIBYTE (prev_from_byte))
 			    : ST_STRING_STYLE);
 	  if (boundary_stop) goto done;
@@ -3383,7 +3383,7 @@ do { prev_from = from;				\
 		/* Check C_CODE here so that if the char has
 		   a syntax-table property which says it is NOT
 		   a string character, it does not end the string.  */
-		if (nofence && c == state->instring && c_code == Sstring)
+		if (nofence && c == state->instring && c_code == Semacs_string)
 		  break;
 
 		switch (c_code)
@@ -3668,7 +3668,7 @@ init_syntax_once (void)
   SET_RAW_SYNTAX_ENTRY (Vstandard_syntax_table, '}',
 			Fcons (make_number (Sclose), make_number ('{')));
   SET_RAW_SYNTAX_ENTRY (Vstandard_syntax_table, '"',
-			Fcons (make_number (Sstring), Qnil));
+			Fcons (make_number (Semacs_string), Qnil));
   SET_RAW_SYNTAX_ENTRY (Vstandard_syntax_table, '\\',
 			Fcons (make_number (Sescape), Qnil));
 

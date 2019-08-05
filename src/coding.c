@@ -669,7 +669,7 @@ growable_destination (struct coding_system *coding)
 	else						\
 	  {						\
 	    src--;					\
-	    c = - string_char (src, &src, NULL);	\
+	    c = - emacs_string_char (src, &src, NULL);	\
 	    record_conversion_result			\
 	      (coding, CODING_RESULT_INVALID_SRC);	\
 	  }						\

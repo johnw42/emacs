@@ -149,7 +149,7 @@ char_string (unsigned int c, unsigned char *p)
    character) of the multibyte form.  */
 
 int
-string_char (const unsigned char *p, const unsigned char **advanced, int *len)
+emacs_string_char (const unsigned char *p, const unsigned char **advanced, int *len)
 {
   int c;
   const unsigned char *saved_p = p;
@@ -843,7 +843,7 @@ string_escape_byte8 (Lisp_Object string)
 }
 
 
-DEFUN ("string", Fstring, Sstring, 0, MANY, 0,
+DEFUN ("string", Fstring, Semacs_string, 0, MANY, 0,
        doc: /*
 Concatenate all the argument characters and make the result a string.
 usage: (string &rest CHARACTERS)  */)
@@ -1088,7 +1088,7 @@ syms_of_character (void)
   defsubr (&Smultibyte_char_to_unibyte);
   defsubr (&Schar_width);
   defsubr (&Sstring_width);
-  defsubr (&Sstring);
+  defsubr (&Semacs_string);
   defsubr (&Sunibyte_string);
   defsubr (&Schar_resolve_modifiers);
   defsubr (&Sget_byte);

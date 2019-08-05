@@ -48,7 +48,7 @@ enum syntaxcode
     Sopen,	 /* for a beginning delimiter */
     Sclose,      /* for an ending delimiter */
     Squote,	 /* for a prefix character like Lisp ' */
-    Sstring,	 /* for a string-grouping character like Lisp " */
+    Semacs_string,	 /* for a string-grouping character like Lisp " */
     Smath,	 /* for delimiters like $ in Tex.  */
     Sescape,	 /* for a character that begins a C-style escape */
     Scharquote,  /* for a character that quotes the following character */

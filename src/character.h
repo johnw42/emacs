@@ -322,7 +322,7 @@ enum
    ? ((((p)[0] & 0x0F) << 12)					\
       | (((p)[1] & 0x3F) << 6)					\
       | ((p)[2] & 0x3F))					\
-   : string_char ((p), NULL, NULL))
+   : emacs_string_char ((p), NULL, NULL))
 
 
 /* Like STRING_CHAR, but set ACTUAL_LEN to the length of multibyte
@@ -341,7 +341,7 @@ enum
       ((((p)[0] & 0x0F) << 12)					\
        | (((p)[1] & 0x3F) << 6)					\
        | ((p)[2] & 0x3F)))					\
-   : string_char ((p), NULL, &actual_len))
+   : emacs_string_char ((p), NULL, &actual_len))
 
 
 /* Like STRING_CHAR, but advance P to the end of multibyte form.  */
@@ -359,7 +359,7 @@ enum
       ((((p)[-3] & 0x0F) << 12)					\
        | (((p)[-2] & 0x3F) << 6)				\
        | ((p)[-1] & 0x3F)))					\
-   : string_char ((p), &(p), NULL))
+   : emacs_string_char ((p), &(p), NULL))
 
 
 /* Fetch the "next" character from Lisp string STRING at byte position
@@ -657,7 +657,7 @@ typedef enum {
 
 extern EMACS_INT char_resolve_modifier_mask (EMACS_INT) ATTRIBUTE_CONST;
 extern int char_string (unsigned, unsigned char *);
-extern int string_char (const unsigned char *,
+extern int emacs_string_char (const unsigned char *,
                         const unsigned char **, int *);
 
 extern int translate_char (Lisp_Object, int c);
