@@ -1,3 +1,44 @@
+;; Gets the a list of at most `max-depth` strings representing the
+;; stack trace for the contiuation `k`.
+(define (get-stack-trace k max-depth)
+  (do ([cur (inspect/object k) (cur 'link)]
+       [i 0 (+ i 1)]
+       [stack '()
+              (cons
+               (call-with-values (lambda () (cur 'source-path))
+                 (case-lambda
+                  [(file line . _)
+                   (format "at ~a (~a:~a)"
+                           ((cur 'code) 'name) file line)]
+                  [else (format "no source at ~a" i)]))
+               stack)])
+      [(or (not cur)
+           (<= (cur 'depth) 1)
+           (> i max-depth))
+       (reverse stack)]))
+
+;; Prints a stack trace for continuation `k`, preceeded by a label
+;; `label`, containing at most `max-depth` items.  If `k` is omitted,
+;; the current continutation is used.
+(define print-stack-trace
+  (case-lambda
+   [(label k max-depth)
+    (printf "backtrace of [~a] as following:\n" label)
+    (for-each (lambda (line)
+                (printf "\t~a\n" line))
+              (get-stack-trace k max-depth))]
+   [(label max-depth)
+    (call/cc (lambda (k)
+               (print-stack-trace label k max-depth)))]))
+
+(debug-level 3)
+(let ([old-handler (base-exception-handler)])
+  (base-exception-handler
+   (lambda (err)
+     (when (continuation-condition? err)
+       (print-stack-trace "exception" (condition-continuation err) 10))
+     (old-handler err))))
+
 (define non-symbol-chars (string->list "\"';()[]#`,"))
 
 (define (symbol-char? c)
@@ -29,6 +70,23 @@
           "#" (substring str 1 n))
          str))))
 
+(define (char-ior n c)
+  (integer->char (bitwise-ior n (char->integer c))))
+
+(define (translate-ctrl-modifier c mods)
+  (assert (eqv? 'ctrl (car mods)))
+  (cond
+   [(eqv? #\? c)
+    (values #\x7F (cdr mods))]
+   [(or (char<=? #\@ c #\_)
+        (char<=? #\a c #\z))
+    (values (integer->char (bitwise-and
+                            (char->integer (char-upcase c))
+                            #x9F))
+            (cdr mods))]
+   [else
+    (values c mods)]))
+
 ;; (define-syntax push!
 ;;   (syntax-rules ()
 ;;     [(_ value stack)
@@ -56,41 +114,37 @@
               (set! line (+ 1 line))
               (set! column 1))
             c))]
-       [replace-char
-        (lambda ()
-          (assert last-read-char)
-          (assert (not char-buf))
-          (set! char-buf last-read-char)
-          (set! last-read-char #f))]
        [next-sexp
         (lambda ()
-          (let ([c (next-char)])
+          (let ([c (peek-char)])
             (let ([sexp
                    (case c
                      [(#\()
-                      (replace-char)
                       (read-list)]
                      [(#\')
+                      (next-char)
                       (skip-whitespace)
                       (list 'quote (next-sexp))]
                      [(#\`)
+                      (next-char)
                       (skip-whitespace)
                       (list '|`| (next-sexp))]
                      [(#\,)
-                      (if (eqv? #\@ (next-char))
+                      (next-char)
+                      (if (eqv? #\@ (peek-char))
                           (begin
+                            (next-char)
                             (skip-whitespace)
                             (list '|,@| (next-sexp)))
                           (begin
-                            (replace-char)
                             (skip-whitespace)
                             (list '|,| (next-sexp))))
                       ]
                      [(#\")
-                      (replace-char)
                       (read-string)]
                      [(#\?) (syntax-error "not implemented: ?")]
                      [(#\#)
+                      (next-char)
                       (case (next-char)
                         [(#\')
                          (list 'function (next-sexp))]
@@ -99,7 +153,6 @@
                      [else
                       (cond
                        [(symbol-char? c)
-                        (replace-char)
                         (read-symbol-or-number)]
                        [(eof-object? c) #f]
                        [else
@@ -117,29 +170,30 @@
        [skip-whitespace
         (lambda ()
           (let loop ()
-            (let ([c (next-char)])
+            (let ([c (peek-char)])
               (cond
                [(eqv? c #\;)
+                (next-char)
                 (skip-comment)
                 (loop)]
                [(and (char? c)
                      (char-whitespace? c))
-                (loop)]
-               [else
-                (replace-char)]))))]
+                (next-char)
+                (loop)]))))]
        [read-symbol-chars
         (lambda ()
           (let loop ([chars '()]
                      [quoted? #f])
-            (let ([c (next-char)])
+            (let ([c (peek-char)])
               (cond
                [(eqv? #\\ c)
+                (next-char)
                 (loop chars #t)]
                [(symbol-char? c)
+                (next-char)
                 (loop (cons c chars)
                       quoted?)]
                [else
-                (replace-char)
                 (values (list->string (reverse chars))
                         quoted?)]))))]
        [read-symbol-or-number
@@ -151,7 +205,7 @@
                 (string->symbol str))))]
        [read-string
         (lambda ()
-          (next-char)
+          (assert (eqv? #\" (next-char)))
           (let loop ([chars '()])
             (let ([c (next-char)])
               (case c
@@ -159,38 +213,124 @@
                  (list->string (reverse chars))]
                 [(#\\)
                  (loop
-                  (let ([c1 (read-escape-seq #t)])
-                    (if c1
-                        (cons c1 chars)
+                  (let-values ([(c mods) (read-escape-seq #t)])
+                    (if c
+                        (cons c chars)
                         chars)))]
                 [else
                  (loop (cons c chars))]))))]
        [read-escape-seq
+        ;; Reads escape sequence.  Returns character and modifier
+        ;; list, or (values #f '()).
         (lambda (string?)
-          (let ([c (next-char)])
+          (let ([c (peek-char)]
+                [just (lambda (c)
+                        (next-char)
+                        (values c '()))]
+                )
             (case c
-              [(#\a) #\alarm]
-              [(#\b) #\backspace]
-              [(#\d) #\delete]
-              [(#\e) #\esc]
-              [(#\f) #\linefeed]
-              [(#\n) #\newline]
-              [(#\r) #\return]
-              [(#\t) #\tab]
-              [(#\v) #\vtab]
+              [(#\a) (just #\alarm)]
+              [(#\b) (just #\backspace)]
+              [(#\d) (just #\delete)]
+              [(#\e) (just #\esc)]
+              [(#\f) (just #\linefeed)]
+              [(#\n) (just #\newline)]
+              [(#\r) (just #\return)]
+              [(#\t) (just #\tab)]
+              [(#\v) (just #\vtab)]
               [(#\newline) #f]
-              [(#\space) (if string? #f #\space)]
-              ;; TODO: Hande escapes as per read_escape()
-              [else c])))]
+              [(#\space) (just (if string? #f #\space))]
+              [(#\M #\S #\H #\A #\s)
+               (next-char)
+               (case c
+                 [(#\M) (read-modifier-char 'meta)]
+                 [(#\S) (read-modifier-char 'shift)]
+                 [(#\H) (read-modifier-char 'hyper)]
+                 [(#\A) (read-modifier-char 'alt)]
+                 [(#\s)
+                  (if (or string?
+                          (not (eqv? #\- (peek-char))))
+                      (just #\space)
+                      (read-modifier-char 'super))])]
+              [(#\C #\^)
+               (when (eqv? #\C c)
+                 (consume-hyphen))
+               (call-with-values
+                   (read-modifier-char 'ctrl)
+                 translate-ctrl-modifier)]
+              ;; Octal escape.
+              [(#\0 #\1 #\2 #\3 #\4 #\5 #\6 #\7)
+               (do ([accum (char- c #\0)
+                           (+ (* 8 accum)
+                              (char- (next-char) #\0))])
+                   ((not (char<=? #\0 (peek-char) #\7))
+                    (integer->char accum)))]
+              [(#\x) (just (read-hex-digits 7))]
+              [(#\u) (just (read-hex-digits 4))]
+              [(#\U) (just (read-hex-digits 8))]
+              [(#\N)
+               (syntax-error
+                (format "Named characters not implemented: ~a"
+                        (read-char-name)))]
+              [else (just c)])))]
+       [read-char-name
+        (lambda ()
+          (unless (eqv? #\{ (next-char))
+            (syntax-error "Expected { after \\N"))
+          (let loop ([chars '()])
+            (let ([c (next-char)])
+              (unless (char<? c #\x80)
+                (syntax-error
+                 (format "Invalid character U+~4,'0x in character name"
+                         c)))
+              (if (eqv? #\} (peek-char))
+                  (list->string (reverse chars))
+                  (loop (if (or (null? chars)
+                                (not (char-whitespace? c))
+                                (not (char-whitespace? (car chars))))
+                            (cons c chars)
+                            chars))))))]
+       [read-hex-char
+        (lambda (max-digits)
+          (let loop ([chars '()]
+                     [to-read max-digits])
+            (let ([c (peek-char)])
+              (if (and (not (zero? to-read))
+                       (or (char-numeric? c)
+                           (char-ci<=? #\a c #\f)))
+                  (begin
+                    (next-char)
+                    (loop (cons c chars) (- to-read 1)))
+                  (string->number
+                   (integer->char
+                    (list->string (reverse chars))) 16)))))]
+       [add-modifier
+        (lambda (modifier)
+          (lambda (c mods)
+            (values c (cons modifier mods))))]
+       [read-modifier-char
+        (lambda (modifier)
+          (consume-hyphen)
+          (let* ([c (next-char)])
+            (call-with-values (if (eqv? #\\ c)
+                                  (read-escape)
+                                  (values c '()))
+              (add-modifier modifier))))]
+       [consume-hyphen
+        (lambda ()
+          (unless (eqv? #\- (next-char))
+            (syntax-error "Invalid escape character syntax")))]
        [read-list
         (lambda ()
-          (next-char)
+          (assert (eqv? #\( (next-char)))
           (let loop ([accum '()])
             (skip-whitespace)
-            (case (next-char)
+            (case (peek-char)
               [(#\))
+               (next-char)
                (reverse accum)]
               [(#\.)
+               (next-char)
                (when (null? accum)
                  (syntax-error "expected sexp"))
                (skip-whitespace)
@@ -203,7 +343,6 @@
                    (syntax-error "expecting )"))
                  result)]
               [else
-               (replace-char)
                (loop (cons (next-sexp) accum))])))])
     (skip-whitespace)
     (next-sexp)))
@@ -218,10 +357,3 @@
 
 (for-each pretty-print
           (elisp-read-file "lisp/emacs-lisp/macroexp.el"))
-
-;; (with-input-from-file "lisp/emacs-lisp/macroexp.el"
-;;   (lambda ()
-;;     (let loop ()
-;;       (and-let* ([sexp (elisp-read)])
-;;                 (pretty-print sexp)
-;;                 (loop)))))
