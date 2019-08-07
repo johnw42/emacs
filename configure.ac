@@ -2904,12 +2904,12 @@ case $with_file_notification,$NOTIFY_OBJ in
 esac
 
 dnl Chez Scheme
-SCHEME_CFLAGS="-DCHEZ_SCHEME -I$HOME/.local/lib/csv9.5.2/a6le -fPIC"
-SCHEME_OBJ="$HOME/.local/lib/csv9.5.2/a6le/kernel.o"
-SCHEME_LIBS="-luuid -lm -ltinfo -lrt -lc -lpthread"
-AC_SUBST([SCHEME_CFLAGS])
-AC_SUBST([SCHEME_OBJ])
-AC_SUBST([SCHEME_LIBS])
+CHEZ_SCHEME_CFLAGS="-DCHEZ_SCHEME -I$HOME/.local/lib/csv9.5.2/a6le -fPIC"
+CHEZ_SCHEME_OBJ="$HOME/.local/lib/csv9.5.2/a6le/kernel.o"
+CHEZ_SCHEME_LIBS="-luuid -lm -ltinfo -lrt -lc -lpthread"
+AC_SUBST([CHEZ_SCHEME_CFLAGS])
+AC_SUBST([CHEZ_SCHEME_OBJ])
+AC_SUBST([CHEZ_SCHEME_LIBS])
 
 dnl kqueue is available on BSD-like systems.
 case $with_file_notification,$NOTIFY_OBJ in

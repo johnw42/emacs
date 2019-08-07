@@ -1,0 +1,1 @@
+(compile-file "dummy.ss")

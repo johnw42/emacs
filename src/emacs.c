@@ -697,32 +697,21 @@ main (int argc, char **argv)
   /* If we use --chdir, this records the original directory.  */
   char *original_pwd = 0;
 
-  char *scheme_args[] = {""};
-
   /* Record (approximately) where the stack begins.  */
   stack_bottom = (char *) &stack_bottom_variable;
 
-  printf("Emacs main\n");
 #ifdef CHEZ_SCHEME
   printf("Starting scheme.\n");
-  //Sset_verbose(1);
   Sscheme_init(NULL);
-  /* Sbuild_heap("/usr/local/google/home/jrw/.local/lib/csv9.5.2/a6le/scheme", NULL); */
   Sregister_boot_file("/usr/local/google/home/jrw/.local/lib/csv9.5.2/a6le/scheme.boot");
   printf("building heap\n");
   Sbuild_heap(NULL, NULL);
-  /* { */
-  /*   ptr load; */
-
-  /*   load = Stop_level_value(Sstring_to_symbol("load")); */
-  /*   Scall1(load, Sstring("/usr/local/google/home/jrw/git/schemacs/scheme/main.ss")); */
-  /* } */
   Sscheme_script("/usr/local/google/home/jrw/git/schemacs/scheme/main.ss", 0, argv);
-  //Sscheme_start(scheme_args, 0);
+  Scall0(Stop_level_value(Sstring_to_symbol("defined-in-scheme")));
   printf("Scheme shutting down.\n");
   Sscheme_deinit();
-#else
-  printf("Scheme disabled.\n");
+  printf("Emacs shutting down.\n");
+  exit(0);
 #endif
 
 #ifndef CANNOT_DUMP
