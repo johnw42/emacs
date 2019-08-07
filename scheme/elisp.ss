@@ -1,9 +1,8 @@
-(begin
-
 (debug-level 3)
 (optimize-level 0)
 (import (elisp reader)
-        (elisp atoms))
+        ;;(elisp atoms)
+        )
 
 ;; Gets the a list of at most `max-depth` strings representing the
 ;; stack trace for the contiuation `k`.
@@ -64,4 +63,4 @@
             (reverse sexps))))))
 
 (for-each pretty-print
-          (elisp-read-file "lisp/emacs-lisp/macroexp.el")))
+          (elisp-read-file "lisp/emacs-lisp/macroexp.el"))

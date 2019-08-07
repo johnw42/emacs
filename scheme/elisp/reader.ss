@@ -59,9 +59,7 @@
         (bitwise-ior #x7F mod-bits)]
        [(or (char<=? #\@ c #\_)
             (char<=? #\a c #\z))
-        (bitwise-and
-         (char->integer (char-upcase c))
-         #x9F)]
+        (bitwise-and char-bits #x1F)]
        [else n])))
 
   ;; (define-syntax push!
