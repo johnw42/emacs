@@ -103,7 +103,7 @@ struct window
     union vectorlike_header header;
 
     /* The frame this window is on.  */
-    Lisp_Object frame;
+    PV_LISP_FIELD(frame);
 
     /* Following (to right or down) and preceding (to left or up)
        child at same level of tree.  Whether this is left/right or
@@ -115,94 +115,94 @@ struct window
        of the root window and 'prev' of the minibuffer window, if
        present, are nil.  'prev' of the root window and 'next' of the
        minibuffer window are always nil.  */
-    Lisp_Object next;
-    Lisp_Object prev;
+    PV_LISP_FIELD(next);
+    PV_LISP_FIELD(prev);
 
     /* The window this one is a child of.  For the root and a
        minibuffer window this is always nil.  */
-    Lisp_Object parent;
+    PV_LISP_FIELD(parent);
 
     /* The "normal" size of the window.  These are fractions, but we
        do not use C doubles to avoid creating new Lisp_Float objects
        while interfacing Lisp in Fwindow_normal_size.  */
-    Lisp_Object normal_lines;
-    Lisp_Object normal_cols;
+    PV_LISP_FIELD(normal_lines);
+    PV_LISP_FIELD(normal_cols);
 
     /* The new sizes of the window as proposed by the window resizing
        functions.  Note that Lisp code may set new_normal to something
        beyond an integer, so C int can't be used here.  */
-    Lisp_Object new_total;
-    Lisp_Object new_normal;
-    Lisp_Object new_pixel;
+    PV_LISP_FIELD(new_total);
+    PV_LISP_FIELD(new_normal);
+    PV_LISP_FIELD(new_pixel);
 
     /* For a leaf window or a tooltip window this is the buffer shown
        in the window; for a combination window this is the first of
        its child windows; for a pseudo window showing the menu bar or
        tool bar this is nil.  It is a buffer for a minibuffer window
        as well.  */
-    Lisp_Object contents;
+    PV_LISP_FIELD(contents);
 
     /* A marker pointing to where in the text to start displaying.
        BIDI Note: This is the _logical-order_ start, i.e. the smallest
        buffer position visible in the window, not necessarily the
        character displayed in the top left corner of the window.  */
-    Lisp_Object start;
+    PV_LISP_FIELD(start);
 
     /* A marker pointing to where in the text point is in this window,
        used only when the window is not selected.
        This exists so that when multiple windows show one buffer
        each one can have its own value of point.  */
-    Lisp_Object pointm;
+    PV_LISP_FIELD(pointm);
 
     /* A marker pointing to where in the text point was in this window
        at the time of last redisplay.  The value is saved for the
        selected window too.  */
-    Lisp_Object old_pointm;
+    PV_LISP_FIELD(old_pointm);
 
     /* No permanent meaning; used by save-window-excursion's
        bookkeeping.  */
-    Lisp_Object temslot;
+    PV_LISP_FIELD(temslot);
 
     /* This window's vertical scroll bar.  This field is only for use by
        the window-system-dependent code which implements the scroll
        bars; it can store anything it likes here.  If this window is
        newly created and we haven't displayed a scroll bar in it yet, or
        if the frame doesn't have any scroll bars, this is nil.  */
-    Lisp_Object vertical_scroll_bar;
+    PV_LISP_FIELD(vertical_scroll_bar);
 
     /* Type of vertical scroll bar.  A value of nil means
        no scroll bar.  A value of t means use frame value.  */
-    Lisp_Object vertical_scroll_bar_type;
+    PV_LISP_FIELD(vertical_scroll_bar_type);
 
     /* This window's horizontal scroll bar.  This field is only for use
        by the window-system-dependent code which implements the scroll
        bars; it can store anything it likes here.  If this window is
        newly created and we haven't displayed a scroll bar in it yet, or
        if the frame doesn't have any scroll bars, this is nil.  */
-    Lisp_Object horizontal_scroll_bar;
+    PV_LISP_FIELD(horizontal_scroll_bar);
 
     /* Type of horizontal scroll bar.  A value of nil means
        no scroll bar.  A value of t means use frame value.  */
-    Lisp_Object horizontal_scroll_bar_type;
+    PV_LISP_FIELD(horizontal_scroll_bar_type);
 
     /* Display-table to use for displaying chars in this window.
        Nil means use the buffer's own display-table.  */
-    Lisp_Object display_table;
+    PV_LISP_FIELD(display_table);
 
     /* Non-nil usually means window is marked as dedicated.
        Note Lisp code may set this to something beyond Qnil
        and Qt, so bitfield can't be used here.  */
-    Lisp_Object dedicated;
+    PV_LISP_FIELD(dedicated);
 
     /* If redisplay in this window goes beyond this buffer position,
        must run the redisplay-end-trigger-hook.  */
-    Lisp_Object redisplay_end_trigger;
+    PV_LISP_FIELD(redisplay_end_trigger);
 
     /* t means this window's child windows are not (re-)combined.  */
-    Lisp_Object combination_limit;
+    PV_LISP_FIELD(combination_limit);
 
     /* An alist with parameters.  */
-    Lisp_Object window_parameters;
+    PV_LISP_FIELD(window_parameters);
 
     /* No Lisp data may follow below this point without changing
        mark_object in alloc.c.  The member current_matrix must be the

@@ -66,7 +66,9 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 #include TERM_HEADER
 #endif /* HAVE_WINDOW_SYSTEM */
 
+#ifndef CHEZ_SCHEME
 #include "emacs_scheme.h"
+#endif
 
 #include "intervals.h"
 #include "character.h"
@@ -701,17 +703,7 @@ main (int argc, char **argv)
   stack_bottom = (char *) &stack_bottom_variable;
 
 #ifdef CHEZ_SCHEME
-  printf("Starting scheme.\n");
-  Sscheme_init(NULL);
-  Sregister_boot_file("/usr/local/google/home/jrw/.local/lib/csv9.5.2/a6le/scheme.boot");
-  printf("building heap\n");
-  Sbuild_heap(NULL, NULL);
-  Sscheme_script("/usr/local/google/home/jrw/git/schemacs/scheme/main.ss", 0, argv);
-  Scall0(Stop_level_value(Sstring_to_symbol("defined-in-scheme")));
-  printf("Scheme shutting down.\n");
-  Sscheme_deinit();
-  printf("Emacs shutting down.\n");
-  exit(0);
+  scheme_init();
 #endif
 
 #ifndef CANNOT_DUMP

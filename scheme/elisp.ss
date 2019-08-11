@@ -1,6 +1,6 @@
 (debug-level 3)
 (optimize-level 0)
-(import (elisp reader)
+(import (elisp eval)
         ;;(elisp atoms)
         )
 
@@ -54,13 +54,18 @@
        (and var
             (and-let* ([vars exprs] ...) body ...)))]))
 
-(define (elisp-read-file path)
-  (with-input-from-file path
-    (lambda ()
-      (let loop ([sexps '()])
-        (or (and-let* ([sexp (elisp-read)])
-                      (loop (cons sexp sexps)))
-            (reverse sexps))))))
+;; (define (elisp-read-file path)
+;;   (with-input-from-file path
+;;     (lambda ()
+;;       (let loop ([sexps '()])
+;;         (or (and-let* ([sexp (elisp-read)])
+;;                       (loop (cons sexp sexps)))
+;;             (reverse sexps))))))
 
-(for-each pretty-print
-          (elisp-read-file "lisp/emacs-lisp/macroexp.el"))
+;; (for-each (lambda (path)
+;;             (for-each pretty-print
+;;                       (elisp-read-file path)))
+;;           '(;;"lisp/emacs-lisp/macroexp.el"
+;;             "lisp/loadup.el"))
+
+(elisp-load "lisp/loadup.el")

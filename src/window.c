@@ -6244,16 +6244,16 @@ from the top of the window.  */)
 struct save_window_data
   {
     union vectorlike_header header;
-    Lisp_Object selected_frame;
-    Lisp_Object current_window;
-    Lisp_Object f_current_buffer;
-    Lisp_Object minibuf_scroll_window;
-    Lisp_Object minibuf_selected_window;
-    Lisp_Object root_window;
-    Lisp_Object focus_frame;
+    PV_LISP_FIELD(selected_frame);
+    PV_LISP_FIELD(current_window);
+    PV_LISP_FIELD(f_current_buffer);
+    PV_LISP_FIELD(minibuf_scroll_window);
+    PV_LISP_FIELD(minibuf_selected_window);
+    PV_LISP_FIELD(root_window);
+    PV_LISP_FIELD(focus_frame);
     /* A vector, each of whose elements is a struct saved_window
        for one window.  */
-    Lisp_Object saved_windows;
+    PV_LISP_FIELD(saved_windows);
 
     /* All fields above are traced by the GC.
        From `frame-cols' down, the fields are ignored by the GC.  */

@@ -383,7 +383,7 @@ ALL_OBJC_CFLAGS = $(EMACS_CFLAGS) \
 
 ## lastfile must follow all files whose initialized data areas should
 ## be dumped as pure by dump-emacs.
-base_obj = dispnew.o frame.o scroll.o xdisp.o menu.o $(XMENU_OBJ) window.o \
+base_obj = scheme_lisp.o dispnew.o frame.o scroll.o xdisp.o menu.o $(XMENU_OBJ) window.o \
 	charset.o coding.o category.o ccl.o character.o chartab.o bidi.o \
 	$(CM_OBJ) term.o terminal.o xfaces.o $(XOBJ) $(GTK_OBJ) $(DBUS_OBJ) \
 	emacs.o keyboard.o macros.o keymap.o sysdep.o \

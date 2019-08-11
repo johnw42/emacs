@@ -19,6 +19,7 @@
   (define line 1)
   (define column 1)
 
+  ;; TODO: Don't allow complex or rational literals.
   (define (emacs-string->number str)
     (let ([n (string-length str)])
       (string->number

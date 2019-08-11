@@ -40,25 +40,25 @@ struct thread_state
   /* The buffer in which the last search was performed, or
      Qt if the last search was done in a string;
      Qnil if no searching has been done yet.  */
-  Lisp_Object m_last_thing_searched;
+  PV_LISP_FIELD(m_last_thing_searched);
 #define last_thing_searched (current_thread->m_last_thing_searched)
 
-  Lisp_Object m_saved_last_thing_searched;
+  PV_LISP_FIELD(m_saved_last_thing_searched);
 #define saved_last_thing_searched (current_thread->m_saved_last_thing_searched)
 
   /* The thread's name.  */
-  Lisp_Object name;
+  PV_LISP_FIELD(name);
 
   /* The thread's function.  */
-  Lisp_Object function;
+  PV_LISP_FIELD(function);
 
   /* If non-nil, this thread has been signaled.  */
-  Lisp_Object error_symbol;
-  Lisp_Object error_data;
+  PV_LISP_FIELD(error_symbol);
+  PV_LISP_FIELD(error_data);
 
   /* If we are waiting for some event, this holds the object we are
      waiting on.  */
-  Lisp_Object event_object;
+  PV_LISP_FIELD(event_object);
 
   /* m_stack_bottom must be the first non-Lisp field.  */
   /* An address near the bottom of the stack.
@@ -143,7 +143,7 @@ struct thread_state
      If the value is a Lisp string object, we are matching text in that
      string; if it's nil, we are matching text in the current buffer; if
      it's t, we are matching text in a C string.  */
-  Lisp_Object m_re_match_object;
+  PV_LISP_FIELD(m_re_match_object);
 #define re_match_object (current_thread->m_re_match_object)
 
   /* This member is different from waiting_for_input.
@@ -233,7 +233,7 @@ struct Lisp_Mutex
   union vectorlike_header header;
 
   /* The name of the mutex, or nil.  */
-  Lisp_Object name;
+  PV_LISP_FIELD(name);
 
   /* The lower-level mutex object.  */
   lisp_mutex_t mutex;
@@ -264,10 +264,10 @@ struct Lisp_CondVar
   union vectorlike_header header;
 
   /* The associated mutex.  */
-  Lisp_Object mutex;
+  PV_LISP_FIELD(mutex);
 
   /* The name of the condition variable, or nil.  */
-  Lisp_Object name;
+  PV_LISP_FIELD(name);
 
   /* The lower-level condition variable object.  */
   sys_cond_t cond;
