@@ -677,12 +677,12 @@ XTERMINAL (Lisp_Object a)
 INLINE void
 tset_charset_list (struct terminal *t, Lisp_Object val)
 {
-  t->charset_list = val;
+  PV_LISP_FIELD_SET(t, charset_list, val);
 }
 INLINE void
 tset_selection_alist (struct terminal *t, Lisp_Object val)
 {
-  t->Vselection_alist = val;
+  PV_LISP_FIELD_SET(t, Vselection_alist, val);
 }
 
 /* Chain of all terminal devices currently in use.  */

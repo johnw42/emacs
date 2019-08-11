@@ -35,54 +35,23 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 #include <verify.h>
 
 #ifdef CHEZ_SCHEME
-#include <scheme.h>
+void scheme_init(void);
 #endif
 
-INLINE_HEADER_BEGIN
-
-#ifdef CHEZ_SCHEME
-
-void scheme_init(void);
-
-typedef ptr Lisp_Object;
-typedef iptr EMACS_INT;
-typedef uptr EMACS_UINT;
-typedef struct interval *INTERVAL;
-
-struct Lisp_Symbol {
-  ptr ptr;
-};
-
-union vectorlike_header {
-  ptr type;
-};
-
-struct window;
-struct frame;
-struct tty_display_info;
-struct Lisp_Subr;
-struct Lisp_Marker;
-struct Lisp_Vector;
-enum handlertype;
-extern Lisp_Object Vascii_downcase_table;
-extern Lisp_Object Vascii_canon_table;
-
-// TODO: See DECLARE_GDB_SYM
-#define DEFINE_LISP_SYMBOL(name) ;
-
-
-INLINE Lisp_Object
-builtin_lisp_symbol (int index)
-{
-  // TODO
-  return 0;
-}
-
-#endif /* !CHEZ_SCHEME */
-
 #define PV_LISP_FIELD(name) Lisp_Object name
+//#define PV_LISP_FIELD(name) Lisp_Object name##_
 #define PV_LISP_ARRAY(name, n) Lisp_Object name[n]
 #define PV_LISP_PROPS(n) Lisp_Object props[n]
+#define PV_LISP_FIELD_REF(ptr, field) ((ptr)->field)
+#define PV_LISP_FIELD_SET(ptr, field, value) ((ptr)->field = (value))
+//#define PV_LISP_FIELD_REF(ptr, field) ((ptr)->field##_)
+//#define PV_LISP_FIELD_SET(ptr, field, value) ((ptr)->field##_ = (value))
+#define PV_LISP_FIELD_AREF(ptr, field, n) ((ptr)->field[n])
+#define PV_LISP_FIELD_ASET(ptr, field, n, value) ((ptr)->field[n] = (value))
+#define PV_LISP_PROP_REF(ptr, n) ((ptr)->props[n])
+#define PV_LISP_PROP_SET(ptr, n, value) ((ptr)->props[n] = (value))
+
+INLINE_HEADER_BEGIN
 
 /* Define a TYPE constant ID as an externally visible name.  Use like this:
 
@@ -111,8 +80,6 @@ builtin_lisp_symbol (int index)
 
 /* Number of elements in an array.  */
 #define ARRAYELTS(arr) (sizeof (arr) / sizeof (arr)[0])
-
-#ifndef CHEZ_SCHEME
 
 /* Number of bits in a Lisp_Object tag.  */
 DEFINE_GDB_SYMBOL_BEGIN (int, GCTYPEBITS)
@@ -216,8 +183,6 @@ typedef EMACS_UINT uprintmax_t;
 # define pD "t"
 #endif
 
-#endif /* !CHEZ_SCHEME */
-
 /* Extra internal type checking?  */
 
 /* Define Emacs versions of <assert.h>'s 'assert (COND)' and <verify.h>'s
@@ -263,8 +228,6 @@ extern bool suppress_checking EXTERNALLY_VISIBLE;
     ? (void) 0							\
     : die (# cond, __FILE__, __LINE__))
 #endif /* ENABLE_CHECKING */
-
-#ifndef CHEZ_SCHEME
 
 
 /* Use the configure flag --enable-check-lisp-object-type to make
@@ -469,8 +432,6 @@ error !;
 #define INTMASK (EMACS_INT_MAX >> (INTTYPEBITS - 1))
 #define case_Lisp_Int case Lisp_Int0: case Lisp_Int1
 
-#endif /* !CHEZ_SCHEME */
-
 /* Idea stolen from GDB.  Pedantic GCC complains about enum bitfields,
    MSVC doesn't support them, and xlc and Oracle Studio c99 complain
    vociferously about them.  */
@@ -481,7 +442,6 @@ error !;
 #define ENUM_BF(TYPE) enum TYPE
 #endif
 
-#ifndef CHEZ_SCHEME
 
 enum Lisp_Type
   {
@@ -777,8 +737,6 @@ struct Lisp_Symbol
 };
 verify (alignof (struct Lisp_Symbol) % GCALIGNMENT == 0);
 
-#endif /* !CHEZ_SCHEME */
-
 /* Declare a Lisp-callable function.  The MAXARGS parameter has the same
    meaning as in the DEFUN macro, and is used to construct a prototype.  */
 /* We can use the same trick as in the DEFUN macro to generate the
@@ -803,8 +761,6 @@ verify (alignof (struct Lisp_Symbol) % GCALIGNMENT == 0);
 			 Lisp_Object, Lisp_Object, Lisp_Object)
 #define DEFUN_ARGS_8	(Lisp_Object, Lisp_Object, Lisp_Object, Lisp_Object, \
 			 Lisp_Object, Lisp_Object, Lisp_Object, Lisp_Object)
-
-#ifndef CHEZ_SCHEME
 
 /* Yield a signed integer that contains TAG along with PTR.
 
@@ -840,8 +796,6 @@ verify (alignof (struct Lisp_Symbol) % GCALIGNMENT == 0);
    This can be used in a static initializer.  */
 #define SYMBOL_INDEX(sym) i##sym
 
-#endif /* !CHEZ_SCHEME */
-
 /* By default, define macros for Qt, etc., as this leads to a bit
    better performance in the core Emacs interpreter.  A plugin can
    define DEFINE_NON_NIL_Q_SYMBOL_MACROS to be false, to be portable to
@@ -851,140 +805,6 @@ verify (alignof (struct Lisp_Symbol) % GCALIGNMENT == 0);
 #endif
 
 #include "globals.h"
-
-#ifdef CHEZ_SCHEME
-INLINE bool
-CHAR_TABLE_P (ptr a)
-{
-  // TODO
-  return false;
-}
-
-INLINE Lisp_Object
-CHAR_TABLE_REF (Lisp_Object ct, int idx)
-{
-  // TODO
-  return Qnil;
-}
-
-INLINE Lisp_Object
-make_number(EMACS_INT n) {
-  return Sinteger(n);
-}
-
-INLINE double
-XFLOATINT (Lisp_Object n) {
-  return Sflonump(n) ? Sflonum_value(n) : Sinteger_value(n);
-}
-
-INLINE EMACS_INT
-XINT(Lisp_Object a) {
-  return Sinteger_value(a);
-}
-
-INLINE EMACS_INT
-XFASTINT(Lisp_Object a) {
-  EMACS_INT n = Sinteger_value(a);
-  eassume(0 <= n);
-  return n;
-}
-
-INLINE EMACS_UINT
-XUINT(Lisp_Object a) {
-  return Sunsigned_value(a);
-}
-
-INLINE bool
-CONSP(Lisp_Object x) {
-  return Spairp(x);
-}
-
-INLINE Lisp_Object
-XCAR(Lisp_Object x) {
-  return Scar(x);
-}
-
-INLINE Lisp_Object
-XCDR(Lisp_Object x) {
-  return Scdr(x);
-}
-
-INLINE bool
-INTEGERP(Lisp_Object x)
-{
-  return Sfixnump(x);
-}
-
-INLINE bool
-NUMBERP(Lisp_Object x)
-{
-  return INTEGERP(x) || Sflonump(x);
-}
-
-INLINE bool
-NATNUMP(Lisp_Object x)
-{
-  return INTEGERP (x) && 0 <= XINT (x);
-}
-
-INLINE bool
-RANGED_INTEGERP(intmax_t lo, Lisp_Object x, intmax_t hi)
-{
-  EMACS_INT n;
-  
-  if (!INTEGERP(x)) return false;
-  n = XINT(x);
-  return lo <= n && n <= hi;
-}
-
-INLINE void
-CHECK_TYPE (int ok, Lisp_Object predicate, Lisp_Object x)
-{
-  // TODO
-}
-
-INLINE void *
-XUNTAG (Lisp_Object a, int type) {
-  return NULL; // TODO
-}
-
-enum Lisp_Type
-  {
-    Lisp_Symbol,
-    Lisp_Misc,
-    Lisp_Int0,
-    Lisp_Int1,
-    Lisp_String,
-    Lisp_Vectorlike,
-    Lisp_Cons,
-    Lisp_Float
-  };
-
-INLINE bool
-NILP(Lisp_Object a)
-{
-  return a == Sfalse || a == Snil;
-}
-
-INLINE char *
-lispstpcpy (char *dest, Lisp_Object string)
-{
-  iptr i, len = Sstring_length(string);
-  for (i = 0; i < len; i++) {
-    dest[i] = Sstring_ref(string, i);
-  }
-  return dest + len;
-}
-
-INLINE bool
-STRINGP (Lisp_Object x)
-{
-  return false; // TODO
-}
-
-#endif /* CHEZ_SCHEME */
-
-#ifndef CHEZ_SCHEME
 
 /* Header of vector-like objects.  This documents the layout constraints on
    vectors and pseudovectors (objects of PVEC_xxx subtype).  It also prevents
@@ -1049,7 +869,7 @@ make_lisp_symbol (struct Lisp_Symbol *sym)
 INLINE Lisp_Object
 builtin_lisp_symbol (int index)
 {
-  return lispsym[index].ptr;
+  return make_lisp_symbol (&lispsym[index]);
 }
 
 INLINE void
@@ -1069,8 +889,6 @@ DEFINE_GDB_SYMBOL_END (ARRAY_MARK_FLAG)
 DEFINE_GDB_SYMBOL_BEGIN (ptrdiff_t, PSEUDOVECTOR_FLAG)
 # define PSEUDOVECTOR_FLAG (PTRDIFF_MAX - PTRDIFF_MAX / 2)
 DEFINE_GDB_SYMBOL_END (PSEUDOVECTOR_FLAG)
-
-#endif /* !CHEZ_SCHEME */
 
 /* In a pseudovector, the size field actually contains a word with one
    PSEUDOVECTOR_FLAG bit set, and one of the following values extracted
@@ -1124,8 +942,6 @@ enum More_Lisp_Bits
     PSEUDOVECTOR_AREA_BITS = PSEUDOVECTOR_SIZE_BITS + PSEUDOVECTOR_REST_BITS,
     PVEC_TYPE_MASK = 0x3f << PSEUDOVECTOR_AREA_BITS
   };
-
-#ifndef CHEZ_SCHEME
 
 /* These functions extract various sorts of values from a Lisp_Object.
    For example, if tem is a Lisp_Object whose type is Lisp_Cons,
@@ -1611,60 +1427,6 @@ STRING_SET_CHARS (Lisp_Object string, ptrdiff_t newsize)
   XSTRING (string)->u.s.size = newsize;
 }
 
-#endif /* !CHEZ_SCHEME */
-
-#ifdef CHEZ_SCHEME
-
-INLINE bool
-VECTORLIKEP (Lisp_Object x)
-{
-  return false; // TODO
-}
-
-INLINE ptrdiff_t
-ASIZE (Lisp_Object array)
-{
-  return 0; // TODO
-}
-
-INLINE ptrdiff_t
-PVSIZE (Lisp_Object pv)
-{
-  return 0; // TODO
-}
-
-INLINE bool
-VECTORP (Lisp_Object x)
-{
-  return false; // TODO
-}
-
-INLINE void
-CHECK_VECTOR (Lisp_Object x)
-{
-  CHECK_TYPE (VECTORP (x), Qvectorp, x);
-}
-
-INLINE enum pvec_type
-PSEUDOVECTOR_TYPE (struct Lisp_Vector *v)
-{
-  return (enum pvec_type)0; // TODO
-}
-
-INLINE bool
-PSEUDOVECTOR_TYPEP (union vectorlike_header *a, enum pvec_type code)
-{
-  return false; // TODO
-}
-
-INLINE bool
-PSEUDOVECTORP (Lisp_Object a, int code)
-{
-  return false; // TOOD
-}
-
-#else
-
 /* A regular vector is just a header plus an array of Lisp_Objects.  */
 
 struct Lisp_Vector
@@ -1861,29 +1623,7 @@ bool_vector_set (Lisp_Object a, EMACS_INT i, bool b)
     *addr &= ~ (1 << (i % BOOL_VECTOR_BITS_PER_CHAR));
 }
 
-#endif /* !CHEZ_SCHEME */
-
 /* Conveniences for dealing with Lisp arrays.  */
-
-#ifdef CHEZ_SCHEME
-
-INLINE Lisp_Object
-AREF (Lisp_Object array, ptrdiff_t idx)
-{
-  return Qnil; // TODO
-}
-
-#define gc_asize ASIZE
-
-INLINE void
-ASET (Lisp_Object array, ptrdiff_t idx, Lisp_Object val)
-{
-  // TODO
-}
-
-#define gc_aset ASET
-
-#else /* !CHEZ_SCHEME */
 
 INLINE Lisp_Object
 AREF (Lisp_Object array, ptrdiff_t idx)
@@ -1949,8 +1689,6 @@ memclear (void *p, ptrdiff_t nbytes)
 #define PSEUDOVECSIZE(type, nonlispfield)			\
   ((offsetof (type, nonlispfield) - header_size) / word_size)
 
-#endif /* !CHEZ_SCHEME */
-
 /* Compute A OP B, using the unsigned comparison operator OP.  A and B
    should be integer expressions.  This is not the same as
    mathematical comparison; for example, UNSIGNED_CMP (0, <, -1)
@@ -1963,8 +1701,6 @@ memclear (void *p, ptrdiff_t nbytes)
 
 /* True iff C is an ASCII character.  */
 #define ASCII_CHAR_P(c) UNSIGNED_CMP (c, <, 0x80)
-
-#ifndef CHEZ_SCHEME
 
 /* A char-table is a kind of vectorlike, with contents are like a
    vector but with a few other slots.  For some purposes, it makes
@@ -2072,13 +1808,13 @@ CHAR_TABLE_REF_ASCII (Lisp_Object ct, ptrdiff_t idx)
   Lisp_Object val;
   do
     {
-      tbl = tbl ? XCHAR_TABLE (tbl->parent) : XCHAR_TABLE (ct);
-      val = (! SUB_CHAR_TABLE_P (tbl->ascii) ? tbl->ascii
-	     : XSUB_CHAR_TABLE (tbl->ascii)->contents[idx]);
+      tbl = tbl ? XCHAR_TABLE (PV_LISP_FIELD_REF (tbl, parent)) : XCHAR_TABLE (ct);
+      val = (! SUB_CHAR_TABLE_P (PV_LISP_FIELD_REF (tbl, ascii)) ? PV_LISP_FIELD_REF (tbl, ascii)
+	     : XSUB_CHAR_TABLE (PV_LISP_FIELD_REF (tbl, ascii))->contents[idx]);
       if (NILP (val))
-	val = tbl->defalt;
+	val = PV_LISP_FIELD_REF (tbl, defalt);
     }
-  while (NILP (val) && ! NILP (tbl->parent));
+  while (NILP (val) && ! NILP (PV_LISP_FIELD_REF (tbl, parent)));
 
   return val;
 }
@@ -2098,8 +1834,8 @@ CHAR_TABLE_REF (Lisp_Object ct, int idx)
 INLINE void
 CHAR_TABLE_SET (Lisp_Object ct, int idx, Lisp_Object val)
 {
-  if (ASCII_CHAR_P (idx) && SUB_CHAR_TABLE_P (XCHAR_TABLE (ct)->ascii))
-    set_sub_char_table_contents (XCHAR_TABLE (ct)->ascii, idx, val);
+  if (ASCII_CHAR_P (idx) && SUB_CHAR_TABLE_P (PV_LISP_FIELD_REF (XCHAR_TABLE (ct), ascii)))
+    set_sub_char_table_contents (PV_LISP_FIELD_REF (XCHAR_TABLE (ct), ascii), idx, val);
   else
     char_table_set (ct, idx, val);
 }
@@ -2169,7 +1905,6 @@ verify (offsetof (struct Lisp_Sub_Char_Table, contents)
 	== (offsetof (struct Lisp_Vector, contents)
 	    + SUB_CHAR_TABLE_OFFSET * sizeof (Lisp_Object)));
 
-#endif /* !CHEZ_SCHEME */
 
 /* Save and restore the instruction and environment pointers,
    without affecting the signal mask.  */
@@ -2191,8 +1926,6 @@ typedef jmp_buf sys_jmp_buf;
 #endif
 
 #include "thread.h"
-
-#ifndef CHEZ_SCHEME
 
 /***********************************************************************
 			       Symbols
@@ -2420,14 +2153,14 @@ HASH_VALUE (struct Lisp_Hash_Table *h, ptrdiff_t idx)
 INLINE Lisp_Object
 HASH_HASH (struct Lisp_Hash_Table *h, ptrdiff_t idx)
 {
-  return AREF (h->hash, idx);
+  return AREF (PV_LISP_FIELD_REF (h, hash), idx);
 }
 
 /* Value is the size of hash table H.  */
 INLINE ptrdiff_t
 HASH_TABLE_SIZE (struct Lisp_Hash_Table *h)
 {
-  return ASIZE (h->next);
+  return ASIZE (PV_LISP_FIELD_REF (h, next));
 }
 
 /* Default size for hash tables if not specified.  */
@@ -3006,8 +2739,6 @@ enum Lisp_Compiled
     COMPILED_INTERACTIVE = 5
   };
 
-#endif /* !CHEZ_SCHEME */
-  
 /* Flag bits in a character.  These also get used in termhooks.h.
    Richard Stallman <rms@gnu.ai.mit.edu> thinks that MULE
    (MUlti-Lingual Emacs) might need 22 bits for the character value
@@ -3028,8 +2759,6 @@ enum char_bits
        itself.  */
     CHARACTERBITS = 22
   };
-
-#ifndef CHEZ_SCHEME
 
 /* Data type checking.  */
 
@@ -3280,37 +3009,6 @@ enum maxargs
    '{ Lisp_Object a[2]; a[0] = fmt; a[1] = text; return Fformat (2, a); }'.
    CALLN is overkill for simple usages like 'Finsert (1, &text);'.  */
 #define CALLN(f, ...) CALLMANY (f, ((Lisp_Object []) {__VA_ARGS__}))
-
-#endif /* !CHEZ_SCHEME */
-
-#ifdef CHEZ_SCHEME
-
-// TODO
-#define DEFVAR_LISP(lname, vname, doc) \
-  do {                                 \
-  } while (false)
-
-// TODO
-#define DEFVAR_LISP_NOPRO(lname, vname, doc) \
-  do {                                       \
-  } while (false)
-
-// TODO
-#define DEFVAR_BOOL(lname, vname, doc) \
-  do {                                 \
-  } while (false)
-
-// TODO
-#define DEFVAR_INT(lname, vname, doc)  \
-  do {                                 \
-  } while (false)
-
-// TODO
-#define DEFVAR_KBOARD(lname, vname, doc) \
-    do {                                 \
-    } while (false)
-
-#else
 
 extern void defvar_lisp (struct Lisp_Objfwd *, const char *, Lisp_Object *);
 extern void defvar_lisp_nopro (struct Lisp_Objfwd *, const char *, Lisp_Object *);
@@ -3612,12 +3310,12 @@ set_string_intervals (Lisp_Object s, INTERVAL i)
 INLINE void
 set_char_table_defalt (Lisp_Object table, Lisp_Object val)
 {
-  XCHAR_TABLE (table)->defalt = val;
+  PV_LISP_FIELD_SET (XCHAR_TABLE (table), defalt, val);
 }
 INLINE void
 set_char_table_purpose (Lisp_Object table, Lisp_Object val)
 {
-  XCHAR_TABLE (table)->purpose = val;
+  PV_LISP_FIELD_SET (XCHAR_TABLE (table), purpose, val);
 }
 
 /* Set different slots in (sub)character tables.  */
@@ -3641,8 +3339,6 @@ set_sub_char_table_contents (Lisp_Object table, ptrdiff_t idx, Lisp_Object val)
 {
   XSUB_CHAR_TABLE (table)->contents[idx] = val;
 }
-
-#endif /* !CHEZ_SCHEME */
 
 /* Defined in data.c.  */
 extern _Noreturn void wrong_choice (Lisp_Object, Lisp_Object);
@@ -3686,9 +3382,7 @@ extern _Noreturn void args_out_of_range (Lisp_Object, Lisp_Object);
 extern _Noreturn void args_out_of_range_3 (Lisp_Object, Lisp_Object,
 					   Lisp_Object);
 extern _Noreturn void circular_list (Lisp_Object);
-#ifndef CHEZ_SCHEME
 extern Lisp_Object do_symval_forwarding (union Lisp_Fwd *);
-#endif /* !CHEZ_SCHEME */
 enum Set_Internal_Bind {
   SET_INTERNAL_SET,
   SET_INTERNAL_BIND,
@@ -3738,7 +3432,6 @@ extern void sweep_weak_hash_tables (void);
 extern char *extract_data_from_object (Lisp_Object, ptrdiff_t *, ptrdiff_t *);
 EMACS_UINT hash_string (char const *, ptrdiff_t);
 EMACS_UINT sxhash (Lisp_Object, int);
-#ifndef CHEZ_SCHEME
 Lisp_Object make_hash_table (struct hash_table_test, EMACS_INT, float, float,
 			     Lisp_Object, bool);
 ptrdiff_t hash_lookup (struct Lisp_Hash_Table *, Lisp_Object, EMACS_UINT *);
@@ -3746,7 +3439,6 @@ ptrdiff_t hash_put (struct Lisp_Hash_Table *, Lisp_Object, Lisp_Object,
 		    EMACS_UINT);
 void hash_remove_from_table (struct Lisp_Hash_Table *, Lisp_Object);
 extern struct hash_table_test const hashtest_eq, hashtest_eql, hashtest_equal;
-#endif /* !CHEZ_SCHEME */
 extern void validate_subarray (Lisp_Object, Lisp_Object, Lisp_Object,
 			       ptrdiff_t, ptrdiff_t *, ptrdiff_t *);
 extern Lisp_Object substring_both (Lisp_Object, ptrdiff_t, ptrdiff_t,
@@ -3885,9 +3577,7 @@ extern void parse_str_as_multibyte (const unsigned char *, ptrdiff_t,
 extern void *my_heap_start (void);
 extern void check_pure_size (void);
 extern void free_misc (Lisp_Object);
-#ifndef CHEZ_SCHEME
 extern void allocate_string_data (struct Lisp_String *, EMACS_INT, EMACS_INT);
-#endif
 extern void malloc_warning (const char *);
 extern _Noreturn void memory_full (size_t);
 extern _Noreturn void buffer_memory_full (ptrdiff_t);
@@ -3960,8 +3650,6 @@ extern Lisp_Object make_specified_string (const char *,
 					  ptrdiff_t, ptrdiff_t, bool);
 extern Lisp_Object make_pure_string (const char *, ptrdiff_t, ptrdiff_t, bool);
 extern Lisp_Object make_pure_c_string (const char *, ptrdiff_t);
-
-#ifndef CHEZ_SCHEME
 
 /* Make a string allocated in pure space, use STR as string data.  */
 
@@ -4157,8 +3845,6 @@ intern_c_string (const char *str)
 {
   return intern_c_string_1 (str, strlen (str));
 }
-
-#endif /* !CHEZ_SCHEME */
 
 /* Defined in eval.c.  */
 extern Lisp_Object Vautoload_queue;
@@ -4800,8 +4486,6 @@ extern char *xstrdup (const char *) ATTRIBUTE_MALLOC;
 extern char *xlispstrdup (Lisp_Object) ATTRIBUTE_MALLOC;
 extern void dupstring (char **, char const *);
 
-#ifndef CHEZ_SCHEME
-
 /* Make DEST a copy of STRING's data.  Return a pointer to DEST's terminating
    null byte.  This is like stpcpy, except the source is a Lisp string.  */
 
@@ -4812,8 +4496,6 @@ lispstpcpy (char *dest, Lisp_Object string)
   memcpy (dest, SDATA (string), len + 1);
   return dest + len;
 }
-
-#endif /* !CHEZ_SCHEME */
 
 extern void xputenv (const char *);
 
@@ -4893,8 +4575,6 @@ extern void *record_xmalloc (size_t) ATTRIBUTE_ALLOC_SIZE ((1));
       unbind_to (sa_count, Qnil);	\
     }					\
   } while (false)
-
-#ifndef CHEZ_SCHEME
 
 /* Set BUF to point to an allocated array of NELT Lisp_Objects,
    immediately followed by EXTRA spare bytes.  */
@@ -5080,8 +4760,6 @@ maybe_gc (void)
 	  && consing_since_gc > memory_full_cons_threshold))
     Fgarbage_collect ();
 }
-
-#endif /* !CHEZ_SCHEME */
 
 INLINE_HEADER_END
 

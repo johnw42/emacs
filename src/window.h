@@ -449,49 +449,49 @@ XWINDOW (Lisp_Object a)
 INLINE void
 wset_frame (struct window *w, Lisp_Object val)
 {
-  w->frame = val;
+  PV_LISP_FIELD_SET(w, frame, val);
 }
 
 INLINE void
 wset_next (struct window *w, Lisp_Object val)
 {
-  w->next = val;
+  PV_LISP_FIELD_SET(w, next, val);
 }
 
 INLINE void
 wset_prev (struct window *w, Lisp_Object val)
 {
-  w->prev = val;
+  PV_LISP_FIELD_SET(w, prev, val);
 }
 
 INLINE void
 wset_redisplay_end_trigger (struct window *w, Lisp_Object val)
 {
-  w->redisplay_end_trigger = val;
+  PV_LISP_FIELD_SET(w, redisplay_end_trigger, val);
 }
 
 INLINE void
 wset_new_pixel (struct window *w, Lisp_Object val)
 {
-  w->new_pixel = val;
+  PV_LISP_FIELD_SET(w, new_pixel, val);
 }
 
 INLINE void
 wset_vertical_scroll_bar (struct window *w, Lisp_Object val)
 {
-  w->vertical_scroll_bar = val;
+  PV_LISP_FIELD_SET(w, vertical_scroll_bar, val);
 }
 
 INLINE void
 wset_horizontal_scroll_bar (struct window *w, Lisp_Object val)
 {
-  w->horizontal_scroll_bar = val;
+  PV_LISP_FIELD_SET(w, horizontal_scroll_bar, val);
 }
 
 INLINE void
 wset_horizontal_scroll_bar_type (struct window *w, Lisp_Object val)
 {
-  w->horizontal_scroll_bar_type = val;
+  PV_LISP_FIELD_SET(w, horizontal_scroll_bar_type, val);
 }
 
 INLINE void
@@ -512,7 +512,7 @@ wset_next_buffers (struct window *w, Lisp_Object val)
 /* True if W is a minibuffer window on a frame that contains at least
    one other window.  */
 #define MINI_NON_ONLY_WINDOW_P(W)	 \
-  (MINI_WINDOW_P (W) && !NILP ((W)->prev))
+  (MINI_WINDOW_P (W) && !NILP (PV_LISP_FIELD_REF(W, prev)))
 
 /* True if W is a minibuffer window that is alone on its frame.  */
 #define MINI_ONLY_WINDOW_P(W)		 \
@@ -551,7 +551,7 @@ wset_next_buffers (struct window *w, Lisp_Object val)
 
 /* Non-nil if window W is internal (is a parent window).  */
 #define WINDOW_INTERNAL_P(W) \
-  (WINDOWP ((W)->contents))
+  (WINDOWP (PV_LISP_FIELD_REF(W, contents)))
 
 /* True if window W is a horizontal combination of windows.  */
 #define WINDOW_HORIZONTAL_COMBINATION_P(W) \
@@ -649,9 +649,9 @@ wset_next_buffers (struct window *w, Lisp_Object val)
 /* Width of bottom divider of window W.  */
 #define WINDOW_BOTTOM_DIVIDER_WIDTH(W)					\
   (((WINDOW_BOTTOMMOST_P (W)						\
-     && NILP ((XWINDOW (FRAME_ROOT_WINDOW				\
-			(WINDOW_XFRAME (W))))->next))			\
-    || EQ ((W)->prev, FRAME_ROOT_WINDOW (WINDOW_XFRAME (W)))		\
+     && NILP (PV_LISP_FIELD_REF (XWINDOW (FRAME_ROOT_WINDOW             \
+                                          (WINDOW_XFRAME (W))), next))) \
+    || EQ (PV_LISP_FIELD_REF(W, prev), FRAME_ROOT_WINDOW (WINDOW_XFRAME (W))) \
     || (W)->pseudo_window_p)						\
    ? 0 : FRAME_BOTTOM_DIVIDER_WIDTH (WINDOW_XFRAME (W)))
 
@@ -838,9 +838,9 @@ wset_next_buffers (struct window *w, Lisp_Object val)
 #define WINDOW_HAS_HORIZONTAL_SCROLL_BAR(W)			\
   ((WINDOW_PSEUDO_P (W) || MINI_NON_ONLY_WINDOW_P (W))		\
    ? false							\
-   : EQ (W->horizontal_scroll_bar_type, Qt)			\
+   : EQ (PV_LISP_FIELD_REF(W, horizontal_scroll_bar_type), Qt)  \
    ? FRAME_HAS_HORIZONTAL_SCROLL_BARS (WINDOW_XFRAME (W))	\
-   : EQ (W->horizontal_scroll_bar_type, Qbottom)		\
+   : EQ (PV_LISP_FIELD_REF(W, horizontal_scroll_bar_type), Qbottom)     \
    ? true							\
    : false)
 #else

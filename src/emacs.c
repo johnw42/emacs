@@ -66,10 +66,6 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 #include TERM_HEADER
 #endif /* HAVE_WINDOW_SYSTEM */
 
-#ifndef CHEZ_SCHEME
-#include "emacs_scheme.h"
-#endif
-
 #include "intervals.h"
 #include "character.h"
 #include "buffer.h"

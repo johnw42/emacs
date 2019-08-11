@@ -498,7 +498,7 @@ struct buffer_text
 
 /* Most code should use this macro to access Lisp fields in struct buffer.  */
 
-#define BVAR(buf, field) ((buf)->field ## _)
+#define BVAR(buf, field) PV_LISP_FIELD_REF(buf, field ## _)
 
 /* This is the structure that the buffer Lisp object points to.  */
 
@@ -992,97 +992,97 @@ XBUFFER (Lisp_Object a)
 INLINE void
 bset_bidi_paragraph_direction (struct buffer *b, Lisp_Object val)
 {
-  b->bidi_paragraph_direction_ = val;
+  PV_LISP_FIELD_SET(b, bidi_paragraph_direction_, val);
 }
 INLINE void
 bset_cache_long_scans (struct buffer *b, Lisp_Object val)
 {
-  b->cache_long_scans_ = val;
+  PV_LISP_FIELD_SET(b, cache_long_scans_, val);
 }
 INLINE void
 bset_case_canon_table (struct buffer *b, Lisp_Object val)
 {
-  b->case_canon_table_ = val;
+  PV_LISP_FIELD_SET(b, case_canon_table_, val);
 }
 INLINE void
 bset_case_eqv_table (struct buffer *b, Lisp_Object val)
 {
-  b->case_eqv_table_ = val;
+  PV_LISP_FIELD_SET(b, case_eqv_table_, val);
 }
 INLINE void
 bset_directory (struct buffer *b, Lisp_Object val)
 {
-  b->directory_ = val;
+  PV_LISP_FIELD_SET(b, directory_, val);
 }
 INLINE void
 bset_display_count (struct buffer *b, Lisp_Object val)
 {
-  b->display_count_ = val;
+  PV_LISP_FIELD_SET(b, display_count_, val);
 }
 INLINE void
 bset_left_margin_cols (struct buffer *b, Lisp_Object val)
 {
-  b->left_margin_cols_ = val;
+  PV_LISP_FIELD_SET(b, left_margin_cols_, val);
 }
 INLINE void
 bset_right_margin_cols (struct buffer *b, Lisp_Object val)
 {
-  b->right_margin_cols_ = val;
+  PV_LISP_FIELD_SET(b, right_margin_cols_, val);
 }
 INLINE void
 bset_display_time (struct buffer *b, Lisp_Object val)
 {
-  b->display_time_ = val;
+  PV_LISP_FIELD_SET(b, display_time_, val);
 }
 INLINE void
 bset_downcase_table (struct buffer *b, Lisp_Object val)
 {
-  b->downcase_table_ = val;
+  PV_LISP_FIELD_SET(b, downcase_table_, val);
 }
 INLINE void
 bset_enable_multibyte_characters (struct buffer *b, Lisp_Object val)
 {
-  b->enable_multibyte_characters_ = val;
+  PV_LISP_FIELD_SET(b, enable_multibyte_characters_, val);
 }
 INLINE void
 bset_filename (struct buffer *b, Lisp_Object val)
 {
-  b->filename_ = val;
+  PV_LISP_FIELD_SET(b, filename_, val);
 }
 INLINE void
 bset_keymap (struct buffer *b, Lisp_Object val)
 {
-  b->keymap_ = val;
+  PV_LISP_FIELD_SET(b, keymap_, val);
 }
 INLINE void
 bset_last_selected_window (struct buffer *b, Lisp_Object val)
 {
-  b->last_selected_window_ = val;
+  PV_LISP_FIELD_SET(b, last_selected_window_, val);
 }
 INLINE void
 bset_local_var_alist (struct buffer *b, Lisp_Object val)
 {
-  b->local_var_alist_ = val;
+  PV_LISP_FIELD_SET(b, local_var_alist_, val);
 }
 INLINE void
 bset_mark_active (struct buffer *b, Lisp_Object val)
 {
-  b->mark_active_ = val;
+  PV_LISP_FIELD_SET(b, mark_active_, val);
 }
 INLINE void
 bset_point_before_scroll (struct buffer *b, Lisp_Object val)
 {
-  b->point_before_scroll_ = val;
+  PV_LISP_FIELD_SET(b, point_before_scroll_, val);
 }
 INLINE void
 bset_read_only (struct buffer *b, Lisp_Object val)
 {
-  b->read_only_ = val;
+  PV_LISP_FIELD_SET(b, read_only_, val);
 }
 INLINE void
 bset_truncate_lines (struct buffer *b, Lisp_Object val)
 {
-  b->truncate_lines_ = val;
+  PV_LISP_FIELD_SET(b, truncate_lines_, val);
 }
 INLINE void
 bset_undo_list (struct buffer *b, Lisp_Object val)
@@ -1092,12 +1092,12 @@ bset_undo_list (struct buffer *b, Lisp_Object val)
 INLINE void
 bset_upcase_table (struct buffer *b, Lisp_Object val)
 {
-  b->upcase_table_ = val;
+  PV_LISP_FIELD_SET(b, upcase_table_, val);
 }
 INLINE void
 bset_width_table (struct buffer *b, Lisp_Object val)
 {
-  b->width_table_ = val;
+  PV_LISP_FIELD_SET(b, width_table_, val);
 }
 
 /* Number of Lisp_Objects at the beginning of struct buffer.
