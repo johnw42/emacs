@@ -259,13 +259,11 @@ composition_valid_p (ptrdiff_t start, ptrdiff_t end, Lisp_Object prop)
 #define LGSTRING_GLYPH(lgs, idx) AREF ((lgs), (idx) + 2)
 #define LGSTRING_SET_GLYPH(lgs, idx, val) ASET ((lgs), (idx) + 2, (val))
 
-#ifndef CHEZ_SCHEME
 INLINE Lisp_Object *
 lgstring_glyph_addr (Lisp_Object lgs, ptrdiff_t idx)
 {
   return aref_addr (lgs, idx + 2);
 }
-#endif
 
 /* Vector size of Lispy glyph.  */
 enum lglyph_indices

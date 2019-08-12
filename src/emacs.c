@@ -698,9 +698,6 @@ main (int argc, char **argv)
   /* Record (approximately) where the stack begins.  */
   stack_bottom = (char *) &stack_bottom_variable;
 
-#ifdef CHEZ_SCHEME
-  scheme_init();
-#endif
 
 #ifndef CANNOT_DUMP
   dumping = !initialized && (strcmp (argv[argc - 1], "dump") == 0
@@ -1720,6 +1717,13 @@ Using an Emacs configured with --with-x-toolkit=lucid does not have this problem
 #endif
 #endif
 
+
+#ifdef CHEZ_SCHEME
+  if (!initialized) {
+    scheme_init();
+  } 
+#endif
+
   initialized = 1;
 
   /* Enter editor command loop.  This never returns.  */
@@ -2161,6 +2165,9 @@ You must run Emacs in batch mode in order to dump it.  */)
   Lisp_Object symbol;
   ptrdiff_t count = SPECPDL_INDEX ();
 
+#if 0
+  printf("Can't dump emacs when using Chez Scheme.\n");
+#else
   check_pure_size ();
 
   if (! noninteractive)
@@ -2245,6 +2252,7 @@ You must run Emacs in batch mode in order to dump it.  */)
 #endif
 
   Vpurify_flag = tem;
+#endif /* not CHEZ_SCHEME */
 
   return unbind_to (count, Qnil);
 }

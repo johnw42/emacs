@@ -35,7 +35,15 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 #include <verify.h>
 
 #ifdef CHEZ_SCHEME
+#include <scheme.h>
 void scheme_init(void);
+
+#undef LOCK
+#undef UNLOCK
+
+#define Scons emacs_Scons
+#define Smake_vector emacs_Smake_vector
+#define Smake_string emacs_Smake_string
 #endif
 
 #define PV_LISP_FIELD(name) Lisp_Object name
@@ -487,6 +495,9 @@ enum Lisp_Misc_Type
 #ifdef HAVE_MODULES
     Lisp_Misc_User_Ptr,
 #endif
+#ifdef CHEZ_SCHEME
+    Lisp_Misc_Scheme_Ref,
+#endif
     /* This is not a type code.  It is for range checking.  */
     Lisp_Misc_Limit
   };
@@ -838,6 +849,13 @@ union vectorlike_header
     char alignas (GCALIGNMENT) gcaligned;
   };
 verify (alignof (union vectorlike_header) % GCALIGNMENT == 0);
+
+#ifdef CHEZ_SCHEME
+struct scheme_psuedovector {
+  union vectorlike_header header;
+  ptr scheme_obj;
+};
+#endif
 
 INLINE bool
 (SYMBOLP) (Lisp_Object x)
@@ -2457,6 +2475,17 @@ struct Lisp_User_Ptr
 };
 #endif
 
+#ifdef CHEZ_SCHEME
+struct Lisp_Scheme_Ref
+{
+  ENUM_BF (Lisp_Misc_Type) type : 16;	     /* = Lisp_Misc_User_Ptr */
+  bool_bf gcmarkbit : 1;
+  unsigned spacer : 15;
+
+  uptr id;
+};
+#endif
+
 /* A finalizer sentinel.  */
 struct Lisp_Finalizer
   {
@@ -2508,6 +2537,9 @@ union Lisp_Misc
 #ifdef HAVE_MODULES
     struct Lisp_User_Ptr u_user_ptr;
 #endif
+#ifdef CHEZ_SCHEME
+    struct Lisp_Scheme_Ref u_scheme_ref;
+#endif
   };
 
 INLINE union Lisp_Misc *
@@ -2553,6 +2585,21 @@ INLINE struct Lisp_User_Ptr *
 XUSER_PTR (Lisp_Object a)
 {
   eassert (USER_PTRP (a));
+  return XUNTAG (a, Lisp_Misc);
+}
+#endif
+
+#ifdef CHEZ_SCHEME
+INLINE bool
+SCHEME_REFP (Lisp_Object x)
+{
+  return MISCP (x) && XMISCTYPE (x) == Lisp_Misc_Scheme_Ref;
+}
+
+INLINE struct Lisp_Scheme_Ref *
+XSCHEME_REF (Lisp_Object a)
+{
+  eassert (SCHEME_REFP (a));
   return XUNTAG (a, Lisp_Misc);
 }
 #endif
