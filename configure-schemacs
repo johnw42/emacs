@@ -1,0 +1,4 @@
+#! /bin/bash
+
+make configure
+./configure --enable-checking=yes --with-chez-scheme CFLAGS=-g "$@"

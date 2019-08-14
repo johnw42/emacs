@@ -378,6 +378,7 @@ OPTION_DEFAULT_ON([gnutls],[don't use -lgnutls for SSL/TLS support])
 OPTION_DEFAULT_ON([zlib],[don't compile with zlib decompression support])
 OPTION_DEFAULT_OFF([modules],[compile with dynamic modules support])
 OPTION_DEFAULT_ON([threads],[don't compile with elisp threading support])
+OPTION_DEFAULT_OFF([chez-scheme],[compile with Chez Scheme])
 
 AC_ARG_WITH([file-notification],[AS_HELP_STRING([--with-file-notification=LIB],
  [use a file notification library (LIB one of: yes, inotify, kqueue, gfile, w32, no)])],
@@ -2904,12 +2905,18 @@ case $with_file_notification,$NOTIFY_OBJ in
 esac
 
 dnl Chez Scheme
-CHEZ_SCHEME_CFLAGS="-DCHEZ_SCHEME -I$HOME/.local/lib/csv9.5.2/a6le -fPIC"
-CHEZ_SCHEME_OBJ="$HOME/.local/lib/csv9.5.2/a6le/kernel.o"
-CHEZ_SCHEME_LIBS="-luuid -lm -ltinfo -lrt -lc -lpthread"
-AC_SUBST([CHEZ_SCHEME_CFLAGS])
-AC_SUBST([CHEZ_SCHEME_OBJ])
-AC_SUBST([CHEZ_SCHEME_LIBS])
+CHEZ_SCHEME_CFLAGS=
+CHEZ_SCHEME_OBJ=
+CHEZ_SCHEME_LIBS=
+if test "$with_chez_scheme" != no; then
+   AC_DEFINE(HAVE_CHEZ_SCHEME, 1, [Define to 1 to use Chez Scheme.])
+   CHEZ_SCHEME_CFLAGS="-DCHEZ_SCHEME -I$HOME/.local/lib/csv9.5.2/a6le -fPIC"
+   CHEZ_SCHEME_OBJ="$HOME/.local/lib/csv9.5.2/a6le/kernel.o"
+   CHEZ_SCHEME_LIBS="-luuid -lm -ltinfo -lrt -lc -lpthread -ldl"
+fi
+AC_SUBST(CHEZ_SCHEME_CFLAGS)
+AC_SUBST(CHEZ_SCHEME_OBJ)
+AC_SUBST(CHEZ_SCHEME_LIBS)
 
 dnl kqueue is available on BSD-like systems.
 case $with_file_notification,$NOTIFY_OBJ in

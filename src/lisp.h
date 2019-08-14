@@ -34,9 +34,11 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 #include <intprops.h>
 #include <verify.h>
 
-#ifdef CHEZ_SCHEME
+#ifdef HAVE_CHEZ_SCHEME
 #include <scheme.h>
 void scheme_init(void);
+void scheme_deinit(void);
+void syms_of_scheme_lisp(void);
 
 #undef LOCK
 #undef UNLOCK
@@ -495,7 +497,7 @@ enum Lisp_Misc_Type
 #ifdef HAVE_MODULES
     Lisp_Misc_User_Ptr,
 #endif
-#ifdef CHEZ_SCHEME
+#ifdef HAVE_CHEZ_SCHEME
     Lisp_Misc_Scheme_Ref,
 #endif
     /* This is not a type code.  It is for range checking.  */
@@ -850,7 +852,7 @@ union vectorlike_header
   };
 verify (alignof (union vectorlike_header) % GCALIGNMENT == 0);
 
-#ifdef CHEZ_SCHEME
+#ifdef HAVE_CHEZ_SCHEME
 struct scheme_psuedovector {
   union vectorlike_header header;
   ptr scheme_obj;
@@ -2475,7 +2477,7 @@ struct Lisp_User_Ptr
 };
 #endif
 
-#ifdef CHEZ_SCHEME
+#ifdef HAVE_CHEZ_SCHEME
 struct Lisp_Scheme_Ref
 {
   ENUM_BF (Lisp_Misc_Type) type : 16;	     /* = Lisp_Misc_User_Ptr */
@@ -2537,7 +2539,7 @@ union Lisp_Misc
 #ifdef HAVE_MODULES
     struct Lisp_User_Ptr u_user_ptr;
 #endif
-#ifdef CHEZ_SCHEME
+#ifdef HAVE_CHEZ_SCHEME
     struct Lisp_Scheme_Ref u_scheme_ref;
 #endif
   };
@@ -2589,7 +2591,7 @@ XUSER_PTR (Lisp_Object a)
 }
 #endif
 
-#ifdef CHEZ_SCHEME
+#ifdef HAVE_CHEZ_SCHEME
 INLINE bool
 SCHEME_REFP (Lisp_Object x)
 {

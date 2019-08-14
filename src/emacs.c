@@ -1610,6 +1610,10 @@ Using an Emacs configured with --with-x-toolkit=lucid does not have this problem
       syms_of_dbusbind ();
 #endif /* HAVE_DBUS */
 
+#ifdef HAVE_CHEZ_SCHEME
+      syms_of_scheme_lisp();
+#endif
+
 #ifdef WINDOWSNT
       syms_of_ntterm ();
 #ifdef HAVE_W32NOTIFY
@@ -1718,10 +1722,10 @@ Using an Emacs configured with --with-x-toolkit=lucid does not have this problem
 #endif
 
 
-#ifdef CHEZ_SCHEME
-  if (!initialized) {
+#ifdef HAVE_CHEZ_SCHEME
+  if (initialized) {
     scheme_init();
-  } 
+  }
 #endif
 
   initialized = 1;
@@ -2165,9 +2169,6 @@ You must run Emacs in batch mode in order to dump it.  */)
   Lisp_Object symbol;
   ptrdiff_t count = SPECPDL_INDEX ();
 
-#if 0
-  printf("Can't dump emacs when using Chez Scheme.\n");
-#else
   check_pure_size ();
 
   if (! noninteractive)
@@ -2252,7 +2253,6 @@ You must run Emacs in batch mode in order to dump it.  */)
 #endif
 
   Vpurify_flag = tem;
-#endif /* not CHEZ_SCHEME */
 
   return unbind_to (count, Qnil);
 }

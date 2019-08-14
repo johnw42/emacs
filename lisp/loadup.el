@@ -257,6 +257,9 @@
 (load "emacs-lisp/tabulated-list")
 (load "buff-menu")
 
+(if (fboundp 'scheme-funcall)
+    (load "emacs-lisp/scheme-internal"))
+
 (if (fboundp 'x-create-frame)
     (progn
       (load "fringe")

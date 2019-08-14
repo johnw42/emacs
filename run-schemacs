@@ -1,0 +1,18 @@
+#! /bin/bash
+
+if make -j; then
+  EMACS_CMD="src/emacs --batch"
+  #EMACS_CMD="src/temacs --batch --load loadup"
+  GDB=
+  if [[ $TERM != dumb ]]; then
+    GDB="gdb --args"
+  fi
+  $GDB $EMACS_CMD --eval \
+    "
+(progn
+ (setq garbage-collection-messages t)
+ (message \"after-idle: %S\"
+   (prog1 (scheme-funcall 'after-idle (cons nil nil))
+   (garbage-collect))))"
+  #src/emacs -Q --batch --eval "(message \"after-idle: %S\" (scheme-funcall 'after-idle))"
+fi

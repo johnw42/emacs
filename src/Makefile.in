@@ -534,7 +534,8 @@ ${lispintdir}/characters.elc: ${charscript:.el=.elc}
 ## on all of $lisp, and emacs depends on DOC, so it is ok to use $lisp here.
 emacs$(EXEEXT): temacs$(EXEEXT) \
                 lisp.mk $(etc)/DOC $(lisp) \
-                $(lispsource)/international/charprop.el ${charsets}
+                $(lispsource)/international/charprop.el ${charsets} \
+		../scheme/main.ss
 ifeq ($(CANNOT_DUMP),yes)
 	ln -f temacs$(EXEEXT) $@
 else
