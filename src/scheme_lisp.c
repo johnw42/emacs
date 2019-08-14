@@ -9,6 +9,7 @@
 
 #pragma GCC diagnostic ignored "-Wdiscarded-qualifiers"
 
+#undef Smake_vector
 #define SHIFT_BITS (CHAR_BIT * sizeof(EMACS_INT) / 2)
 
 static bool scheme_initialized = false;
@@ -52,6 +53,10 @@ static ptr lisp_to_scheme(Lisp_Object lisp_obj) {
 
   if (FLOATP(lisp_obj)) {
     return Sflonum(XFLOAT_DATA(lisp_obj));
+  }
+
+  if (SCHEME_REFP(lisp_obj)) {
+    return XSCHEME_REF(lisp_obj)->scheme_obj;
   }
 
   /* Make sure this Lisp object has an ID number and wrap it as a
@@ -221,6 +226,130 @@ static ptr scheme_elisp_apply(ptr func, ptr args) {
   return lisp_to_scheme(Ffuncall(nargs, lisp_args));
 }
 
+struct locked_scheme_obj {
+  ptr *c_ptr;
+
+  // Copy of *c_ptr.  Valid only during scheme_gc().
+  ptr scheme_obj;
+};
+
+static struct locked_scheme_obj *locked_scheme_objs = NULL;
+static iptr locked_scheme_objs_size = 0;
+static iptr num_locked_scheme_objs = 0;
+
+void scheme_track_for_elisp(ptr *c_ptr) {
+  Slock_object(*c_ptr);
+  if (num_locked_scheme_objs == locked_scheme_objs_size) {
+    iptr new_size =
+      locked_scheme_objs_size == 0 ? 1 : 2 * locked_scheme_objs_size;
+    struct locked_scheme_obj *new_array =
+      reallocarray(locked_scheme_objs,
+                   new_size, sizeof(struct locked_scheme_obj));
+    eassert(new_array);
+    locked_scheme_objs = new_array;
+  }
+  eassert(locked_scheme_objs_size > num_locked_scheme_objs);
+  locked_scheme_objs[num_locked_scheme_objs].c_ptr = c_ptr;
+  ++num_locked_scheme_objs;
+}
+
+void scheme_untrack_for_elisp(ptr *c_ptr) {
+  for (iptr i = 0; i < num_locked_scheme_objs; i++) {
+    if (locked_scheme_objs[i].c_ptr == c_ptr) {
+      Sunlock_object(*locked_scheme_objs[i].c_ptr);
+      --num_locked_scheme_objs;
+      locked_scheme_objs[i].c_ptr =
+        locked_scheme_objs[num_locked_scheme_objs].c_ptr;
+      return;
+    }
+  }
+  eassert(false);
+}
+
+void scheme_gc(void) {
+  if (!scheme_initialized) {
+    return;
+  }
+
+  // Collect and unlock all tracked Scheme objs.
+  ptr vec = Smake_vector(num_locked_scheme_objs, Sfalse);
+  Slock_object(vec);
+  for (iptr i = 0; i < num_locked_scheme_objs; i++) {
+    ptr scheme_obj = *locked_scheme_objs[i].c_ptr;
+    locked_scheme_objs[i].scheme_obj = scheme_obj;
+    Sunlock_object(scheme_obj);
+    Svector_set(vec, i, scheme_obj);
+  }
+
+  // Run garbage collection, which may move the tracked objs.
+  Scall0(Stop_level_value(Sstring_to_symbol("collect")));
+
+  // Update references in C data structures to use the new locations,
+  // and lock the objs in place until the call to the function.
+  for (iptr i = 0; i < num_locked_scheme_objs; i++) {
+    ptr scheme_obj = Svector_ref(vec, i);
+    Slock_object(scheme_obj);
+    if (scheme_obj != locked_scheme_objs[i].scheme_obj) {
+      *locked_scheme_objs[i].c_ptr = scheme_obj;
+      locked_scheme_objs[i].scheme_obj = scheme_obj;
+    }
+  }
+  Sunlock_object(vec);
+}
+
+/* static ptr locked_scheme_objects = Sfalse; */
+/* static iptr num_locked_scheme_objects = 0; */
+
+/* void scheme_lock_for_elisp(ptr x) { */
+/*   eassert(scheme_initialized); */
+/*   Slock_object(x); */
+/*   iptr len = Svector_length(locked_scheme_objects); */
+/*   eassert(len > 0); */
+/*   if (num_locked_scheme_objects == len) { */
+/*     iptr new_len = 2 * len; */
+/*     ptr new_vec = Smake_vector(new_len, Sfalse); */
+/*     Slock_object(new_vec); */
+/*     for (iptr i = 0; i < len; i++) { */
+/*       Svector_set(new_vec, i, Svector_ref(locked_scheme_objects, i)); */
+/*     } */
+/*     Sunlock_object(locked_scheme_objects); */
+/*     locked_scheme_objects = new_vec; */
+/*     len = new_len; */
+/*   } */
+/*   eassert(Svector_length(locked_scheme_objects) > num_locked_scheme_objects); */
+/*   Svector_set(locked_scheme_objects, num_locked_scheme_objects, x); */
+/*   ++num_locked_scheme_objects; */
+/* } */
+
+/* void scheme_unlock_for_elisp(ptr x) { */
+/*   for (iptr i = 0; i < num_locked_scheme_objects; i++) { */
+/*     if (Svector_ref(locked_scheme_objects, i) == x) { */
+/*       --num_locked_scheme_objects; */
+/*       if (num_locked_scheme_objects > 0) { */
+/*         Svector_set(locked_scheme_objects, i, */
+/*                     Svector_ref(locked_scheme_objects, num_locked_scheme_objects)); */
+/*       } */
+/*       Svector_set(locked_scheme_objects, num_locked_scheme_objects, Sfalse); */
+/*       Sunlock_object(x); */
+/*       return; */
+/*     } */
+/*   } */
+/*   eassert(false); */
+/* } */
+
+/* void scheme_gc(void) { */
+/*   if (!scheme_initialized) { */
+/*     return; */
+/*   } */
+/*   for (iptr i = 0; i < num_locked_scheme_objects; i++) { */
+/*     Sunlock_object(Svector_ref(locked_scheme_objects, i)); */
+/*   } */
+/*   Scall0(Stop_level_value(Sstring_to_symbol("collect"))); */
+/*   for (iptr i = 0; i < num_locked_scheme_objects; i++) { */
+/*     Slock_object(Svector_ref(locked_scheme_objects, i)); */
+/*   } */
+/* } */
+
 void syms_of_scheme_lisp(void) {
   DEFSYM(Qscheme_value_ref_id, "scheme-value-ref-id");
   DEFSYM(Qensure_scheme_value_ref, "ensure-scheme-value-ref");
@@ -244,6 +373,8 @@ void scheme_deinit(void) {
 void scheme_init(void) {
   const char *char_ptr = NULL;
   const char **argv = &char_ptr;
+
+  eassert(!scheme_initialized);
 
   /* lisp_object_to_id_table = */
   /*   make_hash_table(hashtest_eq, */
@@ -269,6 +400,11 @@ void scheme_init(void) {
   Sregister_boot_file("/usr/local/google/home/jrw/.local/lib/csv9.5.2/a6le/scheme.boot");
   /* printf("building heap\n"); */
   Sbuild_heap(NULL, NULL);
+  
+  /* num_locked_scheme_objects = 0; */
+  /* locked_scheme_objects = Smake_vector(1, Sfalse); */
+  /* Slock_object(locked_scheme_objects); */
+  
   Sforeign_symbol("scheme_elisp_boundp", scheme_elisp_boundp);
   Sforeign_symbol("scheme_elisp_fboundp", scheme_elisp_fboundp);
   Sforeign_symbol("scheme_elisp_call0", scheme_elisp_call0);

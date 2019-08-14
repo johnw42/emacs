@@ -105,11 +105,10 @@
   (define (identity x) x)
 
   (define (gc)
-    (collect)
     (elisp-funcall 'garbage-collect))
 
   (define (after-idle from-lisp)
-    (collect-notify #f)
+    (collect-notify #t)
 
     (elisp-funcall 'set 'dummy-var (cons #f #f))
     

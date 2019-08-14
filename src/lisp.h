@@ -39,6 +39,9 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 void scheme_init(void);
 void scheme_deinit(void);
 void syms_of_scheme_lisp(void);
+void scheme_track_for_elisp(ptr *);
+void scheme_untrack_for_elisp(ptr *);
+void scheme_gc(void);
 
 #undef LOCK
 #undef UNLOCK
@@ -2484,7 +2487,7 @@ struct Lisp_Scheme_Ref
   bool_bf gcmarkbit : 1;
   unsigned spacer : 15;
 
-  uptr id;
+  ptr scheme_obj;
 };
 #endif
 
@@ -4037,6 +4040,11 @@ extern Lisp_Object module_function_arity (const struct Lisp_Module_Function *);
 extern void mark_modules (void);
 extern void init_module_assertions (bool);
 extern void syms_of_module (void);
+#endif
+
+#ifdef HAVE_CHEZ_SCHEME
+/* Defined in alloc.c.  */
+extern Lisp_Object make_scheme_ref (ptr scheme_obj);
 #endif
 
 /* Defined in thread.c.  */

@@ -3934,6 +3934,21 @@ make_user_ptr (void (*finalizer) (void *), void *p)
 }
 #endif
 
+#ifdef HAVE_CHEZ_SCHEME
+Lisp_Object
+make_scheme_ref (ptr scheme_obj)
+{
+  Lisp_Object obj;
+  struct Lisp_Scheme_Ref *sref;
+
+  obj = allocate_misc (Lisp_Misc_Scheme_Ref);
+  sref = XSCHEME_REF (obj);
+  sref->scheme_obj = scheme_obj;
+  scheme_track_for_elisp(&sref->scheme_obj);
+  return obj;
+}
+#endif
+
 static void
 init_finalizer_list (struct Lisp_Finalizer *head)
 {
@@ -5964,6 +5979,10 @@ garbage_collect_1 (void *end)
   if (garbage_collection_messages)
     message1_nolog ("Garbage collecting...");
 
+#ifdef HAVE_CHEZ_SCHEME
+  scheme_gc();
+#endif
+
   block_input ();
 
   shrink_regexp_cache ();
@@ -6691,6 +6710,12 @@ mark_object (Lisp_Object arg)
 	  break;
 #endif
 
+#ifdef HAVE_CHEZ_SCHEME
+	case Lisp_Misc_Scheme_Ref:
+	  XMISCANY (obj)->gcmarkbit = true;
+	  break;
+#endif
+
 	default:
 	  emacs_abort ();
 	}
@@ -7083,6 +7108,13 @@ sweep_misc (void)
 		  struct Lisp_User_Ptr *uptr = &mblk->markers[i].m.u_user_ptr;
 		  if (uptr->finalizer)
 		    uptr->finalizer (uptr->p);
+		}
+#endif
+#ifdef HAVE_CHEZ_SCHEME
+	      else if (mblk->markers[i].m.u_any.type == Lisp_Misc_Scheme_Ref)
+		{
+		  struct Lisp_Scheme_Ref *sref = &mblk->markers[i].m.u_scheme_ref;
+                  scheme_untrack_for_elisp(&sref->scheme_obj);
 		}
 #endif
               /* Set the type of the freed object to Lisp_Misc_Free.
