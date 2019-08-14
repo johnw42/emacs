@@ -46,9 +46,9 @@ static ptr lisp_to_scheme(Lisp_Object lisp_obj) {
     return Sflonum(XFLOAT_DATA(lisp_obj));
   }
 
-  if (SCHEME_REFP(lisp_obj)) {
-    return XSCHEME_REF(lisp_obj)->scheme_obj;
-  }
+  /* if (SCHEME_REFP(lisp_obj)) { */
+  /*   return XSCHEME_REF(lisp_obj)->scheme_obj; */
+  /* } */
 
   /* Make sure this Lisp object has an ID number and wrap it as a
      Scheme object. */

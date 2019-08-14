@@ -118,7 +118,7 @@
 
     (gc)
     'nil)
-  
+
   (define (emacs-init)
     (printf "called scheme emacs-init\n")
 

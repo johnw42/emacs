@@ -23,6 +23,13 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 
 INLINE_HEADER_BEGIN
 
+#ifdef HAVE_CHEZ_SCHEME
+
+#define PURE_P(obj) false
+#define CHECK_IMPURE(obj, ptr) ((void)0)
+
+#else
+
 /* Define PURESIZE, the number of bytes of pure Lisp code to leave space for.
 
    At one point, this was defined in config.h, meaning that changing
@@ -108,6 +115,8 @@ CHECK_IMPURE (Lisp_Object obj, void *ptr)
 #if DEFINE_KEY_OPS_AS_MACROS
 # define PURE_P(ptr) puresize_h_PURE_P (ptr)
 # define CHECK_IMPURE(obj, ptr) puresize_h_CHECK_IMPURE (obj, ptr)
+#endif
+
 #endif
 
 INLINE_HEADER_END

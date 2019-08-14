@@ -42,9 +42,20 @@ void syms_of_scheme_lisp(void);
 void scheme_track_for_elisp(ptr *);
 void scheme_untrack_for_elisp(ptr *);
 void scheme_gc(void);
+void *XUNTAG_Lisp_Symbol(ptr);
+void *XUNTAG_Lisp_String(ptr);
+void *XUNTAG_Lisp_Vectorlike(ptr);
+void *XUNTAG_Lisp_Misc(ptr);
 
 #undef LOCK
 #undef UNLOCK
+
+INLINE ptr
+scheme_locked_symbol(const char *name) {
+  ptr sym = Sstring_to_symbol(name);
+  Slock_object(sym);
+  return sym;
+}
 
 #define Scons emacs_Scons
 #define Smake_vector emacs_Smake_vector
@@ -335,6 +346,59 @@ error !;
    Commentary for these macros can be found near their corresponding
    functions, below.  */
 
+#ifdef HAVE_CHEZ_SCHEME
+
+#define VECTORLIKE_TAG UINT64_C(0xdca4210e1c3ce44f)
+
+#define lisp_h_XLI(o) ((EMACS_INT)(o))
+#define lisp_h_XIL(i) ((Lisp_Object)(i))
+#define lisp_h_CHECK_NUMBER(x) CHECK_TYPE (INTEGERP (x), Qintegerp, x)
+#define lisp_h_CHECK_SYMBOL(x) CHECK_TYPE (SYMBOLP (x), Qsymbolp, x)
+#define lisp_h_CHECK_TYPE(ok, predicate, x) \
+   ((ok) ? (void) 0 : wrong_type_argument (predicate, x))
+#define lisp_h_CONSP(x) (Spairp(x))
+#define lisp_h_EQ(x, y) (XLI (x) == XLI (y))
+#define lisp_h_FLOATP(x) (Sflonump(x))
+#define lisp_h_INTEGERP(x) (Sfixnump(x))
+#define lisp_h_MARKERP(x) (XMISCTYPE (x) == Lisp_Misc_Marker)
+#define lisp_h_MISCP(x) (XTYPE(x) == Lisp_Misc)
+#define lisp_h_NILP(x) EQ (x, Qnil)
+#define lisp_h_SET_SYMBOL_VAL(sym, v) \
+   (eassert ((sym)->u.s.redirect == SYMBOL_PLAINVAL), \
+    (sym)->u.s.val.value = (v))
+#define lisp_h_SYMBOL_CONSTANT_P(sym) \
+   (XSYMBOL (sym)->u.s.trapped_write == SYMBOL_NOWRITE)
+#define lisp_h_SYMBOL_TRAPPED_WRITE_P(sym) (XSYMBOL (sym)->u.s.trapped_write)
+#define lisp_h_SYMBOL_VAL(sym) \
+   (eassert ((sym)->u.s.redirect == SYMBOL_PLAINVAL), (sym)->u.s.val.value)
+#define lisp_h_SYMBOLP(x) (Ssymbolp(x))
+#define lisp_h_VECTORLIKEP(x) (Sbytevectorp(x) && Sbytevector_length(x) > 8 && *(uint64_t *)Sbytevector_data(x) == VECTORLIKE_TAG)
+#define lisp_h_XCAR(c) (eassert (CONSP (c)), Scar(c))
+#define lisp_h_XCDR(c) (eassert (CONSP (c)), Scdr(c))
+#define XUNTAG(a, type) (XUNTAG_##type (a))
+#define lisp_h_make_number(n) Sfixnum(n)
+# define lisp_h_XFASTINT(a) XINT (a)
+# define lisp_h_XINT(a) (Sfixnum_value(a))
+#define lisp_h_XHASH(a) XUINT (a)
+#define lisp_h_check_cons_list() ((void) 0)
+/* #define lisp_h_XCONS(a) ((a)->scheme_obj) */
+/* #ifndef GC_CHECK_CONS_LIST */
+/* # define lisp_h_check_cons_list() ((void) 0) */
+/* #endif */
+/* # define lisp_h_XFASTINT(a) XINT (a) */
+/* # define lisp_h_XINT(a) (XLI (a) >> INTTYPEBITS) */
+/* # define lisp_h_XSYMBOL(a) \ */
+/*     (eassert (SYMBOLP (a)), \ */
+/*      (struct Lisp_Symbol *) ((intptr_t) XLI (a) - Lisp_Symbol \ */
+/* 			     + (char *) lispsym)) */
+/* # define lisp_h_XTYPE(a) ((enum Lisp_Type) (XLI (a) & ~VALMASK)) */
+/* # define lisp_h_XUNTAG(a, type) \ */
+/*     __builtin_assume_aligned ((void *) (intptr_t) (XLI (a) - (type)), \ */
+/* 			      GCALIGNMENT) */
+/* #endif */
+
+#else /* HAVE_CHEZ_SCHEME */
+
 #if CHECK_LISP_OBJECT_TYPE
 # define lisp_h_XLI(o) ((o).i)
 # define lisp_h_XIL(i) ((Lisp_Object) { i })
@@ -386,6 +450,8 @@ error !;
 			      GCALIGNMENT)
 #endif
 
+#endif /* HAVE_CHEZ_SCHEME */
+
 /* When compiling via gcc -O0, define the key operations as macros, as
    Emacs is too slow otherwise.  To disable this optimization, compile
    with -DINLINING=false.  */
@@ -418,12 +484,14 @@ error !;
 # define VECTORLIKEP(x) lisp_h_VECTORLIKEP (x)
 # define XCAR(c) lisp_h_XCAR (c)
 # define XCDR(c) lisp_h_XCDR (c)
-# define XCONS(a) lisp_h_XCONS (a)
+# ifndef HAVE_CHEZ_SCHEME
+#  define XCONS(a) lisp_h_XCONS (a)
+# endif
 # define XHASH(a) lisp_h_XHASH (a)
 # ifndef GC_CHECK_CONS_LIST
 #  define check_cons_list() lisp_h_check_cons_list ()
 # endif
-# if USE_LSB_TAG
+# if defined(USE_LSB_TAG) && !defined(HAVE_CHEZ_SCHEME)
 #  define make_number(n) lisp_h_make_number (n)
 #  define XFASTINT(a) lisp_h_XFASTINT (a)
 #  define XINT(a) lisp_h_XINT (a)
@@ -577,6 +645,13 @@ enum Lisp_Fwd_Type
    your object -- this way, the same object could be used to represent
    several disparate C structures.  */
 
+#ifdef HAVE_CHEZ_SCHEME
+
+typedef ptr Lisp_Object;
+#define LISP_INITIALLY(i) (Lisp_Object)(i)
+
+#else /* HAVE_CHEZ_SCHEME */
+
 #ifdef CHECK_LISP_OBJECT_TYPE
 
 typedef struct Lisp_Object { EMACS_INT i; } Lisp_Object;
@@ -593,6 +668,7 @@ typedef EMACS_INT Lisp_Object;
 #define LISP_INITIALLY(i) (i)
 enum CHECK_LISP_OBJECT_TYPE { CHECK_LISP_OBJECT_TYPE = false };
 #endif /* CHECK_LISP_OBJECT_TYPE */
+#endif /* HAVE_CHEZ_SCHEME */
 
 /* Forward declarations.  */
 
@@ -644,11 +720,29 @@ INLINE Lisp_Object
 INLINE enum Lisp_Type
 (XTYPE) (Lisp_Object a)
 {
+#ifdef HAVE_CHEZ_SCHEME
+  if (Ssymbolp(a)) {
+    return Lisp_Symbol;
+  } else if (Sfixnump(a)) {
+    return Lisp_Int0;
+  } else if (Sstringp(a)) {
+    return Lisp_String;
+  } else if (Spairp(a)) {
+    return Lisp_Cons;
+  } else if (Sflonump(a)) {
+    return Lisp_Float;
+  } else if (lisp_h_VECTORLIKEP(a)) {
+    return Lisp_Vectorlike;
+  } else {
+    return Lisp_Misc;
+  }
+#else
 #if USE_LSB_TAG
   return lisp_h_XTYPE (a);
 #else
   EMACS_UINT i = XLI (a);
   return USE_LSB_TAG ? i & ~VALMASK : i >> VALBITS;
+#endif
 #endif
 }
 
@@ -660,6 +754,9 @@ INLINE void
 
 /* Extract A's pointer value, assuming A's type is TYPE.  */
 
+#ifdef HAVE_CHEZ_SCHEME
+
+#else /* HAVE_CHEZ_SCHEME */
 INLINE void *
 (XUNTAG) (Lisp_Object a, int type)
 {
@@ -670,6 +767,7 @@ INLINE void *
   return (void *) i;
 #endif
 }
+#endif /* HAVE_CHEZ_SCHEME */
 
 
 /* Interned state of a symbol.  */
@@ -745,8 +843,12 @@ struct Lisp_Symbol
       /* The symbol's property list.  */
       Lisp_Object plist;
 
+#ifdef HAVE_CHEZ_SCHEME
+      ptr scheme_obj;
+#else
       /* Next symbol in obarray bucket, if the symbol is interned.  */
       struct Lisp_Symbol *next;
+#endif
     } s;
     char alignas (GCALIGNMENT) gcaligned;
   } u;
@@ -822,6 +924,14 @@ verify (alignof (struct Lisp_Symbol) % GCALIGNMENT == 0);
 
 #include "globals.h"
 
+#ifdef HAVE_CHEZ_SCHEME
+struct scheme_vectorlike_header
+  {
+    ptrdiff_t size;
+    ptr scheme_obj;
+  };
+#endif
+
 /* Header of vector-like objects.  This documents the layout constraints on
    vectors and pseudovectors (objects of PVEC_xxx subtype).  It also prevents
    compilers from being fooled by Emacs's type punning: XSETPSEUDOVECTOR
@@ -851,7 +961,11 @@ union vectorlike_header
 	 Current layout limits the pseudovectors to 63 PVEC_xxx subtypes,
 	 4095 Lisp_Objects in GC-ed area and 4095 word-sized other slots.  */
     ptrdiff_t size;
+#ifdef HAVE_CHEZ_SCHEME
+    struct scheme_vectorlike_header h;
+#else
     char alignas (GCALIGNMENT) gcaligned;
+#endif
   };
 verify (alignof (union vectorlike_header) % GCALIGNMENT == 0);
 
@@ -871,6 +985,9 @@ INLINE bool
 INLINE struct Lisp_Symbol *
 (XSYMBOL) (Lisp_Object a)
 {
+#ifdef HAVE_CHEZ_SCHEME
+  return XUNTAG_Lisp_Symbol(a);
+#else
 #if USE_LSB_TAG
   return lisp_h_XSYMBOL (a);
 #else
@@ -879,8 +996,12 @@ INLINE struct Lisp_Symbol *
   void *p = (char *) lispsym + i;
   return p;
 #endif
+#endif
 }
 
+#ifdef HAVE_CHEZ_SCHEME
+#define builtin_lisp_symbol(n) ((Lisp_Object)lispsym[n])
+#else
 INLINE Lisp_Object
 make_lisp_symbol (struct Lisp_Symbol *sym)
 {
@@ -894,6 +1015,7 @@ builtin_lisp_symbol (int index)
 {
   return make_lisp_symbol (&lispsym[index]);
 }
+#endif
 
 INLINE void
 (CHECK_SYMBOL) (Lisp_Object x)
@@ -1099,6 +1221,7 @@ clip_to_bounds (ptrdiff_t lower, EMACS_INT num, ptrdiff_t upper)
 
 /* Construct a Lisp_Object from a value or address.  */
 
+#ifndef HAVE_CHEZ_SCHEME
 INLINE Lisp_Object
 make_lisp_ptr (void *ptr, enum Lisp_Type type)
 {
@@ -1106,6 +1229,7 @@ make_lisp_ptr (void *ptr, enum Lisp_Type type)
   eassert (XTYPE (a) == type && XUNTAG (a, type) == ptr);
   return a;
 }
+#endif
 
 INLINE bool
 (INTEGERP) (Lisp_Object x)
@@ -1113,6 +1237,17 @@ INLINE bool
   return lisp_h_INTEGERP (x);
 }
 
+#ifdef HAVE_CHEZ_SCHEME
+#define XSETINT(a, b) ((a) = make_number (b))
+#define XSETFASTINT(a, b) ((a) = make_natnum (b))
+/* #define XSETCONS(a, b) ((a) = make_lisp_ptr (b, Lisp_Cons)) */
+#define XSETVECTOR(a, b) ((a) = PSEUDOVECTOR_PTR (b))
+#define XSETSTRING(a, b) ((a) = (b)->u.s.scheme_obj)
+#define XSETSYMBOL(a, b) ((a) = (b)->u.s.scheme_obj)
+/* #define XSETFLOAT(a, b) ((a) = make_lisp_ptr (b, Lisp_Float)) */
+/* #define XSETMISC(a, b) ((a) = make_lisp_ptr (b, Lisp_Misc)) */
+#define XSETMISC(a, b) ((a) = (b)->scheme_obj)
+#else
 #define XSETINT(a, b) ((a) = make_number (b))
 #define XSETFASTINT(a, b) ((a) = make_natnum (b))
 #define XSETCONS(a, b) ((a) = make_lisp_ptr (b, Lisp_Cons))
@@ -1121,6 +1256,7 @@ INLINE bool
 #define XSETSYMBOL(a, b) ((a) = make_lisp_symbol (b))
 #define XSETFLOAT(a, b) ((a) = make_lisp_ptr (b, Lisp_Float))
 #define XSETMISC(a, b) ((a) = make_lisp_ptr (b, Lisp_Misc))
+#endif
 
 /* Pseudovector types.  */
 
@@ -1139,6 +1275,13 @@ INLINE bool
 			    XUNTAG (a, Lisp_Vectorlike))	\
 			   ->size),				\
 			  code)
+
+#ifdef HAVE_CHEZ_SCHEME
+#define PSEUDOVECTOR_PTR(a) ((a)->header.h.scheme_obj)
+#else /* HAVE_CHEZ_SCHEME */
+#define PSEUDOVECTOR_PTR(a) (make_lisp_ptr (a, Lisp_Vectorlike))
+#endif /* HAVE_CHEZ_SCHEME */
+
 #define XSETTYPED_PSEUDOVECTOR(a, b, size, code)			\
   (XSETVECTOR (a, b),							\
    eassert ((size & (PSEUDOVECTOR_FLAG | PVEC_TYPE_MASK))		\
@@ -1159,6 +1302,7 @@ INLINE bool
 #define XSETMUTEX(a, b) (XSETPSEUDOVECTOR (a, b, PVEC_MUTEX))
 #define XSETCONDVAR(a, b) (XSETPSEUDOVECTOR (a, b, PVEC_CONDVAR))
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Efficiently convert a pointer to a Lisp object and back.  The
    pointer is represented as a Lisp integer, so the garbage collector
    does not know about it.  The pointer should not have both Lisp_Int1
@@ -1177,11 +1321,13 @@ make_pointer_integer (void *p)
   eassert (INTEGERP (a) && XINTPTR (a) == p);
   return a;
 }
+#endif
 
 /* See the macros in intervals.h.  */
 
 typedef struct interval *INTERVAL;
 
+#ifndef HAVE_CHEZ_SCHEME
 struct Lisp_Cons
 {
   union
@@ -1204,6 +1350,7 @@ struct Lisp_Cons
   } u;
 };
 verify (alignof (struct Lisp_Cons) % GCALIGNMENT == 0);
+#endif
 
 INLINE bool
 (NILP) (Lisp_Object x)
@@ -1223,6 +1370,7 @@ CHECK_CONS (Lisp_Object x)
   CHECK_TYPE (CONSP (x), Qconsp, x);
 }
 
+#ifndef HAVE_CHEZ_SCHEME
 INLINE struct Lisp_Cons *
 (XCONS) (Lisp_Object a)
 {
@@ -1246,6 +1394,7 @@ xcdr_addr (Lisp_Object c)
 {
   return &XCONS (c)->u.s.u.cdr;
 }
+#endif /* HAVE_CHEZ_SCHEME */
 
 /* Use these from normal code.  */
 
@@ -1268,12 +1417,20 @@ INLINE Lisp_Object
 INLINE void
 XSETCAR (Lisp_Object c, Lisp_Object n)
 {
+#ifdef HAVE_CHEZ_SCHEME
+  Sset_car(c, n);
+#else
   *xcar_addr (c) = n;
+#endif
 }
 INLINE void
 XSETCDR (Lisp_Object c, Lisp_Object n)
 {
+#ifdef HAVE_CHEZ_SCHEME
+  Sset_cdr(c, n);
+#else
   *xcdr_addr (c) = n;
+#endif
 }
 
 /* Take the car or cdr of something whose type is not known.  */
@@ -1316,6 +1473,9 @@ struct Lisp_String
   {
     struct
     {
+#ifdef HAVE_CHEZ_SCHEME
+      ptr scheme_obj;
+#endif
       ptrdiff_t size;
       ptrdiff_t size_byte;
       INTERVAL intervals;	/* Text properties in this string.  */
@@ -2219,11 +2379,22 @@ SXHASH_REDUCE (EMACS_UINT x)
 
 /* These structures are used for various misc types.  */
 
+#ifdef HAVE_CHEZ_SCHEME
+#define MISC_HEADER_FIELDS(extra_bits)          \
+  ptr scheme_obj;                               \
+  ENUM_BF (Lisp_Misc_Type) type : 16;           \
+  bool_bf gcmarkbit : 1;                        \
+  unsigned spacer : 15 - (extra_bits)
+#else
+#define MISC_HEADER_FIELDS(spacer_bits)         \
+  ENUM_BF (Lisp_Misc_Type) type : 16;           \
+  bool_bf gcmarkbit : 1;                        \
+  unsigned spacer : 15 - (extra_bits)
+#endif
+
 struct Lisp_Misc_Any		/* Supertype of all Misc types.  */
 {
-  ENUM_BF (Lisp_Misc_Type) type : 16;		/* = Lisp_Misc_??? */
-  bool_bf gcmarkbit : 1;
-  unsigned spacer : 15;
+  MISC_HEADER_FIELDS(0);		/* type = Lisp_Misc_??? */
 };
 
 INLINE bool
@@ -2247,9 +2418,7 @@ XMISCTYPE (Lisp_Object a)
 
 struct Lisp_Marker
 {
-  ENUM_BF (Lisp_Misc_Type) type : 16;		/* = Lisp_Misc_Marker */
-  bool_bf gcmarkbit : 1;
-  unsigned spacer : 13;
+  MISC_HEADER_FIELDS(2);		/* type = Lisp_Misc_Marker */
   /* This flag is temporarily used in the functions
      decode/encode_coding_object to record that the marker position
      must be adjusted after the conversion.  */
@@ -2301,9 +2470,7 @@ struct Lisp_Overlay
    I.e. 9words plus 2 bits, 3words of which are for external linked lists.
 */
   {
-    ENUM_BF (Lisp_Misc_Type) type : 16;	/* = Lisp_Misc_Overlay */
-    bool_bf gcmarkbit : 1;
-    unsigned spacer : 15;
+    MISC_HEADER_FIELDS(0);	/* type = Lisp_Misc_Overlay */
     struct Lisp_Overlay *next;
     Lisp_Object start;
     Lisp_Object end;
@@ -2382,9 +2549,7 @@ typedef void (*voidfuncptr) (void);
 
 struct Lisp_Save_Value
   {
-    ENUM_BF (Lisp_Misc_Type) type : 16;	/* = Lisp_Misc_Save_Value */
-    bool_bf gcmarkbit : 1;
-    unsigned spacer : 32 - (16 + 1 + SAVE_TYPE_BITS);
+    MISC_HEADER_FIELDS(SAVE_TYPE_BITS);	/* type = Lisp_Misc_Save_Value */
 
     /* V->data may hold up to SAVE_VALUE_SLOTS entries.  The type of
        V's data entries are determined by V->save_type.  E.g., if
@@ -2471,25 +2636,21 @@ XSAVE_OBJECT (Lisp_Object obj, int n)
 #ifdef HAVE_MODULES
 struct Lisp_User_Ptr
 {
-  ENUM_BF (Lisp_Misc_Type) type : 16;	     /* = Lisp_Misc_User_Ptr */
-  bool_bf gcmarkbit : 1;
-  unsigned spacer : 15;
+  MISC_HEADER_FIELDS(0);	     /* type = Lisp_Misc_User_Ptr */
 
   void (*finalizer) (void *);
   void *p;
 };
 #endif
 
-#ifdef HAVE_CHEZ_SCHEME
-struct Lisp_Scheme_Ref
-{
-  ENUM_BF (Lisp_Misc_Type) type : 16;	     /* = Lisp_Misc_User_Ptr */
-  bool_bf gcmarkbit : 1;
-  unsigned spacer : 15;
+/* #ifdef HAVE_CHEZ_SCHEME */
+/* struct Lisp_Scheme_Ref */
+/* { */
+/*   MISC_HEADER_FIELDS(0);	     /\* type = Lisp_Misc_User_Ptr *\/ */
 
-  ptr scheme_obj;
-};
-#endif
+/*   ptr scheme_obj; */
+/* }; */
+/* #endif */
 
 /* A finalizer sentinel.  */
 struct Lisp_Finalizer
@@ -2522,9 +2683,7 @@ XFINALIZER (Lisp_Object a)
 /* A miscellaneous object, when it's on the free list.  */
 struct Lisp_Free
   {
-    ENUM_BF (Lisp_Misc_Type) type : 16;	/* = Lisp_Misc_Free */
-    bool_bf gcmarkbit : 1;
-    unsigned spacer : 15;
+    MISC_HEADER_FIELDS(0);	/* type = Lisp_Misc_Free */
     union Lisp_Misc *chain;
   };
 
@@ -2543,7 +2702,7 @@ union Lisp_Misc
     struct Lisp_User_Ptr u_user_ptr;
 #endif
 #ifdef HAVE_CHEZ_SCHEME
-    struct Lisp_Scheme_Ref u_scheme_ref;
+    /* struct Lisp_Scheme_Ref u_scheme_ref; */
 #endif
   };
 
@@ -2729,6 +2888,7 @@ XBUFFER_OBJFWD (union Lisp_Fwd *a)
   return &a->u_buffer_objfwd;
 }
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Lisp floating point type.  */
 struct Lisp_Float
   {
@@ -2738,6 +2898,7 @@ struct Lisp_Float
       struct Lisp_Float *chain;
     } u;
   };
+#endif
 
 INLINE bool
 (FLOATP) (Lisp_Object x)
@@ -2745,17 +2906,24 @@ INLINE bool
   return lisp_h_FLOATP (x);
 }
 
+#ifndef HAVE_CHEZ_SCHEME
 INLINE struct Lisp_Float *
 XFLOAT (Lisp_Object a)
 {
   eassert (FLOATP (a));
   return XUNTAG (a, Lisp_Float);
 }
+#endif
 
 INLINE double
 XFLOAT_DATA (Lisp_Object f)
 {
+#ifdef HAVE_CHEZ_SCHEME
+  eassert (FLOATP (f));
+  return Sflonum_value(f);
+#else
   return XFLOAT (f)->u.data;
+#endif
 }
 
 /* Most hosts nowadays use IEEE floating point, so they use IEC 60559
@@ -3311,11 +3479,13 @@ set_symbol_plist (Lisp_Object sym, Lisp_Object plist)
   XSYMBOL (sym)->u.s.plist = plist;
 }
 
+#ifndef HAVE_CHEZ_SCHEME
 INLINE void
 set_symbol_next (Lisp_Object sym, struct Lisp_Symbol *next)
 {
   XSYMBOL (sym)->u.s.next = next;
 }
+#endif
 
 INLINE void
 make_symbol_constant (Lisp_Object sym)
@@ -3792,7 +3962,11 @@ extern Lisp_Object make_save_funcptr_ptr_obj (void (*) (void), void *,
 extern Lisp_Object make_save_memory (Lisp_Object *, ptrdiff_t);
 extern void free_save_value (Lisp_Object);
 extern Lisp_Object build_overlay (Lisp_Object, Lisp_Object, Lisp_Object);
+#ifdef HAVE_CHEZ_SCHEME
+#define free_cons(a) ((void)0)
+#else
 extern void free_cons (struct Lisp_Cons *);
+#endif
 extern void init_alloc_once (void);
 extern void init_alloc (void);
 extern void syms_of_alloc (void);
@@ -3863,6 +4037,7 @@ extern ptrdiff_t evxprintf (char **, ptrdiff_t *, char const *, ptrdiff_t,
 			    char const *, va_list)
   ATTRIBUTE_FORMAT_PRINTF (5, 0);
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Defined in lread.c.  */
 extern Lisp_Object check_obarray (Lisp_Object);
 extern Lisp_Object intern_1 (const char *, ptrdiff_t);
@@ -3870,6 +4045,7 @@ extern Lisp_Object intern_c_string_1 (const char *, ptrdiff_t);
 extern Lisp_Object intern_driver (Lisp_Object, Lisp_Object, Lisp_Object);
 extern void init_symbol (Lisp_Object, Lisp_Object);
 extern Lisp_Object oblookup (Lisp_Object, const char *, ptrdiff_t, ptrdiff_t);
+#endif
 INLINE void
 LOADHIST_ATTACH (Lisp_Object x)
 {
@@ -3886,6 +4062,10 @@ extern void init_obarray (void);
 extern void init_lread (void);
 extern void syms_of_lread (void);
 
+#ifdef HAVE_CHEZ_SCHEME
+extern Lisp_Object intern (const char *str);
+extern Lisp_Object intern_c_string (const char *str);
+#else
 INLINE Lisp_Object
 intern (const char *str)
 {
@@ -3897,6 +4077,7 @@ intern_c_string (const char *str)
 {
   return intern_c_string_1 (str, strlen (str));
 }
+#endif
 
 /* Defined in eval.c.  */
 extern Lisp_Object Vautoload_queue;
@@ -4689,6 +4870,10 @@ enum { defined_GC_CHECK_STRING_BYTES = false };
    Otherwise, STACK_CONS would create heap-based cons cells that
    could point to stack-based strings, which is a no-no.  */
 
+#ifdef HAVE_CHEZ_SCHEME
+enum {USE_STACK_CONS = 0, USE_STACK_STRING = 0};
+#define STACK_CONS(a, b) ((ptr)0)
+#else
 enum
   {
     USE_STACK_CONS = USE_STACK_LISP_OBJECTS,
@@ -4701,7 +4886,9 @@ enum
    variable whose lifetime will be clear to the programmer.  */
 #define STACK_CONS(a, b) \
   make_lisp_ptr (&((struct Lisp_Cons) {{{a, {b}}}}), Lisp_Cons)
-#define AUTO_CONS_EXPR(a, b) \
+#endif
+
+#define AUTO_CONS_EXPR(a, b)                            \
   (USE_STACK_CONS ? STACK_CONS (a, b) : Fcons (a, b))
 
 /* Declare NAME as an auto Lisp cons or short list if possible, a
@@ -4742,6 +4929,10 @@ enum
    STR's value is not necessarily copied.  The resulting Lisp string
    should not be modified or made visible to user code.  */
 
+#ifdef HAVE_CHEZ_SCHEME
+#define AUTO_STRING_WITH_LEN(name, str, len)				\
+  Lisp_Object name = make_unibyte_string (str, len)
+#else
 #define AUTO_STRING_WITH_LEN(name, str, len)				\
   Lisp_Object name =							\
     (USE_STACK_STRING							\
@@ -4749,6 +4940,7 @@ enum
 	((&(struct Lisp_String) {{{len, -1, 0, (unsigned char *) (str)}}}), \
 	 Lisp_String))							\
      : make_unibyte_string (str, len))
+#endif
 
 /* Loop over conses of the list TAIL, signaling if a cycle is found,
    and possibly quitting after each loop iteration.  In the loop body,
@@ -4817,6 +5009,24 @@ maybe_gc (void)
 	  && consing_since_gc > memory_full_cons_threshold))
     Fgarbage_collect ();
 }
+
+#ifdef HAVE_CHEZ_SCHEME
+
+INLINE ptr
+scheme_function_for_name(const char *name) {
+  ptr sym = Ssymbol_to_string((char *)name);
+  eassert(Ssymbolp(sym));
+  ptr fun = Stop_level_value(sym);
+  eassert(Sprocedurep(sym));
+  return fun;
+}
+
+#define scheme_call0(f) (Scall0(scheme_function_for_name(f)))
+#define scheme_call1(f, a) (Scall1(scheme_function_for_name(f), a))
+#define scheme_call2(f, a, b) (Scall2(scheme_function_for_name(f), a, b))
+#define scheme_call3(f, a, b, c) (Scall3(scheme_function_for_name(f), a, b, c))
+
+#endif /* HAVE_CHEZ_SCHEME */
 
 INLINE_HEADER_END
 

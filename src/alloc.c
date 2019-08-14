@@ -103,6 +103,8 @@ static bool valgrind_p;
 #include "w32heap.h"	/* for sbrk */
 #endif
 
+#ifndef HAVE_CHEZ_SCHEME // XXX TODO(jrw)
+
 #ifdef GNU_LINUX
 /* The address where the heap starts.  */
 void *
@@ -537,11 +539,13 @@ XPNTR (Lisp_Object a)
 # define XPNTR(a) macro_XPNTR (a)
 #endif
 
+#ifndef HAVE_CHEZ_SCHEME
 static void
 XFLOAT_INIT (Lisp_Object f, double n)
 {
   XFLOAT (f)->u.data = n;
 }
+#endif
 
 #ifdef DOUG_LEA_MALLOC
 static bool
@@ -2572,6 +2576,8 @@ make_formatted_string (char *buf, const char *format, ...)
 			   Float Allocation
  ***********************************************************************/
 
+#ifdef HAVE_CHEZ_SCHEME
+#else /* HAVE_CHEZ_SCHEME */
 /* We store float cells inside of float_blocks, allocating a new
    float_block with malloc whenever necessary.  Float cells reclaimed
    by GC are put on a free list to be reallocated before allocating
@@ -2671,12 +2677,15 @@ make_float (double float_value)
   return val;
 }
 
+#endif /* HAVE_CHEZ_SCHEME */
 
 
 /***********************************************************************
 			   Cons Allocation
  ***********************************************************************/
 
+#ifdef HAVE_CHEZ_SCHEME
+#else /* HAVE_CHEZ_SCHEME */
 /* We store cons cells inside of cons_blocks, allocating a new
    cons_block with malloc whenever necessary.  Cons cells reclaimed by
    GC are put on a free list to be reallocated before allocating
@@ -2888,6 +2897,7 @@ DEFUN ("make-list", Fmake_list, Smake_list, 2, 2, 0,
 
   return val;
 }
+#endif /* HAVE_CHEZ_SCHEME */
 
 
 
@@ -7113,7 +7123,7 @@ sweep_misc (void)
 #ifdef HAVE_CHEZ_SCHEME
 	      else if (mblk->markers[i].m.u_any.type == Lisp_Misc_Scheme_Ref)
 		{
-		  struct Lisp_Scheme_Ref *sref = &mblk->markers[i].m.u_scheme_ref;
+		  struct Lisp_Scheme_ef *sref = &mblk->markers[i].m.u_scheme_ref;
                   scheme_untrack_for_elisp(&sref->scheme_obj);
 		}
 #endif
@@ -7647,3 +7657,5 @@ union
   enum pvec_type pvec_type;
 } const EXTERNALLY_VISIBLE gdb_make_enums_visible = {0};
 #endif	/* __GNUC__ */
+
+#endif /* HAVE_CHEZ_SCHEME XXX */

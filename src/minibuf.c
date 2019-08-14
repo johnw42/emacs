@@ -1276,6 +1276,9 @@ is used to further constrain the set of candidates.  */)
 	}
       else if (type == obarray_table)
 	{
+#ifdef HAVE_CHEZ_SCHEME
+          break;  // TODO(jrw)
+#else
 	  if (!EQ (bucket, zero))
 	    {
 	      if (!SYMBOLP (bucket))
@@ -1294,6 +1297,7 @@ is used to further constrain the set of candidates.  */)
 	      bucket = AREF (collection, idx);
 	      continue;
 	    }
+#endif
 	}
       else /* if (type == hash_table) */
 	{
@@ -1529,6 +1533,9 @@ with a space are ignored unless STRING itself starts with a space.  */)
 	}
       else if (type == 2)
 	{
+#ifdef HAVE_CHEZ_SCHEME
+          break;
+#else
 	  if (!EQ (bucket, zero))
 	    {
 	      if (!SYMBOLP (bucket))
@@ -1547,6 +1554,7 @@ with a space are ignored unless STRING itself starts with a space.  */)
 	      bucket = AREF (collection, idx);
 	      continue;
 	    }
+#endif
 	}
       else /* if (type == 3) */
 	{
@@ -1745,6 +1753,7 @@ the values STRING, PREDICATE and `lambda'.  */)
 	  for (i = ASIZE (collection) - 1; i >= 0; i--)
 	    {
 	      tail = AREF (collection, i);
+#ifndef HAVE_CHEZ_SCHEME
 	      if (SYMBOLP (tail))
 		while (1)
 		  {
@@ -1760,6 +1769,7 @@ the values STRING, PREDICATE and `lambda'.  */)
 		      break;
 		    XSETSYMBOL (tail, XSYMBOL (tail)->u.s.next);
 		  }
+#endif
 	    }
 	}
 

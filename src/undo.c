@@ -293,6 +293,7 @@ but another undo command will undo to the previous boundary.  */)
 void
 truncate_undo_list (struct buffer *b)
 {
+#ifndef HAVE_CHEZ_SCHEME
   Lisp_Object list;
   Lisp_Object prev, next, last_boundary;
   EMACS_INT size_so_far = 0;
@@ -417,6 +418,7 @@ truncate_undo_list (struct buffer *b)
     bset_undo_list (b, Qnil);
 
   unbind_to (count, Qnil);
+#endif
 }
 
 

@@ -279,6 +279,9 @@ font_intern_prop (const char *str, ptrdiff_t len, bool force_symbol)
 	}
     }
 
+#ifdef HAVE_CHEZ_SCHEME
+  return Fintern(make_string(str, nbytes), Qnil);
+#else
   /* This code is similar to intern function from lread.c.  */
   obarray = check_obarray (Vobarray);
   parse_str_as_multibyte ((unsigned char *) str, len, &nchars, &nbytes);
@@ -289,6 +292,7 @@ font_intern_prop (const char *str, ptrdiff_t len, bool force_symbol)
   name = make_specified_string (str, nchars, len,
 				len != nchars && len == nbytes);
   return intern_driver (name, obarray, tem);
+#endif
 }
 
 /* Return a pixel size of font-spec SPEC on frame F.  */
@@ -4000,11 +4004,23 @@ copy_font_spec (Lisp_Object font)
 
   /* Copy an alist of extra information but discard :font-entity property.  */
   pcdr = spec->props + FONT_EXTRA_INDEX;
+#ifdef HAVE_CHEZ_SCHEME
+  ptr cell = Qnil;
+#endif
   for (tail = AREF (font, FONT_EXTRA_INDEX); CONSP (tail); tail = XCDR (tail))
     if (!EQ (XCAR (XCAR (tail)), QCfont_entity))
       {
+#ifdef HAVE_CHEZ_SCHEME
+        cell = Fcons (Fcons (XCAR (XCAR (tail)), CDR (XCAR (tail))), Qnil);
+        if (pcdr)
+          {
+            *pcdr = cell;
+            pcdr = NULL;
+          }
+#else
         *pcdr = Fcons (Fcons (XCAR (XCAR (tail)), CDR (XCAR (tail))), Qnil);
         pcdr = xcdr_addr (*pcdr);
+#endif
       }
 
   XSETFONT (new_spec, spec);
