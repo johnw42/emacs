@@ -65,7 +65,7 @@ static uniprop_decoder_t uniprop_get_decoder (Lisp_Object);
 
 /* 1 iff TABLE is a uniprop table.  */
 #define UNIPROP_TABLE_P(TABLE)					\
-  (EQ (XCHAR_TABLE (TABLE)->purpose, Qchar_code_property_table)	\
+  (EQ (PV_LISP_FIELD_REF(XCHAR_TABLE (TABLE), purpose), Qchar_code_property_table)	\
    && CHAR_TABLE_EXTRA_SLOTS (XCHAR_TABLE (TABLE)) == 5)
 
 /* Return a decoder for values in the uniprop table TABLE.  */
@@ -89,12 +89,12 @@ CHECK_CHAR_TABLE (Lisp_Object x)
 static void
 set_char_table_ascii (Lisp_Object table, Lisp_Object val)
 {
-  XCHAR_TABLE (table)->ascii = val;
+  PV_LISP_FIELD_SET (XCHAR_TABLE (table), ascii, val);
 }
 static void
 set_char_table_parent (Lisp_Object table, Lisp_Object val)
 {
-  XCHAR_TABLE (table)->parent = val;
+  PV_LISP_FIELD_SET (XCHAR_TABLE (table), parent, val);
 }
 
 DEFUN ("make-char-table", Fmake_char_table, Smake_char_table, 1, 2, 0,
@@ -190,9 +190,9 @@ copy_char_table (Lisp_Object table)
 
   copy = Fmake_vector (make_number (size), Qnil);
   XSETPVECTYPE (XVECTOR (copy), PVEC_CHAR_TABLE);
-  set_char_table_defalt (copy, XCHAR_TABLE (table)->defalt);
-  set_char_table_parent (copy, XCHAR_TABLE (table)->parent);
-  set_char_table_purpose (copy, XCHAR_TABLE (table)->purpose);
+  set_char_table_defalt (copy, PV_LISP_FIELD_REF(XCHAR_TABLE (table), defalt));
+  set_char_table_parent (copy, PV_LISP_FIELD_REF(XCHAR_TABLE (table), parent));
+  set_char_table_purpose (copy, PV_LISP_FIELD_REF(XCHAR_TABLE (table), purpose));
   for (i = 0; i < chartab_size[0]; i++)
     set_char_table_contents
       (copy, i,
@@ -231,7 +231,7 @@ char_table_ref (Lisp_Object table, int c)
 
   if (ASCII_CHAR_P (c))
     {
-      val = tbl->ascii;
+      val = PV_LISP_FIELD_REF(tbl, ascii);
       if (SUB_CHAR_TABLE_P (val))
 	val = XSUB_CHAR_TABLE (val)->contents[c];
     }
@@ -243,9 +243,9 @@ char_table_ref (Lisp_Object table, int c)
     }
   if (NILP (val))
     {
-      val = tbl->defalt;
-      if (NILP (val) && CHAR_TABLE_P (tbl->parent))
-	val = char_table_ref (tbl->parent, c);
+      val = PV_LISP_FIELD_REF(tbl, defalt);
+      if (NILP (val) && CHAR_TABLE_P (PV_LISP_FIELD_REF(tbl, parent)))
+	val = char_table_ref (PV_LISP_FIELD_REF(tbl, parent), c);
     }
   return val;
 }
@@ -336,10 +336,10 @@ char_table_ref_and_range (Lisp_Object table, int c, int *from, int *to)
   if (is_uniprop && UNIPROP_COMPRESSED_FORM_P (val))
     val = uniprop_table_uncompress (table, chartab_idx);
   if (SUB_CHAR_TABLE_P (val))
-    val = sub_char_table_ref_and_range (val, c, from, to, tbl->defalt,
+    val = sub_char_table_ref_and_range (val, c, from, to, PV_LISP_FIELD_REF(tbl, defalt),
 					is_uniprop);
   else if (NILP (val))
-    val = tbl->defalt;
+    val = PV_LISP_FIELD_REF(tbl, defalt);
   idx = chartab_idx;
   while (*from < idx * chartab_chars[0])
     {
@@ -352,9 +352,9 @@ char_table_ref_and_range (Lisp_Object table, int c, int *from, int *to)
 	this_val = uniprop_table_uncompress (table, idx);
       if (SUB_CHAR_TABLE_P (this_val))
 	this_val = sub_char_table_ref_and_range (this_val, c, from, to,
-						 tbl->defalt, is_uniprop);
+						 PV_LISP_FIELD_REF(tbl, defalt), is_uniprop);
       else if (NILP (this_val))
-	this_val = tbl->defalt;
+	this_val = PV_LISP_FIELD_REF(tbl, defalt);
 
       if (! EQ (this_val, val))
 	{
@@ -373,9 +373,9 @@ char_table_ref_and_range (Lisp_Object table, int c, int *from, int *to)
 	this_val = uniprop_table_uncompress (table, chartab_idx);
       if (SUB_CHAR_TABLE_P (this_val))
 	this_val = sub_char_table_ref_and_range (this_val, c, from, to,
-						 tbl->defalt, is_uniprop);
+						 PV_LISP_FIELD_REF(tbl, defalt), is_uniprop);
       else if (NILP (this_val))
-	this_val = tbl->defalt;
+	this_val = PV_LISP_FIELD_REF(tbl, defalt);
       if (! EQ (this_val, val))
 	{
 	  *to = c - 1;
@@ -422,8 +422,8 @@ char_table_set (Lisp_Object table, int c, Lisp_Object val)
   struct Lisp_Char_Table *tbl = XCHAR_TABLE (table);
 
   if (ASCII_CHAR_P (c)
-      && SUB_CHAR_TABLE_P (tbl->ascii))
-    set_sub_char_table_contents (tbl->ascii, c, val);
+      && SUB_CHAR_TABLE_P (PV_LISP_FIELD_REF(tbl, ascii)))
+    set_sub_char_table_contents (PV_LISP_FIELD_REF(tbl, ascii), c, val);
   else
     {
       int i = CHARTAB_IDX (c, 0, 0);
@@ -524,7 +524,7 @@ Return the subtype of char-table CHAR-TABLE.  The value is a symbol.  */)
 {
   CHECK_CHAR_TABLE (char_table);
 
-  return XCHAR_TABLE (char_table)->purpose;
+  return PV_LISP_FIELD_REF(XCHAR_TABLE (char_table), purpose);
 }
 
 DEFUN ("char-table-parent", Fchar_table_parent, Schar_table_parent,
@@ -538,7 +538,7 @@ then the actual applicable value is inherited from the parent char-table
 {
   CHECK_CHAR_TABLE (char_table);
 
-  return XCHAR_TABLE (char_table)->parent;
+  return PV_LISP_FIELD_REF(XCHAR_TABLE (char_table), parent);
 }
 
 DEFUN ("set-char-table-parent", Fset_char_table_parent, Sset_char_table_parent,
@@ -555,7 +555,7 @@ Return PARENT.  PARENT must be either nil or another char-table.  */)
     {
       CHECK_CHAR_TABLE (parent);
 
-      for (temp = parent; !NILP (temp); temp = XCHAR_TABLE (temp)->parent)
+      for (temp = parent; !NILP (temp); temp = PV_LISP_FIELD_REF(XCHAR_TABLE (temp), parent))
 	if (EQ (temp, char_table))
 	  error ("Attempt to make a chartable be its own parent");
     }
@@ -606,7 +606,7 @@ a cons of character codes (for characters in the range), or a character code.  *
   CHECK_CHAR_TABLE (char_table);
 
   if (EQ (range, Qnil))
-    val = XCHAR_TABLE (char_table)->defalt;
+    val = PV_LISP_FIELD_REF(XCHAR_TABLE (char_table), defalt);
   else if (CHARACTERP (range))
     val = CHAR_TABLE_REF (char_table, XFASTINT (range));
   else if (CONSP (range))
@@ -790,17 +790,17 @@ map_sub_char_table (void (*c_function) (Lisp_Object, Lisp_Object, Lisp_Object),
       else
 	{
 	  if (NILP (this))
-	    this = XCHAR_TABLE (top)->defalt;
+	    this = PV_LISP_FIELD_REF(XCHAR_TABLE (top), defalt);
 	  if (!EQ (val, this))
 	    {
 	      bool different_value = 1;
 
 	      if (NILP (val))
 		{
-		  if (! NILP (XCHAR_TABLE (top)->parent))
+		  if (! NILP (PV_LISP_FIELD_REF(XCHAR_TABLE (top), parent)))
 		    {
-		      Lisp_Object parent = XCHAR_TABLE (top)->parent;
-		      Lisp_Object temp = XCHAR_TABLE (parent)->parent;
+		      Lisp_Object parent = PV_LISP_FIELD_REF(XCHAR_TABLE (top), parent);
+		      Lisp_Object temp = PV_LISP_FIELD_REF(XCHAR_TABLE (parent), parent);
 
 		      /* This is to get a value of FROM in PARENT
 			 without checking the parent of PARENT.  */
@@ -865,9 +865,9 @@ map_char_table (void (*c_function) (Lisp_Object, Lisp_Object, Lisp_Object),
   uniprop_decoder_t decoder = UNIPROP_GET_DECODER (table);
 
   range = Fcons (make_number (0), make_number (MAX_CHAR));
-  parent = XCHAR_TABLE (table)->parent;
+  parent = PV_LISP_FIELD_REF(XCHAR_TABLE (table), parent);
 
-  val = XCHAR_TABLE (table)->ascii;
+  val = PV_LISP_FIELD_REF(XCHAR_TABLE (table), ascii);
   if (SUB_CHAR_TABLE_P (val))
     val = XSUB_CHAR_TABLE (val)->contents[0];
   val = map_sub_char_table (c_function, function, table, arg, val, range,
@@ -875,13 +875,13 @@ map_char_table (void (*c_function) (Lisp_Object, Lisp_Object, Lisp_Object),
 
   /* If VAL is nil and TABLE has a parent, we must consult the parent
      recursively.  */
-  while (NILP (val) && ! NILP (XCHAR_TABLE (table)->parent))
+  while (NILP (val) && ! NILP (PV_LISP_FIELD_REF(XCHAR_TABLE (table), parent)))
     {
       Lisp_Object temp;
       int from = XINT (XCAR (range));
 
-      parent = XCHAR_TABLE (table)->parent;
-      temp = XCHAR_TABLE (parent)->parent;
+      parent = PV_LISP_FIELD_REF(XCHAR_TABLE (table), parent);
+      temp = PV_LISP_FIELD_REF(XCHAR_TABLE (parent), parent);
       /* This is to get a value of FROM in PARENT without checking the
 	 parent of PARENT.  */
       set_char_table_parent (parent, Qnil);

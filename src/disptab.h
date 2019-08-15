@@ -25,7 +25,7 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 
 #define DISP_TABLE_P(obj)						    \
   (CHAR_TABLE_P (obj)							    \
-   && EQ (XCHAR_TABLE (obj)->purpose, Qdisplay_table)			    \
+   && EQ (PV_LISP_FIELD_REF(XCHAR_TABLE (obj), purpose), Qdisplay_table)			    \
    && CHAR_TABLE_EXTRA_SLOTS (XCHAR_TABLE (obj)) == DISP_TABLE_EXTRA_SLOTS)
 
 #define DISP_TABLE_EXTRA_SLOTS 6
@@ -38,13 +38,13 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 
 extern Lisp_Object disp_char_vector (struct Lisp_Char_Table *, int);
 
-#define DISP_CHAR_VECTOR(dp, c)				\
-  (ASCII_CHAR_P(c)					\
-   ? (NILP ((dp)->ascii)				\
-      ? (dp)->defalt					\
-      : (SUB_CHAR_TABLE_P ((dp)->ascii)			\
-	 ? XSUB_CHAR_TABLE ((dp)->ascii)->contents[c]	\
-	 : (dp)->ascii))				\
+#define DISP_CHAR_VECTOR(dp, c)                                         \
+  (ASCII_CHAR_P(c)                                                      \
+   ? (NILP (PV_LISP_FIELD_REF(dp, ascii))                               \
+      ? PV_LISP_FIELD_REF(dp, defalt)                                   \
+      : (SUB_CHAR_TABLE_P (PV_LISP_FIELD_REF(dp, ascii))                \
+	 ? XSUB_CHAR_TABLE (PV_LISP_FIELD_REF(dp, ascii))->contents[c]  \
+	 : PV_LISP_FIELD_REF(dp, ascii)))                               \
    : disp_char_vector ((dp), (c)))
 
 /* Defined in window.c.  */

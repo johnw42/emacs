@@ -39,7 +39,7 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 static void
 bset_category_table (struct buffer *b, Lisp_Object val)
 {
-  b->category_table_ = val;
+  PV_LISP_FIELD_SET (b, category_table_, val);
 }
 
 /* The version number of the latest category table.  Each category
@@ -178,7 +178,7 @@ DEFUN ("category-table-p", Fcategory_table_p, Scategory_table_p, 1, 1, 0,
   (Lisp_Object arg)
 {
   if (CHAR_TABLE_P (arg)
-      && EQ (XCHAR_TABLE (arg)->purpose, Qcategory_table))
+      && EQ (PV_LISP_FIELD_REF(XCHAR_TABLE (arg), purpose), Qcategory_table))
     return Qt;
   return Qnil;
 }
@@ -235,9 +235,9 @@ copy_category_table (Lisp_Object table)
 {
   table = copy_char_table (table);
 
-  if (! NILP (XCHAR_TABLE (table)->defalt))
+  if (! NILP (PV_LISP_FIELD_REF(XCHAR_TABLE (table), defalt)))
     set_char_table_defalt (table,
-			   Fcopy_sequence (XCHAR_TABLE (table)->defalt));
+			   Fcopy_sequence (PV_LISP_FIELD_REF(XCHAR_TABLE (table), defalt)));
   set_char_table_extras
     (table, 0, Fcopy_sequence (XCHAR_TABLE (table)->extras[0]));
   map_char_table (copy_category_entry, Qnil, table, table);

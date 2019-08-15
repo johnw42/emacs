@@ -134,237 +134,237 @@ CHECK_OVERLAY (Lisp_Object x)
 static void
 bset_abbrev_mode (struct buffer *b, Lisp_Object val)
 {
-  b->abbrev_mode_ = val;
+  PV_LISP_FIELD_SET (b, abbrev_mode_, val);
 }
 static void
 bset_abbrev_table (struct buffer *b, Lisp_Object val)
 {
-  b->abbrev_table_ = val;
+  PV_LISP_FIELD_SET (b, abbrev_table_, val);
 }
 static void
 bset_auto_fill_function (struct buffer *b, Lisp_Object val)
 {
-  b->auto_fill_function_ = val;
+  PV_LISP_FIELD_SET (b, auto_fill_function_, val);
 }
 static void
 bset_auto_save_file_format (struct buffer *b, Lisp_Object val)
 {
-  b->auto_save_file_format_ = val;
+  PV_LISP_FIELD_SET (b, auto_save_file_format_, val);
 }
 static void
 bset_auto_save_file_name (struct buffer *b, Lisp_Object val)
 {
-  b->auto_save_file_name_ = val;
+  PV_LISP_FIELD_SET (b, auto_save_file_name_, val);
 }
 static void
 bset_backed_up (struct buffer *b, Lisp_Object val)
 {
-  b->backed_up_ = val;
+  PV_LISP_FIELD_SET (b, backed_up_, val);
 }
 static void
 bset_begv_marker (struct buffer *b, Lisp_Object val)
 {
-  b->begv_marker_ = val;
+  PV_LISP_FIELD_SET (b, begv_marker_, val);
 }
 static void
 bset_bidi_display_reordering (struct buffer *b, Lisp_Object val)
 {
-  b->bidi_display_reordering_ = val;
+  PV_LISP_FIELD_SET (b, bidi_display_reordering_, val);
 }
 static void
 bset_bidi_paragraph_start_re (struct buffer *b, Lisp_Object val)
 {
-  b->bidi_paragraph_start_re_ = val;
+  PV_LISP_FIELD_SET (b, bidi_paragraph_start_re_, val);
 }
 static void
 bset_bidi_paragraph_separate_re (struct buffer *b, Lisp_Object val)
 {
-  b->bidi_paragraph_separate_re_ = val;
+  PV_LISP_FIELD_SET (b, bidi_paragraph_separate_re_, val);
 }
 static void
 bset_buffer_file_coding_system (struct buffer *b, Lisp_Object val)
 {
-  b->buffer_file_coding_system_ = val;
+  PV_LISP_FIELD_SET (b, buffer_file_coding_system_, val);
 }
 static void
 bset_case_fold_search (struct buffer *b, Lisp_Object val)
 {
-  b->case_fold_search_ = val;
+  PV_LISP_FIELD_SET (b, case_fold_search_, val);
 }
 static void
 bset_ctl_arrow (struct buffer *b, Lisp_Object val)
 {
-  b->ctl_arrow_ = val;
+  PV_LISP_FIELD_SET (b, ctl_arrow_, val);
 }
 static void
 bset_cursor_in_non_selected_windows (struct buffer *b, Lisp_Object val)
 {
-  b->cursor_in_non_selected_windows_ = val;
+  PV_LISP_FIELD_SET (b, cursor_in_non_selected_windows_, val);
 }
 static void
 bset_cursor_type (struct buffer *b, Lisp_Object val)
 {
-  b->cursor_type_ = val;
+  PV_LISP_FIELD_SET (b, cursor_type_, val);
 }
 static void
 bset_display_table (struct buffer *b, Lisp_Object val)
 {
-  b->display_table_ = val;
+  PV_LISP_FIELD_SET (b, display_table_, val);
 }
 static void
 bset_extra_line_spacing (struct buffer *b, Lisp_Object val)
 {
-  b->extra_line_spacing_ = val;
+  PV_LISP_FIELD_SET (b, extra_line_spacing_, val);
 }
 static void
 bset_file_format (struct buffer *b, Lisp_Object val)
 {
-  b->file_format_ = val;
+  PV_LISP_FIELD_SET (b, file_format_, val);
 }
 static void
 bset_file_truename (struct buffer *b, Lisp_Object val)
 {
-  b->file_truename_ = val;
+  PV_LISP_FIELD_SET (b, file_truename_, val);
 }
 static void
 bset_fringe_cursor_alist (struct buffer *b, Lisp_Object val)
 {
-  b->fringe_cursor_alist_ = val;
+  PV_LISP_FIELD_SET (b, fringe_cursor_alist_, val);
 }
 static void
 bset_fringe_indicator_alist (struct buffer *b, Lisp_Object val)
 {
-  b->fringe_indicator_alist_ = val;
+  PV_LISP_FIELD_SET (b, fringe_indicator_alist_, val);
 }
 static void
 bset_fringes_outside_margins (struct buffer *b, Lisp_Object val)
 {
-  b->fringes_outside_margins_ = val;
+  PV_LISP_FIELD_SET (b, fringes_outside_margins_, val);
 }
 static void
 bset_header_line_format (struct buffer *b, Lisp_Object val)
 {
-  b->header_line_format_ = val;
+  PV_LISP_FIELD_SET (b, header_line_format_, val);
 }
 static void
 bset_indicate_buffer_boundaries (struct buffer *b, Lisp_Object val)
 {
-  b->indicate_buffer_boundaries_ = val;
+  PV_LISP_FIELD_SET (b, indicate_buffer_boundaries_, val);
 }
 static void
 bset_indicate_empty_lines (struct buffer *b, Lisp_Object val)
 {
-  b->indicate_empty_lines_ = val;
+  PV_LISP_FIELD_SET (b, indicate_empty_lines_, val);
 }
 static void
 bset_invisibility_spec (struct buffer *b, Lisp_Object val)
 {
-  b->invisibility_spec_ = val;
+  PV_LISP_FIELD_SET (b, invisibility_spec_, val);
 }
 static void
 bset_left_fringe_width (struct buffer *b, Lisp_Object val)
 {
-  b->left_fringe_width_ = val;
+  PV_LISP_FIELD_SET (b, left_fringe_width_, val);
 }
 static void
 bset_major_mode (struct buffer *b, Lisp_Object val)
 {
-  b->major_mode_ = val;
+  PV_LISP_FIELD_SET (b, major_mode_, val);
 }
 static void
 bset_mark (struct buffer *b, Lisp_Object val)
 {
-  b->mark_ = val;
+  PV_LISP_FIELD_SET (b, mark_, val);
 }
 static void
 bset_minor_modes (struct buffer *b, Lisp_Object val)
 {
-  b->minor_modes_ = val;
+  PV_LISP_FIELD_SET (b, minor_modes_, val);
 }
 static void
 bset_mode_line_format (struct buffer *b, Lisp_Object val)
 {
-  b->mode_line_format_ = val;
+  PV_LISP_FIELD_SET (b, mode_line_format_, val);
 }
 static void
 bset_mode_name (struct buffer *b, Lisp_Object val)
 {
-  b->mode_name_ = val;
+  PV_LISP_FIELD_SET (b, mode_name_, val);
 }
 static void
 bset_name (struct buffer *b, Lisp_Object val)
 {
-  b->name_ = val;
+  PV_LISP_FIELD_SET (b, name_, val);
 }
 static void
 bset_overwrite_mode (struct buffer *b, Lisp_Object val)
 {
-  b->overwrite_mode_ = val;
+  PV_LISP_FIELD_SET (b, overwrite_mode_, val);
 }
 static void
 bset_pt_marker (struct buffer *b, Lisp_Object val)
 {
-  b->pt_marker_ = val;
+  PV_LISP_FIELD_SET (b, pt_marker_, val);
 }
 static void
 bset_right_fringe_width (struct buffer *b, Lisp_Object val)
 {
-  b->right_fringe_width_ = val;
+  PV_LISP_FIELD_SET (b, right_fringe_width_, val);
 }
 static void
 bset_save_length (struct buffer *b, Lisp_Object val)
 {
-  b->save_length_ = val;
+  PV_LISP_FIELD_SET (b, save_length_, val);
 }
 static void
 bset_scroll_bar_width (struct buffer *b, Lisp_Object val)
 {
-  b->scroll_bar_width_ = val;
+  PV_LISP_FIELD_SET (b, scroll_bar_width_, val);
 }
 static void
 bset_scroll_bar_height (struct buffer *b, Lisp_Object val)
 {
-  b->scroll_bar_height_ = val;
+  PV_LISP_FIELD_SET (b, scroll_bar_height_, val);
 }
 static void
 bset_scroll_down_aggressively (struct buffer *b, Lisp_Object val)
 {
-  b->scroll_down_aggressively_ = val;
+  PV_LISP_FIELD_SET (b, scroll_down_aggressively_, val);
 }
 static void
 bset_scroll_up_aggressively (struct buffer *b, Lisp_Object val)
 {
-  b->scroll_up_aggressively_ = val;
+  PV_LISP_FIELD_SET (b, scroll_up_aggressively_, val);
 }
 static void
 bset_selective_display (struct buffer *b, Lisp_Object val)
 {
-  b->selective_display_ = val;
+  PV_LISP_FIELD_SET (b, selective_display_, val);
 }
 static void
 bset_selective_display_ellipses (struct buffer *b, Lisp_Object val)
 {
-  b->selective_display_ellipses_ = val;
+  PV_LISP_FIELD_SET (b, selective_display_ellipses_, val);
 }
 static void
 bset_vertical_scroll_bar_type (struct buffer *b, Lisp_Object val)
 {
-  b->vertical_scroll_bar_type_ = val;
+  PV_LISP_FIELD_SET (b, vertical_scroll_bar_type_, val);
 }
 static void
 bset_horizontal_scroll_bar_type (struct buffer *b, Lisp_Object val)
 {
-  b->horizontal_scroll_bar_type_ = val;
+  PV_LISP_FIELD_SET (b, horizontal_scroll_bar_type_, val);
 }
 static void
 bset_word_wrap (struct buffer *b, Lisp_Object val)
 {
-  b->word_wrap_ = val;
+  PV_LISP_FIELD_SET (b, word_wrap_, val);
 }
 static void
 bset_zv_marker (struct buffer *b, Lisp_Object val)
 {
-  b->zv_marker_ = val;
+  PV_LISP_FIELD_SET (b, zv_marker_, val);
 }
 
 void
@@ -398,9 +398,9 @@ followed by the rest of the buffers.  */)
     {
       Lisp_Object framelist, prevlist, tail;
 
-      framelist = Fcopy_sequence (XFRAME (frame)->buffer_list);
+      framelist = Fcopy_sequence (PV_LISP_FIELD_REF(XFRAME (frame), buffer_list));
       prevlist = Fnreverse (Fcopy_sequence
-			    (XFRAME (frame)->buried_buffer_list));
+			    (PV_LISP_FIELD_REF(XFRAME (frame), buried_buffer_list)));
 
       /* Remove from GENERAL any buffer that duplicates one in
          FRAMELIST or PREVLIST.  */
@@ -1519,7 +1519,7 @@ exists, return the buffer `*scratch*' (creating it if necessary).  */)
   (Lisp_Object buffer, Lisp_Object visible_ok, Lisp_Object frame)
 {
   struct frame *f = decode_live_frame (frame);
-  Lisp_Object tail = f->buffer_list, pred = f->buffer_predicate;
+  Lisp_Object tail = PV_LISP_FIELD_REF(f, buffer_list), pred = PV_LISP_FIELD_REF(f, buffer_predicate);
   Lisp_Object buf, notsogood = Qnil;
 
   /* Consider buffers that have been seen in the frame first.  */
@@ -1734,7 +1734,7 @@ cleaning up all windows currently displaying the buffer to be killed. */)
      since anything can happen within do_yes_or_no_p.  */
 
   /* Don't kill the minibuffer now current.  */
-  if (EQ (buffer, XWINDOW (minibuf_window)->contents))
+  if (EQ (buffer, PV_LISP_FIELD_REF(XWINDOW (minibuf_window), contents)))
     return Qnil;
 
   /* When we kill an ordinary buffer which shares its buffer text
@@ -1781,7 +1781,7 @@ cleaning up all windows currently displaying the buffer to be killed. */)
   /* If the buffer now current is shown in the minibuffer and our buffer
      is the sole other buffer give up.  */
   XSETBUFFER (tem, current_buffer);
-  if (EQ (tem, XWINDOW (minibuf_window)->contents)
+  if (EQ (tem, PV_LISP_FIELD_REF(XWINDOW (minibuf_window), contents))
       && EQ (buffer, Fother_buffer (buffer, Qnil, Qnil)))
     return Qnil;
 
@@ -1961,8 +1961,8 @@ record_buffer (Lisp_Object buffer)
   Vinhibit_quit = tem;
 
   /* Update buffer list of selected frame.  */
-  fset_buffer_list (f, Fcons (buffer, Fdelq (buffer, f->buffer_list)));
-  fset_buried_buffer_list (f, Fdelq (buffer, f->buried_buffer_list));
+  fset_buffer_list (f, Fcons (buffer, Fdelq (buffer, PV_LISP_FIELD_REF(f, buffer_list))));
+  fset_buried_buffer_list (f, Fdelq (buffer, PV_LISP_FIELD_REF(f, buried_buffer_list)));
 
   /* Run buffer-list-update-hook.  */
   if (!NILP (Vrun_hooks))
@@ -1999,9 +1999,9 @@ DEFUN ("bury-buffer-internal", Fbury_buffer_internal, Sbury_buffer_internal,
   Vinhibit_quit = tem;
 
   /* Update buffer lists of selected frame.  */
-  fset_buffer_list (f, Fdelq (buffer, f->buffer_list));
+  fset_buffer_list (f, Fdelq (buffer, PV_LISP_FIELD_REF(f, buffer_list)));
   fset_buried_buffer_list
-    (f, Fcons (buffer, Fdelq (buffer, f->buried_buffer_list)));
+    (f, Fcons (buffer, Fdelq (buffer, PV_LISP_FIELD_REF(f, buried_buffer_list))));
 
   /* Run buffer-list-update-hook.  */
   if (!NILP (Vrun_hooks))
@@ -2405,28 +2405,28 @@ results, see Info node `(elisp)Swapping Text'.  */)
     while (NILP (Fmemq (w, ws)))
       {
 	ws = Fcons (w, ws);
-	if (MARKERP (XWINDOW (w)->pointm)
-	    && (EQ (XWINDOW (w)->contents, buf1)
-		|| EQ (XWINDOW (w)->contents, buf2)))
-	  Fset_marker (XWINDOW (w)->pointm,
+	if (MARKERP (PV_LISP_FIELD_REF(XWINDOW (w), pointm))
+	    && (EQ (PV_LISP_FIELD_REF(XWINDOW (w), contents), buf1)
+		|| EQ (PV_LISP_FIELD_REF(XWINDOW (w), contents), buf2)))
+	  Fset_marker (PV_LISP_FIELD_REF(XWINDOW (w), pointm),
 		       make_number
-		       (BUF_BEGV (XBUFFER (XWINDOW (w)->contents))),
-		       XWINDOW (w)->contents);
+		       (BUF_BEGV (XBUFFER (PV_LISP_FIELD_REF(XWINDOW (w), contents)))),
+		       PV_LISP_FIELD_REF(XWINDOW (w), contents));
 	/* Blindly copied from pointm part.  */
-	if (MARKERP (XWINDOW (w)->old_pointm)
-	    && (EQ (XWINDOW (w)->contents, buf1)
-		|| EQ (XWINDOW (w)->contents, buf2)))
-	  Fset_marker (XWINDOW (w)->old_pointm,
+	if (MARKERP (PV_LISP_FIELD_REF(XWINDOW (w), old_pointm))
+	    && (EQ (PV_LISP_FIELD_REF(XWINDOW (w), contents), buf1)
+		|| EQ (PV_LISP_FIELD_REF(XWINDOW (w), contents), buf2)))
+	  Fset_marker (PV_LISP_FIELD_REF(XWINDOW (w), old_pointm),
 		       make_number
-		       (BUF_BEGV (XBUFFER (XWINDOW (w)->contents))),
-		       XWINDOW (w)->contents);
-	if (MARKERP (XWINDOW (w)->start)
-	    && (EQ (XWINDOW (w)->contents, buf1)
-		|| EQ (XWINDOW (w)->contents, buf2)))
-	  Fset_marker (XWINDOW (w)->start,
+		       (BUF_BEGV (XBUFFER (PV_LISP_FIELD_REF(XWINDOW (w), contents)))),
+		       PV_LISP_FIELD_REF(XWINDOW (w), contents));
+	if (MARKERP (PV_LISP_FIELD_REF(XWINDOW (w), start))
+	    && (EQ (PV_LISP_FIELD_REF(XWINDOW (w), contents), buf1)
+		|| EQ (PV_LISP_FIELD_REF(XWINDOW (w), contents), buf2)))
+	  Fset_marker (PV_LISP_FIELD_REF(XWINDOW (w), start),
 		       make_number
-		       (XBUFFER (XWINDOW (w)->contents)->last_window_start),
-		       XWINDOW (w)->contents);
+		       (XBUFFER (PV_LISP_FIELD_REF(XWINDOW (w), contents))->last_window_start),
+		       PV_LISP_FIELD_REF(XWINDOW (w), contents));
 	w = Fnext_window (w, Qt, Qt);
       }
   }

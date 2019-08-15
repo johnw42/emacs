@@ -1184,7 +1184,7 @@ x_update_window_end (struct window *w, bool cursor_on_p,
      XTframe_up_to_date to redisplay the mouse highlight.  */
   if (mouse_face_overwritten_p)
     {
-      Mouse_HLInfo *hlinfo = MOUSE_HL_INFO (XFRAME (w->frame));
+      Mouse_HLInfo *hlinfo = MOUSE_HL_INFO (XFRAME (PV_LISP_FIELD_REF(w, frame)));
 
       hlinfo->mouse_face_beg_row = hlinfo->mouse_face_beg_col = -1;
       hlinfo->mouse_face_end_row = hlinfo->mouse_face_end_col = -1;
@@ -4212,7 +4212,7 @@ x_ins_del_lines (struct frame *f, int vpos, int n)
 static void
 x_scroll_run (struct window *w, struct run *run)
 {
-  struct frame *f = XFRAME (w->frame);
+  struct frame *f = XFRAME (PV_LISP_FIELD_REF(w, frame));
   int x, y, width, height, from_y, to_y, bottom_y;
 
   /* Get frame-relative bounding box of the text display area of W,
@@ -5189,7 +5189,7 @@ XTmouse_position (struct frame **fp, int insist, Lisp_Object *bar_window,
 
 	    if (bar)
 	      {
-		f1 = XFRAME (WINDOW_FRAME (XWINDOW (bar->window)));
+		f1 = XFRAME (WINDOW_FRAME (XWINDOW (PV_LISP_FIELD_REF(bar, window))));
 		win_x = parent_x;
 		win_y = parent_y;
 	      }
@@ -5264,7 +5264,7 @@ x_window_to_scroll_bar (Display *display, Window window_id, int type)
 	   ! NILP (bar) || (bar = condemned,
 			       condemned = Qnil,
 			       ! NILP (bar));
-	   bar = XSCROLL_BAR (bar)->next)
+	   bar = PV_LISP_FIELD_REF(XSCROLL_BAR (bar), next))
 	if (XSCROLL_BAR (bar)->x_window == window_id
             && FRAME_X_DISPLAY (XFRAME (frame)) == display
 	    && (type = 2
@@ -5437,7 +5437,7 @@ x_send_scroll_bar_event (Lisp_Object window, enum scroll_bar_part part,
   XEvent event;
   XClientMessageEvent *ev = &event.xclient;
   struct window *w = XWINDOW (window);
-  struct frame *f = XFRAME (w->frame);
+  struct frame *f = XFRAME (PV_LISP_FIELD_REF(w, frame));
   intptr_t iw = (intptr_t) w;
   verify (INTPTR_WIDTH <= 64);
   int sign_shift = INTPTR_WIDTH - 32;
@@ -5708,8 +5708,8 @@ xg_scroll_callback (GtkRange     *range,
 
   if (part != scroll_bar_nowhere)
     {
-      window_being_scrolled = bar->window;
-      x_send_scroll_bar_event (bar->window, part, portion, whole,
+      window_being_scrolled = PV_LISP_FIELD_REF(bar, window);
+      x_send_scroll_bar_event (PV_LISP_FIELD_REF(bar, window), part, portion, whole,
 			       bar->horizontal);
     }
 
@@ -6534,7 +6534,7 @@ static struct scroll_bar *
 x_scroll_bar_create (struct window *w, int top, int left,
 		     int width, int height, bool horizontal)
 {
-  struct frame *f = XFRAME (w->frame);
+  struct frame *f = XFRAME (PV_LISP_FIELD_REF(w, frame));
   struct scroll_bar *bar
     = ALLOCATE_PSEUDOVECTOR (struct scroll_bar, x_window, PVEC_OTHER);
   Lisp_Object barobj;
@@ -6583,7 +6583,7 @@ x_scroll_bar_create (struct window *w, int top, int left,
   }
 #endif /* not USE_TOOLKIT_SCROLL_BARS */
 
-  XSETWINDOW (bar->window, w);
+  XSETWINDOW (PV_LISP_FIELD_REF(bar, window), w);
   bar->top = top;
   bar->left = left;
   bar->width = width;
@@ -6597,11 +6597,11 @@ x_scroll_bar_create (struct window *w, int top, int left,
 #endif
 
   /* Add bar to its frame's list of scroll bars.  */
-  bar->next = FRAME_SCROLL_BARS (f);
-  bar->prev = Qnil;
+  PV_LISP_FIELD_SET (bar, next, FRAME_SCROLL_BARS (f));
+  PV_LISP_FIELD_SET (bar, prev, Qnil);
   XSETVECTOR (barobj, bar);
   fset_scroll_bars (f, barobj);
-  if (!NILP (bar->next))
+  if (!NILP (PV_LISP_FIELD_REF(bar, next)))
     XSETVECTOR (XSCROLL_BAR (bar->next)->prev, bar);
 
   /* Map the window/widget.  */
@@ -6745,7 +6745,7 @@ x_scroll_bar_set_handle (struct scroll_bar *bar, int start, int end,
 static void
 x_scroll_bar_remove (struct scroll_bar *bar)
 {
-  struct frame *f = XFRAME (WINDOW_FRAME (XWINDOW (bar->window)));
+  struct frame *f = XFRAME (WINDOW_FRAME (XWINDOW (PV_LISP_FIELD_REF(bar, window))));
   block_input ();
 
 #ifdef USE_TOOLKIT_SCROLL_BARS
@@ -6760,9 +6760,9 @@ x_scroll_bar_remove (struct scroll_bar *bar)
 
   /* Dissociate this scroll bar from its window.  */
   if (bar->horizontal)
-    wset_horizontal_scroll_bar (XWINDOW (bar->window), Qnil);
+    wset_horizontal_scroll_bar (XWINDOW (PV_LISP_FIELD_REF(bar, window)), Qnil);
   else
-    wset_vertical_scroll_bar (XWINDOW (bar->window), Qnil);
+    wset_vertical_scroll_bar (XWINDOW (PV_LISP_FIELD_REF(bar, window)), Qnil);
 
   unblock_input ();
 }
@@ -6776,7 +6776,7 @@ x_scroll_bar_remove (struct scroll_bar *bar)
 static void
 XTset_vertical_scroll_bar (struct window *w, int portion, int whole, int position)
 {
-  struct frame *f = XFRAME (w->frame);
+  struct frame *f = XFRAME (PV_LISP_FIELD_REF(w, frame));
   Lisp_Object barobj;
   struct scroll_bar *bar;
   int top, height, left, width;
@@ -6790,7 +6790,7 @@ XTset_vertical_scroll_bar (struct window *w, int portion, int whole, int positio
   width = WINDOW_SCROLL_BAR_AREA_WIDTH (w);
 
   /* Does the scroll bar exist yet?  */
-  if (NILP (w->vertical_scroll_bar))
+  if (NILP (PV_LISP_FIELD_REF(w, vertical_scroll_bar)))
     {
       if (width > 0 && height > 0)
 	{
@@ -6806,7 +6806,7 @@ XTset_vertical_scroll_bar (struct window *w, int portion, int whole, int positio
       /* It may just need to be moved and resized.  */
       unsigned int mask = 0;
 
-      bar = XSCROLL_BAR (w->vertical_scroll_bar);
+      bar = XSCROLL_BAR (PV_LISP_FIELD_REF(w, vertical_scroll_bar));
 
       block_input ();
 
@@ -6890,7 +6890,7 @@ XTset_vertical_scroll_bar (struct window *w, int portion, int whole, int positio
 static void
 XTset_horizontal_scroll_bar (struct window *w, int portion, int whole, int position)
 {
-  struct frame *f = XFRAME (w->frame);
+  struct frame *f = XFRAME (PV_LISP_FIELD_REF(w, frame));
   Lisp_Object barobj;
   struct scroll_bar *bar;
   int top, height, left, width;
@@ -6905,7 +6905,7 @@ XTset_horizontal_scroll_bar (struct window *w, int portion, int whole, int posit
   height = WINDOW_SCROLL_BAR_AREA_HEIGHT (w);
 
   /* Does the scroll bar exist yet?  */
-  if (NILP (w->horizontal_scroll_bar))
+  if (NILP (PV_LISP_FIELD_REF(w, horizontal_scroll_bar)))
     {
       if (width > 0 && height > 0)
 	{
@@ -6924,7 +6924,7 @@ XTset_horizontal_scroll_bar (struct window *w, int portion, int whole, int posit
       /* It may just need to be moved and resized.  */
       unsigned int mask = 0;
 
-      bar = XSCROLL_BAR (w->horizontal_scroll_bar);
+      bar = XSCROLL_BAR (PV_LISP_FIELD_REF(w, horizontal_scroll_bar));
 
       block_input ();
 
@@ -7039,11 +7039,11 @@ XTcondemn_scroll_bars (struct frame *frame)
 	  /* Prepend scrollbars to already condemned ones.  */
 	  Lisp_Object last = FRAME_SCROLL_BARS (frame);
 
-	  while (!NILP (XSCROLL_BAR (last)->next))
-	    last = XSCROLL_BAR (last)->next;
+	  while (!NILP (PV_LISP_FIELD_REF(XSCROLL_BAR (last), next)))
+	    last = PV_LISP_FIELD_REF(XSCROLL_BAR (last), next);
 
-	  XSCROLL_BAR (last)->next = FRAME_CONDEMNED_SCROLL_BARS (frame);
-	  XSCROLL_BAR (FRAME_CONDEMNED_SCROLL_BARS (frame))->prev = last;
+	  PV_LISP_FIELD_SET (XSCROLL_BAR (last), next, FRAME_CONDEMNED_SCROLL_BARS (frame));
+	  PV_LISP_FIELD_SET (XSCROLL_BAR (FRAME_CONDEMNED_SCROLL_BARS (frame)), prev, last);
 	}
 
       fset_condemned_scroll_bars (frame, FRAME_SCROLL_BARS (frame));
@@ -7063,75 +7063,75 @@ XTredeem_scroll_bar (struct window *w)
   struct frame *f;
 
   /* We can't redeem this window's scroll bar if it doesn't have one.  */
-  if (NILP (w->vertical_scroll_bar) && NILP (w->horizontal_scroll_bar))
+  if (NILP (PV_LISP_FIELD_REF(w, vertical_scroll_bar)) && NILP (PV_LISP_FIELD_REF(w, horizontal_scroll_bar)))
     emacs_abort ();
 
-  if (!NILP (w->vertical_scroll_bar) && WINDOW_HAS_VERTICAL_SCROLL_BAR (w))
+  if (!NILP (PV_LISP_FIELD_REF(w, vertical_scroll_bar)) && WINDOW_HAS_VERTICAL_SCROLL_BAR (w))
     {
-      bar = XSCROLL_BAR (w->vertical_scroll_bar);
+      bar = XSCROLL_BAR (PV_LISP_FIELD_REF(w, vertical_scroll_bar));
       /* Unlink it from the condemned list.  */
       f = XFRAME (WINDOW_FRAME (w));
-      if (NILP (bar->prev))
+      if (NILP (PV_LISP_FIELD_REF(bar, prev)))
 	{
 	  /* If the prev pointer is nil, it must be the first in one of
 	     the lists.  */
-	  if (EQ (FRAME_SCROLL_BARS (f), w->vertical_scroll_bar))
+	  if (EQ (FRAME_SCROLL_BARS (f), PV_LISP_FIELD_REF(w, vertical_scroll_bar)))
 	    /* It's not condemned.  Everything's fine.  */
 	    goto horizontal;
 	  else if (EQ (FRAME_CONDEMNED_SCROLL_BARS (f),
-		       w->vertical_scroll_bar))
-	    fset_condemned_scroll_bars (f, bar->next);
+		       PV_LISP_FIELD_REF(w, vertical_scroll_bar)))
+	    fset_condemned_scroll_bars (f, PV_LISP_FIELD_REF(bar, next));
 	  else
 	    /* If its prev pointer is nil, it must be at the front of
 	       one or the other!  */
 	    emacs_abort ();
 	}
       else
-	XSCROLL_BAR (bar->prev)->next = bar->next;
+	PV_LISP_FIELD_SET (XSCROLL_BAR (PV_LISP_FIELD_REF(bar, prev)), next, PV_LISP_FIELD_REF(bar, next));
 
-      if (! NILP (bar->next))
-	XSCROLL_BAR (bar->next)->prev = bar->prev;
+      if (! NILP (PV_LISP_FIELD_REF(bar, next)))
+	PV_LISP_FIELD_SET (XSCROLL_BAR (PV_LISP_FIELD_REF(bar, next)), prev, PV_LISP_FIELD_REF(bar, prev));
 
-      bar->next = FRAME_SCROLL_BARS (f);
-      bar->prev = Qnil;
+      PV_LISP_FIELD_SET (bar, next, FRAME_SCROLL_BARS (f));
+      PV_LISP_FIELD_SET (bar, prev, Qnil);
       XSETVECTOR (barobj, bar);
       fset_scroll_bars (f, barobj);
-      if (! NILP (bar->next))
+      if (! NILP (PV_LISP_FIELD_REF(bar, next)))
 	XSETVECTOR (XSCROLL_BAR (bar->next)->prev, bar);
     }
 
  horizontal:
-  if (!NILP (w->horizontal_scroll_bar) && WINDOW_HAS_HORIZONTAL_SCROLL_BAR (w))
+  if (!NILP (PV_LISP_FIELD_REF(w, horizontal_scroll_bar)) && WINDOW_HAS_HORIZONTAL_SCROLL_BAR (w))
     {
-      bar = XSCROLL_BAR (w->horizontal_scroll_bar);
+      bar = XSCROLL_BAR (PV_LISP_FIELD_REF(w, horizontal_scroll_bar));
       /* Unlink it from the condemned list.  */
       f = XFRAME (WINDOW_FRAME (w));
-      if (NILP (bar->prev))
+      if (NILP (PV_LISP_FIELD_REF(bar, prev)))
 	{
 	  /* If the prev pointer is nil, it must be the first in one of
 	     the lists.  */
-	  if (EQ (FRAME_SCROLL_BARS (f), w->horizontal_scroll_bar))
+	  if (EQ (FRAME_SCROLL_BARS (f), PV_LISP_FIELD_REF(w, horizontal_scroll_bar)))
 	    /* It's not condemned.  Everything's fine.  */
 	    return;
 	  else if (EQ (FRAME_CONDEMNED_SCROLL_BARS (f),
-		       w->horizontal_scroll_bar))
-	    fset_condemned_scroll_bars (f, bar->next);
+		       PV_LISP_FIELD_REF(w, horizontal_scroll_bar)))
+	    fset_condemned_scroll_bars (f, PV_LISP_FIELD_REF(bar, next));
 	  else
 	    /* If its prev pointer is nil, it must be at the front of
 	       one or the other!  */
 	    emacs_abort ();
 	}
       else
-	XSCROLL_BAR (bar->prev)->next = bar->next;
+	PV_LISP_FIELD_SET (XSCROLL_BAR (PV_LISP_FIELD_REF(bar, prev)), next, PV_LISP_FIELD_REF(bar, next));
 
-      if (! NILP (bar->next))
-	XSCROLL_BAR (bar->next)->prev = bar->prev;
+      if (! NILP (PV_LISP_FIELD_REF(bar, next)))
+	PV_LISP_FIELD_SET (XSCROLL_BAR (PV_LISP_FIELD_REF(bar, next)), prev, PV_LISP_FIELD_REF(bar, prev));
 
-      bar->next = FRAME_SCROLL_BARS (f);
-      bar->prev = Qnil;
+      PV_LISP_FIELD_SET (bar, next, FRAME_SCROLL_BARS (f));
+      PV_LISP_FIELD_SET (bar, prev, Qnil);
       XSETVECTOR (barobj, bar);
       fset_scroll_bars (f, barobj);
-      if (! NILP (bar->next))
+      if (! NILP (PV_LISP_FIELD_REF(bar, next)))
 	XSETVECTOR (XSCROLL_BAR (bar->next)->prev, bar);
     }
 }
@@ -7156,8 +7156,9 @@ XTjudge_scroll_bars (struct frame *f)
 
       x_scroll_bar_remove (b);
 
-      next = b->next;
-      b->next = b->prev = Qnil;
+      next = PV_LISP_FIELD_REF(b, next);
+      PV_LISP_FIELD_SET (b, next, Qnil);
+      PV_LISP_FIELD_SET (b, prev, Qnil);
     }
 
   /* Now there should be no references to the condemned scroll bars,
@@ -7215,7 +7216,7 @@ x_scroll_bar_handle_click (struct scroll_bar *bar,
 			   const XEvent *event,
 			   struct input_event *emacs_event)
 {
-  if (! WINDOWP (bar->window))
+  if (! WINDOWP (PV_LISP_FIELD_REF(bar, window)))
     emacs_abort ();
 
   emacs_event->kind = (bar->horizontal
@@ -7224,7 +7225,7 @@ x_scroll_bar_handle_click (struct scroll_bar *bar,
   emacs_event->code = event->xbutton.button - Button1;
   emacs_event->modifiers
     = (x_x_to_emacs_modifiers (FRAME_DISPLAY_INFO
-			       (XFRAME (WINDOW_FRAME (XWINDOW (bar->window)))),
+			       (XFRAME (WINDOW_FRAME (XWINDOW (PV_LISP_FIELD_REF(bar, window))))),
 			       event->xbutton.state)
        | (event->type == ButtonRelease
 	  ? up_modifier
@@ -7342,7 +7343,7 @@ x_scroll_bar_report_motion (struct frame **fp, Lisp_Object *bar_window,
   struct x_display_info *dpyinfo = FRAME_DISPLAY_INFO (*fp);
   struct scroll_bar *bar = dpyinfo->last_mouse_scroll_bar;
   Window w = bar->x_window;
-  struct frame *f = XFRAME (WINDOW_FRAME (XWINDOW (bar->window)));
+  struct frame *f = XFRAME (WINDOW_FRAME (XWINDOW (PV_LISP_FIELD_REF(bar, window))));
   int win_x, win_y;
   Window dummy_window;
   int dummy_coord;
@@ -7377,7 +7378,7 @@ x_scroll_bar_report_motion (struct frame **fp, Lisp_Object *bar_window,
 	win_y = top_range;
 
       *fp = f;
-      *bar_window = bar->window;
+      *bar_window = PV_LISP_FIELD_REF(bar, window);
 
       if (bar->dragging != -1)
 	*part = scroll_bar_handle;
@@ -7411,7 +7412,7 @@ x_horizontal_scroll_bar_report_motion (struct frame **fp, Lisp_Object *bar_windo
   struct x_display_info *dpyinfo = FRAME_DISPLAY_INFO (*fp);
   struct scroll_bar *bar = dpyinfo->last_mouse_scroll_bar;
   Window w = bar->x_window;
-  struct frame *f = XFRAME (WINDOW_FRAME (XWINDOW (bar->window)));
+  struct frame *f = XFRAME (WINDOW_FRAME (XWINDOW (PV_LISP_FIELD_REF(bar, window))));
   int win_x, win_y;
   Window dummy_window;
   int dummy_coord;
@@ -7446,7 +7447,7 @@ x_horizontal_scroll_bar_report_motion (struct frame **fp, Lisp_Object *bar_windo
 	win_x = left_range;
 
       *fp = f;
-      *bar_window = bar->window;
+      *bar_window = PV_LISP_FIELD_REF(bar, window);
 
       if (bar->dragging != -1)
 	*part = scroll_bar_horizontal_handle;
@@ -9288,7 +9289,7 @@ x_draw_hollow_cursor (struct window *w, struct glyph_row *row)
 static void
 x_draw_bar_cursor (struct window *w, struct glyph_row *row, int width, enum text_cursor_kinds kind)
 {
-  struct frame *f = XFRAME (w->frame);
+  struct frame *f = XFRAME (PV_LISP_FIELD_REF(w, frame));
   struct glyph *cursor_glyph;
 
   /* If cursor is out of bounds, don't draw garbage.  This can happen
@@ -9460,7 +9461,7 @@ x_draw_window_cursor (struct window *w, struct glyph_row *glyph_row, int x,
 	}
 
 #ifdef HAVE_X_I18N
-      if (w == XWINDOW (f->selected_window))
+      if (w == XWINDOW (PV_LISP_FIELD_REF(f, selected_window)))
 	if (FRAME_XIC (f) && (FRAME_XIC_STYLE (f) & XIMPreeditPosition))
 	  xic_set_preeditarea (w, x, y);
 #endif
@@ -10144,7 +10145,7 @@ xim_instantiate_callback (Display *display, XPointer client_data, XPointer call_
 		  xic_set_statusarea (f);
 		if (FRAME_XIC_STYLE (f) & XIMPreeditPosition)
 		  {
-		    struct window *w = XWINDOW (f->selected_window);
+		    struct window *w = XWINDOW (PV_LISP_FIELD_REF(f, selected_window));
 		    xic_set_preeditarea (w, w->cursor.x, w->cursor.y);
 		  }
 	      }
@@ -11270,7 +11271,7 @@ x_set_window_size (struct frame *f, bool change_gravity,
 #endif /* not USE_GTK */
 
   /* If cursor was outside the new size, mark it as off.  */
-  mark_window_cursors_off (XWINDOW (f->root_window));
+  mark_window_cursors_off (XWINDOW (PV_LISP_FIELD_REF(f, root_window)));
 
   /* Clear out any recollection of where the mouse highlighting was,
      since it might be in a place that's outside the new frame size.

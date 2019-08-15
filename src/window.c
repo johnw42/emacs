@@ -113,85 +113,85 @@ CHECK_WINDOW_CONFIGURATION (Lisp_Object x)
 static void
 wset_combination_limit (struct window *w, Lisp_Object val)
 {
-  w->combination_limit = val;
+  PV_LISP_FIELD_SET (w, combination_limit, val);
 }
 
 static void
 wset_dedicated (struct window *w, Lisp_Object val)
 {
-  w->dedicated = val;
+  PV_LISP_FIELD_SET (w, dedicated, val);
 }
 
 static void
 wset_display_table (struct window *w, Lisp_Object val)
 {
-  w->display_table = val;
+  PV_LISP_FIELD_SET (w, display_table, val);
 }
 
 static void
 wset_new_normal (struct window *w, Lisp_Object val)
 {
-  w->new_normal = val;
+  PV_LISP_FIELD_SET (w, new_normal, val);
 }
 
 static void
 wset_new_total (struct window *w, Lisp_Object val)
 {
-  w->new_total = val;
+  PV_LISP_FIELD_SET (w, new_total, val);
 }
 
 static void
 wset_normal_cols (struct window *w, Lisp_Object val)
 {
-  w->normal_cols = val;
+  PV_LISP_FIELD_SET (w, normal_cols, val);
 }
 
 static void
 wset_normal_lines (struct window *w, Lisp_Object val)
 {
-  w->normal_lines = val;
+  PV_LISP_FIELD_SET (w, normal_lines, val);
 }
 
 static void
 wset_parent (struct window *w, Lisp_Object val)
 {
-  w->parent = val;
+  PV_LISP_FIELD_SET (w, parent, val);
 }
 
 static void
 wset_pointm (struct window *w, Lisp_Object val)
 {
-  w->pointm = val;
+  PV_LISP_FIELD_SET (w, pointm, val);
 }
 
 static void
 wset_old_pointm (struct window *w, Lisp_Object val)
 {
-  w->old_pointm = val;
+  PV_LISP_FIELD_SET (w, old_pointm, val);
 }
 
 static void
 wset_start (struct window *w, Lisp_Object val)
 {
-  w->start = val;
+  PV_LISP_FIELD_SET (w, start, val);
 }
 
 static void
 wset_temslot (struct window *w, Lisp_Object val)
 {
-  w->temslot = val;
+  PV_LISP_FIELD_SET (w, temslot, val);
 }
 
 static void
 wset_vertical_scroll_bar_type (struct window *w, Lisp_Object val)
 {
-  w->vertical_scroll_bar_type = val;
+  PV_LISP_FIELD_SET (w, vertical_scroll_bar_type, val);
 }
 
 static void
 wset_window_parameters (struct window *w, Lisp_Object val)
 {
-  w->window_parameters = val;
+  PV_LISP_FIELD_SET (w, window_parameters, val);
 }
 
 static void
@@ -199,8 +199,8 @@ wset_combination (struct window *w, bool horflag, Lisp_Object val)
 {
   /* Since leaf windows never becomes non-leaf, there should
      be no buffer and markers in start and pointm fields of W.  */
-  eassert (!BUFFERP (w->contents) && NILP (w->start) && NILP (w->pointm));
-  w->contents = val;
+  eassert (!BUFFERP (PV_LISP_FIELD_REF(w, contents)) && NILP (PV_LISP_FIELD_REF(w, start)) && NILP (PV_LISP_FIELD_REF(w, pointm)));
+  PV_LISP_FIELD_SET (w, contents, val);
   /* When an internal window is deleted and VAL is nil, HORFLAG
      is meaningless.  */
   if (!NILP (val))
@@ -213,7 +213,7 @@ wset_update_mode_line (struct window *w)
   /* If this window is the selected window on its frame, set the
      global variable update_mode_lines, so that x_consider_frame_title
      will consider this frame's title for redisplay.  */
-  Lisp_Object fselected_window = XFRAME (WINDOW_FRAME (w))->selected_window;
+  Lisp_Object fselected_window = PV_LISP_FIELD_REF(XFRAME (WINDOW_FRAME (w)), selected_window);
 
   if (WINDOWP (fselected_window) && XWINDOW (fselected_window) == w)
     update_mode_lines = 42;
@@ -227,7 +227,7 @@ wset_update_mode_line (struct window *w)
 bool
 window_outdated (struct window *w)
 {
-  struct buffer *b = XBUFFER (w->contents);
+  struct buffer *b = XBUFFER (PV_LISP_FIELD_REF(w, contents));
   return (w->last_modified < BUF_MODIFF (b)
 	  || w->last_overlay_modified < BUF_OVERLAY_MODIFF (b));
 }
@@ -275,9 +275,9 @@ static void
 adjust_window_count (struct window *w, int arg)
 {
   eassert (eabs (arg) == 1);
-  if (BUFFERP (w->contents))
+  if (BUFFERP (PV_LISP_FIELD_REF(w, contents)))
     {
-      struct buffer *b = XBUFFER (w->contents);
+      struct buffer *b = XBUFFER (PV_LISP_FIELD_REF(w, contents));
 
       if (b->base_buffer)
 	b = b->base_buffer;
@@ -299,8 +299,8 @@ wset_buffer (struct window *w, Lisp_Object val)
   if (BUFFERP (val))
     /* Make sure that we do not assign the buffer
        to an internal window.  */
-    eassert (MARKERP (w->start) && MARKERP (w->pointm));
-  w->contents = val;
+    eassert (MARKERP (PV_LISP_FIELD_REF(w, start)) && MARKERP (PV_LISP_FIELD_REF(w, pointm)));
+  PV_LISP_FIELD_SET (w, contents, val);
   adjust_window_count (w, 1);
 }
 
@@ -350,11 +350,11 @@ With a window argument, return the root window of that window's frame.  */)
   if (NILP (frame_or_window))
     window = SELECTED_FRAME ()->root_window;
   else if (WINDOW_VALID_P (frame_or_window))
-      window = XFRAME (XWINDOW (frame_or_window)->frame)->root_window;
+      window = XFRAME (PV_LISP_FIELD_REF(XWINDOW (frame_or_window), frame))->root_window;
   else
     {
       CHECK_LIVE_FRAME (frame_or_window);
-      window = XFRAME (frame_or_window)->root_window;
+      window = PV_LISP_FIELD_REF(XFRAME (frame_or_window), root_window);
     }
 
   return window;
@@ -395,11 +395,11 @@ the first window of that frame.  */)
   else
     {
       CHECK_LIVE_FRAME (frame_or_window);
-      window = XFRAME (frame_or_window)->root_window;
+      window = PV_LISP_FIELD_REF(XFRAME (frame_or_window), root_window);
     }
 
-  while (WINDOWP (XWINDOW (window)->contents))
-    window = XWINDOW (window)->contents;
+  while (WINDOWP (PV_LISP_FIELD_REF(XWINDOW (window), contents)))
+    window = PV_LISP_FIELD_REF(XWINDOW (window), contents);
 
   return window;
 }
@@ -422,7 +422,7 @@ return the selected window of that frame.  */)
   else
     {
       CHECK_LIVE_FRAME (frame_or_window);
-      window = XFRAME (frame_or_window)->selected_window;
+      window = PV_LISP_FIELD_REF(XFRAME (frame_or_window), selected_window);
     }
 
   return window;
@@ -484,7 +484,7 @@ select_window (Lisp_Object window, Lisp_Object norecord,
   w = XWINDOW (window);
 
   /* Make the selected window's buffer current.  */
-  Fset_buffer (w->contents);
+  Fset_buffer (PV_LISP_FIELD_REF(w, contents));
 
   if (EQ (window, selected_window) && !inhibit_point_swap)
     /* `switch-to-buffer' uses (select-window (selected-window)) as a "clever"
@@ -518,7 +518,7 @@ select_window (Lisp_Object window, Lisp_Object norecord,
     fset_selected_window (sf, window);
 
   select_window_1 (window, inhibit_point_swap);
-  bset_last_selected_window (XBUFFER (w->contents), window);
+  bset_last_selected_window (XBUFFER (PV_LISP_FIELD_REF(w, contents)), window);
 
  record_and_return:
   /* record_buffer can call maybe_quit, so make sure it is run only
@@ -528,7 +528,7 @@ select_window (Lisp_Object window, Lisp_Object norecord,
   if (NILP (norecord))
     {
       w->use_time = ++window_select_count;
-      record_buffer (w->contents);
+      record_buffer (PV_LISP_FIELD_REF(w, contents));
     }
 
   return window;
@@ -546,10 +546,10 @@ select_window_1 (Lisp_Object window, bool inhibit_point_swap)
   if (!inhibit_point_swap)
     {
       struct window *ow = XWINDOW (selected_window);
-      if (BUFFERP (ow->contents))
-	set_marker_both (ow->pointm, ow->contents,
-			 BUF_PT (XBUFFER (ow->contents)),
-			 BUF_PT_BYTE (XBUFFER (ow->contents)));
+      if (BUFFERP (PV_LISP_FIELD_REF(ow, contents)))
+	set_marker_both (PV_LISP_FIELD_REF(ow, pointm), PV_LISP_FIELD_REF(ow, contents),
+			 BUF_PT (XBUFFER (PV_LISP_FIELD_REF(ow, contents))),
+			 BUF_PT_BYTE (XBUFFER (PV_LISP_FIELD_REF(ow, contents))));
     }
 
   selected_window = window;
@@ -559,7 +559,7 @@ select_window_1 (Lisp_Object window, bool inhibit_point_swap)
      than one window.  It also matters when
      redisplay_window has altered point after scrolling,
      because it makes the change only in the window.  */
-  set_point_from_marker (XWINDOW (window)->pointm);
+  set_point_from_marker (PV_LISP_FIELD_REF(XWINDOW (window), pointm));
 }
 
 DEFUN ("select-window", Fselect_window, Sselect_window, 1, 2, 0,
@@ -597,7 +597,7 @@ Return nil for an internal window or a deleted window.  */)
   (Lisp_Object window)
 {
   struct window *w = decode_any_window (window);
-  return WINDOW_LEAF_P (w) ? w->contents : Qnil;
+  return WINDOW_LEAF_P (w) ? PV_LISP_FIELD_REF(w, contents) : Qnil;
 }
 
 DEFUN ("window-parent", Fwindow_parent, Swindow_parent, 0, 1, 0,
@@ -618,7 +618,7 @@ horizontal combination.  */)
   (Lisp_Object window)
 {
   struct window *w = decode_valid_window (window);
-  return WINDOW_VERTICAL_COMBINATION_P (w) ? w->contents : Qnil;
+  return WINDOW_VERTICAL_COMBINATION_P (w) ? PV_LISP_FIELD_REF(w, contents) : Qnil;
 }
 
 DEFUN ("window-left-child", Fwindow_left_child, Swindow_left_child, 0, 1, 0,
@@ -630,7 +630,7 @@ vertical combination.  */)
   (Lisp_Object window)
 {
   struct window *w = decode_valid_window (window);
-  return WINDOW_HORIZONTAL_COMBINATION_P (w) ? w->contents : Qnil;
+  return WINDOW_HORIZONTAL_COMBINATION_P (w) ? PV_LISP_FIELD_REF(w, contents) : Qnil;
 }
 
 DEFUN ("window-next-sibling", Fwindow_next_sibling, Swindow_next_sibling, 0, 1, 0,
@@ -665,7 +665,7 @@ WINDOW are never (re-)combined with WINDOW's siblings.  */)
   w = XWINDOW (window);
   if (WINDOW_LEAF_P (w))
     error ("Combination limit is meaningful for internal windows only");
-  return w->combination_limit;
+  return PV_LISP_FIELD_REF(w, combination_limit);
 }
 
 DEFUN ("set-window-combination-limit", Fset_window_combination_limit, Sset_window_combination_limit, 2, 2, 0,
@@ -865,7 +865,7 @@ re-enlarged to its previous size.  */)
 {
   struct window *w = decode_valid_window (window);
 
-  return NILP (horizontal) ? w->normal_lines : w->normal_cols;
+  return NILP (horizontal) ? PV_LISP_FIELD_REF(w, normal_lines) : PV_LISP_FIELD_REF(w, normal_cols);
 }
 
 DEFUN ("window-new-normal", Fwindow_new_normal, Swindow_new_normal, 0, 1, 0,
@@ -1379,7 +1379,7 @@ If they are in the windows's left or right marginal areas, `left-margin'\n\
   Lisp_Object lx, ly;
 
   w = decode_live_window (window);
-  f = XFRAME (w->frame);
+  f = XFRAME (PV_LISP_FIELD_REF(w, frame));
   CHECK_CONS (coordinates);
   lx = Fcar (coordinates);
   ly = Fcdr (coordinates);
@@ -1561,9 +1561,9 @@ correct to return the top-level value of `point', outside of any
   register struct window *w = decode_live_window (window);
 
   if (w == XWINDOW (selected_window))
-    return make_number (BUF_PT (XBUFFER (w->contents)));
+    return make_number (BUF_PT (XBUFFER (PV_LISP_FIELD_REF(w, contents))));
   else
-    return Fmarker_position (w->pointm);
+    return Fmarker_position (PV_LISP_FIELD_REF(w, pointm));
 }
 
 DEFUN ("window-old-point", Fwindow_old_point, Swindow_old_point, 0, 1, 0,
@@ -1611,7 +1611,7 @@ if it isn't already recorded.  */)
   Lisp_Object buf;
   struct buffer *b;
 
-  buf = w->contents;
+  buf = PV_LISP_FIELD_REF(w, contents);
   CHECK_BUFFER (buf);
   b = XBUFFER (buf);
 
@@ -1645,7 +1645,7 @@ if it isn't already recorded.  */)
          `-l' containing a call to `rmail' with subsequent other
          commands.  At the end, W->start happened to be BEG, while
          rmail had already narrowed the buffer.  */
-      CLIP_TEXT_POS_FROM_MARKER (startp, w->start);
+      CLIP_TEXT_POS_FROM_MARKER (startp, PV_LISP_FIELD_REF(w, start));
 
       itdata = bidi_shelve_cache ();
       start_display (&it, w, startp);
@@ -1676,7 +1676,7 @@ Return POS.  */)
 
   if (w == XWINDOW (selected_window))
     {
-      if (XBUFFER (w->contents) == current_buffer)
+      if (XBUFFER (PV_LISP_FIELD_REF(w, contents)) == current_buffer)
 	Fgoto_char (pos);
       else
 	{
@@ -1684,14 +1684,14 @@ Return POS.  */)
 
 	  /* ... but here we want to catch type error before buffer change.  */
 	  CHECK_NUMBER_COERCE_MARKER (pos);
-	  set_buffer_internal (XBUFFER (w->contents));
+	  set_buffer_internal (XBUFFER (PV_LISP_FIELD_REF(w, contents)));
 	  Fgoto_char (pos);
 	  set_buffer_internal (old_buffer);
 	}
     }
   else
     {
-      set_marker_restricted (w->pointm, pos, w->contents);
+      set_marker_restricted (PV_LISP_FIELD_REF(w, pointm), pos, PV_LISP_FIELD_REF(w, contents));
       /* We have to make sure that redisplay updates the window to show
 	 the new value of point.  */
       wset_redisplay (w);
@@ -1714,7 +1714,7 @@ winds up in a partially-visible line.  */)
 {
   register struct window *w = decode_live_window (window);
 
-  set_marker_restricted (w->start, pos, w->contents);
+  set_marker_restricted (PV_LISP_FIELD_REF(w, start), pos, PV_LISP_FIELD_REF(w, contents));
   /* This is not right, but much easier than doing what is right.  */
   w->start_at_line_beg = false;
   if (NILP (noforce))
@@ -1761,8 +1761,8 @@ POS, ROWH is the visible height of that row, and VPOS is the row number
   int x, y;
 
   w = decode_live_window (window);
-  buf = XBUFFER (w->contents);
-  SET_TEXT_POS_FROM_MARKER (top, w->start);
+  buf = XBUFFER (PV_LISP_FIELD_REF(w, contents));
+  SET_TEXT_POS_FROM_MARKER (top, PV_LISP_FIELD_REF(w, start));
 
   if (EQ (pos, Qt))
     posint = -1;
@@ -1774,7 +1774,7 @@ POS, ROWH is the visible height of that row, and VPOS is the row number
   else if (w == XWINDOW (selected_window))
     posint = PT;
   else
-    posint = marker_position (w->pointm);
+    posint = marker_position (PV_LISP_FIELD_REF(w, pointm));
 
   /* If position is above window start or outside buffer boundaries,
      or if window start is out of range, position is not visible.  */
@@ -1833,8 +1833,8 @@ Return nil if window display is not up-to-date.  In that case, use
   if (noninteractive || w->pseudo_window_p)
     return Qnil;
 
-  CHECK_BUFFER (w->contents);
-  b = XBUFFER (w->contents);
+  CHECK_BUFFER (PV_LISP_FIELD_REF(w, contents));
+  b = XBUFFER (PV_LISP_FIELD_REF(w, contents));
 
   /* Fail if current matrix is not up-to-date.  */
   if (!w->window_end_valid
@@ -1962,8 +1962,8 @@ though when run from an idle timer with a delay of zero seconds.  */)
   if (noninteractive || w->pseudo_window_p)
     return Qnil;
 
-  CHECK_BUFFER (w->contents);
-  b = XBUFFER (w->contents);
+  CHECK_BUFFER (PV_LISP_FIELD_REF(w, contents));
+  b = XBUFFER (PV_LISP_FIELD_REF(w, contents));
 
   /* Fail if current matrix is not up-to-date.  */
   if (!w->window_end_valid
@@ -2134,7 +2134,7 @@ return value is a list of elements of the form (PARAMETER . VALUE).  */)
 Lisp_Object
 window_parameter (struct window *w, Lisp_Object parameter)
 {
-  Lisp_Object result = Fassq (parameter, w->window_parameters);
+  Lisp_Object result = Fassq (parameter, PV_LISP_FIELD_REF(w, window_parameters));
 
   return CDR_SAFE (result);
 }
@@ -2161,10 +2161,10 @@ Return VALUE.  */)
   register struct window *w = decode_any_window (window);
   Lisp_Object old_alist_elt;
 
-  old_alist_elt = Fassq (parameter, w->window_parameters);
+  old_alist_elt = Fassq (parameter, PV_LISP_FIELD_REF(w, window_parameters));
   if (NILP (old_alist_elt))
     wset_window_parameters
-      (w, Fcons (Fcons (parameter, value), w->window_parameters));
+      (w, Fcons (Fcons (parameter, value), PV_LISP_FIELD_REF(w, window_parameters)));
   else
     Fsetcdr (old_alist_elt, value);
   return value;
@@ -2189,11 +2189,11 @@ window_display_table (struct window *w)
 {
   struct Lisp_Char_Table *dp = NULL;
 
-  if (DISP_TABLE_P (w->display_table))
-    dp = XCHAR_TABLE (w->display_table);
-  else if (BUFFERP (w->contents))
+  if (DISP_TABLE_P (PV_LISP_FIELD_REF(w, display_table)))
+    dp = XCHAR_TABLE (PV_LISP_FIELD_REF(w, display_table));
+  else if (BUFFERP (PV_LISP_FIELD_REF(w, contents)))
     {
-      struct buffer *b = XBUFFER (w->contents);
+      struct buffer *b = XBUFFER (PV_LISP_FIELD_REF(w, contents));
 
       if (DISP_TABLE_P (BVAR (b, display_table)))
 	dp = XCHAR_TABLE (BVAR (b, display_table));
@@ -2218,7 +2218,7 @@ WINDOW must be a live window and defaults to the selected one.  */)
 static void
 unshow_buffer (register struct window *w)
 {
-  Lisp_Object buf = w->contents;
+  Lisp_Object buf = PV_LISP_FIELD_REF(w, contents);
   struct buffer *b = XBUFFER (buf);
 
   eassert (b == XMARKER (w->pointm)->buffer);
@@ -2241,7 +2241,7 @@ unshow_buffer (register struct window *w)
   /* Point in the selected window's buffer
      is actually stored in that buffer, and the window's pointm isn't used.
      So don't clobber point in that buffer.  */
-  if (! EQ (buf, XWINDOW (selected_window)->contents)
+  if (! EQ (buf, PV_LISP_FIELD_REF(XWINDOW (selected_window), contents))
       /* Don't clobber point in current buffer either (this could be
 	 useful in connection with bug#12208).
       && XBUFFER (buf) != current_buffer  */
@@ -2251,10 +2251,10 @@ unshow_buffer (register struct window *w)
 	   && EQ (buf, XWINDOW (BVAR (b, last_selected_window))->contents)))
     temp_set_point_both (b,
 			 clip_to_bounds (BUF_BEGV (b),
-					 marker_position (w->pointm),
+					 marker_position (PV_LISP_FIELD_REF(w, pointm)),
 					 BUF_ZV (b)),
 			 clip_to_bounds (BUF_BEGV_BYTE (b),
-					 marker_byte_position (w->pointm),
+					 marker_byte_position (PV_LISP_FIELD_REF(w, pointm)),
 					 BUF_ZV_BYTE (b)));
 
   if (WINDOWP (BVAR (b, last_selected_window))
@@ -2273,8 +2273,8 @@ replace_window (Lisp_Object old, Lisp_Object new, bool setflag)
 
   /* If OLD is its frame's root window, then NEW is the new
      root window for that frame.  */
-  if (EQ (old, FRAME_ROOT_WINDOW (XFRAME (o->frame))))
-    fset_root_window (XFRAME (o->frame), new);
+  if (EQ (old, FRAME_ROOT_WINDOW (XFRAME (PV_LISP_FIELD_REF(o, frame)))))
+    fset_root_window (XFRAME (PV_LISP_FIELD_REF(o, frame)), new);
 
   if (setflag)
     {
@@ -2286,9 +2286,9 @@ replace_window (Lisp_Object old, Lisp_Object new, bool setflag)
       n->top_line = o->top_line;
       n->total_cols = o->total_cols;
       n->total_lines = o->total_lines;
-      wset_normal_cols (n, o->normal_cols);
+      wset_normal_cols (n, PV_LISP_FIELD_REF(o, normal_cols));
       wset_normal_cols (o, make_float (1.0));
-      wset_normal_lines (n, o->normal_lines);
+      wset_normal_lines (n, PV_LISP_FIELD_REF(o, normal_lines));
       wset_normal_lines (o, make_float (1.0));
       n->desired_matrix = n->current_matrix = 0;
       n->vscroll = 0;
@@ -2306,19 +2306,19 @@ replace_window (Lisp_Object old, Lisp_Object new, bool setflag)
       n->window_end_valid = false;
     }
 
-  tem = o->next;
+  tem = PV_LISP_FIELD_REF(o, next);
   wset_next (n, tem);
   if (!NILP (tem))
     wset_prev (XWINDOW (tem), new);
 
-  tem = o->prev;
+  tem = PV_LISP_FIELD_REF(o, prev);
   wset_prev (n, tem);
   if (!NILP (tem))
     wset_next (XWINDOW (tem), new);
 
-  tem = o->parent;
+  tem = PV_LISP_FIELD_REF(o, parent);
   wset_parent (n, tem);
-  if (!NILP (tem) && EQ (XWINDOW (tem)->contents, old))
+  if (!NILP (tem) && EQ (PV_LISP_FIELD_REF(XWINDOW (tem), contents), old))
     wset_combination (XWINDOW (tem), XWINDOW (tem)->horizontal, new);
 }
 
@@ -2334,27 +2334,27 @@ recombine_windows (Lisp_Object window)
   bool horflag;
 
   w = XWINDOW (window);
-  parent = w->parent;
-  if (!NILP (parent) && NILP (w->combination_limit))
+  parent = PV_LISP_FIELD_REF(w, parent);
+  if (!NILP (parent) && NILP (PV_LISP_FIELD_REF(w, combination_limit)))
     {
       p = XWINDOW (parent);
-      if (WINDOWP (p->contents) && WINDOWP (w->contents)
+      if (WINDOWP (PV_LISP_FIELD_REF(p, contents)) && WINDOWP (PV_LISP_FIELD_REF(w, contents))
 	  && p->horizontal == w->horizontal)
 	/* WINDOW and PARENT are both either a vertical or a horizontal
 	   combination.  */
 	{
 	  horflag = WINDOW_HORIZONTAL_COMBINATION_P (w);
-	  child = w->contents;
+	  child = PV_LISP_FIELD_REF(w, contents);
 	  c = XWINDOW (child);
 
 	  /* Splice WINDOW's children into its parent's children and
 	     assign new normal sizes.  */
-	  if (NILP (w->prev))
+	  if (NILP (PV_LISP_FIELD_REF(w, prev)))
 	    wset_combination (p, horflag, child);
 	  else
 	    {
-	      wset_prev (c, w->prev);
-	      wset_next (XWINDOW (w->prev), child);
+	      wset_prev (c, PV_LISP_FIELD_REF(w, prev));
+	      wset_next (XWINDOW (PV_LISP_FIELD_REF(w, prev)), child);
 	    }
 
 	  while (c)
@@ -2370,19 +2370,19 @@ recombine_windows (Lisp_Object window)
 		  (c, make_float ((double) c->pixel_height
 				  / (double) p->pixel_height));
 
-	      if (NILP (c->next))
+	      if (NILP (PV_LISP_FIELD_REF(c, next)))
 		{
-		  if (!NILP (w->next))
+		  if (!NILP (PV_LISP_FIELD_REF(w, next)))
 		    {
-		      wset_next (c, w->next);
-		      wset_prev (XWINDOW (c->next), child);
+		      wset_next (c, PV_LISP_FIELD_REF(w, next));
+		      wset_prev (XWINDOW (PV_LISP_FIELD_REF(c, next)), child);
 		    }
 
 		  c = 0;
 		}
 	      else
 		{
-		  child = c->next;
+		  child = PV_LISP_FIELD_REF(c, next);
 		  c = XWINDOW (child);
 		}
 	    }
@@ -2470,10 +2470,10 @@ candidate_window_p (Lisp_Object window, Lisp_Object owindow,
 		    Lisp_Object minibuf, Lisp_Object all_frames)
 {
   struct window *w = XWINDOW (window);
-  struct frame *f = XFRAME (w->frame);
+  struct frame *f = XFRAME (PV_LISP_FIELD_REF(w, frame));
   bool candidate_p = true;
 
-  if (!BUFFERP (w->contents))
+  if (!BUFFERP (PV_LISP_FIELD_REF(w, contents)))
     candidate_p = false;
   else if (MINI_WINDOW_P (w)
            && (EQ (minibuf, Qlambda)
@@ -2488,12 +2488,12 @@ candidate_window_p (Lisp_Object window, Lisp_Object owindow,
   else if (NILP (all_frames))
     {
       eassert (WINDOWP (owindow));
-      candidate_p = EQ (w->frame, XWINDOW (owindow)->frame);
+      candidate_p = EQ (PV_LISP_FIELD_REF(w, frame), PV_LISP_FIELD_REF(XWINDOW (owindow), frame));
     }
   else if (EQ (all_frames, Qvisible))
     {
       candidate_p = FRAME_VISIBLE_P (f)
-	&& (FRAME_TERMINAL (XFRAME (w->frame))
+	&& (FRAME_TERMINAL (XFRAME (PV_LISP_FIELD_REF(w, frame)))
 	    == FRAME_TERMINAL (XFRAME (selected_frame)));
 
     }
@@ -2511,17 +2511,17 @@ candidate_window_p (Lisp_Object window, Lisp_Object owindow,
 			 && !f->output_data.x->has_been_visible)
 #endif
 		     )
-	&& (FRAME_TERMINAL (XFRAME (w->frame))
+	&& (FRAME_TERMINAL (XFRAME (PV_LISP_FIELD_REF(w, frame)))
 	    == FRAME_TERMINAL (XFRAME (selected_frame)));
     }
   else if (WINDOWP (all_frames))
     /* 	To qualify as candidate, it's not sufficient for WINDOW's frame
 	to just share the minibuffer window - it must be active as well
 	(see Bug#24500).  */
-    candidate_p = (EQ (XWINDOW (all_frames)->frame, w->frame)
-		   || EQ (XWINDOW (all_frames)->frame, FRAME_FOCUS_FRAME (f)));
+    candidate_p = (EQ (PV_LISP_FIELD_REF(XWINDOW (all_frames), frame), PV_LISP_FIELD_REF(w, frame))
+		   || EQ (PV_LISP_FIELD_REF(XWINDOW (all_frames), frame), FRAME_FOCUS_FRAME (f)));
   else if (FRAMEP (all_frames))
-    candidate_p = EQ (all_frames, w->frame);
+    candidate_p = EQ (all_frames, PV_LISP_FIELD_REF(w, frame));
 
   return candidate_p;
 }
@@ -2552,7 +2552,7 @@ decode_next_window_args (Lisp_Object *window, Lisp_Object *minibuf, Lisp_Object 
   if (NILP (*all_frames))
     *all_frames
       = (!EQ (*minibuf, Qlambda)
-	 ? FRAME_MINIBUF_WINDOW (XFRAME (w->frame))
+	 ? FRAME_MINIBUF_WINDOW (XFRAME (PV_LISP_FIELD_REF(w, frame)))
 	 : Qnil);
   else if (EQ (*all_frames, Qvisible))
     ;
@@ -2579,7 +2579,7 @@ next_window (Lisp_Object window, Lisp_Object minibuf, Lisp_Object all_frames,
   /* If ALL_FRAMES is a frame, and WINDOW isn't on that frame, just
      return the first window on the frame.  */
   if (FRAMEP (all_frames)
-      && !EQ (all_frames, XWINDOW (window)->frame))
+      && !EQ (all_frames, PV_LISP_FIELD_REF(XWINDOW (window), frame)))
     return Fframe_first_window (all_frames);
 
   if (next_p)
@@ -2754,12 +2754,12 @@ MINIBUF neither nil nor t means never include the minibuffer window.  */)
   (Lisp_Object frame, Lisp_Object minibuf, Lisp_Object window)
 {
   if (NILP (window))
-    window = FRAMEP (frame) ? XFRAME (frame)->selected_window : selected_window;
+    window = FRAMEP (frame) ? PV_LISP_FIELD_REF(XFRAME (frame), selected_window) : selected_window;
   CHECK_WINDOW (window);
   if (NILP (frame))
     frame = selected_frame;
 
-  if (!EQ (frame, XWINDOW (window)->frame))
+  if (!EQ (frame, PV_LISP_FIELD_REF(XWINDOW (window), frame)))
     error ("Window is on a different frame");
 
   return window_list_1 (window, minibuf, frame);
@@ -2879,7 +2879,7 @@ window_loop (enum window_loop type, Lisp_Object obj, bool mini,
 	switch (type)
 	  {
 	  case GET_BUFFER_WINDOW:
-	    if (EQ (w->contents, obj)
+	    if (EQ (PV_LISP_FIELD_REF(w, contents), obj)
 		/* Don't find any minibuffer window except the one that
 		   is currently in use.  */
 		&& (!MINI_WINDOW_P (w) || EQ (window, minibuf_window)))
@@ -2887,7 +2887,7 @@ window_loop (enum window_loop type, Lisp_Object obj, bool mini,
 		if (EQ (window, selected_window))
 		  /* Preferably return the selected window.  */
 		  return window;
-		else if (EQ (XWINDOW (window)->frame, selected_frame)
+		else if (EQ (PV_LISP_FIELD_REF(XWINDOW (window), frame), selected_frame)
 			 && !frame_best_window_flag)
 		  /* Prefer windows on the current frame (but don't
 		     choose another one if we have one already).  */
@@ -2903,25 +2903,25 @@ window_loop (enum window_loop type, Lisp_Object obj, bool mini,
 	  case REPLACE_BUFFER_IN_WINDOWS_SAFELY:
 	    /* We could simply check whether the buffer shown by window
 	       is live, and show another buffer in case it isn't.  */
-	    if (EQ (w->contents, obj))
+	    if (EQ (PV_LISP_FIELD_REF(w, contents), obj))
 	      {
 		/* Undedicate WINDOW.  */
 		wset_dedicated (w, Qnil);
 		/* Make WINDOW show the buffer returned by
 		   other_buffer_safely, don't run any hooks.  */
 		set_window_buffer
-		  (window, other_buffer_safely (w->contents), false, false);
+		  (window, other_buffer_safely (PV_LISP_FIELD_REF(w, contents)), false, false);
 		/* If WINDOW is the selected window, make its buffer
 		   current.  But do so only if the window shows the
 		   current buffer (Bug#6454).  */
 		if (EQ (window, selected_window)
-		    && XBUFFER (w->contents) == current_buffer)
-		  Fset_buffer (w->contents);
+		    && XBUFFER (PV_LISP_FIELD_REF(w, contents)) == current_buffer)
+		  Fset_buffer (PV_LISP_FIELD_REF(w, contents));
 	      }
 	    break;
 
 	  case REDISPLAY_BUFFER_WINDOWS:
-	    if (EQ (w->contents, obj))
+	    if (EQ (PV_LISP_FIELD_REF(w, contents), obj))
 	      {
 		mark_window_display_accurate (window, false);
 		w->update_mode_line = true;
@@ -2934,15 +2934,15 @@ window_loop (enum window_loop type, Lisp_Object obj, bool mini,
 	    /* Check for a leaf window that has a killed buffer
 	       or broken markers.  */
 	  case CHECK_ALL_WINDOWS:
-	    if (BUFFERP (w->contents))
+	    if (BUFFERP (PV_LISP_FIELD_REF(w, contents)))
 	      {
-		struct buffer *b = XBUFFER (w->contents);
+		struct buffer *b = XBUFFER (PV_LISP_FIELD_REF(w, contents));
 
 		if (!BUFFER_LIVE_P (b))
 		  emacs_abort ();
-		if (!MARKERP (w->start) || XMARKER (w->start)->buffer != b)
+		if (!MARKERP (PV_LISP_FIELD_REF(w, start)) || XMARKER (w->start)->buffer != b)
 		  emacs_abort ();
-		if (!MARKERP (w->pointm) || XMARKER (w->pointm)->buffer != b)
+		if (!MARKERP (PV_LISP_FIELD_REF(w, pointm)) || XMARKER (w->pointm)->buffer != b)
 		  emacs_abort ();
 	      }
 	    break;
@@ -3051,7 +3051,7 @@ window-start value is reasonable when this function is called.  */)
 
   w = decode_valid_window (window);
   XSETWINDOW (window, w);
-  f = XFRAME (w->frame);
+  f = XFRAME (PV_LISP_FIELD_REF(w, frame));
 
   if (NILP (root))
     /* ROOT is the frame's root window.  */
@@ -3063,12 +3063,12 @@ window-start value is reasonable when this function is called.  */)
     /* ROOT must be an ancestor of WINDOW.  */
     {
       r = decode_valid_window (root);
-      pwindow = XWINDOW (window)->parent;
+      pwindow = PV_LISP_FIELD_REF(XWINDOW (window), parent);
       while (!NILP (pwindow))
 	if (EQ (pwindow, root))
 	  break;
 	else
-	  pwindow = XWINDOW (pwindow)->parent;
+	  pwindow = PV_LISP_FIELD_REF(XWINDOW (pwindow), parent);
       if (!EQ (pwindow, root))
 	error ("Specified root is not an ancestor of specified window");
     }
@@ -3082,16 +3082,16 @@ window-start value is reasonable when this function is called.  */)
   else if (MINI_WINDOW_P (w)) /* && top > 0) */
     error ("Can't expand minibuffer to full frame");
 
-  if (BUFFERP (w->contents))
+  if (BUFFERP (PV_LISP_FIELD_REF(w, contents)))
     {
-      startpos = marker_position (w->start);
-      startbyte = marker_byte_position (w->start);
+      startpos = marker_position (PV_LISP_FIELD_REF(w, start));
+      startbyte = marker_byte_position (PV_LISP_FIELD_REF(w, start));
       top = (WINDOW_TOP_EDGE_LINE (w)
 	     - FRAME_TOP_MARGIN (XFRAME (WINDOW_FRAME (w))));
       /* Make sure WINDOW is the frame's selected window.  */
       if (!EQ (window, FRAME_SELECTED_WINDOW (f)))
 	{
-	  if (EQ (selected_frame, w->frame))
+	  if (EQ (selected_frame, PV_LISP_FIELD_REF(w, frame)))
 	    Fselect_window (window, Qnil);
 	  else
 	    fset_selected_window (f, window);
@@ -3108,7 +3108,7 @@ window-start value is reasonable when this function is called.  */)
 	{
 	  pwindow = swindow;
 	  while (!NILP (pwindow) && !EQ (window, pwindow))
-	    pwindow = XWINDOW (pwindow)->parent;
+	    pwindow = PV_LISP_FIELD_REF(XWINDOW (pwindow), parent);
 
 	  if (EQ (window, pwindow))
 	    /* If WINDOW is an ancestor of SWINDOW, then SWINDOW is ok
@@ -3121,7 +3121,7 @@ window-start value is reasonable when this function is called.  */)
 
       if (!EQ (swindow, FRAME_SELECTED_WINDOW (f)))
 	{
-	  if (EQ (selected_frame, w->frame))
+	  if (EQ (selected_frame, PV_LISP_FIELD_REF(w, frame)))
 	    Fselect_window (swindow, Qnil);
 	  else
 	    fset_selected_window (f, swindow);
@@ -3158,7 +3158,7 @@ window-start value is reasonable when this function is called.  */)
       if (window_resize_check (w, false))
 	{
 	  window_resize_apply (w, false);
-	  window_pixel_to_total (w->frame, Qnil);
+	  window_pixel_to_total (PV_LISP_FIELD_REF(w, frame), Qnil);
 	}
       else
 	{
@@ -3166,7 +3166,7 @@ window-start value is reasonable when this function is called.  */)
 	  if (window_resize_check (w, false))
 	    {
 	      window_resize_apply (w, false);
-	      window_pixel_to_total (w->frame, Qnil);
+	      window_pixel_to_total (PV_LISP_FIELD_REF(w, frame), Qnil);
 	    }
 	  else
 	    resize_failed = true;
@@ -3182,7 +3182,7 @@ window-start value is reasonable when this function is called.  */)
 	  if (window_resize_check (w, true))
 	    {
 	      window_resize_apply (w, true);
-	      window_pixel_to_total (w->frame, Qt);
+	      window_pixel_to_total (PV_LISP_FIELD_REF(w, frame), Qt);
 	    }
 	  else
 	    {
@@ -3190,7 +3190,7 @@ window-start value is reasonable when this function is called.  */)
 	      if (window_resize_check (w, true))
 		{
 		  window_resize_apply (w, true);
-		  window_pixel_to_total (w->frame, Qt);
+		  window_pixel_to_total (PV_LISP_FIELD_REF(w, frame), Qt);
 		}
 	      else
 		resize_failed = true;
@@ -3206,36 +3206,36 @@ window-start value is reasonable when this function is called.  */)
     }
 
   /* Cleanly unlink WINDOW from window-tree.  */
-  if (!NILP (w->prev))
+  if (!NILP (PV_LISP_FIELD_REF(w, prev)))
     /* Get SIBLING above (on the left of) WINDOW.  */
     {
-      sibling = w->prev;
+      sibling = PV_LISP_FIELD_REF(w, prev);
       s = XWINDOW (sibling);
-      wset_next (s, w->next);
-      if (!NILP (s->next))
-	wset_prev (XWINDOW (s->next), sibling);
+      wset_next (s, PV_LISP_FIELD_REF(w, next));
+      if (!NILP (PV_LISP_FIELD_REF(s, next)))
+	wset_prev (XWINDOW (PV_LISP_FIELD_REF(s, next)), sibling);
     }
   else
     /* Get SIBLING below (on the right of) WINDOW.  */
     {
-      sibling = w->next;
+      sibling = PV_LISP_FIELD_REF(w, next);
       s = XWINDOW (sibling);
       wset_prev (s, Qnil);
-      wset_combination (XWINDOW (w->parent),
+      wset_combination (XWINDOW (PV_LISP_FIELD_REF(w, parent)),
 			XWINDOW (w->parent)->horizontal, sibling);
     }
 
   /* Delete ROOT and all child windows of ROOT.  */
-  if (WINDOWP (r->contents))
+  if (WINDOWP (PV_LISP_FIELD_REF(r, contents)))
     {
-      delete_all_child_windows (r->contents);
+      delete_all_child_windows (PV_LISP_FIELD_REF(r, contents));
       wset_combination (r, false, Qnil);
     }
 
   replace_window (root, window, true);
 
   /* This must become SWINDOW anyway .......  */
-  if (BUFFERP (w->contents) && !resize_failed)
+  if (BUFFERP (PV_LISP_FIELD_REF(w, contents)) && !resize_failed)
     {
       /* Try to minimize scrolling, by setting the window start to the
 	 point will cause the text at the old window start to be at the
@@ -3244,18 +3244,18 @@ window-start value is reasonable when this function is called.  */)
 	 when the display is not current, due to typeahead).  */
       new_top = WINDOW_TOP_EDGE_LINE (w) - FRAME_TOP_MARGIN (XFRAME (WINDOW_FRAME (w)));
       if (new_top != top
-	  && startpos >= BUF_BEGV (XBUFFER (w->contents))
-	  && startpos <= BUF_ZV (XBUFFER (w->contents)))
+	  && startpos >= BUF_BEGV (XBUFFER (PV_LISP_FIELD_REF(w, contents)))
+	  && startpos <= BUF_ZV (XBUFFER (PV_LISP_FIELD_REF(w, contents))))
 	{
 	  struct position pos;
 	  struct buffer *obuf = current_buffer;
 
-	  Fset_buffer (w->contents);
+	  Fset_buffer (PV_LISP_FIELD_REF(w, contents));
 	  /* This computation used to temporarily move point, but that
 	     can have unwanted side effects due to text properties.  */
 	  pos = *vmotion (startpos, startbyte, -top, w);
 
-	  set_marker_both (w->start, w->contents, pos.bufpos, pos.bytepos);
+	  set_marker_both (PV_LISP_FIELD_REF(w, start), PV_LISP_FIELD_REF(w, contents), pos.bufpos, pos.bytepos);
 	  w->window_end_valid = false;
 	  w->start_at_line_beg = (pos.bytepos == BEGV_BYTE
 				    || FETCH_BYTE (pos.bytepos - 1) == '\n');
@@ -3409,13 +3409,13 @@ window_size_changed (struct window *w)
 
   if (WINDOW_INTERNAL_P (w))
     {
-      w = XWINDOW (w->contents);
+      w = XWINDOW (PV_LISP_FIELD_REF(w, contents));
       while (w)
 	{
 	  if (window_size_changed (w))
 	    return true;
 
-	  w = NILP (w->next) ? 0 : XWINDOW (w->next);
+	  w = NILP (PV_LISP_FIELD_REF(w, next)) ? 0 : XWINDOW (PV_LISP_FIELD_REF(w, next));
 	}
     }
 
@@ -3433,11 +3433,11 @@ window_set_before_size_change_sizes (struct window *w)
 
   if (WINDOW_INTERNAL_P (w))
     {
-      w = XWINDOW (w->contents);
+      w = XWINDOW (PV_LISP_FIELD_REF(w, contents));
       while (w)
 	{
 	  window_set_before_size_change_sizes (w);
-	  w = NILP (w->next) ? 0 : XWINDOW (w->next);
+	  w = NILP (PV_LISP_FIELD_REF(w, next)) ? 0 : XWINDOW (PV_LISP_FIELD_REF(w, next));
 	}
     }
 }
@@ -3488,7 +3488,7 @@ set_window_buffer (Lisp_Object window, Lisp_Object buffer,
   struct window *w = XWINDOW (window);
   struct buffer *b = XBUFFER (buffer);
   ptrdiff_t count = SPECPDL_INDEX ();
-  bool samebuf = EQ (buffer, w->contents);
+  bool samebuf = EQ (buffer, PV_LISP_FIELD_REF(w, contents));
 
   wset_buffer (w, buffer);
 
@@ -3515,9 +3515,9 @@ set_window_buffer (Lisp_Object window, Lisp_Object buffer,
       w->hscroll = w->min_hscroll = w->hscroll_whole = 0;
       w->suspend_auto_hscroll = false;
       w->vscroll = 0;
-      set_marker_both (w->pointm, buffer, BUF_PT (b), BUF_PT_BYTE (b));
-      set_marker_both (w->old_pointm, buffer, BUF_PT (b), BUF_PT_BYTE (b));
-      set_marker_restricted (w->start,
+      set_marker_both (PV_LISP_FIELD_REF(w, pointm), buffer, BUF_PT (b), BUF_PT_BYTE (b));
+      set_marker_both (PV_LISP_FIELD_REF(w, old_pointm), buffer, BUF_PT (b), BUF_PT_BYTE (b));
+      set_marker_restricted (PV_LISP_FIELD_REF(w, start),
 			     make_number (b->last_window_start),
 			     buffer);
       w->start_at_line_beg = false;
@@ -3554,7 +3554,7 @@ set_window_buffer (Lisp_Object window, Lisp_Object buffer,
     {
       if (!NILP (Vwindow_scroll_functions))
 	run_hook_with_args_2 (Qwindow_scroll_functions, window,
-			      Fmarker_position (w->start));
+			      Fmarker_position (PV_LISP_FIELD_REF(w, start)));
       if (!samebuf)
 	run_window_configuration_change_hook (XFRAME (WINDOW_FRAME (w)));
     }
@@ -3589,14 +3589,14 @@ This function runs `window-scroll-functions' before running
   if (!BUFFER_LIVE_P (XBUFFER (buffer)))
     error ("Attempt to display deleted buffer");
 
-  tem = w->contents;
+  tem = PV_LISP_FIELD_REF(w, contents);
   if (NILP (tem))
     error ("Window is deleted");
   else
     {
       if (!EQ (tem, buffer))
 	{
-	  if (EQ (w->dedicated, Qt))
+	  if (EQ (PV_LISP_FIELD_REF(w, dedicated), Qt))
 	    /* WINDOW is strongly dedicated to its buffer, signal an
 	       error.  */
 	    error ("Window is dedicated to `%s'", SDATA (BVAR (XBUFFER (tem), name)));
@@ -3642,7 +3642,7 @@ displaying that buffer.  */)
       struct window *w = XWINDOW (object);
       mark_window_display_accurate (object, false);
       w->update_mode_line = true;
-      if (BUFFERP (w->contents))
+      if (BUFFERP (PV_LISP_FIELD_REF(w, contents)))
 	XBUFFER (w->contents)->prevent_redisplay_optimizations_p = true;
       update_mode_lines = 29;
       return Qt;
@@ -3686,15 +3686,15 @@ temp_output_buffer_show (register Lisp_Object buf)
     call1 (Vtemp_buffer_show_function, buf);
   else if (WINDOW_LIVE_P (window = display_buffer (buf, Qnil, Qnil)))
     {
-      if (!EQ (XWINDOW (window)->frame, selected_frame))
+      if (!EQ (PV_LISP_FIELD_REF(XWINDOW (window), frame), selected_frame))
 	Fmake_frame_visible (WINDOW_FRAME (XWINDOW (window)));
       Vminibuf_scroll_window = window;
       w = XWINDOW (window);
       w->hscroll = w->min_hscroll = w->hscroll_whole = 0;
       w->suspend_auto_hscroll = false;
-      set_marker_restricted_both (w->start, buf, BEG, BEG);
-      set_marker_restricted_both (w->pointm, buf, BEG, BEG);
-      set_marker_restricted_both (w->old_pointm, buf, BEG, BEG);
+      set_marker_restricted_both (PV_LISP_FIELD_REF(w, start), buf, BEG, BEG);
+      set_marker_restricted_both (PV_LISP_FIELD_REF(w, pointm), buf, BEG, BEG);
+      set_marker_restricted_both (PV_LISP_FIELD_REF(w, old_pointm), buf, BEG, BEG);
 
       /* Run temp-buffer-show-hook, with the chosen window selected
 	 and its buffer current.  */
@@ -3711,7 +3711,7 @@ temp_output_buffer_show (register Lisp_Object buf)
         record_unwind_protect (restore_buffer, prev_buffer);
         record_unwind_protect (select_window_norecord, prev_window);
         Fselect_window (window, Qt);
-        Fset_buffer (w->contents);
+        Fset_buffer (PV_LISP_FIELD_REF(w, contents));
         run_hook (Qtemp_buffer_show_hook);
         unbind_to (count, Qnil);
       }
@@ -3825,16 +3825,16 @@ Note: This function does not operate on any child windows of WINDOW.  */)
   (Lisp_Object window, Lisp_Object size, Lisp_Object add)
 {
   struct window *w = decode_valid_window (window);
-  EMACS_INT size_min = NILP (add) ? 0 : - XINT (w->new_pixel);
+  EMACS_INT size_min = NILP (add) ? 0 : - XINT (PV_LISP_FIELD_REF(w, new_pixel));
   EMACS_INT size_max = size_min + min (INT_MAX, MOST_POSITIVE_FIXNUM);
 
   CHECK_RANGED_INTEGER (size, size_min, size_max);
   if (NILP (add))
     wset_new_pixel (w, size);
   else
-    wset_new_pixel (w, make_number (XINT (w->new_pixel) + XINT (size)));
+    wset_new_pixel (w, make_number (XINT (PV_LISP_FIELD_REF(w, new_pixel)) + XINT (size)));
 
-  return w->new_pixel;
+  return PV_LISP_FIELD_REF(w, new_pixel);
 }
 
 DEFUN ("set-window-new-total", Fset_window_new_total, Sset_window_new_total, 2, 3, 0,
@@ -3858,9 +3858,9 @@ Note: This function does not operate on any child windows of WINDOW.  */)
   if (NILP (add))
     wset_new_total (w, size);
   else
-    wset_new_total (w, make_number (XINT (w->new_total) + XINT (size)));
+    wset_new_total (w, make_number (XINT (PV_LISP_FIELD_REF(w, new_total)) + XINT (size)));
 
-  return w->new_total;
+  return PV_LISP_FIELD_REF(w, new_total);
 }
 
 DEFUN ("set-window-new-normal", Fset_window_new_normal, Sset_window_new_normal, 1, 2, 0,
@@ -3888,23 +3888,23 @@ Note: This function does not operate on any child windows of WINDOW.  */)
 static bool
 window_resize_check (struct window *w, bool horflag)
 {
-  struct frame *f = XFRAME (w->frame);
+  struct frame *f = XFRAME (PV_LISP_FIELD_REF(w, frame));
   struct window *c;
 
   if (WINDOW_VERTICAL_COMBINATION_P (w))
     /* W is a vertical combination.  */
     {
-      c = XWINDOW (w->contents);
+      c = XWINDOW (PV_LISP_FIELD_REF(w, contents));
       if (horflag)
 	/* All child windows of W must have the same width as W.  */
 	{
 	  while (c)
 	    {
-	      if (XINT (c->new_pixel) != XINT (w->new_pixel)
+	      if (XINT (PV_LISP_FIELD_REF(c, new_pixel)) != XINT (PV_LISP_FIELD_REF(w, new_pixel))
 		  || !window_resize_check (c, horflag))
 		return false;
 
-	      c = NILP (c->next) ? 0 : XWINDOW (c->next);
+	      c = NILP (PV_LISP_FIELD_REF(c, next)) ? 0 : XWINDOW (PV_LISP_FIELD_REF(c, next));
 	    }
 
 	  return true;
@@ -3913,17 +3913,17 @@ window_resize_check (struct window *w, bool horflag)
 	/* The sum of the heights of the child windows of W must equal
 	   W's height.  */
 	{
-	  int remaining_pixels = XINT (w->new_pixel);
+	  int remaining_pixels = XINT (PV_LISP_FIELD_REF(w, new_pixel));
 
 	  while (c)
 	    {
 	      if (!window_resize_check (c, horflag))
 		return false;
 
-	      remaining_pixels -= XINT (c->new_pixel);
+	      remaining_pixels -= XINT (PV_LISP_FIELD_REF(c, new_pixel));
 	      if (remaining_pixels < 0)
 		return false;
-	      c = NILP (c->next) ? 0 : XWINDOW (c->next);
+	      c = NILP (PV_LISP_FIELD_REF(c, next)) ? 0 : XWINDOW (PV_LISP_FIELD_REF(c, next));
 	    }
 
 	  return remaining_pixels == 0;
@@ -3932,22 +3932,22 @@ window_resize_check (struct window *w, bool horflag)
   else if (WINDOW_HORIZONTAL_COMBINATION_P (w))
     /* W is a horizontal combination.  */
     {
-      c = XWINDOW (w->contents);
+      c = XWINDOW (PV_LISP_FIELD_REF(w, contents));
       if (horflag)
 	/* The sum of the widths of the child windows of W must equal W's
 	   width.  */
 	{
-	  int remaining_pixels = XINT (w->new_pixel);
+	  int remaining_pixels = XINT (PV_LISP_FIELD_REF(w, new_pixel));
 
 	  while (c)
 	    {
 	      if (!window_resize_check (c, horflag))
 		return false;
 
-	      remaining_pixels -= XINT (c->new_pixel);
+	      remaining_pixels -= XINT (PV_LISP_FIELD_REF(c, new_pixel));
 	      if (remaining_pixels < 0)
 		return false;
-	      c = NILP (c->next) ? 0 : XWINDOW (c->next);
+	      c = NILP (PV_LISP_FIELD_REF(c, next)) ? 0 : XWINDOW (PV_LISP_FIELD_REF(c, next));
 	    }
 
 	  return remaining_pixels == 0;
@@ -3957,11 +3957,11 @@ window_resize_check (struct window *w, bool horflag)
 	{
 	  while (c)
 	    {
-	      if (XINT (c->new_pixel) != XINT (w->new_pixel)
+	      if (XINT (PV_LISP_FIELD_REF(c, new_pixel)) != XINT (PV_LISP_FIELD_REF(w, new_pixel))
 		  || !window_resize_check (c, horflag))
 		return false;
 
-	      c = NILP (c->next) ? 0 : XWINDOW (c->next);
+	      c = NILP (PV_LISP_FIELD_REF(c, next)) ? 0 : XWINDOW (PV_LISP_FIELD_REF(c, next));
 	    }
 
 	  return true;
@@ -3971,7 +3971,7 @@ window_resize_check (struct window *w, bool horflag)
     /* A leaf window.  Make sure it's not too small.  The following
        hardcodes the values of `window-safe-min-width' (2) and
        `window-safe-min-height' (1) which are defined in window.el.  */
-    return (XINT (w->new_pixel) >= (horflag
+    return (XINT (PV_LISP_FIELD_REF(w, new_pixel)) >= (horflag
 				    ? (2 * FRAME_COLUMN_WIDTH (f))
 				    : FRAME_LINE_HEIGHT (f)));
 }
@@ -3999,8 +3999,8 @@ window_resize_apply (struct window *w, bool horflag)
     {
       w->pixel_width = XFASTINT (w->new_pixel);
       w->total_cols = w->pixel_width / unit;
-      if (NUMBERP (w->new_normal))
-	wset_normal_cols (w, w->new_normal);
+      if (NUMBERP (PV_LISP_FIELD_REF(w, new_normal)))
+	wset_normal_cols (w, PV_LISP_FIELD_REF(w, new_normal));
 
       edge = w->pixel_left;
     }
@@ -4008,8 +4008,8 @@ window_resize_apply (struct window *w, bool horflag)
     {
       w->pixel_height = XFASTINT (w->new_pixel);
       w->total_lines = w->pixel_height / unit;
-      if (NUMBERP (w->new_normal))
-	wset_normal_lines (w, w->new_normal);
+      if (NUMBERP (PV_LISP_FIELD_REF(w, new_normal)))
+	wset_normal_lines (w, PV_LISP_FIELD_REF(w, new_normal));
 
       edge = w->pixel_top;
     }
@@ -4017,7 +4017,7 @@ window_resize_apply (struct window *w, bool horflag)
   if (WINDOW_VERTICAL_COMBINATION_P (w))
     /* W is a vertical combination.  */
     {
-      c = XWINDOW (w->contents);
+      c = XWINDOW (PV_LISP_FIELD_REF(w, contents));
       while (c)
 	{
 	  if (horflag)
@@ -4034,13 +4034,13 @@ window_resize_apply (struct window *w, bool horflag)
 	  if (!horflag)
 	    edge = edge + c->pixel_height;
 
-	  c = NILP (c->next) ? 0 : XWINDOW (c->next);
+	  c = NILP (PV_LISP_FIELD_REF(c, next)) ? 0 : XWINDOW (PV_LISP_FIELD_REF(c, next));
 	}
     }
   else if (WINDOW_HORIZONTAL_COMBINATION_P (w))
     /* W is a horizontal combination.  */
     {
-      c = XWINDOW (w->contents);
+      c = XWINDOW (PV_LISP_FIELD_REF(w, contents));
       while (c)
 	{
 	  if (horflag)
@@ -4058,7 +4058,7 @@ window_resize_apply (struct window *w, bool horflag)
 	  if (horflag)
 	    edge = edge + c->pixel_width;
 
-	  c = NILP (c->next) ? 0 : XWINDOW (c->next);
+	  c = NILP (PV_LISP_FIELD_REF(c, next)) ? 0 : XWINDOW (PV_LISP_FIELD_REF(c, next));
 	}
     }
   else
@@ -4093,7 +4093,7 @@ window_resize_apply_total (struct window *w, bool horflag)
   if (WINDOW_VERTICAL_COMBINATION_P (w))
     /* W is a vertical combination.  */
     {
-      c = XWINDOW (w->contents);
+      c = XWINDOW (PV_LISP_FIELD_REF(w, contents));
       while (c)
 	{
 	  if (horflag)
@@ -4105,13 +4105,13 @@ window_resize_apply_total (struct window *w, bool horflag)
 	  if (!horflag)
 	    edge = edge + c->total_lines;
 
-	  c = NILP (c->next) ? 0 : XWINDOW (c->next);
+	  c = NILP (PV_LISP_FIELD_REF(c, next)) ? 0 : XWINDOW (PV_LISP_FIELD_REF(c, next));
 	}
     }
   else if (WINDOW_HORIZONTAL_COMBINATION_P (w))
     /* W is a horizontal combination.  */
     {
-      c = XWINDOW (w->contents);
+      c = XWINDOW (PV_LISP_FIELD_REF(w, contents));
       while (c)
 	{
 	  if (horflag)
@@ -4123,7 +4123,7 @@ window_resize_apply_total (struct window *w, bool horflag)
 	  if (horflag)
 	    edge = edge + c->total_cols;
 
-	  c = NILP (c->next) ? 0 : XWINDOW (c->next);
+	  c = NILP (PV_LISP_FIELD_REF(c, next)) ? 0 : XWINDOW (PV_LISP_FIELD_REF(c, next));
 	}
     }
 }
@@ -4154,7 +4154,7 @@ be applied on the Elisp level.  */)
   bool horflag = !NILP (horizontal);
 
   if (!window_resize_check (r, horflag)
-      || (XINT (r->new_pixel)
+      || (XINT (PV_LISP_FIELD_REF(r, new_pixel))
 	  != (horflag ? r->pixel_width : r->pixel_height)))
     return Qnil;
 
@@ -4193,7 +4193,7 @@ values.  */)
   /* Handle the mini window.  */
   if (FRAME_HAS_MINIBUF_P (f) && !FRAME_MINIBUF_ONLY_P (f))
     {
-      struct window *m = XWINDOW (f->minibuffer_window);
+      struct window *m = XWINDOW (PV_LISP_FIELD_REF(f, minibuffer_window));
 
       if (NILP (horizontal))
 	{
@@ -4218,9 +4218,9 @@ values.  */)
 void
 resize_frame_windows (struct frame *f, int size, bool horflag, bool pixelwise)
 {
-  Lisp_Object root = f->root_window;
+  Lisp_Object root = PV_LISP_FIELD_REF(f, root_window);
   struct window *r = XWINDOW (root);
-  Lisp_Object mini = f->minibuffer_window;
+  Lisp_Object mini = PV_LISP_FIELD_REF(f, minibuffer_window);
   struct window *m;
   /* old_size is the old size of the frame's root window.  */
   int old_size = horflag ? r->total_cols : r->total_lines;
@@ -4291,10 +4291,10 @@ resize_frame_windows (struct frame *f, int size, bool horflag, bool pixelwise)
       resize_root_window (root, delta, horflag ? Qt : Qnil, Qnil,
 			  pixelwise ? Qt : Qnil);
       if (window_resize_check (r, horflag)
-	  && new_pixel_size == XINT (r->new_pixel))
+	  && new_pixel_size == XINT (PV_LISP_FIELD_REF(r, new_pixel)))
 	{
 	  window_resize_apply (r, horflag);
-	  window_pixel_to_total (r->frame, horflag ? Qt : Qnil);
+	  window_pixel_to_total (PV_LISP_FIELD_REF(r, frame), horflag ? Qt : Qnil);
 	}
       else
 	{
@@ -4302,10 +4302,10 @@ resize_frame_windows (struct frame *f, int size, bool horflag, bool pixelwise)
 	  resize_root_window (root, delta, horflag ? Qt : Qnil, Qt,
 			      pixelwise ? Qt : Qnil);
 	  if (window_resize_check (r, horflag)
-	      && new_pixel_size == XINT (r->new_pixel))
+	      && new_pixel_size == XINT (PV_LISP_FIELD_REF(r, new_pixel)))
 	    {
 	      window_resize_apply (r, horflag);
-	      window_pixel_to_total (r->frame, horflag ? Qt : Qnil);
+	      window_pixel_to_total (PV_LISP_FIELD_REF(r, frame), horflag ? Qt : Qnil);
 	    }
 	}
     }
@@ -4385,10 +4385,10 @@ set correctly.  See the code of `split-window' for how this is done.  */)
      parent, or OLD is ortho-combined.  */
   bool combination_limit
     = (EQ (Vwindow_combination_limit, Qt)
-       || NILP (o->parent)
+       || NILP (PV_LISP_FIELD_REF(o, parent))
        || (horflag
-	   ? WINDOW_VERTICAL_COMBINATION_P (XWINDOW (o->parent))
-	   : WINDOW_HORIZONTAL_COMBINATION_P (XWINDOW (o->parent))));
+	   ? WINDOW_VERTICAL_COMBINATION_P (XWINDOW (PV_LISP_FIELD_REF(o, parent)))
+	   : WINDOW_HORIZONTAL_COMBINATION_P (XWINDOW (PV_LISP_FIELD_REF(o, parent)))));
 
   /* We need a live reference window to initialize some parameters.  */
   if (WINDOW_LIVE_P (old))
@@ -4408,7 +4408,7 @@ set correctly.  See the code of `split-window' for how this is done.  */)
     /* `window-combination-resize' non-nil means try to resize OLD's siblings
        proportionally.  */
     {
-      p = XWINDOW (o->parent);
+      p = XWINDOW (PV_LISP_FIELD_REF(o, parent));
       /* Temporarily pretend we split the parent window.  */
       wset_new_pixel
 	(p, make_number ((horflag ? p->pixel_width : p->pixel_height)
@@ -4423,7 +4423,7 @@ set correctly.  See the code of `split-window' for how this is done.  */)
     {
       if (!window_resize_check (o, horflag))
 	error ("Resizing old window failed");
-      else if (XINT (pixel_size) + XINT (o->new_pixel)
+      else if (XINT (pixel_size) + XINT (PV_LISP_FIELD_REF(o, new_pixel))
 	       != (horflag ? o->pixel_width : o->pixel_height))
 	error ("Sum of sizes of old and new window don't fit");
     }
@@ -4435,10 +4435,10 @@ set correctly.  See the code of `split-window' for how this is done.  */)
 	 by make_parent_window and we need it below for assigning it to
 	 p->new_normal.  */
       Lisp_Object new_normal
-	= horflag ? o->normal_cols : o->normal_lines;
+	= horflag ? PV_LISP_FIELD_REF(o, normal_cols) : PV_LISP_FIELD_REF(o, normal_lines);
 
       make_parent_window (old, horflag);
-      p = XWINDOW (o->parent);
+      p = XWINDOW (PV_LISP_FIELD_REF(o, parent));
       if (EQ (Vwindow_combination_limit, Qt))
 	/* Store t in the new parent's combination_limit slot to avoid
 	   that its children get merged into another window.  */
@@ -4451,29 +4451,29 @@ set correctly.  See the code of `split-window' for how this is done.  */)
       wset_new_normal (p, new_normal);
     }
   else
-    p = XWINDOW (o->parent);
+    p = XWINDOW (PV_LISP_FIELD_REF(o, parent));
 
   fset_redisplay (f);
   new = make_window ();
   n = XWINDOW (new);
   wset_frame (n, frame);
-  wset_parent (n, o->parent);
+  wset_parent (n, PV_LISP_FIELD_REF(o, parent));
 
   if (EQ (side, Qabove) || EQ (side, Qleft))
     {
-      wset_prev (n, o->prev);
-      if (NILP (n->prev))
+      wset_prev (n, PV_LISP_FIELD_REF(o, prev));
+      if (NILP (PV_LISP_FIELD_REF(n, prev)))
 	wset_combination (p, horflag, new);
       else
-	wset_next (XWINDOW (n->prev), new);
+	wset_next (XWINDOW (PV_LISP_FIELD_REF(n, prev)), new);
       wset_next (n, old);
       wset_prev (o, new);
     }
   else
     {
-      wset_next (n, o->next);
-      if (!NILP (n->next))
-	wset_prev (XWINDOW (n->next), new);
+      wset_next (n, PV_LISP_FIELD_REF(o, next));
+      if (!NILP (PV_LISP_FIELD_REF(n, next)))
+	wset_prev (XWINDOW (PV_LISP_FIELD_REF(n, next)), new);
       wset_prev (n, old);
       wset_next (o, new);
     }
@@ -4489,8 +4489,8 @@ set correctly.  See the code of `split-window' for how this is done.  */)
   n->fringes_outside_margins = r->fringes_outside_margins;
   n->scroll_bar_width = r->scroll_bar_width;
   n->scroll_bar_height = r->scroll_bar_height;
-  wset_vertical_scroll_bar_type (n, r->vertical_scroll_bar_type);
-  wset_horizontal_scroll_bar_type (n, r->horizontal_scroll_bar_type);
+  wset_vertical_scroll_bar_type (n, PV_LISP_FIELD_REF(r, vertical_scroll_bar_type));
+  wset_horizontal_scroll_bar_type (n, PV_LISP_FIELD_REF(r, horizontal_scroll_bar_type));
 
   /* Directly assign orthogonal coordinates and sizes.  */
   if (horflag)
@@ -4512,12 +4512,12 @@ set correctly.  See the code of `split-window' for how this is done.  */)
      get them ready here.  */
   wset_new_pixel (n, pixel_size);
   EMACS_INT sum = 0;
-  c = XWINDOW (p->contents);
+  c = XWINDOW (PV_LISP_FIELD_REF(p, contents));
   while (c)
     {
       if (c != n)
-	sum = sum + XINT (c->new_total);
-      c = NILP (c->next) ? 0 : XWINDOW (c->next);
+	sum = sum + XINT (PV_LISP_FIELD_REF(c, new_total));
+      c = NILP (PV_LISP_FIELD_REF(c, next)) ? 0 : XWINDOW (PV_LISP_FIELD_REF(c, next));
     }
   wset_new_total (n, make_number ((horflag
 				   ? p->total_cols
@@ -4530,14 +4530,14 @@ set correctly.  See the code of `split-window' for how this is done.  */)
   adjust_frame_glyphs (f);
   /* Set buffer of NEW to buffer of reference window.  Don't run
      any hooks.  */
-  set_window_buffer (new, r->contents, false, true);
+  set_window_buffer (new, PV_LISP_FIELD_REF(r, contents), false, true);
   unblock_input ();
 
   /* Maybe we should run the scroll functions in Elisp (which already
      runs the configuration change hook).  */
   if (! NILP (Vwindow_scroll_functions))
     run_hook_with_args_2 (Qwindow_scroll_functions, new,
-			  Fmarker_position (n->start));
+			  Fmarker_position (PV_LISP_FIELD_REF(n, start)));
   /* Return NEW.  */
   return new;
 }
@@ -4556,15 +4556,15 @@ Signal an error when WINDOW is the only window on its frame.  */)
 
   w = decode_any_window (window);
   XSETWINDOW (window, w);
-  if (NILP (w->contents))
+  if (NILP (PV_LISP_FIELD_REF(w, contents)))
     /* It's a no-op to delete an already deleted window.  */
     return Qnil;
 
-  parent = w->parent;
+  parent = PV_LISP_FIELD_REF(w, parent);
   if (NILP (parent))
     /* Never delete a minibuffer or frame root window.  */
     error ("Attempt to delete minibuffer or sole ordinary window");
-  else if (NILP (w->prev) && NILP (w->next))
+  else if (NILP (PV_LISP_FIELD_REF(w, prev)) && NILP (PV_LISP_FIELD_REF(w, next)))
     /* Rather bow out here, this case should be handled on the Elisp
        level.  */
     error ("Attempt to delete sole window of parent");
@@ -4579,13 +4579,13 @@ Signal an error when WINDOW is the only window on its frame.  */)
   r = XWINDOW (root);
 
   /* Unlink WINDOW from window tree.  */
-  if (NILP (w->prev))
+  if (NILP (PV_LISP_FIELD_REF(w, prev)))
     /* Get SIBLING below (on the right of) WINDOW.  */
     {
       /* before_sibling means WINDOW is the first child of its
 	 parent and thus before the sibling.  */
       before_sibling = true;
-      sibling = w->next;
+      sibling = PV_LISP_FIELD_REF(w, next);
       s = XWINDOW (sibling);
       wset_prev (s, Qnil);
       wset_combination (p, horflag, sibling);
@@ -4593,15 +4593,15 @@ Signal an error when WINDOW is the only window on its frame.  */)
   else
     /* Get SIBLING above (on the left of) WINDOW.  */
     {
-      sibling = w->prev;
+      sibling = PV_LISP_FIELD_REF(w, prev);
       s = XWINDOW (sibling);
-      wset_next (s, w->next);
-      if (!NILP (s->next))
-	wset_prev (XWINDOW (s->next), sibling);
+      wset_next (s, PV_LISP_FIELD_REF(w, next));
+      if (!NILP (PV_LISP_FIELD_REF(s, next)))
+	wset_prev (XWINDOW (PV_LISP_FIELD_REF(s, next)), sibling);
     }
 
   if (window_resize_check (r, horflag)
-      && (XINT (r->new_pixel)
+      && (XINT (PV_LISP_FIELD_REF(r, new_pixel))
 	  == (horflag ? r->pixel_width : r->pixel_height)))
     /* We can delete WINDOW now.  */
     {
@@ -4626,21 +4626,21 @@ Signal an error when WINDOW is the only window on its frame.  */)
       wset_next (w, Qnil);  /* Don't delete w->next too.  */
       free_window_matrices (w);
 
-      if (WINDOWP (w->contents))
+      if (WINDOWP (PV_LISP_FIELD_REF(w, contents)))
 	{
-	  delete_all_child_windows (w->contents);
+	  delete_all_child_windows (PV_LISP_FIELD_REF(w, contents));
 	  wset_combination (w, false, Qnil);
 	}
       else
 	{
 	  unshow_buffer (w);
-	  unchain_marker (XMARKER (w->pointm));
-	  unchain_marker (XMARKER (w->old_pointm));
-	  unchain_marker (XMARKER (w->start));
+	  unchain_marker (XMARKER (PV_LISP_FIELD_REF(w, pointm)));
+	  unchain_marker (XMARKER (PV_LISP_FIELD_REF(w, old_pointm)));
+	  unchain_marker (XMARKER (PV_LISP_FIELD_REF(w, start)));
 	  wset_buffer (w, Qnil);
 	}
 
-      if (NILP (s->prev) && NILP (s->next))
+      if (NILP (PV_LISP_FIELD_REF(s, prev)) && NILP (PV_LISP_FIELD_REF(s, next)))
 	  /* A matrjoshka where SIBLING has become the only child of
 	     PARENT.  */
 	{
@@ -4648,8 +4648,8 @@ Signal an error when WINDOW is the only window on its frame.  */)
 	  replace_window (parent, sibling, false);
 	  /* Have SIBLING inherit the following three slot values from
 	     PARENT (the combination_limit slot is not inherited).  */
-	  wset_normal_cols (s, p->normal_cols);
-	  wset_normal_lines (s, p->normal_lines);
+	  wset_normal_cols (s, PV_LISP_FIELD_REF(p, normal_cols));
+	  wset_normal_lines (s, PV_LISP_FIELD_REF(p, normal_lines));
 	  /* Mark PARENT as deleted.  */
 	  wset_combination (p, false, Qnil);
 	  /* Try to merge SIBLING into its new parent.  */
@@ -4678,7 +4678,7 @@ Signal an error when WINDOW is the only window on its frame.  */)
 	  /* Now look whether `get-mru-window' gets us something.  */
 	  mru_window = call1 (Qget_mru_window, frame);
 	  if (WINDOW_LIVE_P (mru_window)
-	      && EQ (XWINDOW (mru_window)->frame, frame))
+	      && EQ (PV_LISP_FIELD_REF(XWINDOW (mru_window), frame), frame))
 	    new_selected_window = mru_window;
 
 	  /* If all ended up well, we now promote the mru window.  */
@@ -4701,8 +4701,8 @@ Signal an error when WINDOW is the only window on its frame.  */)
       else
 	{
 	  wset_next (s, window);
-	  if (!NILP (w->next))
-	    wset_prev (XWINDOW (w->next), window);
+	  if (!NILP (PV_LISP_FIELD_REF(w, next)))
+	    wset_prev (XWINDOW (PV_LISP_FIELD_REF(w, next)), window);
 	}
       error ("Deletion failed");
     }
@@ -4719,7 +4719,7 @@ Signal an error when WINDOW is the only window on its frame.  */)
 void
 grow_mini_window (struct window *w, int delta, bool pixelwise)
 {
-  struct frame *f = XFRAME (w->frame);
+  struct frame *f = XFRAME (PV_LISP_FIELD_REF(w, frame));
   struct window *r;
   Lisp_Object root, height;
   int line_height, pixel_height;
@@ -4775,7 +4775,7 @@ grow_mini_window (struct window *w, int delta, bool pixelwise)
 void
 shrink_mini_window (struct window *w, bool pixelwise)
 {
-  struct frame *f = XFRAME (w->frame);
+  struct frame *f = XFRAME (PV_LISP_FIELD_REF(w, frame));
   struct window *r;
   Lisp_Object root, delta;
   EMACS_INT height, unit;
@@ -4826,9 +4826,9 @@ DEFUN ("resize-mini-window-internal", Fresize_mini_window_internal, Sresize_mini
   int height;
 
   CHECK_WINDOW (window);
-  f = XFRAME (w->frame);
+  f = XFRAME (PV_LISP_FIELD_REF(w, frame));
 
-  if (!EQ (FRAME_MINIBUF_WINDOW (XFRAME (w->frame)), window))
+  if (!EQ (FRAME_MINIBUF_WINDOW (XFRAME (PV_LISP_FIELD_REF(w, frame))), window))
     error ("Not a valid minibuffer window");
   else if (FRAME_MINIBUF_ONLY_P (f))
     error ("Cannot resize a minibuffer-only frame");
@@ -4836,8 +4836,8 @@ DEFUN ("resize-mini-window-internal", Fresize_mini_window_internal, Sresize_mini
   r = XWINDOW (FRAME_ROOT_WINDOW (f));
   height = r->pixel_height + w->pixel_height;
   if (window_resize_check (r, false)
-      && XINT (w->new_pixel) > 0
-      && height == XINT (r->new_pixel) + XINT (w->new_pixel))
+      && XINT (PV_LISP_FIELD_REF(w, new_pixel)) > 0
+      && height == XINT (PV_LISP_FIELD_REF(r, new_pixel)) + XINT (PV_LISP_FIELD_REF(w, new_pixel)))
     {
       block_input ();
       window_resize_apply (r, false);
@@ -4866,12 +4866,12 @@ mark_window_cursors_off (struct window *w)
 {
   while (w)
     {
-      if (WINDOWP (w->contents))
-	mark_window_cursors_off (XWINDOW (w->contents));
+      if (WINDOWP (PV_LISP_FIELD_REF(w, contents)))
+	mark_window_cursors_off (XWINDOW (PV_LISP_FIELD_REF(w, contents)));
       else
 	w->phys_cursor_on_p = false;
 
-      w = NILP (w->next) ? 0 : XWINDOW (w->next);
+      w = NILP (PV_LISP_FIELD_REF(w, next)) ? 0 : XWINDOW (PV_LISP_FIELD_REF(w, next));
     }
 }
 
@@ -4984,7 +4984,7 @@ window_scroll (Lisp_Object window, EMACS_INT n, bool whole, bool noerror)
 
   /* On GUI frames, use the pixel-based version which is much slower
      than the line-based one but can handle varying line heights.  */
-  if (FRAME_WINDOW_P (XFRAME (XWINDOW (window)->frame)))
+  if (FRAME_WINDOW_P (XFRAME (PV_LISP_FIELD_REF(XWINDOW (window), frame))))
     window_scroll_pixel_based (window, n, whole, noerror);
   else
     window_scroll_line_based (window, n, whole, noerror);
@@ -5045,7 +5045,7 @@ window_scroll_pixel_based (Lisp_Object window, int n, bool whole, bool noerror)
   bool adjust_old_pointm = !NILP (Fequal (Fwindow_point (window),
 					  Fwindow_old_point (window)));
 
-  SET_TEXT_POS_FROM_MARKER (start, w->start);
+  SET_TEXT_POS_FROM_MARKER (start, PV_LISP_FIELD_REF(w, start));
   /* Scrolling a minibuffer window via scroll bar when the echo area
      shows long text sometimes resets the minibuffer contents behind
      our backs.  Also, someone might narrow-to-region and immediately
@@ -5132,8 +5132,8 @@ window_scroll_pixel_based (Lisp_Object window, int n, bool whole, bool noerror)
 		    spos = XINT (Fline_beginning_position (Qnil));
 		  else
 		    spos = min (XINT (Fline_end_position (Qnil)) + 1, ZV);
-		  set_marker_restricted (w->start, make_number (spos),
-					 w->contents);
+		  set_marker_restricted (PV_LISP_FIELD_REF(w, start), make_number (spos),
+					 PV_LISP_FIELD_REF(w, contents));
 		  w->start_at_line_beg = true;
 		  wset_update_mode_line (w);
 		  /* Set force_start so that redisplay_window will run the
@@ -5279,9 +5279,9 @@ window_scroll_pixel_based (Lisp_Object window, int n, bool whole, bool noerror)
 	}
 
       /* Set the window start, and set up the window for redisplay.  */
-      set_marker_restricted_both (w->start, w->contents, IT_CHARPOS (it),
+      set_marker_restricted_both (PV_LISP_FIELD_REF(w, start), PV_LISP_FIELD_REF(w, contents), IT_CHARPOS (it),
 				  IT_BYTEPOS (it));
-      bytepos = marker_byte_position (w->start);
+      bytepos = marker_byte_position (PV_LISP_FIELD_REF(w, start));
       w->start_at_line_beg = (pos == BEGV || FETCH_BYTE (bytepos - 1) == '\n');
       wset_update_mode_line (w);
       /* Set force_start so that redisplay_window will run the
@@ -5421,7 +5421,7 @@ window_scroll_pixel_based (Lisp_Object window, int n, bool whole, bool noerror)
 	     any of the two margins.  */
 	  if (goal_y < this_scroll_margin)
 	    goal_y = this_scroll_margin;
-	  SET_TEXT_POS_FROM_MARKER (start, w->start);
+	  SET_TEXT_POS_FROM_MARKER (start, PV_LISP_FIELD_REF(w, start));
 	  start_display (&it, w, start);
 	  /* It would be wrong to subtract WINDOW_HEADER_LINE_HEIGHT
 	     here because we called start_display again and did not
@@ -5447,11 +5447,11 @@ window_scroll_pixel_based (Lisp_Object window, int n, bool whole, bool noerror)
   bidi_unshelve_cache (itdata, false);
 
   if (adjust_old_pointm)
-    Fset_marker (w->old_pointm,
+    Fset_marker (PV_LISP_FIELD_REF(w, old_pointm),
 		 ((w == XWINDOW (selected_window))
-		  ? make_number (BUF_PT (XBUFFER (w->contents)))
-		  : Fmarker_position (w->pointm)),
-		 w->contents);
+		  ? make_number (BUF_PT (XBUFFER (PV_LISP_FIELD_REF(w, contents))))
+		  : Fmarker_position (PV_LISP_FIELD_REF(w, pointm))),
+		 PV_LISP_FIELD_REF(w, contents));
 }
 
 
@@ -5473,8 +5473,8 @@ window_scroll_line_based (Lisp_Object window, int n, bool whole, bool noerror)
   register Lisp_Object tem;
   bool lose;
   Lisp_Object bolp;
-  ptrdiff_t startpos = marker_position (w->start);
-  ptrdiff_t startbyte = marker_byte_position (w->start);
+  ptrdiff_t startpos = marker_position (PV_LISP_FIELD_REF(w, start));
+  ptrdiff_t startbyte = marker_byte_position (PV_LISP_FIELD_REF(w, start));
   Lisp_Object original_pos = Qnil;
   bool adjust_old_pointm = !NILP (Fequal (Fwindow_point (window),
 					  Fwindow_old_point (window)));
@@ -5533,7 +5533,7 @@ window_scroll_line_based (Lisp_Object window, int n, bool whole, bool noerror)
     {
       int this_scroll_margin = window_scroll_margin (w, MARGIN_IN_LINES);
 
-      set_marker_restricted_both (w->start, w->contents, pos, pos_byte);
+      set_marker_restricted_both (PV_LISP_FIELD_REF(w, start), PV_LISP_FIELD_REF(w, contents), pos, pos_byte);
       w->start_at_line_beg = !NILP (bolp);
       wset_update_mode_line (w);
       /* Set force_start so that redisplay_window will run
@@ -5627,11 +5627,11 @@ window_scroll_line_based (Lisp_Object window, int n, bool whole, bool noerror)
     }
 
   if (adjust_old_pointm)
-    Fset_marker (w->old_pointm,
+    Fset_marker (PV_LISP_FIELD_REF(w, old_pointm),
 		 ((w == XWINDOW (selected_window))
-		  ? make_number (BUF_PT (XBUFFER (w->contents)))
-		  : Fmarker_position (w->pointm)),
-		 w->contents);
+		  ? make_number (BUF_PT (XBUFFER (PV_LISP_FIELD_REF(w, contents))))
+		  : Fmarker_position (PV_LISP_FIELD_REF(w, pointm))),
+		 PV_LISP_FIELD_REF(w, contents));
 }
 
 
@@ -5650,10 +5650,10 @@ scroll_command (Lisp_Object n, int direction)
 
   /* If selected window's buffer isn't current, make it current for
      the moment.  But don't screw up if window_scroll gets an error.  */
-  if (XBUFFER (XWINDOW (selected_window)->contents) != current_buffer)
+  if (XBUFFER (PV_LISP_FIELD_REF(XWINDOW (selected_window), contents)) != current_buffer)
     {
       record_unwind_protect (save_excursion_restore, save_excursion_save ());
-      Fset_buffer (XWINDOW (selected_window)->contents);
+      Fset_buffer (PV_LISP_FIELD_REF(XWINDOW (selected_window), contents));
     }
 
   if (NILP (n))
@@ -5766,9 +5766,9 @@ specifies the window to scroll.  This takes precedence over
   /* Don't screw up if window_scroll gets an error.  */
   record_unwind_protect (save_excursion_restore, save_excursion_save ());
 
-  Fset_buffer (w->contents);
-  SET_PT_BOTH (marker_position (w->pointm), marker_byte_position (w->pointm));
-  SET_PT_BOTH (marker_position (w->old_pointm), marker_byte_position (w->old_pointm));
+  Fset_buffer (PV_LISP_FIELD_REF(w, contents));
+  SET_PT_BOTH (marker_position (PV_LISP_FIELD_REF(w, pointm)), marker_byte_position (PV_LISP_FIELD_REF(w, pointm)));
+  SET_PT_BOTH (marker_position (PV_LISP_FIELD_REF(w, old_pointm)), marker_byte_position (PV_LISP_FIELD_REF(w, old_pointm)));
 
   if (NILP (arg))
     window_scroll (window, 1, true, true);
@@ -5782,8 +5782,8 @@ specifies the window to scroll.  This takes precedence over
       window_scroll (window, XINT (arg), false, true);
     }
 
-  set_marker_both (w->pointm, Qnil, PT, PT_BYTE);
-  set_marker_both (w->old_pointm, Qnil, PT, PT_BYTE);
+  set_marker_both (PV_LISP_FIELD_REF(w, pointm), Qnil, PT, PT_BYTE);
+  set_marker_both (PV_LISP_FIELD_REF(w, old_pointm), Qnil, PT, PT_BYTE);
   unbind_to (count, Qnil);
 
   return Qnil;
@@ -5865,10 +5865,10 @@ displayed_window_lines (struct window *w)
   int bottom_y;
   void *itdata = NULL;
 
-  if (XBUFFER (w->contents) != current_buffer)
+  if (XBUFFER (PV_LISP_FIELD_REF(w, contents)) != current_buffer)
     {
       old_buffer = current_buffer;
-      set_buffer_internal (XBUFFER (w->contents));
+      set_buffer_internal (XBUFFER (PV_LISP_FIELD_REF(w, contents)));
     }
   else
     old_buffer = NULL;
@@ -5876,7 +5876,7 @@ displayed_window_lines (struct window *w)
   /* In case W->start is out of the accessible range, do something
      reasonable.  This happens in Info mode when Info-scroll-down
      calls (recenter -1) while W->start is 1.  */
-  CLIP_TEXT_POS_FROM_MARKER (start, w->start);
+  CLIP_TEXT_POS_FROM_MARKER (start, PV_LISP_FIELD_REF(w, start));
 
   itdata = bidi_shelve_cache ();
   start_display (&it, w, start);
@@ -5918,7 +5918,7 @@ and redisplay normally--don't erase and redraw the frame.  */)
   (register Lisp_Object arg)
 {
   struct window *w = XWINDOW (selected_window);
-  struct buffer *buf = XBUFFER (w->contents);
+  struct buffer *buf = XBUFFER (PV_LISP_FIELD_REF(w, contents));
   bool center_p = false;
   ptrdiff_t charpos, bytepos;
   EMACS_INT iarg UNINIT;
@@ -5968,7 +5968,7 @@ and redisplay normally--don't erase and redraw the frame.  */)
 
   /* Don't use redisplay code for initial frames, as the necessary
      data structures might not be set up yet then.  */
-  if (!FRAME_INITIAL_P (XFRAME (w->frame)))
+  if (!FRAME_INITIAL_P (XFRAME (PV_LISP_FIELD_REF(w, frame))))
     {
       if (center_p)
 	{
@@ -6107,7 +6107,7 @@ and redisplay normally--don't erase and redraw the frame.  */)
     }
 
   /* Set the new window start.  */
-  set_marker_both (w->start, w->contents, charpos, bytepos);
+  set_marker_both (PV_LISP_FIELD_REF(w, start), PV_LISP_FIELD_REF(w, contents), charpos, bytepos);
   w->window_end_valid = false;
 
   w->optional_new_start = true;
@@ -6183,23 +6183,23 @@ from the top of the window.  */)
   int this_scroll_margin;
 #endif
 
-  if (!(BUFFERP (w->contents) && XBUFFER (w->contents) == current_buffer))
+  if (!(BUFFERP (PV_LISP_FIELD_REF(w, contents)) && XBUFFER (PV_LISP_FIELD_REF(w, contents)) == current_buffer))
     /* This test is needed to make sure PT/PT_BYTE make sense in w->contents
        when passed below to set_marker_both.  */
     error ("move-to-window-line called from unrelated buffer");
 
   window = selected_window;
-  start = marker_position (w->start);
+  start = marker_position (PV_LISP_FIELD_REF(w, start));
   if (start < BEGV || start > ZV)
     {
       int height = window_internal_height (w);
       Fvertical_motion (make_number (- (height / 2)), window, Qnil);
-      set_marker_both (w->start, w->contents, PT, PT_BYTE);
+      set_marker_both (PV_LISP_FIELD_REF(w, start), PV_LISP_FIELD_REF(w, contents), PT, PT_BYTE);
       w->start_at_line_beg = !NILP (Fbolp ());
       w->force_start = true;
     }
   else
-    Fgoto_char (w->start);
+    Fgoto_char (PV_LISP_FIELD_REF(w, start));
 
   lines = displayed_window_lines (w);
 
@@ -6309,7 +6309,7 @@ DEFUN ("window-configuration-frame", Fwindow_configuration_frame, Swindow_config
   CHECK_WINDOW_CONFIGURATION (config);
 
   data = (struct save_window_data *) XVECTOR (config);
-  saved_windows = XVECTOR (data->saved_windows);
+  saved_windows = XVECTOR (PV_LISP_FIELD_REF(data, saved_windows));
   return XWINDOW (SAVED_WINDOW_N (saved_windows, 0)->window)->frame;
 }
 
@@ -6334,9 +6334,9 @@ the return value is nil.  Otherwise the value is t.  */)
   CHECK_WINDOW_CONFIGURATION (configuration);
 
   data = (struct save_window_data *) XVECTOR (configuration);
-  saved_windows = XVECTOR (data->saved_windows);
+  saved_windows = XVECTOR (PV_LISP_FIELD_REF(data, saved_windows));
 
-  new_current_buffer = data->f_current_buffer;
+  new_current_buffer = PV_LISP_FIELD_REF(data, f_current_buffer);
   if (!BUFFER_LIVE_P (XBUFFER (new_current_buffer)))
     new_current_buffer = Qnil;
   else
@@ -6354,8 +6354,8 @@ the return value is nil.  Otherwise the value is t.  */)
 	   point of the current-buffer we copy into old_point.  */
 	if (EQ (XWINDOW (data->current_window)->contents, new_current_buffer)
 	    && WINDOWP (selected_window)
-	    && EQ (XWINDOW (selected_window)->contents, new_current_buffer)
-	    && !EQ (selected_window, data->current_window))
+	    && EQ (PV_LISP_FIELD_REF(XWINDOW (selected_window), contents), new_current_buffer)
+	    && !EQ (selected_window, PV_LISP_FIELD_REF(data, current_window)))
 	  old_point = marker_position (XWINDOW (data->current_window)->pointm);
 	else
 	  old_point = PT;
@@ -6370,7 +6370,7 @@ the return value is nil.  Otherwise the value is t.  */)
 	   window's cursor from being copied from another window.  */
 	if (EQ (XWINDOW (data->current_window)->contents, new_current_buffer)
 	    /* If current_window = selected_window, its point is in BUF_PT.  */
-	    && !EQ (selected_window, data->current_window))
+	    && !EQ (selected_window, PV_LISP_FIELD_REF(data, current_window)))
 	  old_point = marker_position (XWINDOW (data->current_window)->pointm);
 	else
 	  old_point = BUF_PT (XBUFFER (new_current_buffer));
@@ -6406,13 +6406,13 @@ the return value is nil.  Otherwise the value is t.  */)
 	  window = p->window;
 	  w = XWINDOW (window);
 
-	  if (NILP (w->contents))
+	  if (NILP (PV_LISP_FIELD_REF(w, contents)))
 	    /* A dead window that will be resurrected, the window
 	       configuration will change.  */
 	    window_changed = true;
 
-	  if (BUFFERP (w->contents)
-	      && !EQ (w->contents, p->buffer)
+	  if (BUFFERP (PV_LISP_FIELD_REF(w, contents))
+	      && !EQ (PV_LISP_FIELD_REF(w, contents), p->buffer)
 	      && BUFFER_LIVE_P (XBUFFER (p->buffer)))
 	    /* If a window we restore gets another buffer, record the
 	       window's old buffer.  */
@@ -6430,13 +6430,13 @@ the return value is nil.  Otherwise the value is t.  */)
 	 window holds garbage.)  We do this now, before
 	 restoring the window contents, and prevent it from
 	 being done later on when we select a new window.  */
-      if (! NILP (XWINDOW (selected_window)->contents))
+      if (! NILP (PV_LISP_FIELD_REF(XWINDOW (selected_window), contents)))
 	{
 	  w = XWINDOW (selected_window);
-	  set_marker_both (w->pointm,
-			   w->contents,
-			   BUF_PT (XBUFFER (w->contents)),
-			   BUF_PT_BYTE (XBUFFER (w->contents)));
+	  set_marker_both (PV_LISP_FIELD_REF(w, pointm),
+			   PV_LISP_FIELD_REF(w, contents),
+			   BUF_PT (XBUFFER (PV_LISP_FIELD_REF(w, contents))),
+			   BUF_PT_BYTE (XBUFFER (PV_LISP_FIELD_REF(w, contents))));
 	}
 
       fset_redisplay (f);
@@ -6476,21 +6476,21 @@ the return value is nil.  Otherwise the value is t.  */)
 	    {
 	      wset_prev
 		(w, SAVED_WINDOW_N (saved_windows, XFASTINT (p->prev))->window);
-	      wset_next (XWINDOW (w->prev), p->window);
+	      wset_next (XWINDOW (PV_LISP_FIELD_REF(w, prev)), p->window);
 	    }
 	  else
 	    {
 	      wset_prev (w, Qnil);
-	      if (!NILP (w->parent))
-		wset_combination (XWINDOW (w->parent),
+	      if (!NILP (PV_LISP_FIELD_REF(w, parent)))
+		wset_combination (XWINDOW (PV_LISP_FIELD_REF(w, parent)),
 				  (XINT (p->total_cols)
 				   != XWINDOW (w->parent)->total_cols),
 				  p->window);
 	    }
 
 	  /* If we squirreled away the buffer, restore it now.  */
-	  if (BUFFERP (w->combination_limit))
-	    wset_buffer (w, w->combination_limit);
+	  if (BUFFERP (PV_LISP_FIELD_REF(w, combination_limit)))
+	    wset_buffer (w, PV_LISP_FIELD_REF(w, combination_limit));
 	  w->pixel_left = XFASTINT (p->pixel_left);
 	  w->pixel_top = XFASTINT (p->pixel_top);
 	  w->pixel_width = XFASTINT (p->pixel_width);
@@ -6530,7 +6530,7 @@ the return value is nil.  Otherwise the value is t.  */)
 		{
 		  if (NILP (XCDR (pers)))
 		    {
-		      par = Fassq (XCAR (pers), w->window_parameters);
+		      par = Fassq (XCAR (pers), PV_LISP_FIELD_REF(w, window_parameters));
 		      if (CONSP (par) && !NILP (XCDR (par)))
 			/* Reset a parameter to nil if and only if it
 			   has a non-nil association.  Don't make new
@@ -6546,40 +6546,40 @@ the return value is nil.  Otherwise the value is t.  */)
 	  if (BUFFERP (p->buffer) && BUFFER_LIVE_P (XBUFFER (p->buffer)))
 	    /* If saved buffer is alive, install it.  */
 	    {
-	      if (!EQ (w->contents, p->buffer))
+	      if (!EQ (PV_LISP_FIELD_REF(w, contents), p->buffer))
 		/* Record buffer configuration change.  */
 		buffer_changed = true;
 	      wset_buffer (w, p->buffer);
 	      w->start_at_line_beg = !NILP (p->start_at_line_beg);
-	      set_marker_restricted (w->start, p->start, w->contents);
-	      set_marker_restricted (w->pointm, p->pointm, w->contents);
-	      set_marker_restricted (w->old_pointm, p->old_pointm, w->contents);
+	      set_marker_restricted (PV_LISP_FIELD_REF(w, start), p->start, w->contents);
+	      set_marker_restricted (PV_LISP_FIELD_REF(w, pointm), p->pointm, w->contents);
+	      set_marker_restricted (PV_LISP_FIELD_REF(w, old_pointm), p->old_pointm, w->contents);
 	      /* As documented in Fcurrent_window_configuration, don't
 		 restore the location of point in the buffer which was
 		 current when the window configuration was recorded.  */
 	      if (!EQ (p->buffer, new_current_buffer)
 		  && XBUFFER (p->buffer) == current_buffer)
-		Fgoto_char (w->pointm);
+		Fgoto_char (PV_LISP_FIELD_REF(w, pointm));
 	    }
-	  else if (BUFFERP (w->contents) && BUFFER_LIVE_P (XBUFFER (w->contents)))
+	  else if (BUFFERP (PV_LISP_FIELD_REF(w, contents)) && BUFFER_LIVE_P (XBUFFER (PV_LISP_FIELD_REF(w, contents))))
 	    /* Keep window's old buffer; make sure the markers are real.  */
 	    {
 	      /* Set window markers at start of visible range.  */
 	      if (XMARKER (w->start)->buffer == 0)
-		set_marker_restricted_both (w->start, w->contents, 0, 0);
+		set_marker_restricted_both (PV_LISP_FIELD_REF(w, start), PV_LISP_FIELD_REF(w, contents), 0, 0);
 	      if (XMARKER (w->pointm)->buffer == 0)
 		set_marker_restricted_both
-		  (w->pointm, w->contents,
-		   BUF_PT (XBUFFER (w->contents)),
-		   BUF_PT_BYTE (XBUFFER (w->contents)));
+		  (PV_LISP_FIELD_REF(w, pointm), PV_LISP_FIELD_REF(w, contents),
+		   BUF_PT (XBUFFER (PV_LISP_FIELD_REF(w, contents))),
+		   BUF_PT_BYTE (XBUFFER (PV_LISP_FIELD_REF(w, contents))));
 	      if (XMARKER (w->old_pointm)->buffer == 0)
 		set_marker_restricted_both
-		  (w->old_pointm, w->contents,
-		   BUF_PT (XBUFFER (w->contents)),
-		   BUF_PT_BYTE (XBUFFER (w->contents)));
+		  (PV_LISP_FIELD_REF(w, old_pointm), PV_LISP_FIELD_REF(w, contents),
+		   BUF_PT (XBUFFER (PV_LISP_FIELD_REF(w, contents))),
+		   BUF_PT_BYTE (XBUFFER (PV_LISP_FIELD_REF(w, contents))));
 	      w->start_at_line_beg = true;
 	    }
-	  else if (!NILP (w->start))
+	  else if (!NILP (PV_LISP_FIELD_REF(w, start)))
 	    /* Leaf window has no live buffer, get one.  */
 	    {
 	      /* Record buffer configuration change.  */
@@ -6591,11 +6591,11 @@ the return value is nil.  Otherwise the value is t.  */)
 	      wset_buffer (w, other_buffer_safely (Fcurrent_buffer ()));
 	      /* This will set the markers to beginning of visible
 		 range.  */
-	      set_marker_restricted_both (w->start, w->contents, 0, 0);
-	      set_marker_restricted_both (w->pointm, w->contents, 0, 0);
-	      set_marker_restricted_both (w->old_pointm, w->contents, 0, 0);
+	      set_marker_restricted_both (PV_LISP_FIELD_REF(w, start), PV_LISP_FIELD_REF(w, contents), 0, 0);
+	      set_marker_restricted_both (PV_LISP_FIELD_REF(w, pointm), PV_LISP_FIELD_REF(w, contents), 0, 0);
+	      set_marker_restricted_both (PV_LISP_FIELD_REF(w, old_pointm), PV_LISP_FIELD_REF(w, contents), 0, 0);
 	      w->start_at_line_beg = true;
-	      if (!NILP (w->dedicated))
+	      if (!NILP (PV_LISP_FIELD_REF(w, dedicated)))
 		/* Record this window as dead.  */
 		dead_windows = Fcons (window, dead_windows);
 	      /* Make sure window is no more dedicated.  */
@@ -6603,7 +6603,7 @@ the return value is nil.  Otherwise the value is t.  */)
 	    }
 	}
 
-      fset_root_window (f, data->root_window);
+      fset_root_window (f, PV_LISP_FIELD_REF(data, root_window));
       /* Arrange *not* to restore point in the buffer that was
 	 current when the window configuration was saved.  */
       if (EQ (XWINDOW (data->current_window)->contents, new_current_buffer))
@@ -6618,15 +6618,15 @@ the return value is nil.  Otherwise the value is t.  */)
 
 	 Do not record the buffer here.  We do that in a separate call
 	 to select_window below.  See also Bug#16207.  */
-      select_window (data->current_window, Qt, true);
-      BVAR (XBUFFER (XWINDOW (selected_window)->contents),
+      select_window (PV_LISP_FIELD_REF(data, current_window), Qt, true);
+      BVAR (XBUFFER (PV_LISP_FIELD_REF(XWINDOW (selected_window), contents)),
 	    last_selected_window)
 	= selected_window;
 
-      if (NILP (data->focus_frame)
-	  || (FRAMEP (data->focus_frame)
-	      && FRAME_LIVE_P (XFRAME (data->focus_frame))))
-	Fredirect_frame_focus (frame, data->focus_frame);
+      if (NILP (PV_LISP_FIELD_REF(data, focus_frame))
+	  || (FRAMEP (PV_LISP_FIELD_REF(data, focus_frame))
+	      && FRAME_LIVE_P (XFRAME (PV_LISP_FIELD_REF(data, focus_frame)))))
+	Fredirect_frame_focus (frame, PV_LISP_FIELD_REF(data, focus_frame));
 
       /* Now, free glyph matrices in windows that were not reused.  */
       for (i = 0; i < n_leaf_windows; i++)
@@ -6654,16 +6654,16 @@ the return value is nil.  Otherwise the value is t.  */)
 
       /* Record the selected window's buffer here.  The window should
 	 already be the selected one from the call above.  */
-      if (WINDOW_LIVE_P (data->current_window))
-	select_window (data->current_window, Qnil, false);
+      if (WINDOW_LIVE_P (PV_LISP_FIELD_REF(data, current_window)))
+	select_window (PV_LISP_FIELD_REF(data, current_window), Qnil, false);
 
       /* select_window will have made f the selected frame, so we
 	 reselect the proper frame here.  do_switch_frame will change
 	 the selected window too, but that doesn't make the call to
 	 select_window above totally superfluous; it still sets f's
 	 selected window.  */
-      if (FRAME_LIVE_P (XFRAME (data->selected_frame)))
-	do_switch_frame (data->selected_frame, 0, 0, Qnil);
+      if (FRAME_LIVE_P (XFRAME (PV_LISP_FIELD_REF(data, selected_frame))))
+	do_switch_frame (PV_LISP_FIELD_REF(data, selected_frame), 0, 0, Qnil);
 
       if (window_changed)
 	/* At least one window has been added or removed.  Run
@@ -6711,12 +6711,12 @@ the return value is nil.  Otherwise the value is t.  */)
 	 because do_switch_frame has set up selected_window already to
 	 the "normal" frame's selected window and that window *does*
 	 show new_current_buffer.  */
-      if (!EQ (XWINDOW (selected_window)->contents, new_current_buffer))
+      if (!EQ (PV_LISP_FIELD_REF(XWINDOW (selected_window), contents), new_current_buffer))
 	Fgoto_char (make_number (old_point));
     }
 
-  Vminibuf_scroll_window = data->minibuf_scroll_window;
-  minibuf_selected_window = data->minibuf_selected_window;
+  Vminibuf_scroll_window = PV_LISP_FIELD_REF(data, minibuf_scroll_window);
+  minibuf_selected_window = PV_LISP_FIELD_REF(data, minibuf_selected_window);
 
   SAFE_FREE ();
   return (FRAME_LIVE_P (f) ? Qt : Qnil);
@@ -6741,25 +6741,25 @@ delete_all_child_windows (Lisp_Object window)
 
   w = XWINDOW (window);
 
-  if (!NILP (w->next))
+  if (!NILP (PV_LISP_FIELD_REF(w, next)))
     /* Delete WINDOW's siblings (we traverse postorderly).  */
-    delete_all_child_windows (w->next);
+    delete_all_child_windows (PV_LISP_FIELD_REF(w, next));
 
-  if (WINDOWP (w->contents))
+  if (WINDOWP (PV_LISP_FIELD_REF(w, contents)))
     {
-      delete_all_child_windows (w->contents);
+      delete_all_child_windows (PV_LISP_FIELD_REF(w, contents));
       wset_combination (w, false, Qnil);
     }
-  else if (BUFFERP (w->contents))
+  else if (BUFFERP (PV_LISP_FIELD_REF(w, contents)))
     {
       unshow_buffer (w);
-      unchain_marker (XMARKER (w->pointm));
-      unchain_marker (XMARKER (w->old_pointm));
-      unchain_marker (XMARKER (w->start));
+      unchain_marker (XMARKER (PV_LISP_FIELD_REF(w, pointm)));
+      unchain_marker (XMARKER (PV_LISP_FIELD_REF(w, old_pointm)));
+      unchain_marker (XMARKER (PV_LISP_FIELD_REF(w, start)));
       /* Since combination limit makes sense for an internal windows
 	 only, we use this slot to save the buffer for the sake of
 	 possible resurrection in Fset_window_configuration.  */
-      wset_combination_limit (w, w->contents);
+      wset_combination_limit (w, PV_LISP_FIELD_REF(w, contents));
       wset_buffer (w, Qnil);
     }
 
@@ -6770,10 +6770,10 @@ static ptrdiff_t
 count_windows (struct window *window)
 {
   ptrdiff_t count = 1;
-  if (!NILP (window->next))
-    count += count_windows (XWINDOW (window->next));
-  if (WINDOWP (window->contents))
-    count += count_windows (XWINDOW (window->contents));
+  if (!NILP (PV_LISP_FIELD_REF(window, next)))
+    count += count_windows (XWINDOW (PV_LISP_FIELD_REF(window, next)));
+  if (WINDOWP (PV_LISP_FIELD_REF(window, contents)))
+    count += count_windows (XWINDOW (PV_LISP_FIELD_REF(window, contents)));
   return count;
 }
 
@@ -6785,12 +6785,12 @@ get_leaf_windows (struct window *w, struct window **flat, ptrdiff_t i)
 {
   while (w)
     {
-      if (WINDOWP (w->contents))
-	i = get_leaf_windows (XWINDOW (w->contents), flat, i);
+      if (WINDOWP (PV_LISP_FIELD_REF(w, contents)))
+	i = get_leaf_windows (XWINDOW (PV_LISP_FIELD_REF(w, contents)), flat, i);
       else
 	flat[i++] = w;
 
-      w = NILP (w->next) ? 0 : XWINDOW (w->next);
+      w = NILP (PV_LISP_FIELD_REF(w, next)) ? 0 : XWINDOW (PV_LISP_FIELD_REF(w, next));
     }
 
   return i;
@@ -6842,7 +6842,7 @@ save_window_save (Lisp_Object window, struct Lisp_Vector *vector, ptrdiff_t i)
   struct window *w;
   Lisp_Object tem, pers, par;
 
-  for (; !NILP (window); window = w->next)
+  for (; !NILP (window); window = PV_LISP_FIELD_REF(w, next))
     {
       p = SAVED_WINDOW_N (vector, i);
       w = XWINDOW (window);
@@ -6862,13 +6862,13 @@ save_window_save (Lisp_Object window, struct Lisp_Vector *vector, ptrdiff_t i)
       p->top_line = make_number (w->top_line);
       p->total_cols = make_number (w->total_cols);
       p->total_lines = make_number (w->total_lines);
-      p->normal_cols = w->normal_cols;
-      p->normal_lines = w->normal_lines;
+      PV_LISP_FIELD_SET (p, normal_cols, PV_LISP_FIELD_REF(w, normal_cols));
+      PV_LISP_FIELD_SET (p, normal_lines, PV_LISP_FIELD_REF(w, normal_lines));
       XSETFASTINT (p->hscroll, w->hscroll);
       p->suspend_auto_hscroll = w->suspend_auto_hscroll ? Qt : Qnil;
       XSETFASTINT (p->min_hscroll, w->min_hscroll);
       XSETFASTINT (p->hscroll_whole, w->hscroll_whole);
-      p->display_table = w->display_table;
+      PV_LISP_FIELD_SET (p, display_table, PV_LISP_FIELD_REF(w, display_table));
       p->left_margin_cols = make_number (w->left_margin_cols);
       p->right_margin_cols = make_number (w->right_margin_cols);
       p->left_fringe_width = make_number (w->left_fringe_width);
@@ -6876,10 +6876,10 @@ save_window_save (Lisp_Object window, struct Lisp_Vector *vector, ptrdiff_t i)
       p->fringes_outside_margins = w->fringes_outside_margins ? Qt : Qnil;
       p->scroll_bar_width = make_number (w->scroll_bar_width);
       p->scroll_bar_height = make_number (w->scroll_bar_height);
-      p->vertical_scroll_bar_type = w->vertical_scroll_bar_type;
-      p->horizontal_scroll_bar_type = w->horizontal_scroll_bar_type;
-      p->dedicated = w->dedicated;
-      p->combination_limit = w->combination_limit;
+      PV_LISP_FIELD_SET (p, vertical_scroll_bar_type, PV_LISP_FIELD_REF(w, vertical_scroll_bar_type));
+      PV_LISP_FIELD_SET (p, horizontal_scroll_bar_type, PV_LISP_FIELD_REF(w, horizontal_scroll_bar_type));
+      PV_LISP_FIELD_SET (p, dedicated, PV_LISP_FIELD_REF(w, dedicated));
+      PV_LISP_FIELD_SET (p, combination_limit, PV_LISP_FIELD_REF(w, combination_limit));
       p->window_parameters = Qnil;
 
       if (!NILP (Vwindow_persistent_parameters))
@@ -6912,7 +6912,7 @@ save_window_save (Lisp_Object window, struct Lisp_Vector *vector, ptrdiff_t i)
 	      /* Save values for persistent window parameters. */
 	      if (CONSP (pers) && !NILP (XCDR (pers)))
 		{
-		  par = Fassq (XCAR (pers), w->window_parameters);
+		  par = Fassq (XCAR (pers), PV_LISP_FIELD_REF(w, window_parameters));
 		  if (NILP (par))
 		    /* If the window has no value for the parameter,
 		       make one.  */
@@ -6928,26 +6928,26 @@ save_window_save (Lisp_Object window, struct Lisp_Vector *vector, ptrdiff_t i)
 	    }
 	}
 
-      if (BUFFERP (w->contents))
+      if (BUFFERP (PV_LISP_FIELD_REF(w, contents)))
 	{
 	  /* Save w's value of point in the window configuration.  If w
 	     is the selected window, then get the value of point from
 	     the buffer; pointm is garbage in the selected window.  */
 	  if (EQ (window, selected_window))
 	    p->pointm = build_marker (XBUFFER (w->contents),
-				      BUF_PT (XBUFFER (w->contents)),
-				      BUF_PT_BYTE (XBUFFER (w->contents)));
+				      BUF_PT (XBUFFER (PV_LISP_FIELD_REF(w, contents))),
+				      BUF_PT_BYTE (XBUFFER (PV_LISP_FIELD_REF(w, contents))));
 	  else
-	    p->pointm = Fcopy_marker (w->pointm, Qnil);
-	  p->old_pointm = Fcopy_marker (w->old_pointm, Qnil);
+	    PV_LISP_FIELD_SET (p, pointm, Fcopy_marker (PV_LISP_FIELD_REF(w, pointm), Qnil));
+	  PV_LISP_FIELD_SET (p, old_pointm, Fcopy_marker (PV_LISP_FIELD_REF(w, old_pointm), Qnil));
 	  XMARKER (p->pointm)->insertion_type
 	    = !NILP (buffer_local_value /* Don't signal error if void.  */
-		     (Qwindow_point_insertion_type, w->contents));
+		     (Qwindow_point_insertion_type, PV_LISP_FIELD_REF(w, contents)));
 	  XMARKER (p->old_pointm)->insertion_type
 	    = !NILP (buffer_local_value /* Don't signal error if void.  */
-		     (Qwindow_point_insertion_type, w->contents));
+		     (Qwindow_point_insertion_type, PV_LISP_FIELD_REF(w, contents)));
 
-	  p->start = Fcopy_marker (w->start, Qnil);
+	  PV_LISP_FIELD_SET (p, start, Fcopy_marker (PV_LISP_FIELD_REF(w, start), Qnil));
 	  p->start_at_line_beg = w->start_at_line_beg ? Qt : Qnil;
 	}
       else
@@ -6958,11 +6958,11 @@ save_window_save (Lisp_Object window, struct Lisp_Vector *vector, ptrdiff_t i)
 	  p->start_at_line_beg = Qnil;
 	}
 
-      p->parent = NILP (w->parent) ? Qnil : XWINDOW (w->parent)->temslot;
-      p->prev = NILP (w->prev) ? Qnil : XWINDOW (w->prev)->temslot;
+      PV_LISP_FIELD_SET (p, parent, NILP (PV_LISP_FIELD_REF(w, parent)) ? Qnil : XWINDOW (w->parent)->temslot);
+      PV_LISP_FIELD_SET (p, prev, NILP (PV_LISP_FIELD_REF(w, prev)) ? Qnil : XWINDOW (w->prev)->temslot);
 
-      if (WINDOWP (w->contents))
-	i = save_window_save (w->contents, vector, i);
+      if (WINDOWP (PV_LISP_FIELD_REF(w, contents)))
+	i = save_window_save (PV_LISP_FIELD_REF(w, contents), vector, i);
     }
 
   return i;
@@ -6999,15 +6999,15 @@ saved by this function.  */)
   data->frame_text_height = FRAME_TEXT_HEIGHT (f);
   data->frame_menu_bar_height = FRAME_MENU_BAR_HEIGHT (f);
   data->frame_tool_bar_height = FRAME_TOOL_BAR_HEIGHT (f);
-  data->selected_frame = selected_frame;
-  data->current_window = FRAME_SELECTED_WINDOW (f);
-  XSETBUFFER (data->f_current_buffer, current_buffer);
-  data->minibuf_scroll_window = minibuf_level > 0 ? Vminibuf_scroll_window : Qnil;
-  data->minibuf_selected_window = minibuf_level > 0 ? minibuf_selected_window : Qnil;
-  data->root_window = FRAME_ROOT_WINDOW (f);
-  data->focus_frame = FRAME_FOCUS_FRAME (f);
+  PV_LISP_FIELD_SET (data, selected_frame, selected_frame);
+  PV_LISP_FIELD_SET (data, current_window, FRAME_SELECTED_WINDOW (f));
+  XSETBUFFER (PV_LISP_FIELD_REF(data, f_current_buffer), current_buffer);
+  PV_LISP_FIELD_SET (data, minibuf_scroll_window, minibuf_level > 0 ? Vminibuf_scroll_window : Qnil);
+  PV_LISP_FIELD_SET (data, minibuf_selected_window, minibuf_level > 0 ? minibuf_selected_window : Qnil);
+  PV_LISP_FIELD_SET (data, root_window, FRAME_ROOT_WINDOW (f));
+  PV_LISP_FIELD_SET (data, focus_frame, FRAME_FOCUS_FRAME (f));
   tem = make_uninit_vector (n_windows);
-  data->saved_windows = tem;
+  PV_LISP_FIELD_SET (data, saved_windows, tem);
   for (i = 0; i < n_windows; i++)
     ASET (tem, i,
 	  Fmake_vector (make_number (VECSIZE (struct saved_window)), Qnil));
@@ -7222,7 +7222,7 @@ set_window_scroll_bars (struct window *w, Lisp_Object width,
     error ("Invalid type of vertical scroll bar");
 
   if (w->scroll_bar_width != iwidth
-      || !EQ (w->vertical_scroll_bar_type, vertical_type))
+      || !EQ (PV_LISP_FIELD_REF(w, vertical_scroll_bar_type), vertical_type))
     {
       /* Don't change anything if new scroll bar won't fit.  */
       if ((WINDOW_PIXEL_WIDTH (w)
@@ -7250,7 +7250,7 @@ set_window_scroll_bars (struct window *w, Lisp_Object width,
       error ("Invalid type of horizontal scroll bar");
 
     if (w->scroll_bar_height != iheight
-	|| !EQ (w->horizontal_scroll_bar_type, horizontal_type))
+	|| !EQ (PV_LISP_FIELD_REF(w, horizontal_scroll_bar_type), horizontal_type))
       {
 	/* Don't change anything if new scroll bar won't fit.  */
 	if ((WINDOW_PIXEL_HEIGHT (w)
@@ -7327,12 +7327,12 @@ value.  */)
 		 ? make_number (w->scroll_bar_width)
 		 : Qnil),
 		list5 (make_number (WINDOW_SCROLL_BAR_COLS (w)),
-		       w->vertical_scroll_bar_type,
+		       PV_LISP_FIELD_REF(w, vertical_scroll_bar_type),
 		       ((w->scroll_bar_height >= 0)
 			? make_number (w->scroll_bar_height)
 			: Qnil),
 		       make_number (WINDOW_SCROLL_BAR_LINES (w)),
-		       w->horizontal_scroll_bar_type));
+		       PV_LISP_FIELD_REF(w, horizontal_scroll_bar_type)));
 }
 
 /***********************************************************************
@@ -7350,7 +7350,7 @@ optional second arg PIXELS-P means value is measured in pixels.  */)
 {
   Lisp_Object result;
   struct window *w = decode_live_window (window);
-  struct frame *f = XFRAME (w->frame);
+  struct frame *f = XFRAME (PV_LISP_FIELD_REF(w, frame));
 
   if (FRAME_WINDOW_P (f))
     result = (NILP (pixels_p)
@@ -7377,7 +7377,7 @@ If PIXELS-P is non-nil, the return value is VSCROLL.  */)
   (Lisp_Object window, Lisp_Object vscroll, Lisp_Object pixels_p)
 {
   struct window *w = decode_live_window (window);
-  struct frame *f = XFRAME (w->frame);
+  struct frame *f = XFRAME (PV_LISP_FIELD_REF(w, frame));
 
   CHECK_NUMBER_OR_FLOAT (vscroll);
 
@@ -7433,12 +7433,12 @@ foreach_window_1 (struct window *w, bool (*fn) (struct window *, void *),
 
   for (cont = true; w && cont;)
     {
-      if (WINDOWP (w->contents))
- 	cont = foreach_window_1 (XWINDOW (w->contents), fn, user_data);
+      if (WINDOWP (PV_LISP_FIELD_REF(w, contents)))
+ 	cont = foreach_window_1 (XWINDOW (PV_LISP_FIELD_REF(w, contents)), fn, user_data);
       else
 	cont = fn (w, user_data);
 
-      w = NILP (w->next) ? 0 : XWINDOW (w->next);
+      w = NILP (PV_LISP_FIELD_REF(w, next)) ? 0 : XWINDOW (PV_LISP_FIELD_REF(w, next));
     }
 
   return cont;
@@ -7555,8 +7555,8 @@ init_window_once (void)
   struct frame *f = make_initial_frame ();
   XSETFRAME (selected_frame, f);
   Vterminal_frame = selected_frame;
-  minibuf_window = f->minibuffer_window;
-  selected_window = f->selected_window;
+  minibuf_window = PV_LISP_FIELD_REF(f, minibuffer_window);
+  selected_window = PV_LISP_FIELD_REF(f, selected_window);
 }
 
 void

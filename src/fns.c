@@ -3499,32 +3499,32 @@ set_hash_key_and_value (struct Lisp_Hash_Table *h, Lisp_Object key_and_value)
 static void
 set_hash_next (struct Lisp_Hash_Table *h, Lisp_Object next)
 {
-  h->next = next;
+  PV_LISP_FIELD_SET (h, next, next);
 }
 static void
 set_hash_next_slot (struct Lisp_Hash_Table *h, ptrdiff_t idx, ptrdiff_t val)
 {
-  gc_aset (h->next, idx, make_number (val));
+  gc_aset (PV_LISP_FIELD_REF(h, next), idx, make_number (val));
 }
 static void
 set_hash_hash (struct Lisp_Hash_Table *h, Lisp_Object hash)
 {
-  h->hash = hash;
+  PV_LISP_FIELD_SET (h, hash, hash);
 }
 static void
 set_hash_hash_slot (struct Lisp_Hash_Table *h, ptrdiff_t idx, Lisp_Object val)
 {
-  gc_aset (h->hash, idx, val);
+  gc_aset (PV_LISP_FIELD_REF(h, hash), idx, val);
 }
 static void
 set_hash_index (struct Lisp_Hash_Table *h, Lisp_Object index)
 {
-  h->index = index;
+  PV_LISP_FIELD_SET (h, index, index);
 }
 static void
 set_hash_index_slot (struct Lisp_Hash_Table *h, ptrdiff_t idx, ptrdiff_t val)
 {
-  gc_aset (h->index, idx, make_number (val));
+  gc_aset (PV_LISP_FIELD_REF(h, index), idx, make_number (val));
 }
 
 /* If OBJ is a Lisp hash table, return a pointer to its struct
@@ -3627,7 +3627,7 @@ larger_vector (Lisp_Object vec, ptrdiff_t incr_min, ptrdiff_t nitems_max)
 static ptrdiff_t
 HASH_NEXT (struct Lisp_Hash_Table *h, ptrdiff_t idx)
 {
-  return XINT (AREF (h->next, idx));
+  return XINT (AREF (PV_LISP_FIELD_REF(h, next), idx));
 }
 
 /* Return the index of the element in hash table H that is the start
@@ -3636,7 +3636,7 @@ HASH_NEXT (struct Lisp_Hash_Table *h, ptrdiff_t idx)
 static ptrdiff_t
 HASH_INDEX (struct Lisp_Hash_Table *h, ptrdiff_t idx)
 {
-  return XINT (AREF (h->index, idx));
+  return XINT (AREF (PV_LISP_FIELD_REF(h, index), idx));
 }
 
 /* Compare KEY1 which has hash code HASH1 and KEY2 with hash code
@@ -3801,14 +3801,14 @@ make_hash_table (struct hash_table_test test, EMACS_INT size,
 
   /* Initialize hash table slots.  */
   h->test = test;
-  h->weak = weak;
+  PV_LISP_FIELD_SET (h, weak, weak);
   h->rehash_threshold = rehash_threshold;
   h->rehash_size = rehash_size;
   h->count = 0;
   h->key_and_value = Fmake_vector (make_number (2 * size), Qnil);
-  h->hash = Fmake_vector (make_number (size), Qnil);
-  h->next = Fmake_vector (make_number (size), make_number (-1));
-  h->index = Fmake_vector (make_number (index_size), make_number (-1));
+  PV_LISP_FIELD_SET (h, hash, Fmake_vector (make_number (size), Qnil));
+  PV_LISP_FIELD_SET (h, next, Fmake_vector (make_number (size), make_number (-1)));
+  PV_LISP_FIELD_SET (h, index, Fmake_vector (make_number (index_size), make_number (-1)));
   h->pure = pure;
 
   /* Set up the free list.  */
@@ -3843,9 +3843,9 @@ copy_hash_table (struct Lisp_Hash_Table *h1)
   h2 = allocate_hash_table ();
   *h2 = *h1;
   h2->key_and_value = Fcopy_sequence (h1->key_and_value);
-  h2->hash = Fcopy_sequence (h1->hash);
-  h2->next = Fcopy_sequence (h1->next);
-  h2->index = Fcopy_sequence (h1->index);
+  PV_LISP_FIELD_SET (h2, hash, Fcopy_sequence (h1->hash));
+  PV_LISP_FIELD_SET (h2, next, Fcopy_sequence (h1->next));
+  PV_LISP_FIELD_SET (h2, index, Fcopy_sequence (h1->index));
   XSET_HASH_TABLE (table, h2);
 
   /* Maybe add this hash table to the list of all weak hash tables.  */
@@ -3902,10 +3902,10 @@ maybe_resize_hash_table (struct Lisp_Hash_Table *h)
 
       set_hash_key_and_value (h, larger_vector (h->key_and_value,
 						2 * (new_size - old_size), -1));
-      set_hash_hash (h, larger_vector (h->hash, new_size - old_size, -1));
+      set_hash_hash (h, larger_vector (PV_LISP_FIELD_REF(h, hash), new_size - old_size, -1));
       set_hash_index (h, Fmake_vector (make_number (index_size),
 				       make_number (-1)));
-      set_hash_next (h, larger_vecalloc (h->next, new_size - old_size, -1));
+      set_hash_next (h, larger_vecalloc (PV_LISP_FIELD_REF(h, next), new_size - old_size, -1));
 
       /* Update the free list.  Do it so that new entries are added at
          the end of the free list.  This makes some operations like
@@ -3934,7 +3934,7 @@ maybe_resize_hash_table (struct Lisp_Hash_Table *h)
 	if (!NILP (HASH_HASH (h, i)))
 	  {
 	    EMACS_UINT hash_code = XUINT (HASH_HASH (h, i));
-	    ptrdiff_t start_of_bucket = hash_code % ASIZE (h->index);
+	    ptrdiff_t start_of_bucket = hash_code % ASIZE (PV_LISP_FIELD_REF(h, index));
 	    set_hash_next_slot (h, i, HASH_INDEX (h, start_of_bucket));
 	    set_hash_index_slot (h, start_of_bucket, i);
 	  }
@@ -3957,7 +3957,7 @@ hash_lookup (struct Lisp_Hash_Table *h, Lisp_Object key, EMACS_UINT *hash)
   if (hash)
     *hash = hash_code;
 
-  start_of_bucket = hash_code % ASIZE (h->index);
+  start_of_bucket = hash_code % ASIZE (PV_LISP_FIELD_REF(h, index));
 
   for (i = HASH_INDEX (h, start_of_bucket); 0 <= i; i = HASH_NEXT (h, i))
     if (EQ (key, HASH_KEY (h, i))
@@ -3996,7 +3996,7 @@ hash_put (struct Lisp_Hash_Table *h, Lisp_Object key, Lisp_Object value,
   set_hash_hash_slot (h, i, make_number (hash));
 
   /* Add new entry to its collision chain.  */
-  start_of_bucket = hash % ASIZE (h->index);
+  start_of_bucket = hash % ASIZE (PV_LISP_FIELD_REF(h, index));
   set_hash_next_slot (h, i, HASH_INDEX (h, start_of_bucket));
   set_hash_index_slot (h, start_of_bucket, i);
   return i;
@@ -4010,7 +4010,7 @@ hash_remove_from_table (struct Lisp_Hash_Table *h, Lisp_Object key)
 {
   EMACS_UINT hash_code = h->test.hashfn (&h->test, key);
   eassert ((hash_code & ~INTMASK) == 0);
-  ptrdiff_t start_of_bucket = hash_code % ASIZE (h->index);
+  ptrdiff_t start_of_bucket = hash_code % ASIZE (PV_LISP_FIELD_REF(h, index));
   ptrdiff_t prev = -1;
 
   for (ptrdiff_t i = HASH_INDEX (h, start_of_bucket);
@@ -4062,8 +4062,8 @@ hash_clear (struct Lisp_Hash_Table *h)
 	  set_hash_hash_slot (h, i, Qnil);
 	}
 
-      for (i = 0; i < ASIZE (h->index); ++i)
-	ASET (h->index, i, make_number (-1));
+      for (i = 0; i < ASIZE (PV_LISP_FIELD_REF(h, index)); ++i)
+	ASET (PV_LISP_FIELD_REF(h, index), i, make_number (-1));
 
       h->next_free = 0;
       h->count = 0;
@@ -4084,7 +4084,7 @@ hash_clear (struct Lisp_Hash_Table *h)
 static bool
 sweep_weak_table (struct Lisp_Hash_Table *h, bool remove_entries_p)
 {
-  ptrdiff_t n = gc_asize (h->index);
+  ptrdiff_t n = gc_asize (PV_LISP_FIELD_REF(h, index));
   bool marked = false;
 
   for (ptrdiff_t bucket = 0; bucket < n; ++bucket)
@@ -4099,13 +4099,13 @@ sweep_weak_table (struct Lisp_Hash_Table *h, bool remove_entries_p)
 	  bool value_known_to_survive_p = survives_gc_p (HASH_VALUE (h, i));
 	  bool remove_p;
 
-	  if (EQ (h->weak, Qkey))
+	  if (EQ (PV_LISP_FIELD_REF(h, weak), Qkey))
 	    remove_p = !key_known_to_survive_p;
-	  else if (EQ (h->weak, Qvalue))
+	  else if (EQ (PV_LISP_FIELD_REF(h, weak), Qvalue))
 	    remove_p = !value_known_to_survive_p;
-	  else if (EQ (h->weak, Qkey_or_value))
+	  else if (EQ (PV_LISP_FIELD_REF(h, weak), Qkey_or_value))
 	    remove_p = !(key_known_to_survive_p || value_known_to_survive_p);
-	  else if (EQ (h->weak, Qkey_and_value))
+	  else if (EQ (PV_LISP_FIELD_REF(h, weak), Qkey_and_value))
 	    remove_p = !(key_known_to_survive_p && value_known_to_survive_p);
 	  else
 	    emacs_abort ();

@@ -217,8 +217,8 @@ adjust_suspend_auto_hscroll (ptrdiff_t from, ptrdiff_t to)
     {
       struct window *w = XWINDOW (selected_window);
 
-      if (BUFFERP (w->contents)
-	  && XBUFFER (w->contents) == current_buffer
+      if (BUFFERP (PV_LISP_FIELD_REF(w, contents))
+	  && XBUFFER (PV_LISP_FIELD_REF(w, contents)) == current_buffer
 	  && XMARKER (w->old_pointm)->charpos >= from
 	  && XMARKER (w->old_pointm)->charpos <= to)
 	w->suspend_auto_hscroll = 0;

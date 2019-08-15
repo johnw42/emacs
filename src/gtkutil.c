@@ -1201,10 +1201,10 @@ xg_create_frame_widgets (struct frame *f)
   gtk_widget_set_name (wfixed, SSDATA (Vx_resource_name));
 
   /* If this frame has a title or name, set it in the title bar.  */
-  if (! NILP (f->title))
-    title = SSDATA (ENCODE_UTF_8 (f->title));
-  else if (! NILP (f->name))
-    title = SSDATA (ENCODE_UTF_8 (f->name));
+  if (! NILP (PV_LISP_FIELD_REF(f, title)))
+    title = SSDATA (ENCODE_UTF_8 (PV_LISP_FIELD_REF(f, title)));
+  else if (! NILP (PV_LISP_FIELD_REF(f, name)))
+    title = SSDATA (ENCODE_UTF_8 (PV_LISP_FIELD_REF(f, name)));
 
   if (title)
     gtk_window_set_title (GTK_WINDOW (wtop), title);
@@ -1504,7 +1504,7 @@ xg_set_background_color (struct frame *f, unsigned long bg)
       Lisp_Object bar;
       for (bar = FRAME_SCROLL_BARS (f);
            !NILP (bar);
-           bar = XSCROLL_BAR (bar)->next)
+           bar = PV_LISP_FIELD_REF(XSCROLL_BAR (bar), next))
         {
           GtkWidget *scrollbar =
             xg_get_widget_from_map (XSCROLL_BAR (bar)->x_window);
@@ -2341,7 +2341,7 @@ make_cl_data (xg_menu_cb_data *cl_data, struct frame *f, GCallback highlight_cb)
     {
       cl_data = xmalloc (sizeof *cl_data);
       cl_data->f = f;
-      cl_data->menu_bar_vector = f->menu_bar_vector;
+      PV_LISP_FIELD_SET (cl_data, menu_bar_vector, PV_LISP_FIELD_REF(f, menu_bar_vector));
       cl_data->menu_bar_items_used = f->menu_bar_items_used;
       cl_data->highlight_cb = highlight_cb;
       cl_data->ref_count = 0;
@@ -2373,7 +2373,7 @@ update_cl_data (xg_menu_cb_data *cl_data,
   if (cl_data)
     {
       cl_data->f = f;
-      cl_data->menu_bar_vector = f->menu_bar_vector;
+      PV_LISP_FIELD_SET (cl_data, menu_bar_vector, PV_LISP_FIELD_REF(f, menu_bar_vector));
       cl_data->menu_bar_items_used = f->menu_bar_items_used;
       cl_data->highlight_cb = highlight_cb;
     }
@@ -4047,7 +4047,7 @@ xg_set_toolkit_scroll_bar_thumb (struct scroll_bar *bar,
 {
   GtkWidget *wscroll = xg_get_widget_from_map (bar->x_window);
 
-  struct frame *f = XFRAME (WINDOW_FRAME (XWINDOW (bar->window)));
+  struct frame *f = XFRAME (WINDOW_FRAME (XWINDOW (PV_LISP_FIELD_REF(bar, window))));
 
   if (wscroll && bar->dragging == -1)
     {
@@ -4066,7 +4066,7 @@ xg_set_toolkit_scroll_bar_thumb (struct scroll_bar *bar,
           /* We do the same as for MOTIF in xterm.c, use 30 chars per
              line rather than the real portion value.  This makes the
              thumb less likely to resize and that looks better.  */
-          portion = WINDOW_TOTAL_LINES (XWINDOW (bar->window)) * 30;
+          portion = WINDOW_TOTAL_LINES (XWINDOW (PV_LISP_FIELD_REF(bar, window))) * 30;
 
           /* When the thumb is at the bottom, position == whole.
              So we need to increase `whole' to make space for the thumb.  */
@@ -4362,7 +4362,7 @@ xg_tool_bar_callback (GtkWidget *w, gpointer client_data)
 
   idx *= TOOL_BAR_ITEM_NSLOTS;
 
-  key = AREF (f->tool_bar_items, idx + TOOL_BAR_ITEM_KEY);
+  key = AREF (PV_LISP_FIELD_REF(f, tool_bar_items), idx + TOOL_BAR_ITEM_KEY);
   XSETFRAME (frame, f);
 
   /* We generate two events here.  The first one is to set the prefix
@@ -4423,10 +4423,10 @@ xg_tool_bar_help_callback (GtkWidget *w,
   if (event->type == GDK_ENTER_NOTIFY)
     {
       idx *= TOOL_BAR_ITEM_NSLOTS;
-      help = AREF (f->tool_bar_items, idx + TOOL_BAR_ITEM_HELP);
+      help = AREF (PV_LISP_FIELD_REF(f, tool_bar_items), idx + TOOL_BAR_ITEM_HELP);
 
       if (NILP (help))
-        help = AREF (f->tool_bar_items, idx + TOOL_BAR_ITEM_CAPTION);
+        help = AREF (PV_LISP_FIELD_REF(f, tool_bar_items), idx + TOOL_BAR_ITEM_CAPTION);
     }
   else
     help = Qnil;
@@ -4577,7 +4577,7 @@ xg_create_tool_bar (struct frame *f)
 }
 
 
-#define PROP(IDX) AREF (f->tool_bar_items, i * TOOL_BAR_ITEM_NSLOTS + (IDX))
+#define PROP(IDX) AREF (PV_LISP_FIELD_REF(f, tool_bar_items), i * TOOL_BAR_ITEM_NSLOTS + (IDX))
 
 /* Find the right-to-left image named by RTL in the tool bar images for F.
    Returns IMAGE if RTL is not found.  */

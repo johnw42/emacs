@@ -904,7 +904,7 @@ autocmp_chars (Lisp_Object rule, ptrdiff_t charpos, ptrdiff_t bytepos,
   if (len <= 0)
     return unbind_to (count, Qnil);
   to = limit = charpos + len;
-  font_object = win->frame;
+  font_object = PV_LISP_FIELD_REF(win, frame);
 #ifdef HAVE_WINDOW_SYSTEM
   struct frame *f = XFRAME (font_object);
   if (FRAME_WINDOW_P (f))

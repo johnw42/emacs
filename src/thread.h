@@ -41,10 +41,10 @@ struct thread_state
      Qt if the last search was done in a string;
      Qnil if no searching has been done yet.  */
   PV_LISP_FIELD(m_last_thing_searched);
-#define last_thing_searched (current_thread->m_last_thing_searched)
+#define last_thing_searched (PV_LISP_FIELD_REF(current_thread, m_last_thing_searched))
 
   PV_LISP_FIELD(m_saved_last_thing_searched);
-#define saved_last_thing_searched (current_thread->m_saved_last_thing_searched)
+#define saved_last_thing_searched (PV_LISP_FIELD_REF(current_thread, m_saved_last_thing_searched))
 
   /* The thread's name.  */
   PV_LISP_FIELD(name);
@@ -144,7 +144,7 @@ struct thread_state
      string; if it's nil, we are matching text in the current buffer; if
      it's t, we are matching text in a C string.  */
   PV_LISP_FIELD(m_re_match_object);
-#define re_match_object (current_thread->m_re_match_object)
+#define re_match_object (PV_LISP_FIELD_REF(current_thread, m_re_match_object))
 
   /* This member is different from waiting_for_input.
      It is used to communicate to a lisp process-filter/sentinel (via the

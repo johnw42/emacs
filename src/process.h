@@ -234,20 +234,20 @@ XPROCESS (Lisp_Object a)
 INLINE void
 pset_childp (struct Lisp_Process *p, Lisp_Object val)
 {
-  p->childp = val;
+  PV_LISP_FIELD_SET (p, childp, val);
 }
 
 INLINE void
 pset_status (struct Lisp_Process *p, Lisp_Object val)
 {
-  p->status = val;
+  PV_LISP_FIELD_SET (p, status, val);
 }
 
 #ifdef HAVE_GNUTLS
 INLINE void
 pset_gnutls_cred_type (struct Lisp_Process *p, Lisp_Object val)
 {
-  p->gnutls_cred_type = val;
+  PV_LISP_FIELD_SET (p, gnutls_cred_type, val);
 }
 #endif
 

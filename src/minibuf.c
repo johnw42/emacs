@@ -72,25 +72,25 @@ choose_minibuf_frame (void)
 {
   if (FRAMEP (selected_frame)
       && FRAME_LIVE_P (XFRAME (selected_frame))
-      && !EQ (minibuf_window, XFRAME (selected_frame)->minibuffer_window))
+      && !EQ (minibuf_window, PV_LISP_FIELD_REF(XFRAME (selected_frame), minibuffer_window)))
     {
       struct frame *sf = XFRAME (selected_frame);
       Lisp_Object buffer;
 
       /* I don't think that any frames may validly have a null minibuffer
 	 window anymore.  */
-      if (NILP (sf->minibuffer_window))
+      if (NILP (PV_LISP_FIELD_REF(sf, minibuffer_window)))
 	emacs_abort ();
 
       /* Under X, we come here with minibuf_window being the
 	 minibuffer window of the unused termcap window created in
 	 init_window_once.  That window doesn't have a buffer.  */
-      buffer = XWINDOW (minibuf_window)->contents;
+      buffer = PV_LISP_FIELD_REF(XWINDOW (minibuf_window), contents);
       if (BUFFERP (buffer))
 	/* Use set_window_buffer instead of Fset_window_buffer (see
 	   discussion of bug#11984, bug#12025, bug#12026).  */
-	set_window_buffer (sf->minibuffer_window, buffer, 0, 0);
-      minibuf_window = sf->minibuffer_window;
+	set_window_buffer (PV_LISP_FIELD_REF(sf, minibuffer_window), buffer, 0, 0);
+      minibuf_window = PV_LISP_FIELD_REF(sf, minibuffer_window);
     }
 
   /* Make sure no other frame has a minibuffer as its selected window,
@@ -591,7 +591,7 @@ read_minibuf (Lisp_Object map, Lisp_Object initial, Lisp_Object prompt,
   FOR_EACH_FRAME (dummy, frame)
     {
       Lisp_Object root_window = Fframe_root_window (frame);
-      Lisp_Object mini_window = XWINDOW (root_window)->next;
+      Lisp_Object mini_window = PV_LISP_FIELD_REF(XWINDOW (root_window), next);
 
       if (! NILP (mini_window) && ! EQ (mini_window, minibuf_window)
 	  && !NILP (Fwindow_minibuffer_p (mini_window)))
@@ -693,7 +693,7 @@ read_minibuf (Lisp_Object map, Lisp_Object initial, Lisp_Object prompt,
       XWINDOW (minibuf_window)->cursor.x = 0;
       XWINDOW (minibuf_window)->must_be_updated_p = true;
       update_frame (XFRAME (selected_frame), true, true);
-      flush_frame (XFRAME (XWINDOW (minibuf_window)->frame));
+      flush_frame (XFRAME (PV_LISP_FIELD_REF(XWINDOW (minibuf_window), frame)));
     }
 
   /* Make minibuffer contents into a string.  */
@@ -835,7 +835,7 @@ read_minibuf_unwind (void)
   window = minibuf_window;
   /* To keep things predictable, in case it matters, let's be in the
      minibuffer when we reset the relevant variables.  */
-  Fset_buffer (XWINDOW (window)->contents);
+  Fset_buffer (PV_LISP_FIELD_REF(XWINDOW (window), contents));
 
   /* Restore prompt, etc, from outer minibuffer level.  */
   Lisp_Object key_vec = Fcar (minibuf_save_list);

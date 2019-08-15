@@ -1357,11 +1357,11 @@ print_vectorlike (Lisp_Object obj, Lisp_Object printcharfun, bool escapeflag,
       if (escapeflag)
 	{
 	  print_c_string ("#<process ", printcharfun);
-	  print_string (XPROCESS (obj)->name, printcharfun);
+	  print_string (PV_LISP_FIELD_REF(XPROCESS (obj), name), printcharfun);
 	  printchar ('>', printcharfun);
 	}
       else
-	print_string (XPROCESS (obj)->name, printcharfun);
+	print_string (PV_LISP_FIELD_REF(XPROCESS (obj), name), printcharfun);
       break;
 
     case PVEC_BOOL_VECTOR:
@@ -1424,10 +1424,10 @@ print_vectorlike (Lisp_Object obj, Lisp_Object printcharfun, bool escapeflag,
 	int len = sprintf (buf, "#<window %"pI"d",
 			   XWINDOW (obj)->sequence_number);
 	strout (buf, len, len, printcharfun);
-	if (BUFFERP (XWINDOW (obj)->contents))
+	if (BUFFERP (PV_LISP_FIELD_REF(XWINDOW (obj), contents)))
 	  {
 	    print_c_string (" on ", printcharfun);
-	    print_string (BVAR (XBUFFER (XWINDOW (obj)->contents), name),
+	    print_string (BVAR (XBUFFER (PV_LISP_FIELD_REF(XWINDOW (obj), contents)), name),
 			  printcharfun);
 	  }
 	printchar ('>', printcharfun);
@@ -1454,7 +1454,7 @@ print_vectorlike (Lisp_Object obj, Lisp_Object printcharfun, bool escapeflag,
 	/* Implement a readable output, e.g.:
 	  #s(hash-table size 2 test equal data (k1 v1 k2 v2)) */
 	/* Always print the size.  */
-	int len = sprintf (buf, "#s(hash-table size %"pD"d", ASIZE (h->next));
+	int len = sprintf (buf, "#s(hash-table size %"pD"d", ASIZE (PV_LISP_FIELD_REF(h, next)));
 	strout (buf, len, len, printcharfun);
 
 	if (!NILP (h->test.name))
@@ -1463,10 +1463,10 @@ print_vectorlike (Lisp_Object obj, Lisp_Object printcharfun, bool escapeflag,
 	    print_object (h->test.name, printcharfun, escapeflag);
 	  }
 
-	if (!NILP (h->weak))
+	if (!NILP (PV_LISP_FIELD_REF(h, weak)))
 	  {
 	    print_c_string (" weakness ", printcharfun);
-	    print_object (h->weak, printcharfun, escapeflag);
+	    print_object (PV_LISP_FIELD_REF(h, weak), printcharfun, escapeflag);
 	  }
 
 	print_c_string (" rehash-size ", printcharfun);
@@ -1530,7 +1530,7 @@ print_vectorlike (Lisp_Object obj, Lisp_Object printcharfun, bool escapeflag,
     case PVEC_FRAME:
       {
 	void *ptr = XFRAME (obj);
-	Lisp_Object frame_name = XFRAME (obj)->name;
+	Lisp_Object frame_name = PV_LISP_FIELD_REF(XFRAME (obj), name);
 
 	print_c_string ((FRAME_LIVE_P (XFRAME (obj))
 			 ? "#<frame "
@@ -1581,8 +1581,8 @@ print_vectorlike (Lisp_Object obj, Lisp_Object printcharfun, bool escapeflag,
 
     case PVEC_THREAD:
       print_c_string ("#<thread ", printcharfun);
-      if (STRINGP (XTHREAD (obj)->name))
-	print_string (XTHREAD (obj)->name, printcharfun);
+      if (STRINGP (PV_LISP_FIELD_REF(XTHREAD (obj), name)))
+	print_string (PV_LISP_FIELD_REF(XTHREAD (obj), name), printcharfun);
       else
 	{
 	  int len = sprintf (buf, "%p", XTHREAD (obj));
@@ -1593,8 +1593,8 @@ print_vectorlike (Lisp_Object obj, Lisp_Object printcharfun, bool escapeflag,
 
     case PVEC_MUTEX:
       print_c_string ("#<mutex ", printcharfun);
-      if (STRINGP (XMUTEX (obj)->name))
-	print_string (XMUTEX (obj)->name, printcharfun);
+      if (STRINGP (PV_LISP_FIELD_REF(XMUTEX (obj), name)))
+	print_string (PV_LISP_FIELD_REF(XMUTEX (obj), name), printcharfun);
       else
 	{
 	  int len = sprintf (buf, "%p", XMUTEX (obj));
@@ -1605,8 +1605,8 @@ print_vectorlike (Lisp_Object obj, Lisp_Object printcharfun, bool escapeflag,
 
     case PVEC_CONDVAR:
       print_c_string ("#<condvar ", printcharfun);
-      if (STRINGP (XCONDVAR (obj)->name))
-	print_string (XCONDVAR (obj)->name, printcharfun);
+      if (STRINGP (PV_LISP_FIELD_REF(XCONDVAR (obj), name)))
+	print_string (PV_LISP_FIELD_REF(XCONDVAR (obj), name), printcharfun);
       else
 	{
 	  int len = sprintf (buf, "%p", XCONDVAR (obj));

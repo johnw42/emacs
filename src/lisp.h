@@ -51,14 +51,18 @@ void scheme_gc(void);
 #define Smake_string emacs_Smake_string
 #endif
 
-#define PV_LISP_FIELD(name) Lisp_Object name
-//#define PV_LISP_FIELD(name) Lisp_Object name##_
+// #define RENAME_LISP_REFS
+#ifdef RENAME_LISP_REFS
+#define LISP_FIELD_NAME(x) x ## _Lisp
+#else
+#define LISP_FIELD_NAME(x) x
+#endif
+
+#define PV_LISP_FIELD(name) Lisp_Object LISP_FIELD_NAME(name)
 #define PV_LISP_ARRAY(name, n) Lisp_Object name[n]
 #define PV_LISP_PROPS(n) Lisp_Object props[n]
-#define PV_LISP_FIELD_REF(ptr, field) ((ptr)->field)
-#define PV_LISP_FIELD_SET(ptr, field, value) ((ptr)->field = (value))
-//#define PV_LISP_FIELD_REF(ptr, field) ((ptr)->field##_)
-//#define PV_LISP_FIELD_SET(ptr, field, value) ((ptr)->field##_ = (value))
+#define PV_LISP_FIELD_REF(ptr, field) ((ptr)->LISP_FIELD_NAME(field))
+#define PV_LISP_FIELD_SET(ptr, field, value) ((ptr)->LISP_FIELD_NAME(field) = (value))
 #define PV_LISP_FIELD_AREF(ptr, field, n) ((ptr)->field[n])
 #define PV_LISP_FIELD_ASET(ptr, field, n, value) ((ptr)->field[n] = (value))
 #define PV_LISP_PROP_REF(ptr, n) ((ptr)->props[n])

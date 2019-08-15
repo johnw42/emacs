@@ -806,11 +806,11 @@ wset_next_buffers (struct window *w, Lisp_Object val)
 #define WINDOW_VERTICAL_SCROLL_BAR_TYPE(W)		\
   (WINDOW_PSEUDO_P (W)					\
    ? vertical_scroll_bar_none				\
-   : EQ (W->vertical_scroll_bar_type, Qt)		\
+   : EQ (PV_LISP_FIELD_REF(W, vertical_scroll_bar_type), Qt)		\
    ? FRAME_VERTICAL_SCROLL_BAR_TYPE (WINDOW_XFRAME (W))	\
-   : EQ (W->vertical_scroll_bar_type, Qleft)		\
+   : EQ (PV_LISP_FIELD_REF(W, vertical_scroll_bar_type), Qleft)		\
    ? vertical_scroll_bar_left				\
-   : EQ (W->vertical_scroll_bar_type, Qright)		\
+   : EQ (PV_LISP_FIELD_REF(W, vertical_scroll_bar_type), Qright)		\
    ? vertical_scroll_bar_right				\
    : vertical_scroll_bar_none)
 
@@ -1098,7 +1098,7 @@ struct glyph *get_phys_cursor_glyph (struct window *w);
 
 /* True if WINDOW is a valid window.  */
 #define WINDOW_VALID_P(WINDOW)					\
-  (WINDOWP (WINDOW) && !NILP (XWINDOW (WINDOW)->contents))	\
+  (WINDOWP (WINDOW) && !NILP (PV_LISP_FIELD_REF(XWINDOW (WINDOW), contents)))	\
 
 /* A window of any sort, leaf or interior, is "valid" if its
    contents slot is non-nil.  */
@@ -1107,7 +1107,7 @@ struct glyph *get_phys_cursor_glyph (struct window *w);
 
 /* True if WINDOW is a live window.  */
 #define WINDOW_LIVE_P(WINDOW)					\
-  (WINDOWP (WINDOW) && BUFFERP (XWINDOW (WINDOW)->contents))
+  (WINDOWP (WINDOW) && BUFFERP (PV_LISP_FIELD_REF(XWINDOW (WINDOW), contents)))
 
 /* A window is "live" if and only if it shows a buffer.  */
 #define CHECK_LIVE_WINDOW(WINDOW)				\

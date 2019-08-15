@@ -268,7 +268,7 @@ skip_invisible (ptrdiff_t pos, ptrdiff_t *next_boundary_p, ptrdiff_t to, Lisp_Ob
      the next property change */
   prop = Fget_char_property (position, Qinvisible,
 			     (!NILP (window)
-			      && EQ (XWINDOW (window)->contents, buffer))
+			      && EQ (PV_LISP_FIELD_REF(XWINDOW (window), contents), buffer))
 			     ? window : buffer);
   inv_p = TEXT_PROP_MEANS_INVISIBLE (prop);
   /* When counting columns (window == nil), don't skip over ellipsis text.  */
@@ -1190,14 +1190,14 @@ compute_motion (ptrdiff_t from, ptrdiff_t frombyte, EMACS_INT fromvpos,
       width = window_body_width (win, 0);
       /* We must make room for continuation marks if we don't have fringes.  */
 #ifdef HAVE_WINDOW_SYSTEM
-      if (!FRAME_WINDOW_P (XFRAME (win->frame)))
+      if (!FRAME_WINDOW_P (XFRAME (PV_LISP_FIELD_REF(win, frame))))
 #endif
 	width -= 1;
     }
 
   continuation_glyph_width = 1;
 #ifdef HAVE_WINDOW_SYSTEM
-  if (FRAME_WINDOW_P (XFRAME (win->frame)))
+  if (FRAME_WINDOW_P (XFRAME (PV_LISP_FIELD_REF(win, frame))))
     continuation_glyph_width = 0;  /* In the fringe.  */
 #endif
 
@@ -1800,7 +1800,7 @@ visible section of the buffer, and pass LINE and COL as TOPOS.  */)
 			 ? (window_body_width (w, 0)
 			    - (
 #ifdef HAVE_WINDOW_SYSTEM
-			       FRAME_WINDOW_P (XFRAME (w->frame)) ? 0 :
+			       FRAME_WINDOW_P (XFRAME (PV_LISP_FIELD_REF(w, frame))) ? 0 :
 #endif
 			       1))
 			 : XINT (XCAR (topos))),
@@ -1844,7 +1844,7 @@ vmotion (register ptrdiff_t from, register ptrdiff_t from_byte,
 
   /* If the window contains this buffer, use it for getting text properties.
      Otherwise use the current buffer as arg for doing that.  */
-  if (EQ (w->contents, Fcurrent_buffer ()))
+  if (EQ (PV_LISP_FIELD_REF(w, contents), Fcurrent_buffer ()))
     text_prop_object = window;
   else
     text_prop_object = Fcurrent_buffer ();
@@ -1962,7 +1962,7 @@ line_number_display_width (struct window *w, int *width, int *pixel_width)
       struct text_pos startpos;
       bool saved_restriction = false;
       ptrdiff_t count = SPECPDL_INDEX ();
-      SET_TEXT_POS_FROM_MARKER (startpos, w->start);
+      SET_TEXT_POS_FROM_MARKER (startpos, PV_LISP_FIELD_REF(w, start));
       void *itdata = bidi_shelve_cache ();
       /* We want to start from window's start point, but it could be
 	 outside the accessible region, in which case we widen the
@@ -2012,7 +2012,7 @@ numbers on display.  */)
   line_number_display_width (XWINDOW (selected_window), &width, &pixel_width);
   if (EQ (pixelwise, Qcolumns))
     {
-      struct frame *f = XFRAME (w->frame);
+      struct frame *f = XFRAME (PV_LISP_FIELD_REF(w, frame));
       return make_float ((double) pixel_width / FRAME_COLUMN_WIDTH (f));
     }
   else if (!NILP (pixelwise))
@@ -2026,7 +2026,7 @@ static int
 window_column_x (struct window *w, Lisp_Object window,
 		 double col, Lisp_Object column)
 {
-  double x = col * FRAME_COLUMN_WIDTH (XFRAME (w->frame)) + 0.5;
+  double x = col * FRAME_COLUMN_WIDTH (XFRAME (PV_LISP_FIELD_REF(w, frame))) + 0.5;
 
   /* FIXME: Should this be limited to W's dimensions?  */
   if (! (INT_MIN <= x && x <= INT_MAX))
@@ -2044,7 +2044,7 @@ restore_window_buffer (Lisp_Object list)
   list = XCDR (list);
   wset_buffer (w, XCAR (list));
   list = XCDR (list);
-  set_marker_both (w->pointm, w->contents,
+  set_marker_both (PV_LISP_FIELD_REF(w, pointm), PV_LISP_FIELD_REF(w, contents),
 		   XFASTINT (XCAR (list)),
 		   XFASTINT (XCAR (XCDR (list))));
 }
@@ -2103,15 +2103,15 @@ whether or not it is currently displayed in some window.  */)
   CHECK_NUMBER (lines);
   w = decode_live_window (window);
 
-  if (XBUFFER (w->contents) != current_buffer)
+  if (XBUFFER (PV_LISP_FIELD_REF(w, contents)) != current_buffer)
     {
       /* Set the window's buffer temporarily to the current buffer.  */
-      Lisp_Object old = list4 (window, w->contents,
-			       make_number (marker_position (w->pointm)),
-			       make_number (marker_byte_position (w->pointm)));
+      Lisp_Object old = list4 (window, PV_LISP_FIELD_REF(w, contents),
+			       make_number (marker_position (PV_LISP_FIELD_REF(w, pointm))),
+			       make_number (marker_byte_position (PV_LISP_FIELD_REF(w, pointm))));
       record_unwind_protect (restore_window_buffer, old);
       wset_buffer (w, Fcurrent_buffer ());
-      set_marker_both (w->pointm, w->contents,
+      set_marker_both (PV_LISP_FIELD_REF(w, pointm), PV_LISP_FIELD_REF(w, contents),
 		       BUF_PT (current_buffer), BUF_PT_BYTE (current_buffer));
     }
 

@@ -1462,9 +1462,9 @@ x_set_icon_type (struct frame *f, Lisp_Object arg, Lisp_Object oldval)
   block_input ();
   if (NILP (arg))
     result = x_text_icon (f,
-			  SSDATA ((!NILP (f->icon_name)
-				   ? f->icon_name
-				   : f->name)));
+			  SSDATA ((!NILP (PV_LISP_FIELD_REF(f, icon_name))
+				   ? PV_LISP_FIELD_REF(f, icon_name)
+				   : PV_LISP_FIELD_REF(f, name))));
   else
     result = x_bitmap_icon (f, arg);
 
@@ -1499,11 +1499,11 @@ x_set_icon_name (struct frame *f, Lisp_Object arg, Lisp_Object oldval)
   block_input ();
 
   result = x_text_icon (f,
-			SSDATA ((!NILP (f->icon_name)
-				 ? f->icon_name
-				 : !NILP (f->title)
-				 ? f->title
-				 : f->name)));
+			SSDATA ((!NILP (PV_LISP_FIELD_REF(f, icon_name))
+				 ? PV_LISP_FIELD_REF(f, icon_name)
+				 : !NILP (PV_LISP_FIELD_REF(f, title))
+				 ? PV_LISP_FIELD_REF(f, title)
+				 : PV_LISP_FIELD_REF(f, name))));
 
   if (result)
     {
@@ -1913,7 +1913,7 @@ x_set_name_internal (struct frame *f, Lisp_Object name)
 	text.format = 8;
 	text.nitems = bytes;
 
-	if (!STRINGP (f->icon_name))
+	if (!STRINGP (PV_LISP_FIELD_REF(f, icon_name)))
 	  {
 	    icon = text;
 	    encoded_icon_name = encoded_name;
@@ -1921,14 +1921,14 @@ x_set_name_internal (struct frame *f, Lisp_Object name)
 	else
 	  {
 	    /* See the above comment "Note: Encoding strategy".  */
-	    icon.value = x_encode_text (f->icon_name, coding_system, &bytes,
+	    icon.value = x_encode_text (PV_LISP_FIELD_REF(f, icon_name), coding_system, &bytes,
 					&stringp, &do_free_icon_value);
 	    icon.encoding = (stringp ? XA_STRING
 			     : FRAME_DISPLAY_INFO (f)->Xatom_COMPOUND_TEXT);
 	    icon.format = 8;
 	    icon.nitems = bytes;
 
-	    encoded_icon_name = ENCODE_UTF_8 (f->icon_name);
+	    encoded_icon_name = ENCODE_UTF_8 (PV_LISP_FIELD_REF(f, icon_name));
 	  }
 
 #ifdef USE_GTK
@@ -1995,7 +1995,7 @@ x_set_name (struct frame *f, Lisp_Object name, bool explicit)
       /* Check for no change needed in this very common case
 	 before we do any consing.  */
       if (!strcmp (FRAME_DISPLAY_INFO (f)->x_id_name,
-		   SSDATA (f->name)))
+		   SSDATA (PV_LISP_FIELD_REF(f, name))))
 	return;
       name = build_string (FRAME_DISPLAY_INFO (f)->x_id_name);
     }
@@ -2003,15 +2003,15 @@ x_set_name (struct frame *f, Lisp_Object name, bool explicit)
     CHECK_STRING (name);
 
   /* Don't change the name if it's already NAME.  */
-  if (! NILP (Fstring_equal (name, f->name)))
+  if (! NILP (Fstring_equal (name, PV_LISP_FIELD_REF(f, name))))
     return;
 
   fset_name (f, name);
 
   /* For setting the frame title, the title parameter should override
      the name parameter.  */
-  if (! NILP (f->title))
-    name = f->title;
+  if (! NILP (PV_LISP_FIELD_REF(f, title)))
+    name = PV_LISP_FIELD_REF(f, title);
 
   x_set_name_internal (f, name);
 }
@@ -2041,7 +2041,7 @@ static void
 x_set_title (struct frame *f, Lisp_Object name, Lisp_Object old_name)
 {
   /* Don't change the title if it's already NAME.  */
-  if (EQ (name, f->title))
+  if (EQ (name, PV_LISP_FIELD_REF(f, title)))
     return;
 
   update_mode_lines = 38;
@@ -2049,7 +2049,7 @@ x_set_title (struct frame *f, Lisp_Object name, Lisp_Object old_name)
   fset_title (f, name);
 
   if (NILP (name))
-    name = f->name;
+    name = PV_LISP_FIELD_REF(f, name);
   else
     CHECK_STRING (name);
 
@@ -2686,7 +2686,7 @@ free_frame_xic (struct frame *f)
 void
 xic_set_preeditarea (struct window *w, int x, int y)
 {
-  struct frame *f = XFRAME (w->frame);
+  struct frame *f = XFRAME (PV_LISP_FIELD_REF(w, frame));
   XVaNestedList attr;
   XPoint spot;
 
@@ -2829,7 +2829,7 @@ initial_set_up_x_back_buffer (struct frame *f)
   block_input ();
   eassert (FRAME_X_WINDOW (f));
   FRAME_X_RAW_DRAWABLE (f) = FRAME_X_WINDOW (f);
-  if (NILP (CDR (Fassq (Qinhibit_double_buffering, f->param_alist))))
+  if (NILP (CDR (Fassq (Qinhibit_double_buffering, PV_LISP_FIELD_REF(f, param_alist)))))
     set_up_x_back_buffer (f);
   unblock_input ();
 }
@@ -3305,9 +3305,9 @@ x_icon (struct frame *f, Lisp_Object parms)
 	 : NormalState));
 #endif
 
-  x_text_icon (f, SSDATA ((!NILP (f->icon_name)
-			   ? f->icon_name
-			   : f->name)));
+  x_text_icon (f, SSDATA ((!NILP (PV_LISP_FIELD_REF(f, icon_name))
+			   ? PV_LISP_FIELD_REF(f, icon_name)
+			   : PV_LISP_FIELD_REF(f, name))));
 
   unblock_input ();
 }
@@ -3684,7 +3684,7 @@ This function is an internal primitive--use `make-frame' instead.  */)
   fset_icon_name (f,
 		  x_get_arg (dpyinfo, parms, Qicon_name, "iconName", "Title",
 			     RES_TYPE_STRING));
-  if (! STRINGP (f->icon_name))
+  if (! STRINGP (PV_LISP_FIELD_REF(f, icon_name)))
     fset_icon_name (f, Qnil);
 
   FRAME_DISPLAY_INFO (f) = dpyinfo;
@@ -4060,7 +4060,7 @@ This function is an internal primitive--use `make-frame' instead.  */)
      by x_get_arg and friends, now go in the misc. alist of the frame.  */
   for (tem = parms; CONSP (tem); tem = XCDR (tem))
     if (CONSP (XCAR (tem)) && !NILP (XCAR (XCAR (tem))))
-      fset_param_alist (f, Fcons (XCAR (tem), f->param_alist));
+      fset_param_alist (f, Fcons (XCAR (tem), PV_LISP_FIELD_REF(f, param_alist)));
 
   /* Make sure windows on this frame appear in calls to next-window
      and similar functions.  */
@@ -6843,7 +6843,7 @@ Text larger than the specified size is clipped.  */)
      buffer.  */
   count_1 = SPECPDL_INDEX ();
   old_buffer = current_buffer;
-  set_buffer_internal_1 (XBUFFER (w->contents));
+  set_buffer_internal_1 (XBUFFER (PV_LISP_FIELD_REF(w, contents)));
   bset_truncate_lines (current_buffer, Qnil);
   specbind (Qinhibit_read_only, Qt);
   specbind (Qinhibit_modification_hooks, Qt);

@@ -613,7 +613,7 @@ get_char_property_and_overlay (Lisp_Object position, register Lisp_Object prop, 
     {
       CHECK_LIVE_WINDOW (object);
       w = XWINDOW (object);
-      object = w->contents;
+      object = PV_LISP_FIELD_REF(w, contents);
     }
   if (BUFFERP (object))
     {

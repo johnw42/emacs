@@ -520,7 +520,7 @@ at POSITION.  */)
   if (NILP (object))
     XSETBUFFER (object, current_buffer);
   else if (WINDOWP (object))
-    object = XWINDOW (object)->contents;
+    object = PV_LISP_FIELD_REF(XWINDOW (object), contents);
 
   if (!BUFFERP (object))
     /* pos-property only makes sense in buffers right now, since strings
@@ -983,7 +983,7 @@ save_excursion_save (void)
     (Fpoint_marker (),
      Qnil,
      /* Selected window if current buffer is shown in it, nil otherwise.  */
-     (EQ (XWINDOW (selected_window)->contents, Fcurrent_buffer ())
+     (EQ (PV_LISP_FIELD_REF(XWINDOW (selected_window), contents), Fcurrent_buffer ())
       ? selected_window : Qnil),
      Qnil);
 }
@@ -1014,7 +1014,7 @@ save_excursion_restore (Lisp_Object info)
   tem = XSAVE_OBJECT (info, 2);
   if (WINDOWP (tem)
       && !EQ (tem, selected_window)
-      && (tem1 = XWINDOW (tem)->contents,
+      && (tem1 = PV_LISP_FIELD_REF(XWINDOW (tem), contents),
 	  (/* Window is live...  */
 	   BUFFERP (tem1)
 	   /* ...and it shows the current buffer.  */
@@ -3651,7 +3651,7 @@ It returns the number of characters changed.  */)
   validate_region (&start, &end);
   if (CHAR_TABLE_P (table))
     {
-      if (! EQ (XCHAR_TABLE (table)->purpose, Qtranslation_table))
+      if (! EQ (PV_LISP_FIELD_REF(XCHAR_TABLE (table), purpose), Qtranslation_table))
 	error ("Not a translation table");
       size = MAX_CHAR;
       tt = NULL;

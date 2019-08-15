@@ -164,7 +164,7 @@ tty_send_additional_strings (struct terminal *terminal, Lisp_Object sym)
   struct tty_display_info *tty = terminal->display_info.tty;
 
   for (Lisp_Object extra_codes
-	 = CDR_SAFE (assq_no_quit (sym, terminal->param_alist));
+	 = CDR_SAFE (assq_no_quit (sym, PV_LISP_FIELD_REF(terminal, param_alist)));
        CONSP (extra_codes);
        extra_codes = XCDR (extra_codes))
     {
@@ -1634,7 +1634,7 @@ produce_glyphs (struct it *it)
     }
   else
     {
-      Lisp_Object charset_list = FRAME_TERMINAL (it->f)->charset_list;
+      Lisp_Object charset_list = PV_LISP_FIELD_REF(FRAME_TERMINAL (it->f), charset_list);
 
       if (char_charset (it->char_to_display, charset_list, NULL))
 	{
@@ -2134,7 +2134,7 @@ set_tty_color_mode (struct tty_display_info *tty, struct frame *f)
   Lisp_Object tty_color_mode_alist
     = Fintern_soft (build_string ("tty-color-mode-alist"), Qnil);
 
-  tem = assq_no_quit (Qtty_color_mode, f->param_alist);
+  tem = assq_no_quit (Qtty_color_mode, PV_LISP_FIELD_REF(f, param_alist));
   val = CONSP (tem) ? XCDR (tem) : Qnil;
 
   if (INTEGERP (val))

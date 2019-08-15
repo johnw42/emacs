@@ -83,13 +83,13 @@ post_acquire_global_lock (struct thread_state *self)
       we didn't yet have the opportunity to set up the handlers.  Delay
       raising the signal in that case (it will be actually raised when
       the thread comes here after acquiring the lock the next time).  */
-  if (!NILP (current_thread->error_symbol) && handlerlist)
+  if (!NILP (PV_LISP_FIELD_REF(current_thread, error_symbol)) && handlerlist)
     {
-      Lisp_Object sym = current_thread->error_symbol;
-      Lisp_Object data = current_thread->error_data;
+      Lisp_Object sym = PV_LISP_FIELD_REF(current_thread, error_symbol);
+      Lisp_Object data = PV_LISP_FIELD_REF(current_thread, error_data);
 
-      current_thread->error_symbol = Qnil;
-      current_thread->error_data = Qnil;
+      PV_LISP_FIELD_SET (current_thread, error_symbol, Qnil);
+      PV_LISP_FIELD_SET (current_thread, error_data, Qnil);
       Fsignal (sym, data);
     }
 }
@@ -170,11 +170,11 @@ lisp_mutex_lock_for_thread (lisp_mutex_t *mutex, struct thread_state *locker,
   self = locker;
   self->wait_condvar = &mutex->condition;
   while (mutex->owner != NULL && (new_count != 0
-				  || NILP (self->error_symbol)))
+				  || NILP (PV_LISP_FIELD_REF(self, error_symbol))))
     sys_cond_wait (&mutex->condition, &global_lock);
   self->wait_condvar = NULL;
 
-  if (new_count == 0 && !NILP (self->error_symbol))
+  if (new_count == 0 && !NILP (PV_LISP_FIELD_REF(self, error_symbol)))
     return 1;
 
   mutex->owner = self;
@@ -263,7 +263,7 @@ informational only.  */)
   memset ((char *) mutex + offsetof (struct Lisp_Mutex, mutex),
 	  0, sizeof (struct Lisp_Mutex) - offsetof (struct Lisp_Mutex,
 						    mutex));
-  mutex->name = name;
+  PV_LISP_FIELD_SET (mutex, name, name);
   lisp_mutex_init (&mutex->mutex);
 
   XSETMUTEX (result, mutex);
@@ -287,7 +287,7 @@ mutex_lock_callback (void *arg)
 static void
 do_unwind_mutex_lock (void)
 {
-  current_thread->event_object = Qnil;
+  PV_LISP_FIELD_SET (current_thread, event_object, Qnil);
 }
 
 DEFUN ("mutex-lock", Fmutex_lock, Smutex_lock, 1, 1, 0,
@@ -306,7 +306,7 @@ Note that calls to `mutex-lock' and `mutex-unlock' must be paired.  */)
   CHECK_MUTEX (mutex);
   lmutex = XMUTEX (mutex);
 
-  current_thread->event_object = mutex;
+  PV_LISP_FIELD_SET (current_thread, event_object, mutex);
   record_unwind_protect_void (do_unwind_mutex_lock);
   flush_stack_call_func (mutex_lock_callback, lmutex);
   return unbind_to (count, Qnil);
@@ -348,7 +348,7 @@ If no name was given when MUTEX was created, return nil.  */)
   CHECK_MUTEX (mutex);
   lmutex = XMUTEX (mutex);
 
-  return lmutex->name;
+  return PV_LISP_FIELD_REF(lmutex, name);
 }
 
 void
@@ -382,8 +382,8 @@ informational only.  */)
   memset ((char *) condvar + offsetof (struct Lisp_CondVar, cond),
 	  0, sizeof (struct Lisp_CondVar) - offsetof (struct Lisp_CondVar,
 						      cond));
-  condvar->mutex = mutex;
-  condvar->name = name;
+  PV_LISP_FIELD_SET (condvar, mutex, mutex);
+  PV_LISP_FIELD_SET (condvar, name, name);
   sys_cond_init (&condvar->cond);
 
   XSETCONDVAR (result, condvar);
@@ -394,23 +394,23 @@ static void
 condition_wait_callback (void *arg)
 {
   struct Lisp_CondVar *cvar = arg;
-  struct Lisp_Mutex *mutex = XMUTEX (cvar->mutex);
+  struct Lisp_Mutex *mutex = XMUTEX (PV_LISP_FIELD_REF(cvar, mutex));
   struct thread_state *self = current_thread;
   unsigned int saved_count;
   Lisp_Object cond;
 
   XSETCONDVAR (cond, cvar);
-  self->event_object = cond;
+  PV_LISP_FIELD_SET (self, event_object, cond);
   saved_count = lisp_mutex_unlock_for_wait (&mutex->mutex);
   /* If signaled while unlocking, skip the wait but reacquire the lock.  */
-  if (NILP (self->error_symbol))
+  if (NILP (PV_LISP_FIELD_REF(self, error_symbol)))
     {
       self->wait_condvar = &cvar->cond;
       /* This call could switch to another thread.  */
       sys_cond_wait (&cvar->cond, &global_lock);
       self->wait_condvar = NULL;
     }
-  self->event_object = Qnil;
+  PV_LISP_FIELD_SET (self, event_object, Qnil);
   /* Since sys_cond_wait could switch threads, we need to lock the
      mutex for the thread which was the current when we were called,
      otherwise lisp_mutex_lock will record the wrong thread as the
@@ -442,7 +442,7 @@ this thread.  */)
   CHECK_CONDVAR (cond);
   cvar = XCONDVAR (cond);
 
-  mutex = XMUTEX (cvar->mutex);
+  mutex = XMUTEX (PV_LISP_FIELD_REF(cvar, mutex));
   if (!lisp_mutex_owned_p (&mutex->mutex))
     error ("Condition variable's mutex is not held by current thread");
 
@@ -501,7 +501,7 @@ thread.  */)
   CHECK_CONDVAR (cond);
   cvar = XCONDVAR (cond);
 
-  mutex = XMUTEX (cvar->mutex);
+  mutex = XMUTEX (PV_LISP_FIELD_REF(cvar, mutex));
   if (!lisp_mutex_owned_p (&mutex->mutex))
     error ("Condition variable's mutex is not held by current thread");
 
@@ -521,7 +521,7 @@ DEFUN ("condition-mutex", Fcondition_mutex, Scondition_mutex, 1, 1, 0,
   CHECK_CONDVAR (cond);
   cvar = XCONDVAR (cond);
 
-  return cvar->mutex;
+  return PV_LISP_FIELD_REF(cvar, mutex);
 }
 
 DEFUN ("condition-name", Fcondition_name, Scondition_name, 1, 1, 0,
@@ -534,7 +534,7 @@ If no name was given when COND was created, return nil.  */)
   CHECK_CONDVAR (cond);
   cvar = XCONDVAR (cond);
 
-  return cvar->name;
+  return PV_LISP_FIELD_REF(cvar, name);
 }
 
 void
@@ -629,10 +629,10 @@ mark_one_thread (struct thread_state *thread)
       mark_object (tem);
     }
 
-  mark_object (thread->m_last_thing_searched);
+  mark_object (PV_LISP_FIELD_REF(thread, m_last_thing_searched));
 
-  if (!NILP (thread->m_saved_last_thing_searched))
-    mark_object (thread->m_saved_last_thing_searched);
+  if (!NILP (PV_LISP_FIELD_REF(thread, m_saved_last_thing_searched)))
+    mark_object (PV_LISP_FIELD_REF(thread, m_saved_last_thing_searched));
 }
 
 static void
@@ -681,7 +681,7 @@ invoke_thread_function (void)
 {
   ptrdiff_t count = SPECPDL_INDEX ();
 
-  Ffuncall (1, &current_thread->function);
+  Ffuncall (1, &PV_LISP_FIELD_REF(current_thread, function));
   return unbind_to (count, Qnil);
 }
 
@@ -784,14 +784,14 @@ If NAME is given, it must be a string; it names the new thread.  */)
   memset ((char *) new_thread + offset, 0,
 	  sizeof (struct thread_state) - offset);
 
-  new_thread->function = function;
-  new_thread->name = name;
-  new_thread->m_last_thing_searched = Qnil; /* copy from parent? */
-  new_thread->m_saved_last_thing_searched = Qnil;
+  PV_LISP_FIELD_SET (new_thread, function, function);
+  PV_LISP_FIELD_SET (new_thread, name, name);
+  PV_LISP_FIELD_REF(new_thread, m_last_thing_searched) = Qnil; /* copy from parent? */
+  PV_LISP_FIELD_SET (new_thread, m_saved_last_thing_searched, Qnil);
   new_thread->m_current_buffer = current_thread->m_current_buffer;
-  new_thread->error_symbol = Qnil;
-  new_thread->error_data = Qnil;
-  new_thread->event_object = Qnil;
+  PV_LISP_FIELD_SET (new_thread, error_symbol, Qnil);
+  PV_LISP_FIELD_SET (new_thread, error_data, Qnil);
+  PV_LISP_FIELD_SET (new_thread, event_object, Qnil);
 
   new_thread->m_specpdl_size = 50;
   new_thread->m_specpdl = xmalloc ((1 + new_thread->m_specpdl_size)
@@ -844,7 +844,7 @@ The name is the same object that was passed to `make-thread'.  */)
   CHECK_THREAD (thread);
   tstate = XTHREAD (thread);
 
-  return tstate->name;
+  return PV_LISP_FIELD_REF(tstate, name);
 }
 
 static void
@@ -875,8 +875,8 @@ or `thread-join' in the target thread.  */)
 
   /* What to do if thread is already signaled?  */
   /* What if error_symbol is Qnil?  */
-  tstate->error_symbol = error_symbol;
-  tstate->error_data = data;
+  PV_LISP_FIELD_SET (tstate, error_symbol, error_symbol);
+  PV_LISP_FIELD_SET (tstate, error_data, data);
 
   if (tstate->wait_condvar)
     flush_stack_call_func (thread_signal_callback, tstate);
@@ -910,7 +910,7 @@ Otherwise, if THREAD is not blocked, return nil.  */)
   CHECK_THREAD (thread);
   tstate = XTHREAD (thread);
 
-  return tstate->event_object;
+  return PV_LISP_FIELD_REF(tstate, event_object);
 }
 
 static void
@@ -921,13 +921,13 @@ thread_join_callback (void *arg)
   Lisp_Object thread;
 
   XSETTHREAD (thread, tstate);
-  self->event_object = thread;
+  PV_LISP_FIELD_SET (self, event_object, thread);
   self->wait_condvar = &tstate->thread_condvar;
-  while (thread_live_p (tstate) && NILP (self->error_symbol))
+  while (thread_live_p (tstate) && NILP (PV_LISP_FIELD_REF(self, error_symbol)))
     sys_cond_wait (self->wait_condvar, &global_lock);
 
   self->wait_condvar = NULL;
-  self->event_object = Qnil;
+  PV_LISP_FIELD_SET (self, event_object, Qnil);
   post_acquire_global_lock (self);
 }
 

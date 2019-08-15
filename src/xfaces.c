@@ -1856,7 +1856,7 @@ lface_from_face_name_no_resolve (struct frame *f, Lisp_Object face_name,
   Lisp_Object lface;
 
   if (f)
-    lface = assq_no_quit (face_name, f->face_alist);
+    lface = assq_no_quit (face_name, PV_LISP_FIELD_REF(f, face_alist));
   else
     lface = assq_no_quit (face_name, Vface_new_frame_defaults);
 
@@ -2501,7 +2501,7 @@ Value is a vector of face attributes.  */)
 	  lface = Fmake_vector (make_number (LFACE_VECTOR_SIZE),
 				Qunspecified);
 	  ASET (lface, 0, Qface);
-	  fset_face_alist (f, Fcons (Fcons (face, lface), f->face_alist));
+	  fset_face_alist (f, Fcons (Fcons (face, lface), PV_LISP_FIELD_REF(f, face_alist)));
 	}
       else
 	for (i = 1; i < LFACE_VECTOR_SIZE; ++i)
@@ -3234,7 +3234,7 @@ update_face_from_frame_parameter (struct frame *f, Lisp_Object param,
   /* If there are no faces yet, give up.  This is the case when called
      from Fx_create_frame, and we do the necessary things later in
      face-set-after-frame-defaults.  */
-  if (NILP (f->face_alist))
+  if (NILP (PV_LISP_FIELD_REF(f, face_alist)))
     return;
 
   if (EQ (param, Qforeground_color))
@@ -4207,7 +4207,7 @@ free_realized_faces (struct face_cache *c)
 	 matrices as invalid because they will reference faces freed
 	 above.  This function is also called when a frame is
 	 destroyed.  In this case, the root window of F is nil.  */
-      if (WINDOWP (f->root_window))
+      if (WINDOWP (PV_LISP_FIELD_REF(f, root_window)))
 	{
 	  clear_current_matrices (f);
 	  fset_redisplay (f);
@@ -4974,7 +4974,7 @@ face for italic.  */)
       frame = Qnil;
       FOR_EACH_FRAME (tail, frame)
 	if (!NILP (Fequal (Fcdr (Fassq (Qdisplay,
-					XFRAME (frame)->param_alist)),
+					PV_LISP_FIELD_REF(XFRAME (frame), param_alist))),
 			   display)))
 	  break;
     }
@@ -5269,7 +5269,7 @@ realize_default_face (struct frame *f)
     {
       /* This function is called so early that colors are not yet
 	 set in the frame parameter list.  */
-      Lisp_Object color = Fassq (Qforeground_color, f->param_alist);
+      Lisp_Object color = Fassq (Qforeground_color, PV_LISP_FIELD_REF(f, param_alist));
 
       if (CONSP (color) && STRINGP (XCDR (color)))
 	ASET (lface, LFACE_FOREGROUND_INDEX, XCDR (color));
@@ -5285,7 +5285,7 @@ realize_default_face (struct frame *f)
     {
       /* This function is called so early that colors are not yet
 	 set in the frame parameter list.  */
-      Lisp_Object color = Fassq (Qbackground_color, f->param_alist);
+      Lisp_Object color = Fassq (Qbackground_color, PV_LISP_FIELD_REF(f, param_alist));
       if (CONSP (color) && STRINGP (XCDR (color)))
 	ASET (lface, LFACE_BACKGROUND_INDEX, XCDR (color));
       else if (FRAME_WINDOW_P (f))
@@ -5901,7 +5901,7 @@ face_at_buffer_position (struct window *w, ptrdiff_t pos,
 			 ptrdiff_t *endptr, ptrdiff_t limit,
 			 bool mouse, int base_face_id)
 {
-  struct frame *f = XFRAME (w->frame);
+  struct frame *f = XFRAME (PV_LISP_FIELD_REF(w, frame));
   Lisp_Object attrs[LFACE_VECTOR_SIZE];
   Lisp_Object prop, position;
   ptrdiff_t i, noverlays;
@@ -5921,9 +5921,9 @@ face_at_buffer_position (struct window *w, ptrdiff_t pos,
 
   /* Get the `face' or `mouse_face' text property at POS, and
      determine the next position at which the property changes.  */
-  prop = Fget_text_property (position, propname, w->contents);
+  prop = Fget_text_property (position, propname, PV_LISP_FIELD_REF(w, contents));
   XSETFASTINT (limit1, (limit < endpos ? limit : endpos));
-  end = Fnext_single_property_change (position, propname, w->contents, limit1);
+  end = Fnext_single_property_change (position, propname, PV_LISP_FIELD_REF(w, contents), limit1);
   if (INTEGERP (end))
     endpos = XINT (end);
 
@@ -6039,7 +6039,7 @@ face_for_overlay_string (struct window *w, ptrdiff_t pos,
 			 ptrdiff_t *endptr, ptrdiff_t limit,
 			 bool mouse, Lisp_Object overlay)
 {
-  struct frame *f = XFRAME (w->frame);
+  struct frame *f = XFRAME (PV_LISP_FIELD_REF(w, frame));
   Lisp_Object attrs[LFACE_VECTOR_SIZE];
   Lisp_Object prop, position;
   ptrdiff_t endpos;
@@ -6057,9 +6057,9 @@ face_for_overlay_string (struct window *w, ptrdiff_t pos,
 
   /* Get the `face' or `mouse_face' text property at POS, and
      determine the next position at which the property changes.  */
-  prop = Fget_text_property (position, propname, w->contents);
+  prop = Fget_text_property (position, propname, PV_LISP_FIELD_REF(w, contents));
   XSETFASTINT (limit1, (limit < endpos ? limit : endpos));
-  end = Fnext_single_property_change (position, propname, w->contents, limit1);
+  end = Fnext_single_property_change (position, propname, PV_LISP_FIELD_REF(w, contents), limit1);
   if (INTEGERP (end))
     endpos = XINT (end);
 

@@ -48,7 +48,7 @@ static void delete_initial_terminal (struct terminal *);
 static void
 tset_param_alist (struct terminal *t, Lisp_Object val)
 {
-  t->param_alist = val;
+  PV_LISP_FIELD_SET (t, param_alist, val);
 }
 
 
@@ -489,10 +489,10 @@ selected frame's terminal). */)
 static Lisp_Object
 store_terminal_param (struct terminal *t, Lisp_Object parameter, Lisp_Object value)
 {
-  Lisp_Object old_alist_elt = Fassq (parameter, t->param_alist);
+  Lisp_Object old_alist_elt = Fassq (parameter, PV_LISP_FIELD_REF(t, param_alist));
   if (EQ (old_alist_elt, Qnil))
     {
-      tset_param_alist (t, Fcons (Fcons (parameter, value), t->param_alist));
+      tset_param_alist (t, Fcons (Fcons (parameter, value), PV_LISP_FIELD_REF(t, param_alist)));
       return Qnil;
     }
   else
@@ -571,7 +571,7 @@ calculate_glyph_code_table (struct terminal *t)
     }
 
   xfree (alloced);
-  t->glyph_code_table = glyphtab;
+  PV_LISP_FIELD_SET (t, glyph_code_table, glyphtab);
 }
 #endif
 
@@ -589,11 +589,11 @@ terminal_glyph_code (struct terminal *t, int ch)
     {
       /* As a hack, recompute the table when CH is the maximum
 	 character.  */
-      if (NILP (t->glyph_code_table) || ch == MAX_CHAR)
+      if (NILP (PV_LISP_FIELD_REF(t, glyph_code_table)) || ch == MAX_CHAR)
 	calculate_glyph_code_table (t);
 
-      if (! EQ (t->glyph_code_table, Qt))
-	return char_table_ref (t->glyph_code_table, ch);
+      if (! EQ (PV_LISP_FIELD_REF(t, glyph_code_table), Qt))
+	return char_table_ref (PV_LISP_FIELD_REF(t, glyph_code_table), ch);
     }
 #endif
 

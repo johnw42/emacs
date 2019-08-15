@@ -4777,7 +4777,7 @@ live_buffer_holding (struct mem_node *m, void *p)
       char *cb = m->start;
       char *cp = p;
       ptrdiff_t offset = cp - cb;
-      if (0 <= offset && offset < sizeof *b && !NILP (b->name_))
+      if (0 <= offset && offset < sizeof *b && !NILP (PV_LISP_FIELD_REF(b, name_)))
 	{
 	  Lisp_Object obj;
 	  XSETBUFFER (obj, b);
@@ -5557,7 +5557,7 @@ make_pure_vector (ptrdiff_t len)
 static struct Lisp_Hash_Table *
 purecopy_hash_table (struct Lisp_Hash_Table *table)
 {
-  eassert (NILP (table->weak));
+  eassert (NILP (PV_LISP_FIELD_REF(table, weak)));
   eassert (table->pure);
 
   struct Lisp_Hash_Table *pure = pure_alloc (sizeof *pure, Lisp_Vectorlike);
@@ -5569,10 +5569,10 @@ purecopy_hash_table (struct Lisp_Hash_Table *table)
   pure_test.user_cmp_function = purecopy (table->test.user_cmp_function);
 
   pure->header = table->header;
-  pure->weak = purecopy (Qnil);
-  pure->hash = purecopy (table->hash);
-  pure->next = purecopy (table->next);
-  pure->index = purecopy (table->index);
+  PV_LISP_FIELD_SET (pure, weak, purecopy (Qnil));
+  PV_LISP_FIELD_SET (pure, hash, purecopy (PV_LISP_FIELD_REF(table, hash)));
+  PV_LISP_FIELD_SET (pure, next, purecopy (PV_LISP_FIELD_REF(table, next)));
+  PV_LISP_FIELD_SET (pure, index, purecopy (PV_LISP_FIELD_REF(table, index)));
   pure->count = table->count;
   pure->next_free = table->next_free;
   pure->pure = table->pure;
@@ -5639,7 +5639,7 @@ purecopy (Lisp_Object obj)
       /* Do not purify hash tables which haven't been defined with
          :purecopy as non-nil or are weak - they aren't guaranteed to
          not change.  */
-      if (!NILP (table->weak) || !table->pure)
+      if (!NILP (PV_LISP_FIELD_REF(table, weak)) || !table->pure)
         {
           /* Instead, add the hash table to the list of pinned objects,
              so that it will be marked during GC.  */
@@ -6603,7 +6603,7 @@ mark_object (Lisp_Object arg)
 	      mark_object (h->test.user_cmp_function);
 	      /* If hash table is not weak, mark all keys and values.
 		 For weak tables, mark only the vector.  */
-	      if (NILP (h->weak))
+	      if (NILP (PV_LISP_FIELD_REF(h, weak)))
 		mark_object (h->key_and_value);
 	      else
 		VECTOR_MARK (XVECTOR (h->key_and_value));

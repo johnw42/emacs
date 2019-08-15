@@ -907,7 +907,7 @@ to finish setting up the connection. */)
 {
   CHECK_PROCESS (proc);
 
-  XPROCESS (proc)->gnutls_boot_parameters = params;
+  PV_LISP_FIELD_SET (XPROCESS (proc), gnutls_boot_parameters, params);
   return Qnil;
 }
 
@@ -1404,7 +1404,7 @@ gnutls_verify_boot (Lisp_Object proc, Lisp_Object proplist)
   char *c_hostname;
 
   if (NILP (proplist))
-    proplist = Fcdr (Fplist_get (p->childp, QCtls_parameters));
+    proplist = Fcdr (Fplist_get (PV_LISP_FIELD_REF(p, childp), QCtls_parameters));
 
   verify_error = Fplist_get (proplist, QCverify_error);
   hostname = Fplist_get (proplist, QChostname);

@@ -2173,7 +2173,7 @@ free_glyphs (struct frame *f)
 
       /* Release window sub-matrices.  */
       if (!NILP (PV_LISP_FIELD_REF(f, root_window)))
-        free_window_matrices (XWINDOW (f->root_window));
+        free_window_matrices (XWINDOW (PV_LISP_FIELD_REF(f, root_window)));
 
 #if defined (HAVE_X_WINDOWS) && ! defined (USE_X_TOOLKIT) && ! defined (USE_GTK)
       /* Free the dummy window for menu bars without X toolkit and its
@@ -2231,8 +2231,8 @@ free_window_matrices (struct window *w)
 {
   while (w)
     {
-      if (WINDOWP (w->contents))
-	free_window_matrices (XWINDOW (w->contents));
+      if (WINDOWP (PV_LISP_FIELD_REF(w, contents)))
+	free_window_matrices (XWINDOW (PV_LISP_FIELD_REF(w, contents)));
       else
 	{
 	  /* This is a leaf window.  Free its memory and reset fields
@@ -2244,7 +2244,7 @@ free_window_matrices (struct window *w)
 	}
 
       /* Next window on same level.  */
-      w = NILP (w->next) ? 0 : XWINDOW (w->next);
+      w = NILP (PV_LISP_FIELD_REF(w, next)) ? 0 : XWINDOW (PV_LISP_FIELD_REF(w, next));
     }
 }
 
@@ -2365,12 +2365,12 @@ build_frame_matrix_from_window_tree (struct glyph_matrix *matrix, struct window 
 {
   while (w)
     {
-      if (WINDOWP (w->contents))
-	build_frame_matrix_from_window_tree (matrix, XWINDOW (w->contents));
+      if (WINDOWP (PV_LISP_FIELD_REF(w, contents)))
+	build_frame_matrix_from_window_tree (matrix, XWINDOW (PV_LISP_FIELD_REF(w, contents)));
       else
 	build_frame_matrix_from_leaf_window (matrix, w);
 
-      w = NILP (w->next) ? 0 : XWINDOW (w->next);
+      w = NILP (PV_LISP_FIELD_REF(w, next)) ? 0 : XWINDOW (PV_LISP_FIELD_REF(w, next));
     }
 }
 
@@ -2509,7 +2509,7 @@ spec_glyph_lookup_face (struct window *w, GLYPH *glyph)
   /* Convert the glyph's specified face to a realized (cache) face.  */
   if (lface_id > 0)
     {
-      int face_id = merge_faces (XFRAME (w->frame),
+      int face_id = merge_faces (XFRAME (PV_LISP_FIELD_REF(w, frame)),
 				 Qt, lface_id, DEFAULT_FACE_ID);
       SET_GLYPH_FACE (*glyph, face_id);
     }
@@ -2616,7 +2616,7 @@ make_current (struct glyph_matrix *desired_matrix, struct glyph_matrix *current_
   /* If we are called on frame matrices, perform analogous operations
      for window matrices.  */
   if (frame_matrix_frame)
-    mirror_make_current (XWINDOW (frame_matrix_frame->root_window), row);
+    mirror_make_current (XWINDOW (PV_LISP_FIELD_REF(frame_matrix_frame, root_window)), row);
 }
 
 
@@ -2630,8 +2630,8 @@ mirror_make_current (struct window *w, int frame_row)
 {
   while (w)
     {
-      if (WINDOWP (w->contents))
- 	mirror_make_current (XWINDOW (w->contents), frame_row);
+      if (WINDOWP (PV_LISP_FIELD_REF(w, contents)))
+ 	mirror_make_current (XWINDOW (PV_LISP_FIELD_REF(w, contents)), frame_row);
       else
 	{
 	  /* Row relative to window W.  Don't use FRAME_TO_WINDOW_VPOS
@@ -2664,7 +2664,7 @@ mirror_make_current (struct window *w, int frame_row)
 	    }
 	}
 
-      w = NILP (w->next) ? 0 : XWINDOW (w->next);
+      w = NILP (PV_LISP_FIELD_REF(w, next)) ? 0 : XWINDOW (PV_LISP_FIELD_REF(w, next));
     }
 }
 
@@ -2713,7 +2713,7 @@ mirrored_line_dance (struct glyph_matrix *matrix, int unchanged_at_top, int nlin
 
   /* Do the same for window matrices, if MATRIX is a frame matrix.  */
   if (frame_matrix_frame)
-    mirror_line_dance (XWINDOW (frame_matrix_frame->root_window),
+    mirror_line_dance (XWINDOW (PV_LISP_FIELD_REF(frame_matrix_frame, root_window)),
 		       unchanged_at_top, nlines, copy_from, retained_p);
 
   SAFE_FREE ();
@@ -2726,12 +2726,12 @@ mirrored_line_dance (struct glyph_matrix *matrix, int unchanged_at_top, int nlin
 static void
 sync_window_with_frame_matrix_rows (struct window *w)
 {
-  struct frame *f = XFRAME (w->frame);
+  struct frame *f = XFRAME (PV_LISP_FIELD_REF(w, frame));
   struct glyph_row *window_row, *window_row_end, *frame_row;
   int left, right, x, width;
 
   /* Preconditions: W must be a live window on a tty frame.  */
-  eassert (BUFFERP (w->contents));
+  eassert (BUFFERP (PV_LISP_FIELD_REF(w, contents)));
   eassert (!FRAME_WINDOW_P (f));
 
   left = margin_glyphs_to_reserve (w, 1, w->left_margin_cols);
@@ -2767,13 +2767,13 @@ frame_row_to_window (struct window *w, int row)
 
   while (w && !found)
     {
-      if (WINDOWP (w->contents))
- 	found = frame_row_to_window (XWINDOW (w->contents), row);
+      if (WINDOWP (PV_LISP_FIELD_REF(w, contents)))
+ 	found = frame_row_to_window (XWINDOW (PV_LISP_FIELD_REF(w, contents)), row);
       else if (row >= WINDOW_TOP_EDGE_LINE (w)
 	       && row < WINDOW_BOTTOM_EDGE_LINE (w))
 	found = w;
 
-      w = NILP (w->next) ? 0 : XWINDOW (w->next);
+      w = NILP (PV_LISP_FIELD_REF(w, next)) ? 0 : XWINDOW (PV_LISP_FIELD_REF(w, next));
     }
 
   return found;
@@ -2796,8 +2796,8 @@ mirror_line_dance (struct window *w, int unchanged_at_top, int nlines, int *copy
 {
   while (w)
     {
-      if (WINDOWP (w->contents))
-	mirror_line_dance (XWINDOW (w->contents), unchanged_at_top,
+      if (WINDOWP (PV_LISP_FIELD_REF(w, contents)))
+	mirror_line_dance (XWINDOW (PV_LISP_FIELD_REF(w, contents)), unchanged_at_top,
 			   nlines, copy_from, retained_p);
       else
 	{
@@ -2852,7 +2852,7 @@ mirror_line_dance (struct window *w, int unchanged_at_top, int nlines, int *copy
 		{
 		  /* A copy between windows.  This is an infrequent
 		     case not worth optimizing.  */
-		  struct frame *f = XFRAME (w->frame);
+		  struct frame *f = XFRAME (PV_LISP_FIELD_REF(w, frame));
 		  struct window *root = XWINDOW (FRAME_ROOT_WINDOW (f));
 		  struct window *w2;
 		  struct glyph_matrix *m2;
@@ -2891,7 +2891,7 @@ mirror_line_dance (struct window *w, int unchanged_at_top, int nlines, int *copy
 	}
 
       /* Next window on same level.  */
-      w = NILP (w->next) ? 0 : XWINDOW (w->next);
+      w = NILP (PV_LISP_FIELD_REF(w, next)) ? 0 : XWINDOW (PV_LISP_FIELD_REF(w, next));
     }
 }
 
@@ -3054,7 +3054,7 @@ update_frame (struct frame *f, bool force_p, bool inhibit_hairy_id_p)
 {
   /* True means display has been paused because of pending input.  */
   bool paused_p;
-  struct window *root_window = XWINDOW (f->root_window);
+  struct window *root_window = XWINDOW (PV_LISP_FIELD_REF(f, root_window));
 
   if (redisplay_dont_pause)
     force_p = true;
@@ -3160,7 +3160,7 @@ update_frame (struct frame *f, bool force_p, bool inhibit_hairy_id_p)
 void
 update_frame_with_menu (struct frame *f, int row, int col)
 {
-  struct window *root_window = XWINDOW (f->root_window);
+  struct window *root_window = XWINDOW (PV_LISP_FIELD_REF(f, root_window));
   bool paused_p, cursor_at_point_p;
 
   eassert (FRAME_TERMCAP_P (f));
@@ -3215,12 +3215,12 @@ update_window_tree (struct window *w, bool force_p)
 
   while (w && !paused_p)
     {
-      if (WINDOWP (w->contents))
-	paused_p |= update_window_tree (XWINDOW (w->contents), force_p);
+      if (WINDOWP (PV_LISP_FIELD_REF(w, contents)))
+	paused_p |= update_window_tree (XWINDOW (PV_LISP_FIELD_REF(w, contents)), force_p);
       else if (w->must_be_updated_p)
 	paused_p |= update_window (w, force_p);
 
-      w = NILP (w->next) ? 0 : XWINDOW (w->next);
+      w = NILP (PV_LISP_FIELD_REF(w, next)) ? 0 : XWINDOW (PV_LISP_FIELD_REF(w, next));
     }
 
   return paused_p;
@@ -3670,7 +3670,7 @@ update_text_area (struct window *w, struct glyph_row *updated_row, int vpos)
 	      struct glyph *glyph = &current_row->glyphs[TEXT_AREA][i - 1];
 	      int left, right;
 
-	      rif->get_glyph_overhangs (glyph, XFRAME (w->frame),
+	      rif->get_glyph_overhangs (glyph, XFRAME (PV_LISP_FIELD_REF(w, frame)),
 					&left, &right);
 	      can_skip_p = (right == 0 && !abort_skipping);
 	    }
@@ -3703,7 +3703,7 @@ update_text_area (struct window *w, struct glyph_row *updated_row, int vpos)
 		  int left, right;
 
 		  rif->get_glyph_overhangs (current_glyph,
-					    XFRAME (w->frame),
+					    XFRAME (PV_LISP_FIELD_REF(w, frame)),
 					    &left, &right);
 		  while (left > 0 && i > 0)
 		    {
@@ -3894,7 +3894,7 @@ update_window_line (struct window *w, int vpos, bool *mouse_face_overwritten_p)
 static void
 set_window_cursor_after_update (struct window *w)
 {
-  struct frame *f = XFRAME (w->frame);
+  struct frame *f = XFRAME (PV_LISP_FIELD_REF(w, frame));
   int cx, cy, vpos, hpos;
 
   /* Not intended for frame matrix updates.  */
@@ -3968,12 +3968,12 @@ set_window_update_flags (struct window *w, bool on_p)
 {
   while (w)
     {
-      if (WINDOWP (w->contents))
-	set_window_update_flags (XWINDOW (w->contents), on_p);
+      if (WINDOWP (PV_LISP_FIELD_REF(w, contents)))
+	set_window_update_flags (XWINDOW (PV_LISP_FIELD_REF(w, contents)), on_p);
       else
 	w->must_be_updated_p = on_p;
 
-      w = NILP (w->next) ? 0 : XWINDOW (w->next);
+      w = NILP (PV_LISP_FIELD_REF(w, next)) ? 0 : XWINDOW (PV_LISP_FIELD_REF(w, next));
     }
 }
 
@@ -5125,9 +5125,9 @@ buffer_posn_from_coords (struct window *w, int *x, int *y, struct display_pos *p
 
   /* We used to set current_buffer directly here, but that does the
      wrong thing with `face-remapping-alist' (bug#2044).  */
-  Fset_buffer (w->contents);
+  Fset_buffer (PV_LISP_FIELD_REF(w, contents));
   itdata = bidi_shelve_cache ();
-  CLIP_TEXT_POS_FROM_MARKER (startp, w->start);
+  CLIP_TEXT_POS_FROM_MARKER (startp, PV_LISP_FIELD_REF(w, start));
   start_display (&it, w, startp);
   x0 = *x;
 
@@ -5190,7 +5190,7 @@ buffer_posn_from_coords (struct window *w, int *x, int *y, struct display_pos *p
   *dx = to_x - it.current_x;
   *dy = *y - it.current_y;
 
-  string = w->contents;
+  string = PV_LISP_FIELD_REF(w, contents);
   if (STRINGP (it.string))
     string = it.string;
   *pos = it.current;
@@ -5208,7 +5208,7 @@ buffer_posn_from_coords (struct window *w, int *x, int *y, struct display_pos *p
       if (STRINGP (it.string))
 	BYTEPOS (pos->pos) = string_char_to_byte (string, CHARPOS (pos->pos));
       else
-	BYTEPOS (pos->pos) = buf_charpos_to_bytepos (XBUFFER (w->contents),
+	BYTEPOS (pos->pos) = buf_charpos_to_bytepos (XBUFFER (PV_LISP_FIELD_REF(w, contents)),
 						     CHARPOS (pos->pos));
     }
 
@@ -5886,7 +5886,7 @@ pass nil for VARIABLE.  */)
 	goto changed;
       if (idx == ASIZE (state))
 	goto changed;
-      if (!EQ (AREF (state, idx++), XFRAME (frame)->name))
+      if (!EQ (AREF (state, idx++), PV_LISP_FIELD_REF(XFRAME (frame), name)))
 	goto changed;
     }
   /* Check that the buffer info matches.  */
@@ -5943,7 +5943,7 @@ pass nil for VARIABLE.  */)
     {
       ASET (state, idx, frame);
       idx++;
-      ASET (state, idx, XFRAME (frame)->name);
+      ASET (state, idx, PV_LISP_FIELD_REF(XFRAME (frame), name));
       idx++;
     }
   FOR_EACH_LIVE_BUFFER (tail, buf)

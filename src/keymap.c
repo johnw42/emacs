@@ -1493,8 +1493,8 @@ like in the respective argument of `key-binding'.  */)
       window = POSN_WINDOW (position);
 
       if (WINDOWP (window)
-	  && BUFFERP (XWINDOW (window)->contents)
-	  && XBUFFER (XWINDOW (window)->contents) != current_buffer)
+	  && BUFFERP (PV_LISP_FIELD_REF(XWINDOW (window), contents))
+	  && XBUFFER (PV_LISP_FIELD_REF(XWINDOW (window), contents)) != current_buffer)
 	{
 	  /* Arrange to go back to the original buffer once we're done
 	     processing the key sequence.  We don't use
@@ -1504,7 +1504,7 @@ like in the respective argument of `key-binding'.  */)
 	     things the same.
 	  */
 	  record_unwind_current_buffer ();
-	  set_buffer_internal (XBUFFER (XWINDOW (window)->contents));
+	  set_buffer_internal (XBUFFER (PV_LISP_FIELD_REF(XWINDOW (window), contents)));
 	}
     }
 
@@ -3556,12 +3556,12 @@ describe_vector (Lisp_Object vector, Lisp_Object prefix, Lisp_Object args,
 	}
     }
 
-  if (CHAR_TABLE_P (vector) && ! NILP (XCHAR_TABLE (vector)->defalt))
+  if (CHAR_TABLE_P (vector) && ! NILP (PV_LISP_FIELD_REF(XCHAR_TABLE (vector), defalt)))
     {
       if (!NILP (elt_prefix))
 	insert1 (elt_prefix);
       insert ("default", 7);
-      (*elt_describer) (XCHAR_TABLE (vector)->defalt, args);
+      (*elt_describer) (PV_LISP_FIELD_REF(XCHAR_TABLE (vector), defalt), args);
     }
 }
 

@@ -744,7 +744,7 @@ This function is called by the editor initialization to begin editing.  */)
     return Qnil;
 
   if (command_loop_level >= 0
-      && current_buffer != XBUFFER (XWINDOW (selected_window)->contents))
+      && current_buffer != XBUFFER (PV_LISP_FIELD_REF(XWINDOW (selected_window), contents)))
     buffer = Fcurrent_buffer ();
   else
     buffer = Qnil;
@@ -1308,7 +1308,7 @@ command_loop_1 (void)
 	Fkill_emacs (Qnil);
 
       /* Make sure the current window's buffer is selected.  */
-      set_buffer_internal (XBUFFER (XWINDOW (selected_window)->contents));
+      set_buffer_internal (XBUFFER (PV_LISP_FIELD_REF(XWINDOW (selected_window), contents)));
 
       /* Display any malloc warning that just came out.  Use while because
 	 displaying one warning can cause another.  */
@@ -1371,7 +1371,7 @@ command_loop_1 (void)
       /* A filter may have run while we were reading the input.  */
       if (! FRAME_LIVE_P (XFRAME (selected_frame)))
 	Fkill_emacs (Qnil);
-      set_buffer_internal (XBUFFER (XWINDOW (selected_window)->contents));
+      set_buffer_internal (XBUFFER (PV_LISP_FIELD_REF(XWINDOW (selected_window), contents)));
 
       ++num_input_keys;
 
@@ -1401,7 +1401,7 @@ command_loop_1 (void)
 	{
 	  struct buffer *b;
 	  XWINDOW (selected_window)->force_start = 0;
-	  b = XBUFFER (XWINDOW (selected_window)->contents);
+	  b = XBUFFER (PV_LISP_FIELD_REF(XWINDOW (selected_window), contents));
 	  BUF_BEG_UNCHANGED (b) = BUF_END_UNCHANGED (b) = 0;
 	}
 
@@ -1571,7 +1571,7 @@ command_loop_1 (void)
     finalize:
 
       if (current_buffer == prev_buffer
-	  && XBUFFER (XWINDOW (selected_window)->contents) == current_buffer
+	  && XBUFFER (PV_LISP_FIELD_REF(XWINDOW (selected_window), contents)) == current_buffer
 	  && last_point_position != PT
 	  && NILP (Vdisable_point_adjustment)
 	  && NILP (Vglobal_disable_point_adjustment))
@@ -1641,7 +1641,7 @@ adjust_point_for_property (ptrdiff_t last_pt, bool modified)
   bool check_display = true, check_invisible = true;
   ptrdiff_t orig_pt = PT;
 
-  eassert (XBUFFER (XWINDOW (selected_window)->contents) == current_buffer);
+  eassert (XBUFFER (PV_LISP_FIELD_REF(XWINDOW (selected_window), contents)) == current_buffer);
 
   /* FIXME: cycling is probably not necessary because these properties
      can't be usefully combined anyway.  */
@@ -5702,7 +5702,7 @@ make_lispy_event (struct input_event *event)
 	  int fuzz;
 
 	  if (WINDOWP (event->frame_or_window))
-	    f = XFRAME (XWINDOW (event->frame_or_window)->frame);
+	    f = XFRAME (PV_LISP_FIELD_REF(XWINDOW (event->frame_or_window), frame));
 	  else if (FRAMEP (event->frame_or_window))
 	    f = XFRAME (event->frame_or_window);
 	  else
@@ -5862,7 +5862,7 @@ make_lispy_event (struct input_event *event)
 	  bool is_double;
 
 	  if (WINDOWP (event->frame_or_window))
-	    fr = XFRAME (XWINDOW (event->frame_or_window)->frame);
+	    fr = XFRAME (PV_LISP_FIELD_REF(XWINDOW (event->frame_or_window), frame));
 	  else if (FRAMEP (event->frame_or_window))
 	    fr = XFRAME (event->frame_or_window);
 	  else
@@ -9249,9 +9249,9 @@ read_key_sequence (Lisp_Object *keybuf, int bufsize, Lisp_Object prompt,
 		{
 		  if (! FRAME_LIVE_P (XFRAME (selected_frame)))
 		    Fkill_emacs (Qnil);
-		  if (XBUFFER (XWINDOW (selected_window)->contents)
+		  if (XBUFFER (PV_LISP_FIELD_REF(XWINDOW (selected_window), contents))
 		      != current_buffer)
-		    Fset_buffer (XWINDOW (selected_window)->contents);
+		    Fset_buffer (PV_LISP_FIELD_REF(XWINDOW (selected_window), contents));
 		}
 
 	      goto replay_sequence;
@@ -9299,9 +9299,9 @@ read_key_sequence (Lisp_Object *keybuf, int bufsize, Lisp_Object prompt,
 		 special-event-map, ...) might have switched the current buffer
 		 or the selected window from under us in the mean time.  */
 	      if (fix_current_buffer
-		  && (XBUFFER (XWINDOW (selected_window)->contents)
+		  && (XBUFFER (PV_LISP_FIELD_REF(XWINDOW (selected_window), contents))
 		      != current_buffer))
-		Fset_buffer (XWINDOW (selected_window)->contents);
+		Fset_buffer (PV_LISP_FIELD_REF(XWINDOW (selected_window), contents));
 	      current_binding = active_maps (first_event);
 	    }
 
@@ -9350,8 +9350,8 @@ read_key_sequence (Lisp_Object *keybuf, int bufsize, Lisp_Object prompt,
 		     not the current buffer.  If we're at the
 		     beginning of a key sequence, switch buffers.  */
 		  if (WINDOWP (window)
-		      && BUFFERP (XWINDOW (window)->contents)
-		      && XBUFFER (XWINDOW (window)->contents) != current_buffer)
+		      && BUFFERP (PV_LISP_FIELD_REF(XWINDOW (window), contents))
+		      && XBUFFER (PV_LISP_FIELD_REF(XWINDOW (window), contents)) != current_buffer)
 		    {
 		      ASET (raw_keybuf, raw_keybuf_count, key);
 		      raw_keybuf_count++;
@@ -9372,7 +9372,7 @@ read_key_sequence (Lisp_Object *keybuf, int bufsize, Lisp_Object prompt,
 
 		      if (! FRAME_LIVE_P (XFRAME (selected_frame)))
 			Fkill_emacs (Qnil);
-		      set_buffer_internal (XBUFFER (XWINDOW (window)->contents));
+		      set_buffer_internal (XBUFFER (PV_LISP_FIELD_REF(XWINDOW (window), contents)));
 		      goto replay_sequence;
 		    }
 		}
@@ -10816,7 +10816,7 @@ The `posn-' functions access elements of such lists.  */)
 		      ? window_box_left_offset (w, TEXT_AREA)
 		      : 0)));
       XSETINT (y, WINDOW_TO_FRAME_PIXEL_Y (w, XINT (y)));
-      frame_or_window = w->frame;
+      frame_or_window = PV_LISP_FIELD_REF(w, frame);
     }
 
   CHECK_LIVE_FRAME (frame_or_window);

@@ -737,7 +737,7 @@ set_frame_menubar (struct frame *f, bool first_time, bool deep_p)
       if (! menubar_widget)
 	previous_menu_items_used = 0;
 
-      buffer = XWINDOW (FRAME_SELECTED_WINDOW (f))->contents;
+      buffer = PV_LISP_FIELD_REF(XWINDOW (FRAME_SELECTED_WINDOW (f)), contents);
       specbind (Qinhibit_quit, Qt);
       /* Don't let the debugger step into this code
 	 because it is not reentrant.  */
@@ -766,14 +766,14 @@ set_frame_menubar (struct frame *f, bool first_time, bool deep_p)
 
       /* Save the frame's previous menu bar contents data.  */
       if (previous_menu_items_used)
-	memcpy (previous_items, XVECTOR (f->menu_bar_vector)->contents,
+	memcpy (previous_items, XVECTOR (PV_LISP_FIELD_REF(f, menu_bar_vector))->contents,
 		previous_menu_items_used * word_size);
 
       /* Fill in menu_items with the current menu bar contents.
 	 This can evaluate Lisp code.  */
       save_menu_items ();
 
-      menu_items = f->menu_bar_vector;
+      menu_items = PV_LISP_FIELD_REF(f, menu_bar_vector);
       menu_items_allocated = VECTORP (menu_items) ? ASIZE (menu_items) : 0;
       subitems = ASIZE (items) / 4;
       submenu_start = alloca ((subitems + 1) * sizeof *submenu_start);

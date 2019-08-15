@@ -3619,21 +3619,21 @@ font_update_drivers (struct frame *f, Lisp_Object new_drivers)
 static void
 fset_font_data (struct frame *f, Lisp_Object val)
 {
-  f->font_data = val;
+  PV_LISP_FIELD_SET (f, font_data, val);
 }
 
 void
 font_put_frame_data (struct frame *f, Lisp_Object driver, void *data)
 {
-  Lisp_Object val = assq_no_quit (driver, f->font_data);
+  Lisp_Object val = assq_no_quit (driver, PV_LISP_FIELD_REF(f, font_data));
 
   if (!data)
-    fset_font_data (f, Fdelq (val, f->font_data));
+    fset_font_data (f, Fdelq (val, PV_LISP_FIELD_REF(f, font_data)));
   else
     {
       if (NILP (val))
 	fset_font_data (f, Fcons (Fcons (driver, make_save_ptr (data)),
-				  f->font_data));
+				  PV_LISP_FIELD_REF(f, font_data)));
       else
 	XSETCDR (val, make_save_ptr (data));
     }
@@ -3642,7 +3642,7 @@ font_put_frame_data (struct frame *f, Lisp_Object driver, void *data)
 void *
 font_get_frame_data (struct frame *f, Lisp_Object driver)
 {
-  Lisp_Object val = assq_no_quit (driver, f->font_data);
+  Lisp_Object val = assq_no_quit (driver, PV_LISP_FIELD_REF(f, font_data));
 
   return NILP (val) ? NULL : XSAVE_POINTER (XCDR (val), 0);
 }
@@ -3747,7 +3747,7 @@ font_at (int c, ptrdiff_t pos, struct face *face, struct window *w,
 	}
     }
 
-  f = XFRAME (w->frame);
+  f = XFRAME (PV_LISP_FIELD_REF(w, frame));
   if (! FRAME_WINDOW_P (f))
     return Qnil;
   if (! face)
@@ -3799,7 +3799,7 @@ font_range (ptrdiff_t pos, ptrdiff_t pos_byte, ptrdiff_t *limit,
 
   if (!face)
     {
-      struct frame *f = XFRAME (w->frame);
+      struct frame *f = XFRAME (PV_LISP_FIELD_REF(w, frame));
       int face_id;
 
       if (NILP (string))
@@ -4583,7 +4583,7 @@ DEFUN ("internal-char-font", Finternal_char_font, Sinternal_char_font, 1, 2, 0,
       if (NILP (window))
 	return Qnil;
       w = XWINDOW (window);
-      f = XFRAME (w->frame);
+      f = XFRAME (PV_LISP_FIELD_REF(w, frame));
       face_id = face_at_buffer_position (w, pos, &dummy,
 					 pos + 100, false, -1);
     }
@@ -4977,7 +4977,7 @@ character at index specified by POSITION.  */)
 
   if (NILP (string))
     {
-      if (XBUFFER (w->contents) != current_buffer)
+      if (XBUFFER (PV_LISP_FIELD_REF(w, contents)) != current_buffer)
 	error ("Specified window is not displaying the current buffer");
       CHECK_NUMBER_COERCE_MARKER (position);
       if (! (BEGV <= XINT (position) && XINT (position) < ZV))

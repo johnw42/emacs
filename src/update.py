@@ -21,11 +21,13 @@ class Updater:
         self.lines[self.line_index] = new_line + "\n"
 
     def __exit__(self, x, *_):
-        if self.lines[self.line_index].rstrip("\n") == self.line:
-            return
-
         new_line = self.line.rstrip("\n")
         assert "\n" not in new_line
+
+        if self.lines[self.line_index].rstrip("\n") == new_line:
+            return
+
+        # print(new_line)
         self.lines[self.line_index] = new_line + "\n"
 
         if not x:
@@ -82,8 +84,12 @@ class Matcher:
         self.match = None
 
     def __call__(self, pat):
-        self.match = re.match(pat, line)
-        return bool(self.match)
+        self.match = match = re.search(pat, self.line)
+        if not self.match:
+            return False
+        self.before = self.line[: match.start(0)]
+        self.after = self.line[match.end(0) :]
+        return True
 
     def __getattr__(self, attr):
         return getattr(self.match, attr)
@@ -95,7 +101,7 @@ class Matcher:
         return len(self.match)
 
     def Err(self, pat):
-        if self(r"[^:]+:\d+:\d+: error: " + pat):
+        if self(r"^[^:]+:\d+:\d+: error: " + pat):
             parts = self.line.split(":")[:3]
             self.err_file = parts[0]
             self.err_line = int(parts[1]) - 1
@@ -107,22 +113,35 @@ class Matcher:
         return Updater(self.err_file, self.err_line)
 
 
-for line in sys.stdin:
-    state = 0
-    line = line.rstrip()
-    m = Matcher(line)
-    # print(line)
-    if state in [1, 2]:
-        state += 1
-        print(line)
-    elif m.Err(r"‘.*’ has no member named ‘(.*)’; did you mean ‘(\1)_’?"):
-        with m.Update() as u:
-            print(u.line)
-            print(" " * m.err_column + "%")
-            i, j = ExprBefore(u.line, m.err_column)
-            print(" " * i + "*" + " " * (j - i - 1) + "*")
-            for i in range(m.err_column):
-                end = ExprEnd(u.line, i)
-                if end:
-                    print(" " * i + "^" + " " * (end - i - 1) + "^")
-            # print(">>", u.line[ExprBefore(u.line, m.err_column) : m.err_column])
+def main():
+    lines = list(sys.stdin)
+    lines.reverse()
+    for i, line in enumerate(lines):
+        state = 0
+        line = line.rstrip()
+        m = Matcher(line)
+        if m.Err(r"‘.*’ has no member named ‘([^’]*)’"):
+            name = m[1]
+            # print(repr(name), lines[i - 1].rstrip("\n"))
+            with m.Update() as u:
+                um = Matcher(u.line)
+                if um(r"^(\s*)([^=]+)->([a-z_]+) = ([^;]+);$") and um[3] == name:
+                    _, indent, obj, field, rhs = um
+                    u.line = f"{indent}PV_LISP_FIELD_SET ({obj}, {field}, {rhs});"
+                elif (
+                    um(r"([A-Z_]+\s*\([^()]+\)|[a-z_A-Z]+)->([a-z_]+)")
+                    # and um[2] == name
+                ):
+                    _, obj, field = um
+                    u.line = um.before + f"PV_LISP_FIELD_REF({obj}, {field})" + um.after
+                # print(" " * m.err_column + "%")
+                # i, j = ExprBefore(u.line, m.err_column)
+                # print(" " * i + "*" + " " * (j - i - 1) + "*")
+                # for i in range(m.err_column):
+                #     end = ExprEnd(u.line, i)
+                #     if end:
+                #         print(" " * i + "^" + " " * (end - i - 1) + "^")
+                # print(">>", u.line[ExprBefore(u.line, m.err_column) : m.err_column])
+
+
+main()
