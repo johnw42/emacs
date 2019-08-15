@@ -10,108 +10,18 @@
 #pragma GCC diagnostic ignored "-Wdiscarded-qualifiers"
 
 #undef Smake_vector
-#define SHIFT_BITS (CHAR_BIT * sizeof(EMACS_INT) / 2)
 
 static bool scheme_initialized = false;
+static ptr c_data_table;
+
+ptr scheme_pseudovector_tag = 0;
 
 static ptr lisp_to_scheme(Lisp_Object lisp_obj) {
-  if (SYMBOLP(lisp_obj)) {
-    Lisp_Object name = SYMBOL_NAME(lisp_obj);
-    ptrdiff_t len = SBYTES(name);
-    char *buffer = alloca(1 + len);
-    memcpy(buffer, SSDATA(name), len);
-    buffer[len] = '\0';
-    ptr p = Sstring_to_symbol(buffer);
-    return p;
-  }
-
-  // If lisp_obj is a scheme value ref, extract the ID number and map
-  // it back to a real Scheme value.
-  Lisp_Object ref_id = call1(Qscheme_value_ref_id, lisp_obj);
-  if (!NILP(ref_id)) {
-    CHECK_NUMBER(ref_id);
-    return Scall1(Stop_level_value(Sstring_to_symbol("scheme-object-for-id")),
-                  Sunsigned(XINT(ref_id)));
-  }
-    
-  if (STRINGP(lisp_obj)) {
-    return Sstring_of_length(SSDATA(lisp_obj), SBYTES(lisp_obj));
-  }
-
-  if (INTEGERP(lisp_obj)) {
-    return Sinteger(XINT(lisp_obj));
-  }
-
-  if (FLOATP(lisp_obj)) {
-    return Sflonum(XFLOAT_DATA(lisp_obj));
-  }
-
-  /* if (SCHEME_REFP(lisp_obj)) { */
-  /*   return XSCHEME_REF(lisp_obj)->scheme_obj; */
-  /* } */
-
-  /* Make sure this Lisp object has an ID number and wrap it as a
-     Scheme object. */
-  Lisp_Object obj_id = call1(Qensure_lisp_object_id, lisp_obj);
-  EMACS_UINT lisp_obj_uint = (EMACS_UINT) XLI(lisp_obj);
-  uptr hi = lisp_obj_uint >> SHIFT_BITS;
-  uptr lo = (lisp_obj_uint << SHIFT_BITS) >> SHIFT_BITS;
-  return Scall3(Stop_level_value(Sstring_to_symbol("ensure-lisp-object-ref")),
-                Sfixnum((iptr)hi),
-                Sfixnum((iptr)lo),
-                Sinteger(XINT(obj_id)));
+  return lisp_obj;
 }
 
 static Lisp_Object scheme_to_lisp(ptr scheme_obj) {
-  ptr obj_value;
-  Lisp_Object lisp_obj = Qnil;
-  
-  if (Ssymbolp(scheme_obj)) {
-    lisp_obj = Fintern(scheme_to_lisp(Ssymbol_to_string(scheme_obj)), Qnil);
-    goto end;
-  }
-  if (Sstringp(scheme_obj)) {
-    iptr len = Sstring_length(scheme_obj);
-    char *buffer = alloca(len);
-    for (iptr i = 0; i < len; i++) {
-      buffer[i] = Sstring_ref(scheme_obj, i);
-    }
-    lisp_obj = make_string(buffer, len);
-    goto end;
-  }
-  if (Sfixnump(scheme_obj) || Sbignump(scheme_obj)) {
-    lisp_obj = make_number(Sinteger_value(scheme_obj));
-    goto end;
-  }
-  if (Sflonump(scheme_obj)) {
-    lisp_obj = make_float(Sflonum_value(scheme_obj));
-    goto end;
-  }
-
-  // If scheme_obj is a lisp-object-ref, extract its value and convert
-  // to to a real Lisp_Object reference.
-  obj_value = Scall1(Stop_level_value(Sstring_to_symbol("extract-lisp-object")),
-                     scheme_obj);
-  if (obj_value != Sfalse) {
-    eassert(Spairp(obj_value));
-    ptr hi_obj = Scar(obj_value);
-    ptr lo_obj = Scdr(obj_value);
-    eassert(Sfixnump(hi_obj));
-    eassert(Sfixnump(lo_obj));
-    iptr hi = Sfixnum_value(hi_obj) << SHIFT_BITS;
-    iptr lo = Sfixnum_value(lo_obj);
-    eassert((hi & lo) == 0);
-    lisp_obj = XIL(hi | lo);
-    goto end;
-  }
-
-  obj_value = Scall1(Stop_level_value(Sstring_to_symbol("ensure-scheme-object-id")),
-                     scheme_obj);
-  eassert(Sfixnump(obj_value));
-  lisp_obj = call1(Qensure_scheme_value_ref, make_number(Sinteger_value(obj_value)));
-
- end:
-  return lisp_obj;
+  return scheme_obj;
 }
 
 DEFUN ("scheme-funcall", Fscheme_funcall, Sscheme_funcall, 1, MANY, 0,
@@ -298,10 +208,65 @@ void scheme_init(void) {
   Sforeign_symbol("scheme_elisp_call1", scheme_elisp_call1);
   Sforeign_symbol("scheme_elisp_apply", scheme_elisp_apply);
   Sscheme_script("/usr/local/google/home/jrw/git/schemacs/scheme/main.ss", 0, argv);
-  Scall0(Stop_level_value(Sstring_to_symbol("emacs-init")));
+  scheme_call0("emacs-init");
+  
+  c_data_table = scheme_call0("make-eq-hashtable");
+  Slock_object(c_data_table);
+
+  scheme_pseudovector_tag = scheme_call0("gensym");
+  Slock_object(scheme_pseudovector_tag);
 
   atexit(scheme_deinit);
   scheme_initialized = true;
 }
+
+ptr
+scheme_malloc(ptrdiff_t size)
+{
+  eassert(size > 0);
+  ptr bvec = Smake_bytevector(size, 0);
+  Slock_object(bvec);
+  return bvec;
+}
+
+ptr
+scheme_intern(const char *str, iptr len, ptr obarray)
+{
+  ptr name = len < 0 ? Sstring(str) : Sstring_of_length(str, len);
+  Slock_object(name);
+  ptr sym = Fintern(name, obarray);
+  Sunlock_object(name);
+  return sym;
+}
+
+void *
+scheme_alloc_c_data(ptr key, iptr size)
+{
+  ptr data_obj = scheme_malloc(size);
+  scheme_call3("hashtable-set!", c_data_table, key, data_obj);
+  return scheme_malloc_ptr(data_obj);
+}
+
+ptr
+scheme_make_pvec(iptr size,
+                 enum pvec_type type,
+                 iptr bytes_count,
+                 int bytes_fill)
+{
+  eassert(size >= 0);
+  ptr vec = Smake_vector(size + MIN_PVEC_SIZE, Qnil);
+  Slock_object(vec);
+  ptr bytes = Smake_bytevector(bytes_found, bytes_fill);
+  Slock_object(bytes);
+  PVEC_FIELD_SET(vec, BYTES, bytes);
+  PVEC_FIELD_SET(vec, TAG, scheme_pseudovector_tag);
+  PVEC_FIELD_SET(vec, PVEC_TYPE, Sfixnum(type));
+}
+
+void
+staticpro (Lisp_Object *varaddress)
+{
+}
+
 
 #endif

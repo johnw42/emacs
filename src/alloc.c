@@ -2376,11 +2376,29 @@ bool_vector_fill (Lisp_Object a, Lisp_Object init)
   return a;
 }
 
+#endif /* not HAVE_CHEZ_SCHEME */
+
+#ifdef HAVE_CHEZ_SCHEME
+static ptr
+make_bool_vector(iptr num_bits, bool fill)
+{
+  eassert(num_bits >= 0);
+  iptr num_bytes = (num_bits + 7) / 8;
+  ptr vec = scheme_make_pvec(1, PVEC_BOOL_VECTOR, num_bytes, fill ? -1 : 0);
+  Svector_set(vec, 0, Sfixnum(num_bits));
+  return vec;
+}
+
+#endif
+
 /* Return a newly allocated, uninitialized bool vector of size NBITS.  */
 
 Lisp_Object
 make_uninit_bool_vector (EMACS_INT nbits)
 {
+#ifdef HAVE_CHEZ_SCHEME
+  return make_bool_vector(nbits, false);
+#else
   Lisp_Object val;
   EMACS_INT words = bool_vector_words (nbits);
   EMACS_INT word_bytes = words * sizeof (bits_word);
@@ -2398,6 +2416,7 @@ make_uninit_bool_vector (EMACS_INT nbits)
     p->data[words - 1] = 0;
 
   return val;
+#endif
 }
 
 DEFUN ("make-bool-vector", Fmake_bool_vector, Smake_bool_vector, 2, 2, 0,
@@ -2405,11 +2424,17 @@ DEFUN ("make-bool-vector", Fmake_bool_vector, Smake_bool_vector, 2, 2, 0,
 LENGTH must be a number.  INIT matters only in whether it is t or nil.  */)
   (Lisp_Object length, Lisp_Object init)
 {
+#ifdef HAVE_CHEZ_SCHEME
+  CHECK_NATNUM (length);
+  iptr num_bits = Sfixnum_value(length);
+  return make_bool_vector(num_bits, !NILP(init));
+#else
   Lisp_Object val;
 
   CHECK_NATNUM (length);
   val = make_uninit_bool_vector (XFASTINT (length));
   return bool_vector_fill (val, init);
+#endif
 }
 
 DEFUN ("bool-vector", Fbool_vector, Sbool_vector, 0, MANY, 0,
@@ -7436,6 +7461,8 @@ garbage collection bugs.  Otherwise, do nothing and return OBJ.   */)
   return obj;
 }
 
+#endif /* not HAVE_CHEZ_SCHEME */
+
 #ifdef ENABLE_CHECKING
 
 bool suppress_checking;
@@ -7449,6 +7476,8 @@ die (const char *msg, const char *file, int line)
 }
 
 #endif /* ENABLE_CHECKING */
+
+#ifndef HAVE_CHEZ_SCHEME
 
 #if defined (ENABLE_CHECKING) && USE_STACK_LISP_OBJECTS
 

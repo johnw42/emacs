@@ -2910,6 +2910,7 @@ CHEZ_SCHEME_OBJ=
 CHEZ_SCHEME_LIBS=
 if test "$with_chez_scheme" != no; then
    AC_DEFINE(HAVE_CHEZ_SCHEME, 1, [Define to 1 to use Chez Scheme.])
+   AC_DEFINE(USE_STACK_LISP_OBJECTS, true, [Define to true or false to avoid auto-detection.])
    CHEZ_SCHEME_CFLAGS="-DCHEZ_SCHEME -I$HOME/.local/lib/csv9.5.2/a6le -fPIC"
    CHEZ_SCHEME_OBJ="$HOME/.local/lib/csv9.5.2/a6le/kernel.o"
    CHEZ_SCHEME_LIBS="-luuid -lm -ltinfo -lrt -lc -lpthread -ldl"

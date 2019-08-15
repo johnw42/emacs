@@ -4029,8 +4029,8 @@ static Lisp_Object initial_obarray;
 
 #ifdef HAVE_CHEZ_SCHEME
 
-static ptr
-obarray_table (ptr obarray)
+ptr
+scheme_obarray_table (ptr obarray)
 {
   if (NILP (obarray)) obarray = Vobarray;
   if (!fatal_error_in_progress
@@ -4041,11 +4041,18 @@ obarray_table (ptr obarray)
       wrong_type_argument (Qvectorp, obarray);
     }
   ptr table = AREF(obarray, 0);
-  eassert(Scall1(Stop_level_value(Sstring_to_symbol("hashable?")), table) != Sfalse);
+  if (table == Sfalse)
+    {
+      table = scheme_call2("make-hashtable",
+                           Stop_level_value(Sstring_to_symbol("string-hash")),
+                           Stop_level_value(Sstring_to_symbol("string=")));
+      ASET(obarray, 0, table);
+    }
+  eassert(scheme_call1("hashable?", table) != Sfalse);
   return table;
 }
 
-#else /* HAVE_CHEZ_SCHEME */
+#else
 
 /* `oblookup' stores the bucket number here, for the sake of Funintern.  */
 
@@ -4171,17 +4178,21 @@ it defaults to the value of `obarray'.  */)
   (Lisp_Object string, Lisp_Object obarray)
 {
 #ifdef HAVE_CHEZ_SCHEME
-  ptr table = obarray_table (obarray);
-  ptr name = scheme_call1("string->symbol", string);
-  Slock_object(name);
-  ptr found = scheme_call2("hashtable-contains?", table, name);
-  if (found == Sfalse)
+  bool is_global_obarray = NILP(obarray) || obarray == Vobarray;
+  ptr table = scheme_obarray_table (obarray);
+
+  ptr sym = scheme_call3("hashtable-ref", table, string, Sfalse);
+  if (sym == Sfalse)
     {
-      // TODO(jrw): allocate struct Lisp_Symbol in a bytevector.
-      scheme_call3("hashtable-set!", table, name, Strue);
+      sym = scheme_call1(is_global_obarray ? "string->symbol" : "gensym", string);
+      Slock_object(sym);
+      struct Lisp_Symbol *data =
+        SCHEME_ALLOC_C_DATA(sym, struct Lisp_Symbol);
+      data->u.s.plist = Qnil;
+      data->u.s.scheme_obj = sym;
+      scheme_call3("hashtable-set!", table, string, sym);
     }
-  Sunlock_object(name);
-  return name;
+  return sym;
 #else
   Lisp_Object tem;
 
@@ -4205,22 +4216,13 @@ it defaults to the value of `obarray'.  */)
   (Lisp_Object name, Lisp_Object obarray)
 {
 #ifdef HAVE_CHEZ_SCHEME
-  ptr result = Qnil;
-  ptr table = obarray_table (obarray);
-  bool locked = false;
-  if (!Ssymbolp(name))
+  ptr table = scheme_obarray_table (obarray);
+  if (!Sstringp(name))
     {
-      name = scheme_call1("string->symbol", name);
-      Slock_object(name);
-      locked = true;
+      name = scheme_call1("symbol->string", name);
     }
-  ptr found = scheme_call2("hashtable-contains?", table, name);
-  if (found != Sfalse)
-    {
-      result = name;
-    }
-  if (locked) Sunlock_object(name);
-  return result;
+  ptr found = scheme_call3("hashtable-ref", table, name, Sfalse);
+  return found == Sfalse ? Qnil : found;
 #else
   register Lisp_Object tem, string;
 
@@ -4253,22 +4255,19 @@ usage: (unintern NAME OBARRAY)  */)
   (Lisp_Object name, Lisp_Object obarray)
 {
 #ifdef HAVE_CHEZ_SCHEME
+  ptr table = scheme_obarray_table (obarray);
+  ptr key = name;
+  if (!Sstringp(name))
+    key = scheme_call1("symbol->string", name);
+  Slock_object(key);
   ptr result = Qnil;
-  ptr table = obarray_table (obarray);
-  bool locked = false;
-  if (!Ssymbolp(name))
-    {
-      name = scheme_call1("string->symbol", name);
-      Slock_object(name);
-      locked = true;
-    }
-  ptr found = scheme_call2("hashtable-contains?", table, name);
-  if (found != Sfalse)
+  ptr sym = scheme_call3("hashtable-ref", table, key, Sfalse);
+  if (sym == name || (Sstringp(name) && sym != Sfalse))
     {
       result = Qt;
-      scheme_call2("hashtable-delete!", table, name);
+      scheme_call2("hashtable-delete!", table, key);
     }
-  if (locked) Sunlock_object(name);
+  Sunlock_object(key);
   return result;
 #else
   register Lisp_Object string, tem;
@@ -4381,9 +4380,8 @@ void
 map_obarray (Lisp_Object obarray, void (*fn) (Lisp_Object, Lisp_Object), Lisp_Object arg)
 {
 #ifdef HAVE_CHEZ_SCHEME
-  ptr table = obarray_table(obarray);
-  for (ptr tail = Scall1(Stop_level_value(Sstring_to_symbol("hashtable-keys")),
-                         table);
+  ptr table = scheme_obarray_table(obarray);
+  for (ptr tail = scheme_call1("hashtable-keys", table);
        tail != Snil; tail = Fcdr(tail))
     {
       Slock_object(tail);
@@ -4435,14 +4433,14 @@ void
 init_obarray (void)
 {
 #ifdef HAVE_CHEZ_SCHEME
-  ptr table = Scall0(Stop_level_value(Sstring_to_symbol("make-eq-hashtable")));
-  Slock_object(table);
-  Vobarray = Fmake_vector(make_number(1), table);
+  Vobarray = Fmake_vector(make_number(1), Qnil);
   initial_obarray = Vobarray;
   staticpro (&initial_obarray);
 
   for (int i = 0; i < ARRAYELTS (lispsym); i++)
-    define_symbol (builtin_lisp_symbol (i), defsym_name[i]);
+    {
+      lispsym[i] = scheme_intern(defsym_name[i], -1, Vobarray);
+    }
 #else
   Vobarray = Fmake_vector (make_number (OBARRAY_SIZE), make_number (0));
   initial_obarray = Vobarray;
