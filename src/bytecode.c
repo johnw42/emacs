@@ -358,7 +358,7 @@ exec_byte_code (Lisp_Object bytestr, Lisp_Object vector, Lisp_Object maxdepth,
     bytestr = Fstring_as_unibyte (bytestr);
 
   ptrdiff_t bytestr_length = SBYTES (bytestr);
-  Lisp_Object *vectorp = XVECTOR (vector)->contents;
+  XVECTOR_CACHE (vectorp, vector);
 
   unsigned char quitcounter = 1;
   EMACS_INT stack_items = XFASTINT (maxdepth) + 1;
@@ -488,7 +488,7 @@ exec_byte_code (Lisp_Object bytestr, Lisp_Object vector, Lisp_Object maxdepth,
 	  op = FETCH;
 	varref:
 	  {
-	    Lisp_Object v1 = vectorp[op], v2;
+	    Lisp_Object v1 = XVECTOR_REF (vectorp, op), v2;
 	    if (!SYMBOLP (v1)
 		|| XSYMBOL (v1)->u.s.redirect != SYMBOL_PLAINVAL
 		|| (v2 = SYMBOL_VAL (XSYMBOL (v1)), EQ (v2, Qunbound)))
@@ -553,7 +553,7 @@ exec_byte_code (Lisp_Object bytestr, Lisp_Object vector, Lisp_Object maxdepth,
 	  op = FETCH;
 	varset:
 	  {
-	    Lisp_Object sym = vectorp[op];
+	    Lisp_Object sym = XVECTOR_REF (vectorp, op);
 	    Lisp_Object val = POP;
 
 	    /* Inline the most common case.  */
@@ -593,7 +593,7 @@ exec_byte_code (Lisp_Object bytestr, Lisp_Object vector, Lisp_Object maxdepth,
 	  op -= Bvarbind;
 	varbind:
 	  /* Specbind can signal and thus GC.  */
-	  specbind (vectorp[op], POP);
+	  specbind (XVECTOR_REF (vectorp, op), POP);
 	  NEXT;
 
 	CASE (Bcall6):
@@ -733,7 +733,7 @@ exec_byte_code (Lisp_Object bytestr, Lisp_Object vector, Lisp_Object maxdepth,
 	  NEXT;
 
 	CASE (Bconstant2):
-	  PUSH (vectorp[FETCH2]);
+	  PUSH (XVECTOR_REF (vectorp, FETCH2));
 	  NEXT;
 
 	CASE (Bsave_excursion):
@@ -1443,7 +1443,7 @@ exec_byte_code (Lisp_Object bytestr, Lisp_Object vector, Lisp_Object maxdepth,
 	  if (BYTE_CODE_SAFE
 	      && ! (Bconstant <= op && op < Bconstant + const_length))
 	    emacs_abort ();
-	  PUSH (vectorp[op - Bconstant]);
+	  PUSH (XVECTOR_REF (vectorp, op - Bconstant));
 	  NEXT;
 	}
     }

@@ -939,7 +939,7 @@ struct scroll_bar
 };
 
 /* Turning a lisp vector value into a pointer to a struct scroll_bar.  */
-#define XSCROLL_BAR(vec) ((struct scroll_bar *) XVECTOR (vec))
+#define XSCROLL_BAR(vec) XPVEC (struct scroll_bar, vec)
 
 #ifdef USE_X_TOOLKIT
 

@@ -3509,8 +3509,7 @@ usage: (vector &rest OBJECTS)  */)
   (ptrdiff_t nargs, Lisp_Object *args)
 {
   Lisp_Object val = make_uninit_vector (nargs);
-  struct Lisp_Vector *p = XVECTOR (val);
-  memcpy (p->contents, args, nargs * sizeof *args);
+  vector_copy_in (val, args, nargs);
   return val;
 }
 
@@ -7388,6 +7387,8 @@ which_symbols (Lisp_Object obj, EMACS_INT find_max)
    unbind_to (gc_count, Qnil);
    return found;
 }
+
+#ifndef HAVE_CHEZ_SCHEME
 
 #ifdef SUSPICIOUS_OBJECT_CHECKING
 

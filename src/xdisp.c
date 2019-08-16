@@ -4672,11 +4672,11 @@ setup_for_ellipsis (struct it *it, int len)
 {
   /* Use the display table definition for `...'.  Invalid glyphs
      will be handled by the method returning elements from dpvec.  */
-  if (it->dp && VECTORP (DISP_INVIS_VECTOR (it->dp)))
+  Lisp_Object invis_vector = DISP_INVIS_VECTOR (it->dp);
+  if (it->dp && VECTORP (invis_vector))
     {
-      struct Lisp_Vector *v = XVECTOR (DISP_INVIS_VECTOR (it->dp));
-      it->dpvec = v->contents;
-      it->dpend = v->contents + v->header.size;
+      it->dpvec = XVECTOR_CONTENTS (invis_vector);
+      it->dpend = it->dpvec + ASIZE (invis_vector);
     }
   else
     {
@@ -7098,7 +7098,7 @@ get_next_display_element (struct it *it)
 	      && (dv = DISP_CHAR_VECTOR (it->dp, c),
 		  VECTORP (dv)))
 	    {
-	      struct Lisp_Vector *v = XVECTOR (dv);
+              struct Lisp_Vector *v = XVECTOR (dv);
 
 	      /* Return the first character from the display table
 		 entry, if not empty.  If empty, don't display the
@@ -16805,7 +16805,7 @@ redisplay_window (Lisp_Object window, bool just_this_one_p)
       struct Lisp_Char_Table *disptab = buffer_display_table ();
 
       if (! disptab_matches_widthtab
-	  (disptab, XVECTOR (BVAR (current_buffer, width_table))))
+	  (disptab, BVAR (current_buffer, width_table)))
         {
 	  struct buffer *buf = current_buffer;
 
@@ -30757,9 +30757,8 @@ on_hot_spot_p (Lisp_Object hot_spot, int x, int y)
       /* CDR is [x0 y0 x1 y1 x2 y2 ...x(n-1) y(n-1)] */
       if (VECTORP (XCDR (hot_spot)))
 	{
-	  struct Lisp_Vector *v = XVECTOR (XCDR (hot_spot));
-	  Lisp_Object *poly = v->contents;
-	  ptrdiff_t n = v->header.size;
+	  XVECTOR_CACHE (poly, XCDR (hot_spot));
+	  ptrdiff_t n = XVECTOR_SIZE (poly);
 	  ptrdiff_t i;
 	  bool inside = false;
 	  Lisp_Object lx, ly;
@@ -30773,15 +30772,15 @@ on_hot_spot_p (Lisp_Object hot_spot, int x, int y)
 	     If count is odd, we are inside polygon.  Pixels on edges
 	     may or may not be included depending on actual geometry of the
 	     polygon.  */
-	  if ((lx = poly[n-2], !INTEGERP (lx))
-	      || (ly = poly[n-1], !INTEGERP (lx)))
+	  if ((lx = XVECTOR_REF (poly, n-2), !INTEGERP (lx))
+	      || (ly = XVECTOR_REF (poly, n-1), !INTEGERP (lx)))
 	    return false;
 	  x0 = XINT (lx), y0 = XINT (ly);
 	  for (i = 0; i < n; i += 2)
 	    {
 	      int x1 = x0, y1 = y0;
-	      if ((lx = poly[i], !INTEGERP (lx))
-		  || (ly = poly[i+1], !INTEGERP (ly)))
+	      if ((lx = XVECTOR_REF (poly, i), !INTEGERP (lx))
+		  || (ly = XVECTOR_REF (poly, i+1), !INTEGERP (ly)))
 		return false;
 	      x0 = XINT (lx), y0 = XINT (ly);
 

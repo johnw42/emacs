@@ -2810,7 +2810,7 @@ read1 (Lisp_Object readcharfun, int *pch, bool first_in_list)
 	      tmp = read_vector (readcharfun, 0);
 	      if (ASIZE (tmp) < CHAR_TABLE_STANDARD_SLOTS)
 		error ("Invalid size char-table");
-	      XSETPVECTYPE (XVECTOR (tmp), PVEC_CHAR_TABLE);
+	      SETPVECTYPE (tmp, PVEC_CHAR_TABLE);
 	      return tmp;
 	    }
 	  else if (c == '^')
@@ -2897,6 +2897,7 @@ read1 (Lisp_Object readcharfun, int *pch, bool first_in_list)
 	    }
 	  invalid_syntax ("#&...");
 	}
+#ifndef HAVE_CHEZ_SCHEME
       if (c == '[')
 	{
 	  /* Accept compiled functions at read-time so that we don't have to
@@ -2904,12 +2905,13 @@ read1 (Lisp_Object readcharfun, int *pch, bool first_in_list)
 	  Lisp_Object tmp;
 	  struct Lisp_Vector *vec;
 	  tmp = read_vector (readcharfun, 1);
-	  vec = XVECTOR (tmp);
+          vec = XVECTOR (tmp);
 	  if (vec->header.size == 0)
 	    invalid_syntax ("Empty byte-code object");
 	  make_byte_code (vec);
 	  return tmp;
 	}
+#endif
       if (c == '(')
 	{
 	  Lisp_Object tmp;
@@ -3790,7 +3792,6 @@ static Lisp_Object
 read_vector (Lisp_Object readcharfun, bool bytecodeflag)
 {
   ptrdiff_t i, size;
-  Lisp_Object *ptr0;
   Lisp_Object tem, item, vector;
 #ifndef HAVE_CHEZ_SCHEME
   struct Lisp_Cons *otem;
@@ -3802,7 +3803,7 @@ read_vector (Lisp_Object readcharfun, bool bytecodeflag)
   vector = Fmake_vector (len, Qnil);
 
   size = ASIZE (vector);
-  ptr0 = XVECTOR (vector)->contents;
+  XVECTOR_CACHE (ptr0, vector);
   for (i = 0; i < size; i++)
     {
       item = Fcar (tem);
@@ -3825,7 +3826,7 @@ read_vector (Lisp_Object readcharfun, bool bytecodeflag)
 	    }
 	  else if (i == COMPILED_CONSTANTS)
 	    {
-	      Lisp_Object bytestr = ptr0[COMPILED_CONSTANTS];
+	      Lisp_Object bytestr = XVECTOR_REF (ptr0, COMPILED_CONSTANTS);
 
 	      if (NILP (item))
 		{

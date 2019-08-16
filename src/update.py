@@ -2,7 +2,9 @@
 
 import re
 import sys
-import contextlib
+import subprocess
+
+g_changes_made = False
 
 
 class Updater:
@@ -11,7 +13,9 @@ class Updater:
         self.line_index = line_index
         with open(filename) as f:
             self.lines = f.readlines()
-        self.line = self.lines[line_index].rstrip("\n")
+        m = re.match(r"^(\s*)([^\n]+)\n?$", self.lines[line_index])
+        self.indent = m[1]
+        self.line = self.old_line = m[2]
 
     def __enter__(self):
         return self
@@ -21,14 +25,25 @@ class Updater:
         self.lines[self.line_index] = new_line + "\n"
 
     def __exit__(self, x, *_):
-        if self.lines[self.line_index].rstrip("\n") == self.line:
+        if x:
             return
 
-        new_line = self.line.rstrip("\n")
-        assert "\n" not in new_line
-        self.lines[self.line_index] = new_line + "\n"
+        if self.old_line == self.line:
+            return
 
-        if not x:
+        global g_changes_made
+        g_changes_made = True
+
+        print(f"Updating {self.filename}:{self.line_index+1}:")
+        print(f"- {self.old_line}")
+
+        new_line = self.line
+        assert "\n" not in new_line
+        self.lines[self.line_index] = self.indent + new_line + "\n"
+
+        print(f"+ {new_line}")
+
+        if len(sys.argv) == 1:
             with open(self.filename, "w") as f:
                 f.writelines(self.lines)
 
@@ -82,7 +97,7 @@ class Matcher:
         self.match = None
 
     def __call__(self, pat):
-        self.match = re.match(pat, line)
+        self.match = re.match(pat, self.line)
         return bool(self.match)
 
     def __getattr__(self, attr):
@@ -94,35 +109,130 @@ class Matcher:
     def __len__(self):
         return len(self.match)
 
-    def Err(self, pat):
-        if self(r"[^:]+:\d+:\d+: error: " + pat):
-            parts = self.line.split(":")[:3]
-            self.err_file = parts[0]
-            self.err_line = int(parts[1]) - 1
-            self.err_column = int(parts[2]) - 1
-            return True
-        return False
+
+class ErrMatcher(Matcher):
+    def __init__(self, line):
+        m = re.match(r"^([^:]+):(\d+):(\d+): (?:error|warning): ", line)
+        if m:
+            self.err_file = m[1]
+            self.err_line = int(m[2]) - 1
+            self.err_column = int(m[3]) - 1
+            line = line[m.end(0) :]
+        else:
+            line = ""
+        Matcher.__init__(self, line)
 
     def Update(self):
         return Updater(self.err_file, self.err_line)
 
 
-for line in sys.stdin:
-    state = 0
-    line = line.rstrip()
-    m = Matcher(line)
-    # print(line)
-    if state in [1, 2]:
-        state += 1
-        print(line)
-    elif m.Err(r"‘.*’ has no member named ‘(.*)’; did you mean ‘(\1)_’?"):
-        with m.Update() as u:
-            print(u.line)
-            print(" " * m.err_column + "%")
-            i, j = ExprBefore(u.line, m.err_column)
-            print(" " * i + "*" + " " * (j - i - 1) + "*")
-            for i in range(m.err_column):
-                end = ExprEnd(u.line, i)
-                if end:
-                    print(" " * i + "^" + " " * (end - i - 1) + "^")
-            # print(">>", u.line[ExprBefore(u.line, m.err_column) : m.err_column])
+class CodeMatcher(Matcher):
+    def __init__(self, line):
+        m = re.match(r"\s*", line)
+        line = line[m.end(0) :]
+        Matcher.__init__(self, line)
+
+    def __call__(self, pat):
+        return Matcher.__call__(self, pat) and self.end(0) == len(self.line)
+
+
+def MakeArgRegex(depth):
+    if depth == 0:
+        return r"[^=,]+"
+    sub = MakeArgRegex(depth - 1)
+    return r"(?:" + sub + r"(?:(?:\(" + sub + r"\))+" + sub + r")?)"
+
+
+ID_REGEX = r"([A-Za-z_][A-Za-z_0-9]*)"
+ARG_REGEX = r"([^=,;]+)"
+ARGS_REGEX = r"([^=;]+)"
+STRICT_ARG_REGEX = "(" + MakeArgRegex(1) + ")"
+
+
+def Main():
+    proc = subprocess.Popen(
+        ["make", "-j", "-k", "temacs"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT
+    )
+    lines = [line.decode().rstrip("\n") for line in proc.stdout]
+    proc.wait()
+    lines.reverse()
+    for i in range(1, len(lines)):
+        state = 0
+        em = ErrMatcher(lines[i])
+        cm = CodeMatcher(lines[i - 1][1:])
+        if False:
+            pass
+        elif em(r"invalid type argument of ‘->’ \(have ‘int’\)"):
+            # print(lines[i])
+            if cm(
+                r"(\s*)Lisp_Object \*"
+                + ID_REGEX
+                + r" = XVECTOR\s*\("
+                + ARG_REGEX
+                + r"\)->contents;$"
+            ):
+                with em.Update() as u:
+                    _, indent, var, vec = cm
+                    u.line = f"{indent}XVECTOR_CACHE ({var}, {vec});"
+        elif em(
+            r"implicit declaration of function ‘XVECTOR’; did you mean ‘XVECTOR_’\? \[-Wimplicit-function-declaration\]"
+        ):
+            if cm(r"(.*)XVECTOR \(" + STRICT_ARG_REGEX + r"\)->contents(.*)"):
+                with em.Update() as u:
+                    _, pre, vec, post = cm
+                    u.line = f"{pre}XVECTOR_CONTENTS ({vec}){post}"
+            # if cm(
+            #     r"XSETPVECTYPE\s*\(XVECTOR\s*\("
+            #     + ARG_REGEX
+            #     + r"\),\s*"
+            #     + ARG_REGEX
+            #     + r"\);$"
+            # ):
+            #     with em.Update() as u:
+            #         _, vec_arg, type_arg = cm
+            #         u.line = f"SETPVECTYPE ({vec_arg}, {type_arg});"
+            # elif cm(
+            #     r"(?:struct Lisp_Vector \*)?"
+            #     + ID_REGEX
+            #     + r" = XVECTOR\s*\("
+            #     + ARGS_REGEX
+            #     + r"\);$"
+            # ) or cm(
+            #     r"(?:struct Lisp_Object \*)?"
+            #     + ID_REGEX
+            #     + r" = XVECTOR\s*\("
+            #     + ARGS_REGEX
+            #     + r"\)->contents;$"
+            # ):
+            #     with em.Update() as u:
+            #         _, var, arg = cm
+            #         u.line = f"XVECTOR_CACHE ({var}, {arg});"
+            # elif cm(
+            #     r"(.*?)XVECTOR\s*\("
+            #     + STRICT_ARG_REGEX
+            #     + r"\)->contents\["
+            #     + STRICT_ARG_REGEX
+            #     + r"\](.*)"
+            # ):
+            #     with em.Update() as u:
+            #         _, pre, vec, idx, post = cm
+            #         u.line = f"{pre}AREF ({vec}, {idx}){post}"
+        # if em(r"‘.*’ has no member named ‘(.*)’; did you mean ‘(\1)_’?"):
+        #     with em.Update() as u:
+        #         pass
+        #         # print(u.line)
+        #         # print(" " * m.err_column + "%")
+        #         # i, j = ExprBefore(u.line, m.err_column)
+        #         # print(" " * i + "*" + " " * (j - i - 1) + "*")
+        #         # for i in range(m.err_column):
+        #         #     end = ExprEnd(u.line, i)
+        #         #     if end:
+        #         #         print(" " * i + "^" + " " * (end - i - 1) + "^")
+        #         # print(">>", u.line[ExprBefore(u.line, m.err_column) : m.err_column])
+    if not g_changes_made:
+        lines.reverse()
+        for line in lines:
+            print(line)
+
+
+Main()

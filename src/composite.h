@@ -86,20 +86,20 @@ composition_registered_p (Lisp_Object prop)
 /* Return the Nth glyph of composition specified by CMP.  CMP is a
    pointer to `struct composition'.  */
 #define COMPOSITION_GLYPH(cmp, n)					\
-  XINT (XVECTOR (XVECTOR (XHASH_TABLE (composition_hash_table)		\
-			  ->key_and_value)				\
-		 ->contents[cmp->hash_index * 2])			\
-	->contents[cmp->method == COMPOSITION_WITH_RULE_ALTCHARS	\
-		  ? (n) * 2 : (n)])
+  XINT (AREF (AREF (XHASH_TABLE (composition_hash_table)		\
+                    ->key_and_value,                                    \
+                    cmp->hash_index * 2),                               \
+              cmp->method == COMPOSITION_WITH_RULE_ALTCHARS             \
+              ? (n) * 2 : (n)))
 
 /* Return the encoded composition rule to compose the Nth glyph of
    rule-base composition specified by CMP.  CMP is a pointer to
    `struct composition'. */
 #define COMPOSITION_RULE(cmp, n)				\
-  XINT (XVECTOR (XVECTOR (XHASH_TABLE (composition_hash_table)	\
-			  ->key_and_value)			\
-		 ->contents[cmp->hash_index * 2])		\
-	->contents[(n) * 2 - 1])
+  XINT (AREF (AREF (XHASH_TABLE (composition_hash_table)	\
+                    ->key_and_value,                            \
+                    cmp->hash_index * 2),                       \
+              (n) * 2 - 1))
 
 /* Decode encoded composition rule RULE_CODE into GREF (global
    reference point code), NREF (new ref. point code).  Don't check RULE_CODE;
@@ -259,11 +259,13 @@ composition_valid_p (ptrdiff_t start, ptrdiff_t end, Lisp_Object prop)
 #define LGSTRING_GLYPH(lgs, idx) AREF ((lgs), (idx) + 2)
 #define LGSTRING_SET_GLYPH(lgs, idx, val) ASET ((lgs), (idx) + 2, (val))
 
+#ifndef HAVE_CHEZ_SCHEME
 INLINE Lisp_Object *
 lgstring_glyph_addr (Lisp_Object lgs, ptrdiff_t idx)
 {
   return aref_addr (lgs, idx + 2);
 }
+#endif
 
 /* Vector size of Lispy glyph.  */
 enum lglyph_indices

@@ -6308,7 +6308,7 @@ DEFUN ("window-configuration-frame", Fwindow_configuration_frame, Swindow_config
 
   CHECK_WINDOW_CONFIGURATION (config);
 
-  data = (struct save_window_data *) XVECTOR (config);
+  data = XPVEC (struct save_window_data, config);
   saved_windows = XVECTOR (data->saved_windows);
   return XWINDOW (SAVED_WINDOW_N (saved_windows, 0)->window)->frame;
 }
@@ -6333,7 +6333,7 @@ the return value is nil.  Otherwise the value is t.  */)
 
   CHECK_WINDOW_CONFIGURATION (configuration);
 
-  data = (struct save_window_data *) XVECTOR (configuration);
+  data = XPVEC (struct save_window_data, configuration);
   saved_windows = XVECTOR (data->saved_windows);
 
   new_current_buffer = data->f_current_buffer;
@@ -7470,8 +7470,8 @@ compare_window_configurations (Lisp_Object configuration1,
   CHECK_WINDOW_CONFIGURATION (configuration1);
   CHECK_WINDOW_CONFIGURATION (configuration2);
 
-  d1 = (struct save_window_data *) XVECTOR (configuration1);
-  d2 = (struct save_window_data *) XVECTOR (configuration2);
+  d1 = XPVEC (struct save_window_data, configuration1);
+  d2 = XPVEC (struct save_window_data, configuration2);
   sws1 = XVECTOR (d1->saved_windows);
   sws2 = XVECTOR (d2->saved_windows);
 

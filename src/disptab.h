@@ -58,28 +58,33 @@ extern struct Lisp_Char_Table *buffer_display_table (void);
 #define GLYPH_TABLE_LENGTH  \
   ((VECTORP (Vglyph_table)) ? ASIZE (Vglyph_table) : 0)
 
+// TODO(jrw): Update comment.
 /* Return the current base (for indexing) of the GLYPH table,
    or 0 if the table isn't currently valid.  */
-#define GLYPH_TABLE_BASE  \
-  ((VECTORP (Vglyph_table)) ? XVECTOR (Vglyph_table)->contents : 0)
+#define GLYPH_TABLE_BASE(var)                                           \
+  XVECTOR_CACHE_IF (VECTORP (Vglyph_table), var, Vglyph_table)
+
+#define GLYPH_TABLE_NULLP(var) XVECTOR_CACHE_NULLP (var)
+
+#define GLYPH_TABLE_REF(var, i) XVECTOR_REF (var, i)
 
 /* Given BASE and LEN returned by the two previous macros,
    return nonzero if the GLYPH code G should be output as a single
    character with code G.  Return zero if G has a string in the table.  */
 #define GLYPH_SIMPLE_P(base,len,g) \
-  (GLYPH_FACE (g) != DEFAULT_FACE_ID || GLYPH_CHAR (g) >= (len) || !STRINGP (base[GLYPH_CHAR (g)]))
+  (GLYPH_FACE (g) != DEFAULT_FACE_ID || GLYPH_CHAR (g) >= (len) || !STRINGP (XVECTOR_REF (base, GLYPH_CHAR (g))))
 
 /* Given BASE and LEN returned by the two previous macros,
    return nonzero if GLYPH code G is aliased to a different code.  */
 #define GLYPH_ALIAS_P(base,len,g) \
-  (GLYPH_FACE (g) == DEFAULT_FACE_ID && GLYPH_CHAR (g) < (len) && INTEGERP (base[GLYPH_CHAR (g)]))
+  (GLYPH_FACE (g) == DEFAULT_FACE_ID && GLYPH_CHAR (g) < (len) && INTEGERP (XVECTOR_REF (base, GLYPH_CHAR (g))))
 
 /* Follow all aliases for G in the glyph table given by (BASE,
    LENGTH), and set G to the final glyph.  */
 #define GLYPH_FOLLOW_ALIASES(base, length, g)			\
   do {								\
     while (GLYPH_ALIAS_P ((base), (length), (g)))		\
-      SET_GLYPH_CHAR ((g), XINT ((base)[GLYPH_CHAR (g)]));	\
+      SET_GLYPH_CHAR ((g), XINT (XVECTOR_REF (base, GLYPH_CHAR (g))));	\
     if (!GLYPH_CHAR_VALID_P (g))				\
       SET_GLYPH_CHAR (g, ' ');					\
   } while (false)
@@ -87,8 +92,8 @@ extern struct Lisp_Char_Table *buffer_display_table (void);
 /* Assuming that GLYPH_SIMPLE_P (BASE, LEN, G) is 0,
    return the length and the address of the character-sequence
    used for outputting GLYPH G.  */
-#define GLYPH_LENGTH(base,g)   SCHARS (base[GLYPH_CHAR (g)])
-#define GLYPH_STRING(base,g)   SDATA (base[GLYPH_CHAR (g)])
+#define GLYPH_LENGTH(base,g)   SCHARS (XVECTOR_REF (base, GLYPH_CHAR (g)))
+#define GLYPH_STRING(base,g)   SDATA (XVECTOR_REF (base, GLYPH_CHAR (g)))
 
 /* GLYPH for a space character.  */
 

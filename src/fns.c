@@ -491,7 +491,11 @@ the same empty object instead of its copy.  */)
 
   if (RECORDP (arg))
     {
+#ifdef HAVE_CHEZ_SCHEME
+      return Frecord (PVSIZE (arg), PVEC_LISP_FIELD_PTR(arg));
+#else
       return Frecord (PVSIZE (arg), XVECTOR (arg)->contents);
+#endif
     }
 
   if (CHAR_TABLE_P (arg))
@@ -1890,7 +1894,11 @@ sort_vector (Lisp_Object vector, Lisp_Object predicate)
   SAFE_ALLOCA_LISP (tmp, halflen);
   for (ptrdiff_t i = 0; i < halflen; i++)
     tmp[i] = make_number (0);
+#ifdef HAVE_CHEZ_SCHEME
+  eassert(!HAVE_CHEZ_SCHEME);
+#else
   sort_vector_inplace (predicate, len, XVECTOR (vector)->contents, tmp);
+#endif
   SAFE_FREE ();
 }
 

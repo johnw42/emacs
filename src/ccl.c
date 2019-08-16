@@ -34,6 +34,8 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 #include "ccl.h"
 #include "coding.h"
 
+#ifndef HAVE_CHEZ_SCHEME
+
 /* Table of registered CCL programs.  Each element is a vector of
    NAME, CCL_PROG, RESOLVEDP, and UPDATEDP, where NAME (symbol) is the
    name of the program, CCL_PROG (vector) is the compiled code of the
@@ -627,9 +629,9 @@ do								\
     ccl_prog_stack_struct[stack_idx].ic = (ret_ic);		\
     ccl_prog_stack_struct[stack_idx].eof_ic = eof_ic;		\
     stack_idx++;						\
-    ccl_prog = called_ccl.prog;					\
+    XVECTOR_CACHE_UPDATE(ccl_prog, called_ccl.prog);            \
     ic = CCL_HEADER_MAIN;					\
-    eof_ic = XFASTINT (ccl_prog[CCL_HEADER_EOF]);		\
+    eof_ic = XFASTINT (XVECTOR_REF (ccl_prog, CCL_HEADER_EOF));		\
     goto ccl_repeat;						\
   }								\
 while (0)
@@ -736,7 +738,7 @@ while (0)
 #define GET_CCL_RANGE(var, ccl_prog, ic, lo, hi)		\
   do								\
     {								\
-      EMACS_INT prog_word = XINT ((ccl_prog)[ic]);		\
+      EMACS_INT prog_word = XINT (XVECTOR_REF (ccl_prog, ic));  \
       if (! ASCENDING_ORDER (lo, prog_word, hi))		\
 	CCL_INVALID_CMD;					\
       (var) = prog_word;					\
@@ -760,7 +762,7 @@ while (0)
       CCL_SUSPEND (CCL_STAT_SUSPEND_BY_DST);	\
   } while (0)
 
-/* Write a string at ccl_prog[IC] of length LEN to the current output
+/* Write a string at XVECTOR_REF (ccl_prog, IC) of length LEN to the current output
    buffer.  */
 #define CCL_WRITE_STRING(len)					\
   do {								\
@@ -769,12 +771,12 @@ while (0)
       CCL_INVALID_CMD;						\
     else if (dst + len <= dst_end)				\
       {								\
-	if (XFASTINT (ccl_prog[ic]) & 0x1000000)		\
+	if (XFASTINT (XVECTOR_REF (ccl_prog, ic)) & 0x1000000)		\
 	  for (ccli = 0; ccli < len; ccli++)			\
-	    *dst++ = XFASTINT (ccl_prog[ic + ccli]) & 0xFFFFFF;	\
+	    *dst++ = XFASTINT (XVECTOR_REF (ccl_prog, ic + ccli)) & 0xFFFFFF;	\
 	else							\
 	  for (ccli = 0; ccli < len; ccli++)			\
-	    *dst++ = ((XFASTINT (ccl_prog[ic + (ccli / 3)]))	\
+	    *dst++ = ((XFASTINT (XVECTOR_REF (ccl_prog, ic + (ccli / 3))))	\
 		      >> ((2 - (ccli % 3)) * 8)) & 0xFF;	\
       }								\
     else							\
@@ -847,7 +849,7 @@ ccl_debug_hook (int ic)
 
 struct ccl_prog_stack
   {
-    Lisp_Object *ccl_prog;	/* Pointer to an array of CCL code.  */
+    xvector_cache_t ccl_prog;	/* Lisp vector of CCL code.  */
     int ic;			/* Instruction Counter.  */
     int eof_ic;			/* Instruction Counter to jump on EOF.  */
   };
@@ -861,7 +863,6 @@ ccl_driver (struct ccl_program *ccl, int *source, int *destination, int src_size
   register int *reg = ccl->reg;
   register int ic = ccl->ic;
   register int code = 0, field1, field2;
-  register Lisp_Object *ccl_prog = ccl->prog;
   int *src = source, *src_end = src + src_size;
   int *dst = destination, *dst_end = dst + dst_size;
   int jump_address;
@@ -872,6 +873,8 @@ ccl_driver (struct ccl_program *ccl, int *source, int *destination, int src_size
   struct charset *charset;
   int eof_ic = ccl->eof_ic;
   int eof_hit = 0;
+
+  XVECTOR_CACHE(ccl_prog, ccl->prog);
 
   if (ccl->buf_magnification == 0) /* We can't read/produce any bytes.  */
     dst = NULL;
@@ -926,14 +929,15 @@ ccl_driver (struct ccl_program *ccl, int *source, int *destination, int src_size
 	  break;
 
 	case CCL_SetConst:	/* 00000000000000000000rrrXXXXX */
-	  reg[rrr] = XINT (ccl_prog[ic++]);
+	  reg[rrr] = XINT (XVECTOR_REF (ccl_prog, ic));
+          ic++;
 	  break;
 
 	case CCL_SetArray:	/* CCCCCCCCCCCCCCCCCCCCRRRrrrXXXXX */
 	  i = reg[RRR];
 	  j = field1 >> 3;
 	  if (0 <= i && i < j)
-	    reg[rrr] = XINT (ccl_prog[ic + i]);
+	    reg[rrr] = XINT (XVECTOR_REF (ccl_prog, ic + i));
 	  ic += j;
 	  break;
 
@@ -961,13 +965,13 @@ ccl_driver (struct ccl_program *ccl, int *source, int *destination, int src_size
 	  break;
 
 	case CCL_WriteConstJump: /* A--D--D--R--E--S--S-000XXXXX */
-	  i = XINT (ccl_prog[ic]);
+	  i = XINT (XVECTOR_REF (ccl_prog, ic));
 	  CCL_WRITE_CHAR (i);
 	  ic += ADDR;
 	  break;
 
 	case CCL_WriteConstReadJump: /* A--D--D--R--E--S--S-rrrXXXXX */
-	  i = XINT (ccl_prog[ic]);
+	  i = XINT (XVECTOR_REF (ccl_prog, ic));
 	  CCL_WRITE_CHAR (i);
 	  ic++;
 	  CCL_READ_CHAR (reg[rrr]);
@@ -975,17 +979,18 @@ ccl_driver (struct ccl_program *ccl, int *source, int *destination, int src_size
 	  break;
 
 	case CCL_WriteStringJump: /* A--D--D--R--E--S--S-000XXXXX */
-	  j = XINT (ccl_prog[ic++]);
+	  j = XINT (XVECTOR_REF (ccl_prog, ic));
+          ic++;
 	  CCL_WRITE_STRING (j);
 	  ic += ADDR - 1;
 	  break;
 
 	case CCL_WriteArrayReadJump: /* A--D--D--R--E--S--S-rrrXXXXX */
 	  i = reg[rrr];
-	  j = XINT (ccl_prog[ic]);
+	  j = XINT (XVECTOR_REF (ccl_prog, ic));
 	  if (0 <= i && i < j)
 	    {
-	      i = XINT (ccl_prog[ic + 1 + i]);
+	      i = XINT (XVECTOR_REF (ccl_prog, ic + 1 + i));
 	      CCL_WRITE_CHAR (i);
 	    }
 	  ic += j + 2;
@@ -1004,7 +1009,7 @@ ccl_driver (struct ccl_program *ccl, int *source, int *destination, int src_size
 	case CCL_Branch:	/* CCCCCCCCCCCCCCCCCCCCrrrXXXXX */
 	{
 	  int ioff = 0 <= reg[rrr] && reg[rrr] < field1 ? reg[rrr] : field1;
-	  int incr = XINT (ccl_prog[ic + ioff]);
+	  int incr = XINT (XVECTOR_REF (ccl_prog, ic + ioff));
 	  ic += incr;
 	}
 	  break;
@@ -1023,7 +1028,7 @@ ccl_driver (struct ccl_program *ccl, int *source, int *destination, int src_size
 	case CCL_WriteExprConst:  /* 1:00000OPERATION000RRR000XXXXX */
 	  rrr = 7;
 	  i = reg[RRR];
-	  j = XINT (ccl_prog[ic]);
+	  j = XINT (XVECTOR_REF (ccl_prog, ic));
 	  op = field1 >> 6;
 	  jump_address = ic + 1;
 	  goto ccl_set_expr;
@@ -1056,7 +1061,10 @@ ccl_driver (struct ccl_program *ccl, int *source, int *destination, int src_size
 	    /* If FFF is nonzero, the CCL program ID is in the
                following code.  */
 	    if (rrr)
-	      prog_id = XINT (ccl_prog[ic++]);
+              {
+                prog_id = XINT (XVECTOR_REF (ccl_prog, ic));
+                ic++;
+              }
 	    else
 	      prog_id = field1;
 
@@ -1079,9 +1087,9 @@ ccl_driver (struct ccl_program *ccl, int *source, int *destination, int src_size
 	    ccl_prog_stack_struct[stack_idx].ic = ic;
 	    ccl_prog_stack_struct[stack_idx].eof_ic = eof_ic;
 	    stack_idx++;
-	    ccl_prog = XVECTOR (AREF (slot, 1))->contents;
+	    XVECTOR_CACHE (ccl_prog, AREF (slot, 1));
 	    ic = CCL_HEADER_MAIN;
-	    eof_ic = XFASTINT (ccl_prog[CCL_HEADER_EOF]);
+	    eof_ic = XFASTINT (XVECTOR_REF (ccl_prog, CCL_HEADER_EOF));
 	  }
 	  break;
 
@@ -1099,7 +1107,7 @@ ccl_driver (struct ccl_program *ccl, int *source, int *destination, int src_size
 	  i = reg[rrr];
 	  if (0 <= i && i < field1)
 	    {
-	      j = XINT (ccl_prog[ic + i]);
+	      j = XINT (XVECTOR_REF (ccl_prog, ic + i));
 	      CCL_WRITE_CHAR (j);
 	    }
 	  ic += field1;
@@ -1124,7 +1132,8 @@ ccl_driver (struct ccl_program *ccl, int *source, int *destination, int src_size
 	  CCL_SUCCESS;
 
 	case CCL_ExprSelfConst: /* 00000OPERATION000000rrrXXXXX */
-	  i = XINT (ccl_prog[ic++]);
+	  i = XINT (XVECTOR_REF (ccl_prog, ic));
+          ic++;
 	  op = field1 >> 6;
 	  goto ccl_expr_self;
 
@@ -1160,7 +1169,8 @@ ccl_driver (struct ccl_program *ccl, int *source, int *destination, int src_size
 
 	case CCL_SetExprConst:	/* 00000OPERATION000RRRrrrXXXXX */
 	  i = reg[RRR];
-	  j = XINT (ccl_prog[ic++]);
+	  j = XINT (XVECTOR_REF (ccl_prog, ic));
+          ic++;
 	  op = field1 >> 6;
 	  jump_address = ic;
 	  goto ccl_set_expr;
@@ -1178,8 +1188,10 @@ ccl_driver (struct ccl_program *ccl, int *source, int *destination, int src_size
 	case CCL_JumpCondExprConst: /* A--D--D--R--E--S--S-rrrXXXXX */
 	  i = reg[rrr];
 	  jump_address = ic + ADDR;
-	  op = XINT (ccl_prog[ic++]);
-	  j = XINT (ccl_prog[ic++]);
+	  op = XINT (XVECTOR_REF (ccl_prog, ic));
+          ic++;
+	  j = XINT (XVECTOR_REF (ccl_prog, ic));
+          ic++;
 	  rrr = 7;
 	  goto ccl_set_expr;
 
@@ -1189,7 +1201,8 @@ ccl_driver (struct ccl_program *ccl, int *source, int *destination, int src_size
 	case CCL_JumpCondExprReg:
 	  i = reg[rrr];
 	  jump_address = ic + ADDR;
-	  op = XINT (ccl_prog[ic++]);
+	  op = XINT (XVECTOR_REF (ccl_prog, ic));
+          ic++;
 	  GET_CCL_RANGE (j, ccl_prog, ic++, 0, 7);
 	  j = reg[j];
 	  rrr = 7;
@@ -1340,7 +1353,8 @@ ccl_driver (struct ccl_program *ccl, int *source, int *destination, int src_size
 		ptrdiff_t size;
 		int fin_ic;
 
-		j = XINT (ccl_prog[ic++]); /* number of maps. */
+		j = XINT (XVECTOR_REF (ccl_prog, ic)); /* number of maps. */
+                ic++;
 		fin_ic = ic + j;
 		op = reg[rrr];
 		if ((j > reg[RRR]) && (j >= 0))
@@ -1359,7 +1373,8 @@ ccl_driver (struct ccl_program *ccl, int *source, int *destination, int src_size
 		  {
 		    if (!VECTORP (Vcode_conversion_map_vector)) continue;
 		    size = ASIZE (Vcode_conversion_map_vector);
-		    point = XINT (ccl_prog[ic++]);
+		    point = XINT (XVECTOR_REF (ccl_prog, ic));
+                    ic++;
 		    if (! (0 <= point && point < size)) continue;
 		    map = AREF (Vcode_conversion_map_vector, point);
 
@@ -1453,7 +1468,8 @@ ccl_driver (struct ccl_program *ccl, int *source, int *destination, int src_size
 		stack_idx_of_map_multiple = 0;
 
 		/* Get number of maps and separators.  */
-		map_set_rest_length = XINT (ccl_prog[ic++]);
+		map_set_rest_length = XINT (XVECTOR_REF (ccl_prog, ic));
+                ic++;
 
 		fin_ic = ic + map_set_rest_length;
 		op = reg[rrr];
@@ -1524,7 +1540,7 @@ ccl_driver (struct ccl_program *ccl, int *source, int *destination, int src_size
 		do {
 		  for (;map_set_rest_length > 0;i++, ic++, map_set_rest_length--)
 		    {
-		      point = XINT (ccl_prog[ic]);
+		      point = XINT (XVECTOR_REF (ccl_prog, ic));
 		      if (point < 0)
 			{
 			  /* +1 is for including separator. */
@@ -1639,7 +1655,8 @@ ccl_driver (struct ccl_program *ccl, int *source, int *destination, int src_size
 	      {
 		Lisp_Object map, attrib, value, content;
 		int point;
-		j = XINT (ccl_prog[ic++]); /* map_id */
+		j = XINT (XVECTOR_REF (ccl_prog, ic)); /* map_id */
+                ic++;
 		op = reg[rrr];
 		if (! (VECTORP (Vcode_conversion_map_vector)
 		       && j < ASIZE (Vcode_conversion_map_vector)))
@@ -1779,7 +1796,7 @@ ccl_driver (struct ccl_program *ccl, int *source, int *destination, int src_size
  ccl_finish:
   ccl->ic = ic;
   ccl->stack_idx = stack_idx;
-  ccl->prog = ccl_prog;
+  /* ccl->prog = ccl_prog; */
   ccl->consumed = src - source;
   if (dst != NULL)
     ccl->produced = dst - destination;
@@ -1912,16 +1929,14 @@ setup_ccl_program (struct ccl_program *ccl, Lisp_Object ccl_prog)
 {
   if (! NILP (ccl_prog))
     {
-      struct Lisp_Vector *vp;
-
       ccl_prog = ccl_get_compiled_code (ccl_prog, &ccl->idx);
       if (! VECTORP (ccl_prog))
 	return false;
-      vp = XVECTOR (ccl_prog);
-      ccl->size = vp->header.size;
-      ccl->prog = vp->contents;
-      ccl->eof_ic = XINT (vp->contents[CCL_HEADER_EOF]);
-      ccl->buf_magnification = XINT (vp->contents[CCL_HEADER_BUF_MAG]);
+      XVECTOR_CACHE (vp, ccl_prog);
+      ccl->size = XVECTOR_SIZE (vp);
+      ccl->prog = ccl_prog;
+      ccl->eof_ic = XINT (XVECTOR_REF (vp, CCL_HEADER_EOF));
+      ccl->buf_magnification = XINT (XVECTOR_REF (vp, CCL_HEADER_BUF_MAG));
       if (ccl->idx >= 0)
 	{
 	  Lisp_Object slot;
@@ -2270,10 +2285,13 @@ Return index number of the registered map.  */)
   return idx;
 }
 
+#endif
+
 
 void
 syms_of_ccl (void)
 {
+#ifndef HAVE_CHEZ_SCHEME
   staticpro (&Vccl_program_table);
   Vccl_program_table = Fmake_vector (make_number (32), Qnil);
 
@@ -2318,4 +2336,5 @@ used by CCL.  */);
   defsubr (&Sccl_execute_on_string);
   defsubr (&Sregister_ccl_program);
   defsubr (&Sregister_code_conversion_map);
+#endif
 }

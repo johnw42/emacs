@@ -685,7 +685,7 @@ extern bool blankp (int);
 
 /* Return a translation table of id number ID.  */
 #define GET_TRANSLATION_TABLE(id) \
-  (XCDR (XVECTOR (Vtranslation_table_vector)->contents[(id)]))
+  (XCDR (AREF (Vtranslation_table_vector, (id))))
 
 /* Look up the element in char table OBJ at index CH, and return it as
    an integer.  If the element is not a character, return CH itself.  */

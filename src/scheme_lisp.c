@@ -14,7 +14,7 @@
 static bool scheme_initialized = false;
 static ptr c_data_table;
 
-ptr scheme_pseudovector_tag = 0;
+ptr scheme_pseudovector_symbol = Sfalse;
 
 static ptr lisp_to_scheme(Lisp_Object lisp_obj) {
   return lisp_obj;
@@ -213,8 +213,8 @@ void scheme_init(void) {
   c_data_table = scheme_call0("make-eq-hashtable");
   Slock_object(c_data_table);
 
-  scheme_pseudovector_tag = scheme_call0("gensym");
-  Slock_object(scheme_pseudovector_tag);
+  scheme_pseudovector_symbol = scheme_call0("gensym");
+  Slock_object(scheme_pseudovector_symbol);
 
   atexit(scheme_deinit);
   scheme_initialized = true;
@@ -247,20 +247,41 @@ scheme_alloc_c_data(ptr key, iptr size)
   return scheme_malloc_ptr(data_obj);
 }
 
-ptr
-scheme_make_pvec(iptr size,
-                 enum pvec_type type,
+ptr *
+scheme_copy_vector_contents(ptr vec, ptr *output)
+{
+  iptr len = Svector_length(vec);
+  for (iptr i = 0; i < len; i++)
+    {
+      output[i] = Svector_ref(vec, i);
+    }
+  return output;
+}
+
+union vectorlike_header *
+scheme_make_pvec(iptr non_lisp_field_offset,
+                 enum pvec_type tag,
                  iptr bytes_count,
                  int bytes_fill)
 {
-  eassert(size >= 0);
-  ptr vec = Smake_vector(size + MIN_PVEC_SIZE, Qnil);
+  eassert(bytes_count >= non_lisp_field_offset);
+  ptr vec = Smake_vector(NUM_PVEC_FIELDS, Qnil);
   Slock_object(vec);
-  ptr bytes = Smake_bytevector(bytes_found, bytes_fill);
+  ptr bytes = Smake_bytevector(bytes_count, bytes_fill);
   Slock_object(bytes);
+  struct Lisp_Pseudovector *data = (void *)Sbytevector_data(bytes);
+  data->header.scheme_obj = vec;
+  iptr num_lisp_fields = (non_lisp_field_offset - 
+                          offsetof(struct Lisp_Pseudovector, first_lisp_field))
+    / sizeof(ptr);
+  for (iptr i = 0; i < num_lisp_fields; i++) {
+    (&data->first_lisp_field)[i] = Qnil;
+  }
   PVEC_FIELD_SET(vec, BYTES, bytes);
-  PVEC_FIELD_SET(vec, TAG, scheme_pseudovector_tag);
-  PVEC_FIELD_SET(vec, PVEC_TYPE, Sfixnum(type));
+  PVEC_FIELD_SET(vec, SYMBOL, scheme_pseudovector_symbol);
+  PVEC_FIELD_SET(vec, PVEC_TYPE, Sfixnum(tag));
+  PVEC_FIELD_SET(vec, NUM_LISP_FIELDS, Sfixnum(num_lisp_fields));
+  return &data->header;
 }
 
 void

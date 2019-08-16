@@ -346,7 +346,7 @@ xfont_list_pattern (Display *display, const char *pattern,
   if (num_fonts > 0)
     {
       char **indices = alloca (sizeof (char *) * num_fonts);
-      Lisp_Object *props = XVECTOR (xfont_scratch_props)->contents;
+      XVECTOR_CACHE (props, xfont_scratch_props);
       Lisp_Object scripts = Qnil, entity = Qnil;
 
       for (i = 0; i < ASIZE (xfont_scratch_props); i++)
@@ -435,9 +435,9 @@ xfont_list_pattern (Display *display, const char *pattern,
 		  list = Fcons (entity, list), entity = Qnil;
 		continue;
 	      }
-	    if (memcmp (props, aref_addr (entity, FONT_FOUNDRY_INDEX),
-			word_size * 7)
-		|| ! EQ (AREF (entity, FONT_SPACING_INDEX), props[7]))
+            XVECTOR_CACHE(foundry, AREF (entity, FONT_FOUNDRY_INDEX));
+            if (xvector_cmp(props, foundry, 7)
+		|| ! EQ (AREF (entity, FONT_SPACING_INDEX), XVECTOR_REF (props, 7)))
 	      {
 		vcopy (xfont_scratch_props, 0,
 		       aref_addr (entity, FONT_FOUNDRY_INDEX), 7);

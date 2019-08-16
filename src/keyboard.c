@@ -4322,18 +4322,20 @@ Lisp_Object pending_funcalls;
 static bool
 decode_timer (Lisp_Object timer, struct timespec *result)
 {
-  Lisp_Object *vec;
-
   if (! (VECTORP (timer) && ASIZE (timer) == 9))
     return 0;
-  vec = XVECTOR (timer)->contents;
-  if (! NILP (vec[0]))
+  XVECTOR_CACHE (vec, timer);
+  if (! NILP (XVECTOR_REF (vec, 0)))
     return 0;
-  if (! INTEGERP (vec[2]))
+  if (! INTEGERP (XVECTOR_REF (vec, 2)))
     return false;
 
   struct lisp_time t;
-  if (decode_time_components (vec[1], vec[2], vec[3], vec[8], &t, 0) <= 0)
+  if (decode_time_components (XVECTOR_REF (vec, 1),
+                              XVECTOR_REF (vec, 2),
+                              XVECTOR_REF (vec, 3),
+                              XVECTOR_REF (vec, 8),
+                              &t, 0) <= 0)
     return false;
   *result = lisp_to_timespec (t);
   return timespec_valid_p (*result);
@@ -8089,14 +8091,14 @@ process_tool_bar_item (Lisp_Object key, Lisp_Object def, Lisp_Object data, void 
 	 discard any previously made item.  */
       for (i = 0; i < ntool_bar_items; i += TOOL_BAR_ITEM_NSLOTS)
 	{
-	  Lisp_Object *v = XVECTOR (tool_bar_items_vector)->contents + i;
+          XVECTOR_CACHE (v, tool_bar_items_vector);
 
-	  if (EQ (key, v[TOOL_BAR_ITEM_KEY]))
+	  if (EQ (key, XVECTOR_REF (v, i + TOOL_BAR_ITEM_KEY)))
 	    {
 	      if (ntool_bar_items > i + TOOL_BAR_ITEM_NSLOTS)
-		memmove (v, v + TOOL_BAR_ITEM_NSLOTS,
-			 ((ntool_bar_items - i - TOOL_BAR_ITEM_NSLOTS)
-			  * word_size));
+                xvector_move (v, i,
+                              v, i + TOOL_BAR_ITEM_NSLOTS,
+                              ntool_bar_items - i - TOOL_BAR_ITEM_NSLOTS);
 	      ntool_bar_items -= TOOL_BAR_ITEM_NSLOTS;
 	      break;
 	    }
@@ -8410,8 +8412,8 @@ append_tool_bar_item (void)
 
   /* Append entries from tool_bar_item_properties to the end of
      tool_bar_items_vector.  */
-  vcopy (tool_bar_items_vector, ntool_bar_items,
-	 XVECTOR (tool_bar_item_properties)->contents, TOOL_BAR_ITEM_NSLOTS);
+  vector_copy (tool_bar_items_vector, tool_bar_item_properties,
+               ntool_bar_items);
   ntool_bar_items += TOOL_BAR_ITEM_NSLOTS;
 }
 
@@ -10021,7 +10023,7 @@ represented as events of the form (nil . COMMAND).  */)
   if (!total_keys
       || (cmds && total_keys < NUM_RECENT_KEYS))
     return Fvector (total_keys,
-		    XVECTOR (recent_keys)->contents);
+		    XVECTOR_CONTENTS (recent_keys));
   else
     {
       Lisp_Object es = Qnil;
@@ -10051,7 +10053,7 @@ See also `this-command-keys-vector'.  */)
   (void)
 {
   return make_event_array (this_command_key_count,
-			   XVECTOR (this_command_keys)->contents);
+			   XVECTOR_CONTENTS (this_command_keys));
 }
 
 DEFUN ("set--this-command-keys", Fset__this_command_keys,
@@ -10098,7 +10100,7 @@ See also `this-command-keys'.  */)
   (void)
 {
   return Fvector (this_command_key_count,
-		  XVECTOR (this_command_keys)->contents);
+		  XVECTOR_CONTENTS (this_command_keys));
 }
 
 DEFUN ("this-single-command-keys", Fthis_single_command_keys,
@@ -10113,7 +10115,7 @@ The value is always a vector.  */)
 {
   return Fvector (this_command_key_count
 		  - this_single_command_key_start,
-		  (XVECTOR (this_command_keys)->contents
+		  (XVECTOR_CONTENTS (this_command_keys)
 		   + this_single_command_key_start));
 }
 
@@ -10127,7 +10129,7 @@ shows the events before all translations (except for input methods).
 The value is always a vector.  */)
   (void)
 {
-  return Fvector (raw_keybuf_count, XVECTOR (raw_keybuf)->contents);
+  return Fvector (raw_keybuf_count, XVECTOR_CONTENTS (raw_keybuf));
 }
 
 DEFUN ("clear-this-command-keys", Fclear_this_command_keys,

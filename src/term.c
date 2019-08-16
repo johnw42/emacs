@@ -528,7 +528,7 @@ encode_terminal_code (struct glyph *src, int src_len,
   unsigned char *buf;
   ptrdiff_t nchars, nbytes, required;
   ptrdiff_t tlen = GLYPH_TABLE_LENGTH;
-  register Lisp_Object *tbase = GLYPH_TABLE_BASE;
+  GLYPH_TABLE_BASE(tbase);
   Lisp_Object charset_list;
 
   /* Allocate sufficient size of buffer to store all characters in
@@ -640,7 +640,7 @@ encode_terminal_code (struct glyph *src, int src_len,
 		c = GLYPH_CHAR (g);
 	      else
 		/* We have a string in Vglyph_table.  */
-		string = tbase[GLYPH_CHAR (g)];
+		string = GLYPH_TABLE_REF (tbase, GLYPH_CHAR (g));
 	    }
 
 	  if (NILP (string))
@@ -3389,18 +3389,17 @@ tty_menu_destroy (tty_menu *menu)
 static void
 tty_menu_help_callback (char const *help_string, int pane, int item)
 {
-  Lisp_Object *first_item;
   Lisp_Object pane_name;
   Lisp_Object menu_object;
 
-  first_item = XVECTOR (menu_items)->contents;
-  if (EQ (first_item[0], Qt))
-    pane_name = first_item[MENU_ITEMS_PANE_NAME];
-  else if (EQ (first_item[0], Qquote))
+  XVECTOR_CACHE (first_item, menu_items);
+  if (EQ (XVECTOR_REF (first_item, 0), Qt))
+    pane_name = XVECTOR_REF (first_item, MENU_ITEMS_PANE_NAME);
+  else if (EQ (XVECTOR_REF (first_item, 0), Qquote))
     /* This shouldn't happen, see xmenu_show.  */
     pane_name = empty_unibyte_string;
   else
-    pane_name = first_item[MENU_ITEMS_ITEM_NAME];
+    pane_name = XVECTOR_REF (first_item, MENU_ITEMS_ITEM_NAME);
 
   /* (menu-item MENU-NAME PANE-NUMBER)  */
   menu_object = list3 (Qmenu_item, pane_name, make_number (pane));

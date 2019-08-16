@@ -766,8 +766,9 @@ set_frame_menubar (struct frame *f, bool first_time, bool deep_p)
 
       /* Save the frame's previous menu bar contents data.  */
       if (previous_menu_items_used)
-	memcpy (previous_items, XVECTOR (f->menu_bar_vector)->contents,
-		previous_menu_items_used * word_size);
+        vector_copy_out(previous_items,
+                        f->menu_bar_vector,
+                        previous_menu_items_used);
 
       /* Fill in menu_items with the current menu bar contents.
 	 This can evaluate Lisp code.  */

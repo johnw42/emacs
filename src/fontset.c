@@ -453,8 +453,7 @@ reorder_font_vector (Lisp_Object font_group, struct font *font)
     }
 
   if (score_changed)
-    qsort (XVECTOR (vec)->contents, size, word_size,
-	   fontset_compare_rfontdef);
+    vector_qsort (vec, size, fontset_compare_rfontdef);
   EMACS_INT low_tick_bits = charset_ordered_list_tick & MOST_POSITIVE_FIXNUM;
   XSETCAR (font_group, make_number (low_tick_bits));
 }

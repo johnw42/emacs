@@ -24,6 +24,8 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 #include "character.h"
 #include "charset.h"
 
+#ifndef HAVE_CHEZ_SCHEME
+
 /* 64/16/32/128 */
 
 /* Number of elements in Nth level char-table.  */
@@ -107,6 +109,10 @@ that specifies how many extra slots the char-table has.  Otherwise,
 the char-table has no extra slot.  */)
   (register Lisp_Object purpose, Lisp_Object init)
 {
+#ifdef HAVE_CHEZ_SCHEME
+  eassert(!HAVE_CHEZ_SCHEME);
+  return Qnil;
+#else
   Lisp_Object vector;
   Lisp_Object n;
   int n_extras;
@@ -126,11 +132,12 @@ the char-table has no extra slot.  */)
 
   size = CHAR_TABLE_STANDARD_SLOTS + n_extras;
   vector = Fmake_vector (make_number (size), init);
-  XSETPVECTYPE (XVECTOR (vector), PVEC_CHAR_TABLE);
+  SETPVECTYPE (vector, PVEC_CHAR_TABLE);
   set_char_table_parent (vector, Qnil);
   set_char_table_purpose (vector, purpose);
   XSETCHAR_TABLE (vector, XCHAR_TABLE (vector));
   return vector;
+#endif
 }
 
 static Lisp_Object
@@ -184,12 +191,16 @@ copy_sub_char_table (Lisp_Object table)
 Lisp_Object
 copy_char_table (Lisp_Object table)
 {
+#ifdef HAVE_CHEZ_SCHEME
+  eassert(!HAVE_CHEZ_SCHEME);
+  return table;
+#else
   Lisp_Object copy;
   int size = PVSIZE (table);
   int i;
 
   copy = Fmake_vector (make_number (size), Qnil);
-  XSETPVECTYPE (XVECTOR (copy), PVEC_CHAR_TABLE);
+  SETPVECTYPE (copy, PVEC_CHAR_TABLE);
   set_char_table_defalt (copy, XCHAR_TABLE (table)->defalt);
   set_char_table_parent (copy, XCHAR_TABLE (table)->parent);
   set_char_table_purpose (copy, XCHAR_TABLE (table)->purpose);
@@ -206,6 +217,7 @@ copy_char_table (Lisp_Object table)
 
   XSETCHAR_TABLE (copy, XCHAR_TABLE (copy));
   return copy;
+#endif
 }
 
 static Lisp_Object
@@ -1219,11 +1231,11 @@ uniprop_encode_value_character (Lisp_Object table, Lisp_Object value)
 static Lisp_Object
 uniprop_encode_value_run_length (Lisp_Object table, Lisp_Object value)
 {
-  Lisp_Object *value_table = XVECTOR (XCHAR_TABLE (table)->extras[4])->contents;
+  XVECTOR_CACHE (value_table, XCHAR_TABLE (table)->extras[4]);
   int i, size = ASIZE (XCHAR_TABLE (table)->extras[4]);
 
   for (i = 0; i < size; i++)
-    if (EQ (value, value_table[i]))
+    if (EQ (value, XVECTOR_REF (value_table, i)))
       break;
   if (i == size)
     wrong_type_argument (build_string ("Unicode property value"), value);
@@ -1237,12 +1249,12 @@ uniprop_encode_value_run_length (Lisp_Object table, Lisp_Object value)
 static Lisp_Object
 uniprop_encode_value_numeric (Lisp_Object table, Lisp_Object value)
 {
-  Lisp_Object *value_table = XVECTOR (XCHAR_TABLE (table)->extras[4])->contents;
+  XVECTOR_CACHE (value_table, XCHAR_TABLE (table)->extras[4]);
   int i, size = ASIZE (XCHAR_TABLE (table)->extras[4]);
 
   CHECK_NUMBER (value);
   for (i = 0; i < size; i++)
-    if (EQ (value, value_table[i]))
+    if (EQ (value, XVECTOR_REF(value_table, i)))
       break;
   value = make_number (i);
   if (i == size)
@@ -1360,11 +1372,13 @@ CHAR-TABLE must be what returned by `unicode-property-table-internal'. */)
   CHAR_TABLE_SET (char_table, XINT (ch), value);
   return Qnil;
 }
+#endif /* not HAVE_CHEZ_SCHEME */
 
 
 void
 syms_of_chartab (void)
 {
+#ifndef HAVE_CHEZ_SCHEME
   /* Purpose of uniprop tables. */
   DEFSYM (Qchar_code_property_table, "char-code-property-table");
 
@@ -1393,4 +1407,5 @@ syms_of_chartab (void)
 	       doc: /* Alist of character property name vs char-table containing property values.
 Internal use only.  */);
   Vchar_code_property_alist = Qnil;
+#endif /* not HAVE_CHEZ_SCHEME */
 }

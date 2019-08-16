@@ -1154,7 +1154,7 @@ line_draw_cost (struct frame *f, struct glyph_matrix *matrix, int vpos)
   struct glyph *beg = row->glyphs[TEXT_AREA];
   struct glyph *end = beg + row->used[TEXT_AREA];
   int len;
-  Lisp_Object *glyph_table_base = GLYPH_TABLE_BASE;
+  GLYPH_TABLE_BASE(glyph_table_base);
   ptrdiff_t glyph_table_len = GLYPH_TABLE_LENGTH;
 
   /* Ignore trailing and leading spaces if we can.  */
@@ -1175,7 +1175,7 @@ line_draw_cost (struct frame *f, struct glyph_matrix *matrix, int vpos)
 
   /* If we don't have a glyph-table, each glyph is one character,
      so return the number of glyphs.  */
-  if (glyph_table_base == 0)
+  if (GLYPH_TABLE_NULLP (glyph_table_base))
     len = end - beg;
   else
     {

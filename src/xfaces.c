@@ -1463,8 +1463,7 @@ the face font sort order.  */)
   vec = Fvconcat (ndrivers, drivers);
   nfonts = ASIZE (vec);
 
-  qsort (XVECTOR (vec)->contents, nfonts, word_size,
-	 compare_fonts_by_sort_order);
+  vector_qsort (vec, nfonts, compare_fonts_by_sort_order);
 
   result = Qnil;
   for (i = nfonts - 1; i >= 0; --i)
@@ -1901,8 +1900,7 @@ get_lface_attributes_no_remap (struct frame *f, Lisp_Object face_name,
   lface = lface_from_face_name_no_resolve (f, face_name, signal_p);
 
   if (! NILP (lface))
-    memcpy (attrs, XVECTOR (lface)->contents,
-	    LFACE_VECTOR_SIZE * sizeof *attrs);
+    vector_copy_out(attrs, lface, LFACE_VECTOR_SIZE);
 
   return !NILP (lface);
 }
@@ -2598,7 +2596,7 @@ The value is TO.  */)
       f = XFRAME (new_frame);
     }
 
-  vcopy (copy, 0, XVECTOR (lface)->contents, LFACE_VECTOR_SIZE);
+  vector_copy (copy, lface, LFACE_VECTOR_SIZE);
 
   /* Changing a named face means that all realized faces depending on
      that face are invalid.  Since we cannot tell which realized faces
@@ -3038,7 +3036,7 @@ FRAME 0 means change the face on all frames, and change the default
                 {
                   if (! FONT_OBJECT_P (value))
                     {
-                      Lisp_Object *attrs = XVECTOR (lface)->contents;
+                      Lisp_Object *attrs = XVECTOR_CONTENTS (lface);
                       Lisp_Object font_object;
 
                       font_object = font_load_for_lface (f1, attrs, value);
@@ -3108,7 +3106,7 @@ FRAME 0 means change the face on all frames, and change the default
 	 the font to nil so that the font selector doesn't think that
 	 the attribute is mandatory.  Also, clear the average
 	 width.  */
-      font_clear_prop (XVECTOR (lface)->contents, prop_index);
+      font_clear_prop (XVECTOR_CONTENTS (lface), prop_index);
     }
 
   /* Changing a named face means that all realized faces depending on
@@ -3138,7 +3136,7 @@ FRAME 0 means change the face on all frames, and change the default
 	     reflected in changed `font' frame parameters.  */
 	  if (FRAMEP (frame)
 	      && (prop_index || EQ (attr, QCfont))
-	      && lface_fully_specified_p (XVECTOR (lface)->contents))
+	      && lface_fully_specified_p (XVECTOR_CONTENTS (lface)))
 	    set_font_frame_param (frame, lface);
 	  else
 #endif /* HAVE_WINDOW_SYSTEM */
@@ -3318,7 +3316,7 @@ set_font_frame_param (Lisp_Object frame, Lisp_Object lface)
     {
       if (FONT_SPEC_P (font))
 	{
-	  font = font_load_for_lface (f, XVECTOR (lface)->contents, font);
+	  font = font_load_for_lface (f, XVECTOR_CONTENTS (lface), font);
 	  if (NILP (font))
 	    return;
 	  ASET (lface, LFACE_FONT_INDEX, font);
@@ -3679,8 +3677,8 @@ Default face attributes override any local face attributes.  */)
      the local frame is defined from default specs in `face-defface-spec'
      and those should be overridden by global settings.  Hence the strange
      "global before local" priority.  */
-  lvec = XVECTOR (local_lface)->contents;
-  gvec = XVECTOR (global_lface)->contents;
+  lvec = XVECTOR_CONTENTS (local_lface);
+  gvec = XVECTOR_CONTENTS (global_lface);
   for (i = 1; i < LFACE_VECTOR_SIZE; ++i)
     if (IGNORE_DEFFACE_P (gvec[i]))
       ASET (local_lface, i, Qunspecified);
@@ -3869,8 +3867,8 @@ If FRAME is omitted or nil, use the selected frame.  */)
 
   lface1 = lface_from_face_name (f, face1, true);
   lface2 = lface_from_face_name (f, face2, true);
-  equal_p = lface_equal_p (XVECTOR (lface1)->contents,
-			   XVECTOR (lface2)->contents);
+  equal_p = lface_equal_p (XVECTOR_CONTENTS (lface1),
+			   XVECTOR_CONTENTS (lface2));
   return equal_p ? Qt : Qnil;
 }
 
@@ -4629,7 +4627,7 @@ DEFUN ("face-attributes-as-vector", Fface_attributes_as_vector,
   Lisp_Object lface;
   lface = Fmake_vector (make_number (LFACE_VECTOR_SIZE),
 			Qunspecified);
-  merge_face_ref (XFRAME (selected_frame), plist, XVECTOR (lface)->contents,
+  merge_face_ref (XFRAME (selected_frame), plist, XVECTOR_CONTENTS (lface),
 		  true, 0);
   return lface;
 }
@@ -5300,9 +5298,9 @@ realize_default_face (struct frame *f)
     ASET (lface, LFACE_STIPPLE_INDEX, Qnil);
 
   /* Realize the face; it must be fully-specified now.  */
-  eassert (lface_fully_specified_p (XVECTOR (lface)->contents));
+  eassert (lface_fully_specified_p (XVECTOR_CONTENTS (lface)));
   check_lface (lface);
-  memcpy (attrs, XVECTOR (lface)->contents, sizeof attrs);
+  memcpy (attrs, XVECTOR_CONTENTS (lface), sizeof attrs);
   struct face *face = realize_face (c, attrs, DEFAULT_FACE_ID);
 
 #ifndef HAVE_WINDOW_SYSTEM

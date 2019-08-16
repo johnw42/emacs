@@ -3999,7 +3999,7 @@ copy_font_spec (Lisp_Object font)
   spec->props[FONT_TYPE_INDEX] = spec->props[FONT_EXTRA_INDEX] = Qnil;
 
   /* Copy basic properties FONT_FOUNDRY_INDEX..FONT_AVGWIDTH_INDEX.  */
-  memcpy (spec->props + 1, XVECTOR (font)->contents + 1,
+  memcpy (spec->props + 1, XVECTOR_CONTENTS (font) + 1,
 	  (FONT_EXTRA_INDEX - 1) * word_size);
 
   /* Copy an alist of extra information but discard :font-entity property.  */

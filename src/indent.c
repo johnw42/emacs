@@ -108,15 +108,16 @@ character_width (int c, struct Lisp_Char_Table *dp)
    invalidate the buffer's width_run_cache.  */
 
 bool
-disptab_matches_widthtab (struct Lisp_Char_Table *disptab, struct Lisp_Vector *widthtab)
+disptab_matches_widthtab (struct Lisp_Char_Table *disptab, struct Lisp_Object widthtab)
 {
   int i;
 
-  eassert (widthtab->header.size == 256);
+  XVECTOR_CACHE(cache, widthtab);
+  eassert (XVECTOR_SIZE (cache) == 256);
 
   for (i = 0; i < 256; i++)
     if (character_width (i, disptab)
-        != XFASTINT (widthtab->contents[i]))
+        != XFASTINT (XVECTOR_REF (cache, i)))
       return 0;
 
   return 1;
@@ -127,16 +128,25 @@ disptab_matches_widthtab (struct Lisp_Char_Table *disptab, struct Lisp_Vector *w
 void
 recompute_width_table (struct buffer *buf, struct Lisp_Char_Table *disptab)
 {
+#ifdef HAVE_CHEZ_SCHEME
+  if (!VECTORP (BVAR (buf, width_table)))
+    bset_width_table (buf, make_uninit_vector (256));
+  ptr widthtab = BVAR (buf, width_table);
+  eassert (Svector_length(widthtab) == 256);
+
+  for (iptr i = 0; i < 256; i++)
+    Svector_set(widthtab, i, Sfixnum (character_width (i, disptab)));
+#else
   int i;
-  struct Lisp_Vector *widthtab;
 
   if (!VECTORP (BVAR (buf, width_table)))
     bset_width_table (buf, make_uninit_vector (256));
-  widthtab = XVECTOR (BVAR (buf, width_table));
-  eassert (widthtab->header.size == 256);
+  XVECTOR_CACHE (widthtab, BVAR (buf, width_table));
+  eassert (XVECTOR_SIZE(widthtab) == 256);
 
   for (i = 0; i < 256; i++)
-    XSETFASTINT (widthtab->contents[i], character_width (i, disptab));
+    XVECTOR_SETFASTINT (widthtab, i, character_width (i, disptab));
+#endif
 }
 
 /* Allocate or free the width run cache, as requested by the
@@ -1145,7 +1155,7 @@ compute_motion (ptrdiff_t from, ptrdiff_t frombyte, EMACS_INT fromvpos,
   ptrdiff_t width_run_start = from;
   ptrdiff_t width_run_end   = from;
   ptrdiff_t width_run_width = 0;
-  Lisp_Object *width_table;
+  xvector_cache_t width_table = XVECTOR_CACHE_INIT;
 
   /* The next buffer pos where we should consult the width run cache. */
   ptrdiff_t next_width_run = from;
@@ -1173,16 +1183,18 @@ compute_motion (ptrdiff_t from, ptrdiff_t frombyte, EMACS_INT fromvpos,
     cache_buffer = cache_buffer->base_buffer;
   if (dp == buffer_display_table ())
     {
-      width_table = (VECTORP (BVAR (current_buffer, width_table))
-		     ? XVECTOR (BVAR (current_buffer, width_table))->contents
-		     : 0);
-      if (width_table)
-	width_cache = width_run_cache_on_off ();
+      if (VECTORP (BVAR (current_buffer, width_table)))
+        {
+          XVECTOR_CACHE_UPDATE(width_table, BVAR (current_buffer, width_table));
+          width_cache = width_run_cache_on_off ();
+        }
+      else
+        XVECTOR_CACHE_SET_NULL(width_table);
     }
   else
     /* If the window has its own display table, we can't use the width
        run cache, because that's based on the buffer's display table.  */
-    width_table = 0;
+    XVECTOR_CACHE_SET_NULL(width_table);
 
   /* Negative width means use all available text columns.  */
   if (width < 0)
@@ -1533,7 +1545,7 @@ compute_motion (ptrdiff_t from, ptrdiff_t frombyte, EMACS_INT fromvpos,
 	      /* Is this character part of the current run?  If so, extend
 		 the run.  */
 	      if (pos - 1 == width_run_end
-		  && XFASTINT (width_table[c]) == width_run_width)
+		  && XFASTINT (XVECTOR_REF (width_table, c)) == width_run_width)
 		width_run_end = pos;
 
 	      /* The previous run is over, since this is a character at a
@@ -1548,7 +1560,7 @@ compute_motion (ptrdiff_t from, ptrdiff_t frombyte, EMACS_INT fromvpos,
 				       width_run_start, width_run_end);
 
 		  /* Start recording a new width run.  */
-		  width_run_width = XFASTINT (width_table[c]);
+		  width_run_width = XFASTINT (XVECTOR_REF (width_table, c));
 		  width_run_start = pos - 1;
 		  width_run_end = pos;
 		}
