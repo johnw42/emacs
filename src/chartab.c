@@ -1235,7 +1235,7 @@ uniprop_encode_value_run_length (Lisp_Object table, Lisp_Object value)
   int i, size = ASIZE (XCHAR_TABLE (table)->extras[4]);
 
   for (i = 0; i < size; i++)
-    if (EQ (value, XVECTOR_REF (value_table, i)))
+    if (EQ (value, xv_ref (value_table, i)))
       break;
   if (i == size)
     wrong_type_argument (build_string ("Unicode property value"), value);
@@ -1254,7 +1254,7 @@ uniprop_encode_value_numeric (Lisp_Object table, Lisp_Object value)
 
   CHECK_NUMBER (value);
   for (i = 0; i < size; i++)
-    if (EQ (value, XVECTOR_REF(value_table, i)))
+    if (EQ (value, xv_ref(value_table, i)))
       break;
   value = make_number (i);
   if (i == size)

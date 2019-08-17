@@ -113,11 +113,11 @@ disptab_matches_widthtab (struct Lisp_Char_Table *disptab, struct Lisp_Object wi
   int i;
 
   XVECTOR_CACHE(cache, widthtab);
-  eassert (XVECTOR_SIZE (cache) == 256);
+  eassert (xv_size (cache) == 256);
 
   for (i = 0; i < 256; i++)
     if (character_width (i, disptab)
-        != XFASTINT (XVECTOR_REF (cache, i)))
+        != XFASTINT (xv_ref (cache, i)))
       return 0;
 
   return 1;
@@ -142,10 +142,10 @@ recompute_width_table (struct buffer *buf, struct Lisp_Char_Table *disptab)
   if (!VECTORP (BVAR (buf, width_table)))
     bset_width_table (buf, make_uninit_vector (256));
   XVECTOR_CACHE (widthtab, BVAR (buf, width_table));
-  eassert (XVECTOR_SIZE(widthtab) == 256);
+  eassert (xv_size(widthtab) == 256);
 
   for (i = 0; i < 256; i++)
-    XVECTOR_SETFASTINT (widthtab, i, character_width (i, disptab));
+    XV_SETFASTINT (widthtab, i, character_width (i, disptab));
 #endif
 }
 
@@ -1155,7 +1155,7 @@ compute_motion (ptrdiff_t from, ptrdiff_t frombyte, EMACS_INT fromvpos,
   ptrdiff_t width_run_start = from;
   ptrdiff_t width_run_end   = from;
   ptrdiff_t width_run_width = 0;
-  xvector_cache_t width_table = XVECTOR_CACHE_INIT;
+  xvector_t width_table = XVECTOR_CACHE_INIT;
 
   /* The next buffer pos where we should consult the width run cache. */
   ptrdiff_t next_width_run = from;
@@ -1545,7 +1545,7 @@ compute_motion (ptrdiff_t from, ptrdiff_t frombyte, EMACS_INT fromvpos,
 	      /* Is this character part of the current run?  If so, extend
 		 the run.  */
 	      if (pos - 1 == width_run_end
-		  && XFASTINT (XVECTOR_REF (width_table, c)) == width_run_width)
+		  && XFASTINT (xv_ref (width_table, c)) == width_run_width)
 		width_run_end = pos;
 
 	      /* The previous run is over, since this is a character at a
@@ -1560,7 +1560,7 @@ compute_motion (ptrdiff_t from, ptrdiff_t frombyte, EMACS_INT fromvpos,
 				       width_run_start, width_run_end);
 
 		  /* Start recording a new width run.  */
-		  width_run_width = XFASTINT (XVECTOR_REF (width_table, c));
+		  width_run_width = XFASTINT (xv_ref (width_table, c));
 		  width_run_start = pos - 1;
 		  width_run_end = pos;
 		}

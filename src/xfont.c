@@ -437,7 +437,7 @@ xfont_list_pattern (Display *display, const char *pattern,
 	      }
             XVECTOR_CACHE(foundry, AREF (entity, FONT_FOUNDRY_INDEX));
             if (xvector_cmp(props, foundry, 7)
-		|| ! EQ (AREF (entity, FONT_SPACING_INDEX), XVECTOR_REF (props, 7)))
+		|| ! EQ (AREF (entity, FONT_SPACING_INDEX), xv_ref (props, 7)))
 	      {
 		vcopy (xfont_scratch_props, 0,
 		       aref_addr (entity, FONT_FOUNDRY_INDEX), 7);

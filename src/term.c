@@ -3393,13 +3393,13 @@ tty_menu_help_callback (char const *help_string, int pane, int item)
   Lisp_Object menu_object;
 
   XVECTOR_CACHE (first_item, menu_items);
-  if (EQ (XVECTOR_REF (first_item, 0), Qt))
-    pane_name = XVECTOR_REF (first_item, MENU_ITEMS_PANE_NAME);
-  else if (EQ (XVECTOR_REF (first_item, 0), Qquote))
+  if (EQ (xv_ref (first_item, 0), Qt))
+    pane_name = xv_ref (first_item, MENU_ITEMS_PANE_NAME);
+  else if (EQ (xv_ref (first_item, 0), Qquote))
     /* This shouldn't happen, see xmenu_show.  */
     pane_name = empty_unibyte_string;
   else
-    pane_name = XVECTOR_REF (first_item, MENU_ITEMS_ITEM_NAME);
+    pane_name = xv_ref (first_item, MENU_ITEMS_ITEM_NAME);
 
   /* (menu-item MENU-NAME PANE-NUMBER)  */
   menu_object = list3 (Qmenu_item, pane_name, make_number (pane));

@@ -2902,13 +2902,11 @@ read1 (Lisp_Object readcharfun, int *pch, bool first_in_list)
 	{
 	  /* Accept compiled functions at read-time so that we don't have to
 	     build them using function calls.  */
-	  Lisp_Object tmp;
-	  struct Lisp_Vector *vec;
-	  tmp = read_vector (readcharfun, 1);
-          vec = XVECTOR (tmp);
-	  if (vec->header.size == 0)
+	  Lisp_Object tmp = read_vector (readcharfun, 1);
+          xvector_t vec = XVECTOR (tmp);
+	  if (xv_size (vec) == 0)
 	    invalid_syntax ("Empty byte-code object");
-	  make_byte_code (vec);
+	  make_byte_code (xv_unwrap (vec));
 	  return tmp;
 	}
 #endif
@@ -3826,7 +3824,7 @@ read_vector (Lisp_Object readcharfun, bool bytecodeflag)
 	    }
 	  else if (i == COMPILED_CONSTANTS)
 	    {
-	      Lisp_Object bytestr = XVECTOR_REF (ptr0, COMPILED_CONSTANTS);
+	      Lisp_Object bytestr = xv_ref (ptr0, COMPILED_CONSTANTS);
 
 	      if (NILP (item))
 		{
@@ -4474,7 +4472,7 @@ defsubr (struct Lisp_Subr *sname)
 {
   Lisp_Object sym, tem;
   sym = intern_c_string (sname->symbol_name);
-  XSETPVECTYPE (sname, PVEC_SUBR);
+  XSETPVECTYPE (AS_XV (sname), PVEC_SUBR);
   XSETSUBR (tem, sname);
   set_symbol_function (sym, tem);
 }

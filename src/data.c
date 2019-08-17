@@ -2339,7 +2339,7 @@ bool-vector.  IDX starts at 0.  */)
 
   if (VECTORP (array))
     {
-      CHECK_IMPURE (array, XVECTOR (array));
+      CHECK_IMPURE (array, xv_unwrap (XVECTOR (array)));
       if (idxval < 0 || idxval >= ASIZE (array))
 	args_out_of_range (array, idx);
       ASET (array, idxval, newelt);

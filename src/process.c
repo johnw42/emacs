@@ -1542,7 +1542,7 @@ Return nil if format of ADDRESS is invalid.  */)
   if (VECTORP (address))  /* AF_INET or AF_INET6 */
     {
       XVECTOR_CACHE (p, address);
-      ptrdiff_t size = XVECTOR_SIZE (p);
+      ptrdiff_t size = xv_size (p);
       Lisp_Object args[10];
       int nargs, i;
       char const *format;
@@ -1575,15 +1575,15 @@ Return nil if format of ADDRESS is invalid.  */)
 
       for (i = 0; i < nargs; i++)
 	{
-	  if (! RANGED_INTEGERP (0, XVECTOR_REF (p, i), 65535))
+	  if (! RANGED_INTEGERP (0, xv_ref (p, i), 65535))
 	    return Qnil;
 
 	  if (nargs <= 5         /* IPv4 */
 	      && i < 4           /* host, not port */
-	      && XINT (XVECTOR_REF (p, i)) > 255)
+	      && XINT (xv_ref (p, i)) > 255)
 	    return Qnil;
 
-	  args[i + 1] = XVECTOR_REF (p, i);
+	  args[i + 1] = xv_ref (p, i);
 	}
 
       return Fformat (nargs + 1, args);
@@ -2480,7 +2480,7 @@ conv_sockaddr_to_lisp (struct sockaddr *sa, ptrdiff_t len)
   Lisp_Object address;
   ptrdiff_t i;
   unsigned char *cp;
-  xvector_cache_t p = XVECTOR_CACHE_INIT;
+  xvector_t p = XVECTOR_CACHE_INIT;
 
   /* Workaround for a bug in getsockname on BSD: Names bound to
      sockets in the UNIX domain are inaccessible; getsockname returns
@@ -2497,7 +2497,7 @@ conv_sockaddr_to_lisp (struct sockaddr *sa, ptrdiff_t len)
 	address = Fmake_vector (make_number (len), Qnil);
 	XVECTOR_CACHE_UPDATE (p, address);
         --len;
-	XVECTOR_REF (p, len) = make_number (ntohs (sin->sin_port));
+	xv_set (p, len, make_number (ntohs (sin->sin_port)));
 	cp = (unsigned char *) &sin->sin_addr;
 	break;
       }
@@ -2510,9 +2510,9 @@ conv_sockaddr_to_lisp (struct sockaddr *sa, ptrdiff_t len)
 	address = Fmake_vector (make_number (len), Qnil);
 	XVECTOR_CACHE_UPDATE (p, address);
         --len;
-	XVECTOR_REF (p, len) = make_number (ntohs (sin6->sin6_port));
+	xv_set (p, len, make_number (ntohs (sin6->sin6_port)));
 	for (i = 0; i < len; i++)
-	  XVECTOR_SET (p, i, make_number (ntohs (ip6[i])));
+	  xv_set (p, i, make_number (ntohs (ip6[i])));
 	return address;
       }
 #endif
@@ -2548,7 +2548,7 @@ conv_sockaddr_to_lisp (struct sockaddr *sa, ptrdiff_t len)
     }
 
   for (i = 0; i < len; i++, cp++)
-    XVECTOR_SET (p, i, make_number (*cp));
+    xv_set (p, i, make_number (*cp));
 
   return address;
 }
@@ -2569,18 +2569,18 @@ conv_addrinfo_to_lisp (struct addrinfo *res)
 static ptrdiff_t
 get_lisp_to_sockaddr_size (Lisp_Object address, int *familyp)
 {
-  xvector_cache_t p;
+  xvector_t p;
 
   if (VECTORP (address))
     {
       XVECTOR_CACHE_UPDATE (p, address);
-      if (XVECTOR_SIZE (p) == 5)
+      if (xv_size (p) == 5)
 	{
 	  *familyp = AF_INET;
 	  return sizeof (struct sockaddr_in);
 	}
 #ifdef AF_INET6
-      else if (XVECTOR_SIZE (p) == 9)
+      else if (xv_size (p) == 9)
 	{
 	  *familyp = AF_INET6;
 	  return sizeof (struct sockaddr_in6);
@@ -2599,10 +2599,10 @@ get_lisp_to_sockaddr_size (Lisp_Object address, int *familyp)
     {
       struct sockaddr *sa;
       XVECTOR_CACHE_UPDATE (p, XCDR (address));
-      if (MAX_ALLOCA - sizeof sa->sa_family < XVECTOR_SIZE (p))
+      if (MAX_ALLOCA - sizeof sa->sa_family < xv_size (p))
 	return 0;
       *familyp = XINT (XCAR (address));
-      return XVECTOR_SIZE (p) + sizeof (sa->sa_family);
+      return xv_size (p) + sizeof (sa->sa_family);
     }
   return 0;
 }
@@ -2617,7 +2617,7 @@ get_lisp_to_sockaddr_size (Lisp_Object address, int *familyp)
 static void
 conv_lisp_to_sockaddr (int family, Lisp_Object address, struct sockaddr *sa, int len)
 {
-  xvector_cache_t p = XVECTOR_CACHE_INIT;
+  xvector_t p = XVECTOR_CACHE_INIT;
   register unsigned char *cp = NULL;
   register int i;
   EMACS_INT hostport;
@@ -2632,7 +2632,7 @@ conv_lisp_to_sockaddr (int family, Lisp_Object address, struct sockaddr *sa, int
 	  DECLARE_POINTER_ALIAS (sin, struct sockaddr_in, sa);
 	  len = sizeof (sin->sin_addr) + 1;
           --len;
-	  hostport = XINT (XVECTOR_REF (p, len));
+	  hostport = XINT (xv_ref (p, len));
 	  sin->sin_port = htons (hostport);
 	  cp = (unsigned char *)&sin->sin_addr;
 	  sa->sa_family = family;
@@ -2644,12 +2644,12 @@ conv_lisp_to_sockaddr (int family, Lisp_Object address, struct sockaddr *sa, int
 	  DECLARE_POINTER_ALIAS (ip6, uint16_t, &sin6->sin6_addr);
 	  len = sizeof (sin6->sin6_addr) / 2 + 1;
           --len;
-	  hostport = XINT (XVECTOR_REF (p, len));
+	  hostport = XINT (xv_ref (p, len));
 	  sin6->sin6_port = htons (hostport);
 	  for (i = 0; i < len; i++)
-	    if (INTEGERP (XVECTOR_REF (p, i)))
+	    if (INTEGERP (xv_ref (p, i)))
 	      {
-		int j = XFASTINT (XVECTOR_REF (p, i)) & 0xffff;
+		int j = XFASTINT (xv_ref (p, i)) & 0xffff;
 		ip6[i] = ntohs (j);
 	      }
 	  sa->sa_family = family;
@@ -2680,8 +2680,8 @@ conv_lisp_to_sockaddr (int family, Lisp_Object address, struct sockaddr *sa, int
     }
 
   for (i = 0; i < len; i++)
-    if (INTEGERP (XVECTOR_REF (p, i)))
-      *cp++ = XFASTINT (XVECTOR_REF (p, i)) & 0xff;
+    if (INTEGERP (xv_ref (p, i)))
+      *cp++ = XFASTINT (xv_ref (p, i)) & 0xff;
 }
 
 #ifdef DATAGRAM_SOCKETS
@@ -4414,7 +4414,7 @@ network_interface_info (Lisp_Object ifname)
 
       any = 1;
       for (n = 0; n < 6; n++)
-	XVECTOR_SET (p, n, make_number (((unsigned char *)
+	xv_set (p, n, make_number (((unsigned char *)
                                          &rq.ifr_hwaddr.sa_data[0])
                                         [n]));
       elt = Fcons (make_number (rq.ifr_hwaddr.sa_family), hwaddr);
@@ -4439,7 +4439,7 @@ network_interface_info (Lisp_Object ifname)
 
           memcpy (linkaddr, LLADDR (sdl), sdl->sdl_alen);
           for (n = 0; n < 6; n++)
-            XVECTOR_SET (p, n, make_number (linkaddr[n]));
+            xv_set (p, n, make_number (linkaddr[n]));
 
           elt = Fcons (make_number (it->ifa_addr->sa_family), hwaddr);
           break;

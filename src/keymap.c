@@ -797,7 +797,7 @@ store_in_keymap (Lisp_Object keymap, register Lisp_Object idx, Lisp_Object def)
 	  {
 	    if (NATNUMP (idx) && XFASTINT (idx) < ASIZE (elt))
 	      {
-		CHECK_IMPURE (elt, XVECTOR (elt));
+		CHECK_IMPURE (elt, XVECTOR (elt).vptr);
 		ASET (elt, XFASTINT (idx), def);
 		return def;
 	      }

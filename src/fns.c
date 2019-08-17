@@ -494,7 +494,7 @@ the same empty object instead of its copy.  */)
 #ifdef HAVE_CHEZ_SCHEME
       return Frecord (PVSIZE (arg), PVEC_LISP_FIELD_PTR(arg));
 #else
-      return Frecord (PVSIZE (arg), XVECTOR (arg)->contents);
+      return Frecord (PVSIZE (arg), XVECTOR (arg).vptr->contents);
 #endif
     }
 
@@ -1897,7 +1897,7 @@ sort_vector (Lisp_Object vector, Lisp_Object predicate)
 #ifdef HAVE_CHEZ_SCHEME
   eassert(!HAVE_CHEZ_SCHEME);
 #else
-  sort_vector_inplace (predicate, len, XVECTOR (vector)->contents, tmp);
+  sort_vector_inplace (predicate, len, XVECTOR (vector).vptr->contents, tmp);
 #endif
   SAFE_FREE ();
 }
@@ -3606,7 +3606,7 @@ larger_vecalloc (Lisp_Object vec, ptrdiff_t incr_min, ptrdiff_t nitems_max)
     memory_full (SIZE_MAX);
   new_size = old_size + incr;
   v = allocate_vector (new_size);
-  memcpy (v->contents, XVECTOR (vec)->contents, old_size * sizeof *v->contents);
+  xvector_copy(as_xv (v), XVECTOR (vec), old_size);
   XSETVECTOR (vec, v);
   return vec;
 }
@@ -3619,7 +3619,7 @@ larger_vector (Lisp_Object vec, ptrdiff_t incr_min, ptrdiff_t nitems_max)
   ptrdiff_t old_size = ASIZE (vec);
   Lisp_Object v = larger_vecalloc (vec, incr_min, nitems_max);
   ptrdiff_t new_size = ASIZE (v);
-  memclear (XVECTOR (v)->contents + old_size,
+  memclear (XVECTOR (v).vptr->contents + old_size,
 	    (new_size - old_size) * word_size);
   return v;
 }

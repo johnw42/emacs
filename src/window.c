@@ -6290,7 +6290,7 @@ struct saved_window
 };
 
 #define SAVED_WINDOW_N(swv,n) \
-  ((struct saved_window *) (XVECTOR ((swv)->contents[(n)])))
+  XPVEC (struct saved_window, xv_ref (swv, n))
 
 DEFUN ("window-configuration-p", Fwindow_configuration_p, Swindow_configuration_p, 1, 1, 0,
        doc: /* Return t if OBJECT is a window-configuration object.  */)
@@ -6304,7 +6304,7 @@ DEFUN ("window-configuration-frame", Fwindow_configuration_frame, Swindow_config
   (Lisp_Object config)
 {
   register struct save_window_data *data;
-  struct Lisp_Vector *saved_windows;
+  xvector_t saved_windows;
 
   CHECK_WINDOW_CONFIGURATION (config);
 
@@ -6324,7 +6324,7 @@ the return value is nil.  Otherwise the value is t.  */)
   (Lisp_Object configuration)
 {
   register struct save_window_data *data;
-  struct Lisp_Vector *saved_windows;
+  xvector_t saved_windows;
   Lisp_Object new_current_buffer;
   Lisp_Object frame;
   struct frame *f;
@@ -6400,7 +6400,7 @@ the return value is nil.  Otherwise the value is t.  */)
 
       /* Don't do this within the main loop below: This may call Lisp
 	 code and is thus potentially unsafe while input is blocked.  */
-      for (k = 0; k < saved_windows->header.size; k++)
+      for (k = 0; k < xv_size (saved_windows); k++)
 	{
 	  p = SAVED_WINDOW_N (saved_windows, k);
 	  window = p->window;
@@ -6459,7 +6459,7 @@ the return value is nil.  Otherwise the value is t.  */)
 	 dead.  */
       delete_all_child_windows (FRAME_ROOT_WINDOW (f));
 
-      for (k = 0; k < saved_windows->header.size; k++)
+      for (k = 0; k < xv_size (saved_windows); k++)
 	{
 	  p = SAVED_WINDOW_N (saved_windows, k);
 	  window = p->window;
@@ -6836,7 +6836,7 @@ get_phys_cursor_glyph (struct window *w)
 
 
 static ptrdiff_t
-save_window_save (Lisp_Object window, struct Lisp_Vector *vector, ptrdiff_t i)
+save_window_save (Lisp_Object window, xvector_t vector, ptrdiff_t i)
 {
   struct saved_window *p;
   struct window *w;
@@ -7464,7 +7464,7 @@ compare_window_configurations (Lisp_Object configuration1,
 			       bool ignore_positions)
 {
   register struct save_window_data *d1, *d2;
-  struct Lisp_Vector *sws1, *sws2;
+  xvector_t sws1, sws2;
   ptrdiff_t i;
 
   CHECK_WINDOW_CONFIGURATION (configuration1);
@@ -7486,10 +7486,10 @@ compare_window_configurations (Lisp_Object configuration1,
 	      || !EQ (d1->minibuf_selected_window, d2->minibuf_selected_window)))
       || !EQ (d1->focus_frame, d2->focus_frame)
       /* Verify that the two configurations have the same number of windows.  */
-      || sws1->header.size != sws2->header.size)
+      || xv_size (sws1) != xv_size (sws2))
     return false;
 
-  for (i = 0; i < sws1->header.size; i++)
+  for (i = 0; i < xv_size (sws1); i++)
     {
       struct saved_window *sw1, *sw2;
 

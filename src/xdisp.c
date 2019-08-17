@@ -3348,9 +3348,9 @@ init_from_display_pos (struct it *it, struct window *w, struct display_pos *pos)
      character translations or ellipses.  */
   if (pos->dpvec_index >= 0)
     {
-      if (it->dpvec == NULL)
+      if (xvc_nullp (it->dpvec))
 	get_next_display_element (it);
-      eassert (it->dpvec && it->current.dpvec_index == 0);
+      eassert (!xvc_nullp (it->dpvec) && it->current.dpvec_index == 0);
       it->current.dpvec_index = pos->dpvec_index;
     }
 
@@ -3412,7 +3412,7 @@ handle_stop (struct it *it)
   bool handle_overlay_change_p;
   struct props *p;
 
-  it->dpvec = NULL;
+  it->dpvec = XVC_NULL;
   it->current.dpvec_index = -1;
   handle_overlay_change_p = !it->ignore_overlay_strings_at_pos_p;
   it->ellipsis_p = false;
@@ -4675,14 +4675,14 @@ setup_for_ellipsis (struct it *it, int len)
   Lisp_Object invis_vector = DISP_INVIS_VECTOR (it->dp);
   if (it->dp && VECTORP (invis_vector))
     {
-      it->dpvec = XVECTOR_CONTENTS (invis_vector);
-      it->dpend = it->dpvec + ASIZE (invis_vector);
+      it->dpvec = xvector_contents (invis_vector);
+      it->dpend = xvc_add (it->dpvec, ASIZE (invis_vector));
     }
   else
     {
       /* Default `...'.  */
-      it->dpvec = default_invis_vector;
-      it->dpend = default_invis_vector + 3;
+      it->dpvec = as_xvc (default_invis_vector);
+      it->dpend = as_xvc (default_invis_vector + 3);
     }
 
   it->dpvec_char_len = len;
@@ -6692,7 +6692,7 @@ reseat_1 (struct it *it, struct text_pos pos, bool set_stop_p)
 
   it->current.pos = it->position = pos;
   it->end_charpos = ZV;
-  it->dpvec = NULL;
+  it->dpvec = XVC_NULL;
   it->current.dpvec_index = -1;
   it->current.overlay_string_index = -1;
   IT_STRING_CHARPOS (*it) = -1;
@@ -7073,7 +7073,7 @@ get_next_display_element (struct it *it)
 	 count the recursion depth of this function and signal an
 	 error when a certain maximum depth is reached.)  Is it worth
 	 it?  */
-      if (success_p && it->dpvec == NULL)
+      if (success_p && xvc_nullp (it->dpvec))
 	{
 	  Lisp_Object dv;
 	  struct charset *unibyte = CHARSET_FROM_ID (charset_unibyte);
@@ -7098,16 +7098,16 @@ get_next_display_element (struct it *it)
 	      && (dv = DISP_CHAR_VECTOR (it->dp, c),
 		  VECTORP (dv)))
 	    {
-              struct Lisp_Vector *v = XVECTOR (dv);
+              xvector_t v = XVECTOR (dv);
 
 	      /* Return the first character from the display table
 		 entry, if not empty.  If empty, don't display the
 		 current character.  */
-	      if (v->header.size)
+	      if (xv_size (v))
 		{
 		  it->dpvec_char_len = it->len;
-		  it->dpvec = v->contents;
-		  it->dpend = v->contents + v->header.size;
+		  it->dpvec = xv_contents (v);
+		  it->dpend = xvc_add (xv_contents (v), xv_size (v));
 		  it->current.dpvec_index = 0;
 		  it->dpvec_face_id = -1;
 		  it->saved_face_id = it->face_id;
@@ -7274,8 +7274,8 @@ get_next_display_element (struct it *it)
 	    display_control:
 	      /* Set up IT->dpvec and return first character from it.  */
 	      it->dpvec_char_len = it->len;
-	      it->dpvec = it->ctl_chars;
-	      it->dpend = it->dpvec + ctl_len;
+	      it->dpvec = as_xvc (it->ctl_chars);
+	      it->dpend = xvc_add (it->dpvec, ctl_len);
 	      it->current.dpvec_index = 0;
 	      it->dpvec_face_id = face_id;
 	      it->saved_face_id = it->face_id;
@@ -7615,7 +7615,7 @@ set_iterator_to_next (struct it *it, bool reseat_p)
          display vector entry (these entries may contain faces).  */
       it->face_id = it->saved_face_id;
 
-      if (it->dpvec + it->current.dpvec_index >= it->dpend)
+      if (xvc_diff (it->dpend, it->dpvec) <= it->current.dpvec_index)
 	{
 	  bool recheck_faces = it->ellipsis_p;
 
@@ -7629,7 +7629,7 @@ set_iterator_to_next (struct it *it, bool reseat_p)
 	      it->object = it->w->contents;
 	    }
 
-	  it->dpvec = NULL;
+	  it->dpvec = XVC_NULL;
 	  it->current.dpvec_index = -1;
 
 	  /* Skip over characters which were displayed via IT->dpvec.  */
@@ -7845,14 +7845,14 @@ next_element_from_display_vector (struct it *it)
   int next_face_id;
 
   /* Precondition.  */
-  eassert (it->dpvec && it->current.dpvec_index >= 0);
+  eassert (!xvc_nullp(it->dpvec) && it->current.dpvec_index >= 0);
 
   it->face_id = it->saved_face_id;
 
   /* KFS: This code used to check ip->dpvec[0] instead of the current element.
      That seemed totally bogus - so I changed it...  */
-  if (it->dpend - it->dpvec > 0	/* empty dpvec[] is invalid */
-      && (gc = it->dpvec[it->current.dpvec_index], GLYPH_CODE_P (gc)))
+  if (xvc_diff(it->dpend, it->dpvec) > 0	/* empty dpvec[] is invalid */
+      && (gc = xvc_ref (it->dpvec, it->current.dpvec_index), GLYPH_CODE_P (gc)))
     {
       struct face *this_face, *prev_face, *next_face;
 
@@ -7887,14 +7887,14 @@ next_element_from_display_vector (struct it *it)
 	 either at the next glyph from the display vector, or at the
 	 face we saw before the display vector.  */
       next_face_id = it->saved_face_id;
-      if (it->current.dpvec_index < it->dpend - it->dpvec - 1)
+      if (it->current.dpvec_index < xvc_diff (it->dpend, it->dpvec) - 1)
 	{
 	  if (it->dpvec_face_id >= 0)
 	    next_face_id = it->dpvec_face_id;
 	  else
 	    {
 	      int lface_id =
-		GLYPH_CODE_FACE (it->dpvec[it->current.dpvec_index + 1]);
+		GLYPH_CODE_FACE (xvc_ref (it->dpvec, it->current.dpvec_index + 1));
 
 	      if (lface_id > 0)
 		next_face_id = merge_faces (it->f, Qt, lface_id,
@@ -8743,8 +8743,10 @@ move_it_in_display_line_to (struct it *it,
 		   && to_charpos <= it->cmp_it.charpos))))	\
    && (it->method == GET_FROM_BUFFER				\
        || (it->method == GET_FROM_DISPLAY_VECTOR		\
-	   && it->dpvec + it->current.dpvec_index + 1 >= it->dpend)))
+           && it->current.dpvec_index + 1 >= xvc_diff (it->dpend, it->dpvec))))
 
+  
+  
   if (it->hpos == 0)
     {
       /* If line numbers are being displayed, produce a line number.
@@ -10078,7 +10080,7 @@ in_display_vector_p (struct it *it)
 {
   return (it->method == GET_FROM_DISPLAY_VECTOR
 	  && it->current.dpvec_index > 0
-	  && it->dpvec + it->current.dpvec_index != it->dpend);
+	  && it->current.dpvec_index != xvc_diff (it->dpend, it->dpvec));
 }
 
 DEFUN ("window-text-pixel-size", Fwindow_text_pixel_size, Swindow_text_pixel_size, 0, 6, 0,
@@ -30758,7 +30760,7 @@ on_hot_spot_p (Lisp_Object hot_spot, int x, int y)
       if (VECTORP (XCDR (hot_spot)))
 	{
 	  XVECTOR_CACHE (poly, XCDR (hot_spot));
-	  ptrdiff_t n = XVECTOR_SIZE (poly);
+	  ptrdiff_t n = xv_size (poly);
 	  ptrdiff_t i;
 	  bool inside = false;
 	  Lisp_Object lx, ly;
@@ -30772,15 +30774,15 @@ on_hot_spot_p (Lisp_Object hot_spot, int x, int y)
 	     If count is odd, we are inside polygon.  Pixels on edges
 	     may or may not be included depending on actual geometry of the
 	     polygon.  */
-	  if ((lx = XVECTOR_REF (poly, n-2), !INTEGERP (lx))
-	      || (ly = XVECTOR_REF (poly, n-1), !INTEGERP (lx)))
+	  if ((lx = xv_ref (poly, n-2), !INTEGERP (lx))
+	      || (ly = xv_ref (poly, n-1), !INTEGERP (lx)))
 	    return false;
 	  x0 = XINT (lx), y0 = XINT (ly);
 	  for (i = 0; i < n; i += 2)
 	    {
 	      int x1 = x0, y1 = y0;
-	      if ((lx = XVECTOR_REF (poly, i), !INTEGERP (lx))
-		  || (ly = XVECTOR_REF (poly, i+1), !INTEGERP (ly)))
+	      if ((lx = xv_ref (poly, i), !INTEGERP (lx))
+		  || (ly = xv_ref (poly, i+1), !INTEGERP (ly)))
 		return false;
 	      x0 = XINT (lx), y0 = XINT (ly);
 

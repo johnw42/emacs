@@ -1010,7 +1010,7 @@ init_main_thread (void)
 {
   main_thread.header.size
     = PSEUDOVECSIZE (struct thread_state, m_stack_bottom);
-  XSETPVECTYPE (&main_thread, PVEC_THREAD);
+  XSETPVECTYPE (AS_XV (&main_thread), PVEC_THREAD);
   main_thread.m_last_thing_searched = Qnil;
   main_thread.m_saved_last_thing_searched = Qnil;
   main_thread.name = Qnil;

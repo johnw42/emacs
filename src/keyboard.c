@@ -4325,16 +4325,16 @@ decode_timer (Lisp_Object timer, struct timespec *result)
   if (! (VECTORP (timer) && ASIZE (timer) == 9))
     return 0;
   XVECTOR_CACHE (vec, timer);
-  if (! NILP (XVECTOR_REF (vec, 0)))
+  if (! NILP (xv_ref (vec, 0)))
     return 0;
-  if (! INTEGERP (XVECTOR_REF (vec, 2)))
+  if (! INTEGERP (xv_ref (vec, 2)))
     return false;
 
   struct lisp_time t;
-  if (decode_time_components (XVECTOR_REF (vec, 1),
-                              XVECTOR_REF (vec, 2),
-                              XVECTOR_REF (vec, 3),
-                              XVECTOR_REF (vec, 8),
+  if (decode_time_components (xv_ref (vec, 1),
+                              xv_ref (vec, 2),
+                              xv_ref (vec, 3),
+                              xv_ref (vec, 8),
                               &t, 0) <= 0)
     return false;
   *result = lisp_to_timespec (t);
@@ -8093,7 +8093,7 @@ process_tool_bar_item (Lisp_Object key, Lisp_Object def, Lisp_Object data, void 
 	{
           XVECTOR_CACHE (v, tool_bar_items_vector);
 
-	  if (EQ (key, XVECTOR_REF (v, i + TOOL_BAR_ITEM_KEY)))
+	  if (EQ (key, xv_ref (v, i + TOOL_BAR_ITEM_KEY)))
 	    {
 	      if (ntool_bar_items > i + TOOL_BAR_ITEM_NSLOTS)
                 xvector_move (v, i,
@@ -10022,8 +10022,8 @@ represented as events of the form (nil . COMMAND).  */)
 
   if (!total_keys
       || (cmds && total_keys < NUM_RECENT_KEYS))
-    return Fvector (total_keys,
-		    XVECTOR_CONTENTS (recent_keys));
+    return call_with_vector_slice (Fvector, recent_keys,
+                                   0, total_keys);
   else
     {
       Lisp_Object es = Qnil;
@@ -10053,7 +10053,7 @@ See also `this-command-keys-vector'.  */)
   (void)
 {
   return make_event_array (this_command_key_count,
-			   XVECTOR_CONTENTS (this_command_keys));
+			   xvc_unwrap (xvector_contents (this_command_keys)));
 }
 
 DEFUN ("set--this-command-keys", Fset__this_command_keys,
@@ -10099,8 +10099,8 @@ the last key sequence that has been read.
 See also `this-command-keys'.  */)
   (void)
 {
-  return Fvector (this_command_key_count,
-		  XVECTOR_CONTENTS (this_command_keys));
+  return call_with_vector_slice (Fvector, this_command_keys,
+                                 0, this_command_key_count);
 }
 
 DEFUN ("this-single-command-keys", Fthis_single_command_keys,
@@ -10113,10 +10113,9 @@ does not include prefix arguments.
 The value is always a vector.  */)
   (void)
 {
-  return Fvector (this_command_key_count
-		  - this_single_command_key_start,
-		  (XVECTOR_CONTENTS (this_command_keys)
-		   + this_single_command_key_start));
+  return call_with_vector_slice (Fvector, this_command_keys,
+                                 this_single_command_key_start,
+                                 this_command_key_count);
 }
 
 DEFUN ("this-single-command-raw-keys", Fthis_single_command_raw_keys,
@@ -10129,7 +10128,7 @@ shows the events before all translations (except for input methods).
 The value is always a vector.  */)
   (void)
 {
-  return Fvector (raw_keybuf_count, XVECTOR_CONTENTS (raw_keybuf));
+  return call_with_vector_slice (Fvector, raw_keybuf, 0, raw_keybuf_count);
 }
 
 DEFUN ("clear-this-command-keys", Fclear_this_command_keys,

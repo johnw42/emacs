@@ -649,7 +649,7 @@ fontset_find_font (Lisp_Object fontset, int c, struct face *face,
 	     the support of the character C.  That checking is costly,
 	     and even without the checking, the found font supports C
 	     in high possibility.  */
-	  font_entity = font_find_for_lface (f, face->lface,
+	  font_entity = font_find_for_lface (f, as_xvc (face->lface),
 					     FONT_DEF_SPEC (font_def), -1);
 	  if (NILP (font_entity))
 	    {
@@ -657,7 +657,7 @@ fontset_find_font (Lisp_Object fontset, int c, struct face *face,
 	      RFONT_DEF_SET_FACE (rfont_def, -1);
 	      continue;
 	    }
-	  font_object = font_open_for_lface (f, font_entity, face->lface,
+	  font_object = font_open_for_lface (f, font_entity, as_xvc (face->lface),
 					     FONT_DEF_SPEC (font_def));
 	  if (NILP (font_object))
 	    {
@@ -694,7 +694,7 @@ fontset_find_font (Lisp_Object fontset, int c, struct face *face,
 	}
 
       /* Find a font-entity with the current spec and supporting C.  */
-      font_entity = font_find_for_lface (f, face->lface,
+      font_entity = font_find_for_lface (f, as_xvc (face->lface),
 					 FONT_DEF_SPEC (font_def), c);
       if (! NILP (font_entity))
 	{
@@ -703,7 +703,7 @@ fontset_find_font (Lisp_Object fontset, int c, struct face *face,
 	  Lisp_Object new_vec;
 	  int j;
 
-	  font_object = font_open_for_lface (f, font_entity, face->lface,
+	  font_object = font_open_for_lface (f, font_entity, as_xvc (face->lface),
 					     Qnil);
 	  if (NILP (font_object))
 	    continue;
@@ -1647,7 +1647,7 @@ appended.  By default, FONT-SPEC overrides the previous settings.  */)
 	    continue;
 	  face = FACE_FROM_ID_OR_NULL (f, DEFAULT_FACE_ID);
 	  if (face)
-	    font_object = font_load_for_lface (f, face->lface, font_spec);
+	    font_object = font_load_for_lface (f, as_xvc (face->lface), font_spec);
 	  else
 	    font_object = font_open_by_spec (f, font_spec);
 	  if (! NILP (font_object))

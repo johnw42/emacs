@@ -166,7 +166,7 @@ get_composition_id (ptrdiff_t charpos, ptrdiff_t bytepos, ptrdiff_t nchars,
 {
   Lisp_Object id, length, components, key;
   ptrdiff_t glyph_len;
-  xvector_cache_t key_contents = XVECTOR_CACHE_INIT;
+  xvector_t key_contents = XVECTOR_CACHE_INIT;
   struct Lisp_Hash_Table *hash_table = XHASH_TABLE (composition_hash_table);
   ptrdiff_t hash_index;
   EMACS_UINT hash_code;
@@ -294,7 +294,7 @@ get_composition_id (ptrdiff_t charpos, ptrdiff_t bytepos, ptrdiff_t nchars,
          composition rule).  */
       for (i = 0; i < len; i++)
 	{
-	  if (!INTEGERP (XVECTOR_REF (key_contents, i)))
+	  if (!INTEGERP (xv_ref (key_contents, i)))
 	    goto invalid_composition;
 	}
     }
@@ -337,7 +337,7 @@ get_composition_id (ptrdiff_t charpos, ptrdiff_t bytepos, ptrdiff_t nchars,
       for (i = 0; i < glyph_len; i++)
 	{
 	  int this_width;
-	  ch = XINT (XVECTOR_REF (key_contents, i));
+	  ch = XINT (xv_ref (key_contents, i));
 	  /* TAB in a composition means display glyphs with padding
 	     space on the left or right.  */
 	  this_width = (ch == '\t' ? 1 : CHARACTER_WIDTH (ch));
@@ -350,7 +350,7 @@ get_composition_id (ptrdiff_t charpos, ptrdiff_t bytepos, ptrdiff_t nchars,
       /* Rule-base composition.  */
       double leftmost = 0.0, rightmost;
 
-      ch = XINT (XVECTOR_REF (key_contents, 0));
+      ch = XINT (xv_ref (key_contents, 0));
       rightmost = ch != '\t' ? CHARACTER_WIDTH (ch) : 1;
 
       for (i = 1; i < glyph_len; i += 2)
@@ -359,8 +359,8 @@ get_composition_id (ptrdiff_t charpos, ptrdiff_t bytepos, ptrdiff_t nchars,
 	  int this_width;
 	  double this_left;
 
-	  rule = XINT (XVECTOR_REF (key_contents, i));
-	  ch = XINT (XVECTOR_REF (key_contents, i + 1));
+	  rule = XINT (xv_ref (key_contents, i));
+	  ch = XINT (xv_ref (key_contents, i + 1));
 	  this_width = ch != '\t' ? CHARACTER_WIDTH (ch) : 1;
 
 	  /* A composition rule is specified by an integer value
