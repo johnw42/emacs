@@ -262,11 +262,7 @@ get_composition_id (ptrdiff_t charpos, ptrdiff_t bytepos, ptrdiff_t nchars,
     composition_table = xpalloc (composition_table, &composition_table_size,
 				 1, -1, sizeof *composition_table);
 
-#ifdef HAVE_CHEZ_SCHEME
-  key_contents = READONLY_VECTOR_CONTENTS(key);
-#else
   XVECTOR_CACHE_UPDATE (key_contents, key);
-#endif
 
   /* Check if the contents of COMPONENTS are valid if COMPONENTS is a
      vector or a list.  It should be a sequence of:

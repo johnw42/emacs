@@ -5178,8 +5178,8 @@ init_buffer_once (void)
   /* This is not strictly necessary, but let's make them initialized.  */
   bset_name (&buffer_defaults, build_pure_c_string (" *buffer-defaults*"));
   bset_name (&buffer_local_symbols, build_pure_c_string (" *buffer-local-symbols*"));
-  BUFFER_PVEC_INIT (AS_XV (&buffer_defaults));
-  BUFFER_PVEC_INIT (AS_XV (&buffer_local_symbols));
+  BUFFER_PVEC_INIT (&buffer_defaults);
+  BUFFER_PVEC_INIT (&buffer_local_symbols); 
 
   /* Set up the default values of various buffer slots.  */
   /* Must do these before making the first buffer! */

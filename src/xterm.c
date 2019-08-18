@@ -6536,7 +6536,7 @@ x_scroll_bar_create (struct window *w, int top, int left,
 {
   struct frame *f = XFRAME (w->frame);
   struct scroll_bar *bar
-    = ALLOCATE_PSEUDOVECTOR (struct scroll_bar, x_window, PVEC_OTHER);
+    = ALLOCATE_PSEUDOVECTOR_ (struct scroll_bar, x_window, PVEC_OTHER);
   Lisp_Object barobj;
 
   block_input ();

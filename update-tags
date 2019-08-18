@@ -4,4 +4,4 @@ universal-ctags -eR \
   --regex-C='/DEFUN *\("([^"]+)",/\1/f/' \
   --regex-C='/DEFUN *\("[^"]+", *(F[^,]+),/\1/f/' \
   --regex-C='/DEFUN *\("[^"]+", *F[^,]+, *(S[^,]+),\)/\1/f/' \
-  src lib-src scheme lisp
+  src lib-src lib scheme lisp

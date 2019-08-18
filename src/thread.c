@@ -260,7 +260,7 @@ informational only.  */)
     CHECK_STRING (name);
 
 #ifdef HAVE_CHEZ_SCHEME
-  mutex = SCHEME_ALLOCATE_PSEUDOVECTOR(struct Lisp_Mutex, muteax, PVEC_MUTEX);
+  mutex = SCHEME_ALLOCATE_PSEUDOVECTOR(struct Lisp_Mutex, mutex, PVEC_MUTEX);
 #else
   mutex = ALLOCATE_PSEUDOVECTOR (struct Lisp_Mutex, mutex, PVEC_MUTEX);
   memset ((char *) mutex + offsetof (struct Lisp_Mutex, mutex),

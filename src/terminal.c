@@ -264,7 +264,7 @@ get_named_terminal (const char *name)
 static struct terminal *
 allocate_terminal (void)
 {
-  return ALLOCATE_ZEROED_PSEUDOVECTOR
+  return ALLOCATE_ZEROED_PSEUDOVECTOR_
     (struct terminal, next_terminal, PVEC_TERMINAL);
 }
 

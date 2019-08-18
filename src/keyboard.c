@@ -9748,7 +9748,7 @@ read_key_sequence (Lisp_Object *keybuf, int bufsize, Lisp_Object prompt,
 	      /* Treat uppercase keys as shifted.  */
 	      || (INTEGERP (key)
 		  && (KEY_TO_CHAR (key)
-		      < XCHAR_TABLE (BVAR (current_buffer, downcase_table))->header.size)
+		      < CHAR_TABLE_SIZE (BVAR (current_buffer, downcase_table)))
 		  && uppercasep (KEY_TO_CHAR (key))))
 	    {
 	      Lisp_Object new_key

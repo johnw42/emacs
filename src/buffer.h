@@ -983,7 +983,7 @@ INLINE struct buffer *
 XBUFFER (Lisp_Object a)
 {
   eassert (BUFFERP (a));
-  return XUNTAG (a, Lisp_Vectorlike);
+  return XUNTAG_PVEC (a);
 }
 
 /* Most code should use these functions to set Lisp fields in struct
@@ -1100,6 +1100,12 @@ bset_width_table (struct buffer *b, Lisp_Object val)
   PV_LISP_FIELD_SET(b, width_table_, val);
 }
 
+#ifdef HAVE_CHEZ_SCHEME
+
+void BUFFER_PVEC_INIT(struct buffer *b);
+
+#else
+
 /* Number of Lisp_Objects at the beginning of struct buffer.
    If you add, remove, or reorder Lisp_Objects within buffer
    structure, make sure that this is still correct.  */
@@ -1119,7 +1125,9 @@ bset_width_table (struct buffer *b, Lisp_Object val)
    with other pseudovectors.  */
 
 #define BUFFER_PVEC_INIT(b)                                    \
-  XSETPVECTYPESIZE (b, PVEC_BUFFER, BUFFER_LISP_SIZE, BUFFER_REST_SIZE)
+  XSETPVECTYPESIZE (AS_XV (b), PVEC_BUFFER, BUFFER_LISP_SIZE, BUFFER_REST_SIZE)
+
+#endif
 
 /* Convenient check whether buffer B is live.  */
 

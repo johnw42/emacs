@@ -241,7 +241,11 @@ for example, (type-of 1) returns `integer'.  */)
 	}
 
     case Lisp_Vectorlike:
+#ifdef HAVE_CHEZ_SCHEME
+      switch ((enum pvec_type) PVEC_FIELD_REF (object, PVEC_TYPE)))
+#else
       switch (PSEUDOVECTOR_TYPE (XVECTOR (object)))
+#endif
         {
         case PVEC_NORMAL_VECTOR: return Qvector;
         case PVEC_WINDOW_CONFIGURATION: return Qwindow_configuration;

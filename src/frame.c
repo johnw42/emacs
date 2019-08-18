@@ -797,7 +797,7 @@ adjust_frame_size (struct frame *f, int new_width, int new_height, int inhibit,
 static struct frame *
 allocate_frame (void)
 {
-  return ALLOCATE_ZEROED_PSEUDOVECTOR (struct frame, face_cache, PVEC_FRAME);
+  return ALLOCATE_ZEROED_PSEUDOVECTOR_ (struct frame, face_cache, PVEC_FRAME);
 }
 
 struct frame *

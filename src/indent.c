@@ -108,7 +108,7 @@ character_width (int c, struct Lisp_Char_Table *dp)
    invalidate the buffer's width_run_cache.  */
 
 bool
-disptab_matches_widthtab (struct Lisp_Char_Table *disptab, struct Lisp_Object widthtab)
+disptab_matches_widthtab (struct Lisp_Char_Table *disptab, Lisp_Object widthtab)
 {
   int i;
 

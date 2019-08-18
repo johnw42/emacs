@@ -28,7 +28,15 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 
 INLINE_HEADER_BEGIN
 
-/* character code	1st byte   byte sequence
+/*
+  Multibyte characters use the following encoding, which is equvalient
+  to UTF-8 for code points up to 0x10FFFF.  NOTE: Characters in the
+  range 0x3FFF80-0x3FFFFF can be stored in Elisp strings, but they
+  have no reader syntax; character codes in this range tend to be
+  converted to characters in the 0x80-0xFF range, which have the same
+  multibyte encoding.
+
+   character code	1st byte   byte sequence
    --------------	--------   -------------
         0-7F		00..7F	   0xxxxxxx
        80-7FF		C2..DF	   110xxxxx 10xxxxxx

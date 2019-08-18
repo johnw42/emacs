@@ -2148,6 +2148,15 @@ struct it_slice
   Lisp_Object height;
 };
 
+INLINE void
+it_slice_clear (struct it_slice *slice)
+{
+  slice->x = Qnil;
+  slice->y = Qnil;
+  slice->width = Qnil;
+  slice->height = Qnil;
+}
+
 /* Input sources for fetching characters or data to display.
    The input source is found in the `method' field.  */
 
@@ -2364,23 +2373,12 @@ struct it
     struct composition_it cmp_it;
     int face_id;
 
-    /* Save values specific to a given method.  */
-    union {
-      /* method == GET_FROM_IMAGE */
-      struct {
-	Lisp_Object object;
-	struct it_slice slice;
-	ptrdiff_t image_id;
-      } image;
-      /* method == GET_FROM_STRETCH */
-      struct {
-	Lisp_Object object;
-      } stretch;
-      /* method == GET_FROM_XWIDGET */
-      struct {
-	Lisp_Object object;
-      } xwidget;
-    } u;
+    /* method == GET_FROM_{IMAGE,STRETCH,XWIDGET} */
+    Lisp_Object object;
+
+    /* method == GET_FROM_IMAGE */
+    struct it_slice slice;
+    ptrdiff_t image_id;
 
     /* Current text and display positions.  */
     struct text_pos position;
@@ -2671,6 +2669,39 @@ struct it
   struct bidi_it bidi_it;
   bidi_dir_t paragraph_embedding;
 };
+
+INLINE void it_clear(struct it *it)
+{
+#ifdef HAVE_CHEZ_SCHEME
+  memset (it, 0, sizeof (struct it));
+  it->dpvec = XVC_NULL;
+  it->dpend = XVC_NULL;
+  scheme_ptr_fill (it->ctl_chars, Qnil,
+                   sizeof (it->ctl_chars) / sizeof (Lisp_Object));
+  scheme_ptr_fill (it->overlay_strings, Qnil,
+                   OVERLAY_STRING_CHUNK_SIZE);
+  scheme_ptr_fill (it->string_overlays, Qnil,
+                   OVERLAY_STRING_CHUNK_SIZE);
+  it->string = Qnil;
+  it->from_overlay = Qnil;
+  for (iptr i = 0; i < IT_STACK_SIZE; i++)
+    {
+      struct iterator_stack_entry *e = &it->stack[i];
+      e->string = Qnil;
+      e->object = Qnil;
+      it_slice_clear (&e->slice);
+      e->from_overlay = Qnil;
+      e->space_width = Qnil;
+      e->font_height = Qnil;
+    }
+  it_slice_clear (&it->slice);
+  it->space_width = Qnil;
+  it->font_height = Qnil;
+  it->object = Qnil;
+#else
+  memclear (it, sizeof (struct it));
+#endif
+}
 
 
 /* Access to positions of iterator IT.  */

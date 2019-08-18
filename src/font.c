@@ -182,9 +182,15 @@ Lisp_Object
 font_make_object (int size, Lisp_Object entity, int pixelsize)
 {
   Lisp_Object font_object;
+#ifndef HAVE_CHEZ_SCHEME
+  struct font *font =
+    ALLOCATE_PSEUDOVECTOR_EX(struct font, min_width, PVEC_FONT,
+                             size * sizeof(ptr));
+#else
   struct font *font
     = (struct font *) allocate_pseudovector (size, FONT_OBJECT_MAX,
 					     FONT_OBJECT_MAX, PVEC_FONT);
+#endif
   int i;
 
   /* GC can happen before the driver is set up,

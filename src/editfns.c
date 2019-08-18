@@ -3222,8 +3222,8 @@ differences between the two buffers.  */)
     /* FIXME: Find a good number for .too_expensive.  */
     .too_expensive = 1000000,
   };
-  memclear (ctx.deletions, del_bytes);
-  memclear (ctx.insertions, ins_bytes);
+  memset (ctx.deletions, 0, del_bytes);
+  memset (ctx.insertions, 0, ins_bytes);
   /* compareseq requires indices to be zero-based.  We add BEGV back
      later.  */
   bool early_abort = compareseq (0, size_a, 0, size_b, false, &ctx);

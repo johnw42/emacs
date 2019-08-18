@@ -240,38 +240,63 @@ scheme_intern(const char *str, iptr len, ptr obarray)
 }
 
 void *
-scheme_alloc_c_data(ptr key, iptr size)
+scheme_alloc_c_data (ptr key, iptr size)
 {
   ptr data_obj = scheme_malloc(size);
   scheme_call3("hashtable-set!", c_data_table, key, data_obj);
   return scheme_malloc_ptr(data_obj);
 }
 
-ptr *
-scheme_copy_vector_contents(ptr vec, ptr *output)
+void *
+scheme_find_c_data (ptr key)
 {
-  iptr len = Svector_length(vec);
-  for (iptr i = 0; i < len; i++)
-    {
-      output[i] = Svector_ref(vec, i);
-    }
-  return output;
+  ptr found = scheme_call3("hashtable-ref", c_data_table, key, Sfalse);
+  if (found == Sfalse)
+    return NULL;
+  eassert (Sbytevectorp (found));
+  return Sbytevector_data (found);
 }
 
+/* void * */
+/* scheme_find_or_alloc_c_data (ptr key, iptr size, void (*init)(void *)) */
+/* { */
+/*   void *data = scheme_find_c_data (key); */
+/*   if (data == NULL) */
+/*     { */
+/*       data = scheme_alloc_c_data (ptr, size); */
+/*       if (init) */
+/*         (*init)(data); */
+/*     } */
+/*   return data; */
+/* } */
+
+/* ptr * */
+/* scheme_copy_vector_contents(ptr vec, ptr *output) */
+/* { */
+/*   iptr len = Svector_length(vec); */
+/*   for (iptr i = 0; i < len; i++) */
+/*     { */
+/*       output[i] = Svector_ref(vec, i); */
+/*     } */
+/*   return output; */
+/* } */
+
 union vectorlike_header *
-scheme_make_pvec(iptr non_lisp_field_offset,
-                 enum pvec_type tag,
+scheme_make_pvec(enum pvec_type tag,
+                 iptr non_lisp_field_offset,
                  iptr bytes_count,
                  int bytes_fill)
 {
   eassert(bytes_count >= non_lisp_field_offset);
-  ptr vec = Smake_vector(NUM_PVEC_FIELDS, Qnil);
-  Slock_object(vec);
+
   ptr bytes = Smake_bytevector(bytes_count, bytes_fill);
   Slock_object(bytes);
-  struct Lisp_Pseudovector *data = (void *)Sbytevector_data(bytes);
+  union vectorlike_header *header = (void *)Sbytevector_data(bytes);
+  ptr vec = Smake_vector(NUM_PVEC_FIELDS, Qnil);
+  Slock_object(vec);
+  struct Lisp_Pseudovector *data = (void *)header;
   data->header.scheme_obj = vec;
-  iptr num_lisp_fields = (non_lisp_field_offset - 
+  iptr num_lisp_fields = (non_lisp_field_offset -
                           offsetof(struct Lisp_Pseudovector, first_lisp_field))
     / sizeof(ptr);
   for (iptr i = 0; i < num_lisp_fields; i++) {
@@ -281,13 +306,46 @@ scheme_make_pvec(iptr non_lisp_field_offset,
   PVEC_FIELD_SET(vec, SYMBOL, scheme_pseudovector_symbol);
   PVEC_FIELD_SET(vec, PVEC_TYPE, Sfixnum(tag));
   PVEC_FIELD_SET(vec, NUM_LISP_FIELDS, Sfixnum(num_lisp_fields));
-  return &data->header;
+  return header;
 }
 
 void
-staticpro (Lisp_Object *varaddress)
+scheme_ptr_fill (ptr *p, ptr init, iptr num_words)
 {
+  for (iptr i = 0; i < num_words; i++) {
+    p[i] = init;
+  }
 }
 
+enum Lisp_Type
+XTYPE (Lisp_Object a)
+{
+  if (Ssymbolp(a)) {
+    return Lisp_Symbol;
+  } else if (Sfixnump(a)) {
+    return Lisp_Int0;
+  } else if (Sstringp(a)) {
+    return Lisp_String;
+  } else if (Spairp(a)) {
+    return Lisp_Cons;
+  } else if (Sflonump(a)) {
+    return Lisp_Float;
+  } else if (Svectorp(a)) {
+    return Lisp_Vectorlike;
+  } else if (scheme_pvecp(a)) {
+    if (Sfixnum_value (PVEC_FIELD_REF (a, PVEC_TYPE)) == PVEC_MISC)
+      return Lisp_Misc;
+    else
+      return Lisp_Vectorlike;
+  } else {
+    eassert (false);
+    return Lisp_Misc;
+  }
+}
+
+/* void */
+/* staticpro (Lisp_Object *varaddress) */
+/* { */
+/* } */
 
 #endif

@@ -602,7 +602,7 @@ void
 wset_redisplay (struct window *w)
 {
   /* Beware: selected_window can be nil during early stages.  */
-  if (!EQ (PSEUDOVECTOR_PTR (w), selected_window))
+  if (!EQ (SCHEME_PVEC_OBJ (w), selected_window))
     redisplay_other_windows ();
   w->redisplay = true;
 }
@@ -2832,7 +2832,7 @@ init_iterator (struct it *it, struct window *w,
 
   /* Clear IT, and set it->object and other IT's Lisp objects to Qnil.
      Other parts of redisplay rely on that.  */
-  memclear (it, sizeof *it);
+  it_clear (it);
   it->current.overlay_string_index = -1;
   it->current.dpvec_index = -1;
   it->base_face_id = remapped_base_face_id;
@@ -6106,15 +6106,15 @@ push_it (struct it *it, struct text_pos *position)
   switch (p->method)
     {
     case GET_FROM_IMAGE:
-      p->u.image.object = it->object;
-      p->u.image.image_id = it->image_id;
-      p->u.image.slice = it->slice;
+      p->object = it->object;
+      p->image_id = it->image_id;
+      p->slice = it->slice;
       break;
     case GET_FROM_STRETCH:
-      p->u.stretch.object = it->object;
+      p->object = it->object;
       break;
     case GET_FROM_XWIDGET:
-      p->u.xwidget.object = it->object;
+      p->object = it->object;
       break;
     case GET_FROM_BUFFER:
     case GET_FROM_DISPLAY_VECTOR:
@@ -6213,15 +6213,15 @@ pop_it (struct it *it)
   switch (it->method)
     {
     case GET_FROM_IMAGE:
-      it->image_id = p->u.image.image_id;
-      it->object = p->u.image.object;
-      it->slice = p->u.image.slice;
+      it->image_id = p->image_id;
+      it->object = p->object;
+      it->slice = p->slice;
       break;
     case GET_FROM_XWIDGET:
-      it->object = p->u.xwidget.object;
+      it->object = p->object;
       break;
     case GET_FROM_STRETCH:
-      it->object = p->u.stretch.object;
+      it->object = p->object;
       break;
     case GET_FROM_BUFFER:
       it->object = it->w->contents;

@@ -1,6 +1,6 @@
 #! /bin/bash
 
-if make -j; then
+if make -j 2>/dev/null || make -k; then
   EMACS_CMD="src/emacs --batch"
   #EMACS_CMD="src/temacs --batch --load loadup"
   GDB=

@@ -51,7 +51,7 @@ extern ptrdiff_t last_known_column_point;
    for characters as WIDTHTAB.  We use this to decide when to
    invalidate the buffer's column_cache.  */
 bool disptab_matches_widthtab (struct Lisp_Char_Table *disptab,
-			       struct Lisp_Object widthtab);
+			       Lisp_Object widthtab);
 
 /* Recompute BUF's width table, using the display table DISPTAB.  */
 void recompute_width_table (struct buffer *buf,
