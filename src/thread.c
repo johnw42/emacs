@@ -26,11 +26,21 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 #include "coding.h"
 #include "syssignal.h"
 
+#ifdef HAVE_CHEZ_SCHEME
+static struct thread_state *main_thread_ptr;
+
+#define main_thread (*main_thread_ptr)
+
+struct thread_state *current_thread = NULL;
+
+static struct thread_state *all_threads = NULL;
+#else
 static struct thread_state main_thread;
 
 struct thread_state *current_thread = &main_thread;
 
 static struct thread_state *all_threads = &main_thread;
+#endif
 
 static sys_mutex_t global_lock;
 
@@ -259,14 +269,7 @@ informational only.  */)
   if (!NILP (name))
     CHECK_STRING (name);
 
-#ifdef HAVE_CHEZ_SCHEME
-  mutex = SCHEME_ALLOCATE_PSEUDOVECTOR(struct Lisp_Mutex, mutex, PVEC_MUTEX);
-#else
   mutex = ALLOCATE_PSEUDOVECTOR (struct Lisp_Mutex, mutex, PVEC_MUTEX);
-  memset ((char *) mutex + offsetof (struct Lisp_Mutex, mutex),
-	  0, sizeof (struct Lisp_Mutex) - offsetof (struct Lisp_Mutex,
-						    mutex));
-#endif
   mutex->name = name;
   lisp_mutex_init (&mutex->mutex);
 
@@ -383,9 +386,6 @@ informational only.  */)
     CHECK_STRING (name);
 
   condvar = ALLOCATE_PSEUDOVECTOR (struct Lisp_CondVar, cond, PVEC_CONDVAR);
-  memset ((char *) condvar + offsetof (struct Lisp_CondVar, cond),
-	  0, sizeof (struct Lisp_CondVar) - offsetof (struct Lisp_CondVar,
-						      cond));
   condvar->mutex = mutex;
   condvar->name = name;
   sys_cond_init (&condvar->cond);
@@ -774,7 +774,9 @@ If NAME is given, it must be a string; it names the new thread.  */)
   struct thread_state *new_thread;
   Lisp_Object result;
   const char *c_name = NULL;
+#ifndef HAVE_CHEZ_SCHEME
   size_t offset = offsetof (struct thread_state, m_stack_bottom);
+#endif
 
   /* Can't start a thread in temacs.  */
   if (!initialized)
@@ -785,8 +787,13 @@ If NAME is given, it must be a string; it names the new thread.  */)
 
   new_thread = ALLOCATE_PSEUDOVECTOR (struct thread_state, m_stack_bottom,
 				      PVEC_THREAD);
-  memset ((char *) new_thread + offset, 0,
-	  sizeof (struct thread_state) - offset);
+#ifdef HAVE_CHEZ_SCHEME
+  new_thread->m_re_match_object = Qnil;
+#else
+  memset ((char *) condvar + offsetof (struct Lisp_CondVar, cond),
+	  0, sizeof (struct Lisp_CondVar) - offsetof (struct Lisp_CondVar,
+						      cond));
+#endif
 
   new_thread->function = function;
   new_thread->name = name;
@@ -1008,9 +1015,17 @@ thread_check_current_buffer (struct buffer *buffer)
 static void
 init_main_thread (void)
 {
+#ifdef HAVE_CHEZ_SCHEME
+  main_thread_ptr = ALLOCATE_PSEUDOVECTOR
+    (struct thread_state, m_stack_bottom, PVEC_THREAD);
+  main_thread_ptr->m_re_match_object = Qnil;
+  current_thread = main_thread_ptr;
+  all_threads = main_thread_ptr;
+#else
   main_thread.header.size
     = PSEUDOVECSIZE (struct thread_state, m_stack_bottom);
   XSETPVECTYPE (AS_XV (&main_thread), PVEC_THREAD);
+#endif
   main_thread.m_last_thing_searched = Qnil;
   main_thread.m_saved_last_thing_searched = Qnil;
   main_thread.name = Qnil;

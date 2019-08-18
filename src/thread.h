@@ -143,7 +143,7 @@ struct thread_state
      If the value is a Lisp string object, we are matching text in that
      string; if it's nil, we are matching text in the current buffer; if
      it's t, we are matching text in a C string.  */
-  PV_LISP_FIELD(m_re_match_object);
+  Lisp_Object m_re_match_object;
 #define re_match_object (current_thread->m_re_match_object)
 
   /* This member is different from waiting_for_input.

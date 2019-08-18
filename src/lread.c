@@ -19,7 +19,9 @@ You should have received a copy of the GNU General Public License
 along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 
 /* Tell globals.h to define tables needed by init_obarray.  */
+#ifndef HAVE_CHEZ_SCHEME
 #define DEFINE_SYMBOLS
+#endif
 
 #include <config.h>
 #include "sysstdio.h"

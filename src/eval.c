@@ -2372,8 +2372,8 @@ usage: (apply FUNCTION &rest ARGUMENTS)  */)
       /* Avoid making funcall cons up a yet another new vector of arguments
 	 by explicitly supplying nil's for optional values.  */
       SAFE_ALLOCA_LISP (funcall_args, 1 + XSUBR (fun)->max_args);
-      memclear (funcall_args + numargs + 1,
-		(XSUBR (fun)->max_args - numargs) * word_size);
+      memclear_lisp (funcall_args + numargs + 1,
+                     (XSUBR (fun)->max_args - numargs) * word_size);
       funcall_nargs = 1 + XSUBR (fun)->max_args;
     }
   else
@@ -2838,8 +2838,11 @@ funcall_subr (struct Lisp_Subr *subr, ptrdiff_t numargs, Lisp_Object *args)
           eassert (subr->max_args <= ARRAYELTS (internal_argbuf));
           internal_args = internal_argbuf;
           memcpy (internal_args, args, numargs * word_size);
+#ifdef HAVE_CHEZ_SCHEME
+#else
           memclear (internal_args + numargs,
                     (subr->max_args - numargs) * word_size);
+#endif
         }
       else
         internal_args = args;

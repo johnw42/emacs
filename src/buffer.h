@@ -1100,11 +1100,7 @@ bset_width_table (struct buffer *b, Lisp_Object val)
   PV_LISP_FIELD_SET(b, width_table_, val);
 }
 
-#ifdef HAVE_CHEZ_SCHEME
-
-void BUFFER_PVEC_INIT(struct buffer *b);
-
-#else
+#ifndef HAVE_CHEZ_SCHEME
 
 /* Number of Lisp_Objects at the beginning of struct buffer.
    If you add, remove, or reorder Lisp_Objects within buffer
@@ -1163,6 +1159,15 @@ extern struct buffer *all_buffers;
 #define FOR_EACH_BUFFER(b) \
   for ((b) = all_buffers; (b); (b) = (b)->next)
 
+#ifdef HAVE_CHEZ_SCHEME
+extern struct buffer *buffer_defaults_ptr;
+extern struct buffer *buffer_local_flags_ptr;
+extern struct buffer *buffer_local_symbols_ptr;
+
+#define buffer_defaults (*buffer_defaults_ptr)
+#define buffer_local_flags (*buffer_local_flags_ptr)
+#define buffer_local_symbols (*buffer_local_symbols_ptr)
+#else
 /* This structure holds the default values of the buffer-local variables
    that have special slots in each buffer.
    The default value occupies the same slot in this structure
@@ -1193,6 +1198,7 @@ extern struct buffer buffer_local_flags;
    that don't have such names.  */
 
 extern struct buffer buffer_local_symbols;
+#endif
 
 extern void delete_all_overlays (struct buffer *);
 extern void reset_buffer (struct buffer *);

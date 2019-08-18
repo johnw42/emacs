@@ -538,6 +538,15 @@ struct glyph
   } u;
 };
 
+INLINE void glyph_clear (struct glyph *p, ptrdiff_t n)
+{
+  memset (p, 0, n * sizeof (struct glyph));
+#ifdef HAVE_CHEZ_SCHEME
+  for (ptrdiff_t i = 0; i < n; i++)
+    p[i].object = Qnil;
+#endif
+}
+
 
 /* Default value of the glyph font_type field.  */
 

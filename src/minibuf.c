@@ -1254,9 +1254,13 @@ is used to further constrain the set of candidates.  */)
   tail = collection;
   if (type == obarray_table)
     {
+#ifdef HAVE_CHEZ_SCHEME
+      eassert (!HAVE_CHEZ_SCHEME);
+#else
       collection = check_obarray (collection);
       obsize = ASIZE (collection);
       bucket = AREF (collection, idx);
+#endif
     }
 
   while (1)
@@ -1511,9 +1515,13 @@ with a space are ignored unless STRING itself starts with a space.  */)
   tail = collection;
   if (type == 2)
     {
+#ifdef HAVE_CHEZ_SCHEME
+      eassert (!HAVE_CHEZ_SCHEME);
+#else
       collection = check_obarray (collection);
       obsize = ASIZE (collection);
       bucket = AREF (collection, idx);
+#endif
     }
 
   while (1)
@@ -1730,6 +1738,9 @@ the values STRING, PREDICATE and `lambda'.  */)
     }
   else if (VECTORP (collection))
     {
+#ifdef HAVE_CHEZ_SCHEME
+      eassert (!HAVE_CHEZ_SCHEME);
+#else
       /* Bypass intern-soft as that loses for nil.  */
       tem = oblookup (collection,
 		      SSDATA (string),
@@ -1753,7 +1764,6 @@ the values STRING, PREDICATE and `lambda'.  */)
 	  for (i = ASIZE (collection) - 1; i >= 0; i--)
 	    {
 	      tail = AREF (collection, i);
-#ifndef HAVE_CHEZ_SCHEME
 	      if (SYMBOLP (tail))
 		while (1)
 		  {
@@ -1769,12 +1779,12 @@ the values STRING, PREDICATE and `lambda'.  */)
 		      break;
 		    XSETSYMBOL (tail, XSYMBOL (tail)->u.s.next);
 		  }
-#endif
 	    }
 	}
 
       if (!SYMBOLP (tem))
 	return Qnil;
+#endif
     }
   else if (HASH_TABLE_P (collection))
     {

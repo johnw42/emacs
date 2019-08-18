@@ -492,7 +492,9 @@ the same empty object instead of its copy.  */)
   if (RECORDP (arg))
     {
 #ifdef HAVE_CHEZ_SCHEME
-      return Frecord (PVSIZE (arg), PVEC_LISP_FIELD_PTR(arg));
+      return Frecord (PVSIZE (arg),
+                      &((struct Lisp_Pseudovector *) XUNTAG_PVEC (arg))
+                      ->first_lisp_field);
 #else
       return Frecord (PVSIZE (arg), XVECTOR (arg).vptr->contents);
 #endif
@@ -1554,6 +1556,13 @@ changing the value of a sequence `foo'.  */)
 
       if (n != ASIZE (seq))
 	{
+#ifdef HAVE_CHEZ_SCHEME
+          ptr new_seq = scheme_make_vector (n, Qnil);
+	  for (i = n = 0; i < ASIZE (seq); ++i)
+	    if (NILP (Fequal (AREF (seq, i), elt)))
+              Svector_set (new_seq, i, AREF (seq, i));
+          seq = new_seq;
+#else
 	  struct Lisp_Vector *p = allocate_vector (n);
 
 	  for (i = n = 0; i < ASIZE (seq); ++i)
@@ -1561,6 +1570,7 @@ changing the value of a sequence `foo'.  */)
 	      p->contents[n++] = AREF (seq, i);
 
 	  XSETVECTOR (seq, p);
+#endif
 	}
     }
   else if (STRINGP (seq))
@@ -2268,6 +2278,67 @@ internal_equal (Lisp_Object o1, Lisp_Object o2, enum equal_kind equal_kind,
 
     case Lisp_Vectorlike:
       {
+#ifdef HAVE_CHEZ_SCHEME
+        eassume (Svectorp (o1) && Svectorp (o2));
+        if (Svector_length (o1) != Svector_length (o2) ||
+            scheme_pvecp (o1) != scheme_pvecp (o2))
+          return false;
+        if (scheme_pvecp (o1))
+          {
+            /* Compare pseudovectors. */
+            if (scheme_pvec_type (o1) != scheme_pvec_type (o2))
+              return false;
+
+            /* Boolvectors are compared much like strings.  */
+            if (BOOL_VECTOR_P (o1))
+              {
+                EMACS_INT size = bool_vector_size (o1);
+                if (size != bool_vector_size (o2))
+                  return false;
+                if (memcmp (bool_vector_data (o1), bool_vector_data (o2),
+                            bool_vector_bytes (size)))
+                  return false;
+                return true;
+              }
+            if (WINDOW_CONFIGURATIONP (o1))
+              {
+                eassert (equal_kind != EQUAL_NO_QUIT);
+                return compare_window_configurations (o1, o2, false);
+              }
+
+            /* Aside from them, only true vectors, char-tables, compiled
+               functions, and fonts (font-spec, font-entity, font-object)
+               are sensible to compare, so eliminate the others now.  */
+            if (scheme_pvec_type (o1) < PVEC_COMPILED)
+              return false;
+
+            iptr size1 = scheme_pvec_asize (o1);
+            iptr size2 = scheme_pvec_asize (o2);
+            eassert (size1 == size2);
+
+            ptr *fields1 = scheme_pvec_lisp_fields (o1);
+            ptr *fields2 = scheme_pvec_lisp_fields (o2);            
+            for (iptr i = 0; i < size1; i++)
+              {
+                if (!internal_equal (fields1[i],
+                                     fields2[i],
+                                     equal_kind, depth + 1, ht))
+                  return false;
+              }
+          }
+        else
+          {
+            /* Comapre true vectors. */
+            iptr size = Svector_length (o1);
+            for (iptr i = 0; i < size; i++)
+              {
+                if (!internal_equal (Svector_ref (o1, i),
+                                     Svector_ref (o2, i),
+                                     equal_kind, depth + 1, ht))
+                  return false;
+              }
+          }
+#else
 	register int i;
 	ptrdiff_t size = ASIZE (o1);
 	/* Pseudovectors have the type encoded in the size field, so this test
@@ -2310,6 +2381,7 @@ internal_equal (Lisp_Object o1, Lisp_Object o2, enum equal_kind equal_kind,
 	    if (!internal_equal (v1, v2, equal_kind, depth + 1, ht))
 	      return false;
 	  }
+#endif
 	return true;
       }
       break;
@@ -3592,9 +3664,11 @@ get_key_arg (Lisp_Object key, ptrdiff_t nargs, Lisp_Object *args, char *used)
 static Lisp_Object
 larger_vecalloc (Lisp_Object vec, ptrdiff_t incr_min, ptrdiff_t nitems_max)
 {
+#ifndef HAVE_CHEZ_SCHEME
   struct Lisp_Vector *v;
+#endif
   ptrdiff_t incr, incr_max, old_size, new_size;
-  ptrdiff_t C_language_max = min (PTRDIFF_MAX, SIZE_MAX) / sizeof *v->contents;
+  ptrdiff_t C_language_max = min (PTRDIFF_MAX, SIZE_MAX) / sizeof (Lisp_Object);
   ptrdiff_t n_max = (0 <= nitems_max && nitems_max < C_language_max
 		     ? nitems_max : C_language_max);
   eassert (VECTORP (vec));
@@ -3605,9 +3679,15 @@ larger_vecalloc (Lisp_Object vec, ptrdiff_t incr_min, ptrdiff_t nitems_max)
   if (incr_max < incr)
     memory_full (SIZE_MAX);
   new_size = old_size + incr;
+#ifdef HAVE_CHEZ_SCHEME
+  ptr new_vec = scheme_make_vector (new_size, Qnil);
+  vector_copy (new_vec, vec, old_size);
+  vec = new_vec;
+#else
   v = allocate_vector (new_size);
   xvector_copy(as_xv (v), XVECTOR (vec), old_size);
   XSETVECTOR (vec, v);
+#endif
   return vec;
 }
 
@@ -3616,11 +3696,15 @@ larger_vecalloc (Lisp_Object vec, ptrdiff_t incr_min, ptrdiff_t nitems_max)
 Lisp_Object
 larger_vector (Lisp_Object vec, ptrdiff_t incr_min, ptrdiff_t nitems_max)
 {
+#ifndef HAVE_CHEZ_SCHEME
   ptrdiff_t old_size = ASIZE (vec);
+#endif
   Lisp_Object v = larger_vecalloc (vec, incr_min, nitems_max);
+#ifndef HAVE_CHEZ_SCHEME
   ptrdiff_t new_size = ASIZE (v);
   memclear (XVECTOR (v).vptr->contents + old_size,
 	    (new_size - old_size) * word_size);
+#endif
   return v;
 }
 
@@ -4080,6 +4164,7 @@ hash_clear (struct Lisp_Hash_Table *h)
 
 
 
+#ifndef HAVE_CHEZ_SCHEME
 /************************************************************************
 			   Weak Hash Tables
  ************************************************************************/
@@ -4217,6 +4302,7 @@ sweep_weak_hash_tables (void)
 
   weak_hash_tables = used;
 }
+#endif
 
 
 

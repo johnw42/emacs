@@ -929,7 +929,7 @@ static void
 coding_set_source (struct coding_system *coding)
 {
 #ifdef HAVE_CHEZ_SCHEME
-  eassert (!HAVE_CHEZ_SCHEME)
+  eassert (!HAVE_CHEZ_SCHEME);
 #else
   if (BUFFERP (coding->src_object))
     {
@@ -11286,7 +11286,7 @@ internal character representation.  */);
   Vtranslation_table_for_input = Qnil;
 
   Lisp_Object args[coding_arg_undecided_max];
-  memclear (args, sizeof args);
+  memclear_lisp (args, sizeof args);
 
   Lisp_Object plist[] =
     {

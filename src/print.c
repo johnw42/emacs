@@ -1230,12 +1230,14 @@ print_preprocess (Lisp_Object obj)
 	  goto loop;
 
 	case Lisp_Vectorlike:
+#ifndef HAVE_CHEZ_SCHEME
 	  size = ASIZE (obj);
 	  if (size & PSEUDOVECTOR_FLAG)
 	    size &= PSEUDOVECTOR_SIZE_MASK;
 	  for (i = (SUB_CHAR_TABLE_P (obj)
 		    ? SUB_CHAR_TABLE_OFFSET : 0); i < size; i++)
 	    print_preprocess (AREF (obj, i));
+#endif
 	  if (HASH_TABLE_P (obj))
 	    { /* For hash tables, the key_and_value slot is past
 		 `size' because it needs to be marked specially in case
@@ -1243,6 +1245,22 @@ print_preprocess (Lisp_Object obj)
 	      struct Lisp_Hash_Table *h = XHASH_TABLE (obj);
 	      print_preprocess (h->key_and_value);
 	    }
+#ifdef HAVE_CHEZ_SCHEME
+          else if (scheme_pvecp (obj))
+            {
+              size = scheme_pvec_asize (obj);
+              ptr *data = scheme_pvec_lisp_fields (obj);
+              for (i = (SUB_CHAR_TABLE_P (obj)
+                        ? SUB_CHAR_TABLE_OFFSET : 0); i < size; i++)
+                print_preprocess (data[i]);
+            }
+          else
+            {
+              size = Svector_length (obj);
+              for (iptr i = 0; i < size; i++)
+                print_preprocess (Svector_ref (obj, i));
+            }
+#endif
 	  break;
 
 	default:
@@ -1529,7 +1547,7 @@ print_vectorlike (Lisp_Object obj, Lisp_Object printcharfun, bool escapeflag,
 
     case PVEC_FRAME:
       {
-	void *ptr = XFRAME (obj);
+	void *ptr0 = XFRAME (obj);
 	Lisp_Object frame_name = XFRAME (obj)->name;
 
 	print_c_string ((FRAME_LIVE_P (XFRAME (obj))
@@ -1546,7 +1564,7 @@ print_vectorlike (Lisp_Object obj, Lisp_Object printcharfun, bool escapeflag,
 	      frame_name = build_string ("*INVALID*FRAME*NAME*");
 	  }
 	print_string (frame_name, printcharfun);
-	int len = sprintf (buf, " %p>", ptr);
+	int len = sprintf (buf, " %p>", ptr0);
 	strout (buf, len, len, printcharfun);
       }
       break;
@@ -1641,6 +1659,9 @@ print_vectorlike (Lisp_Object obj, Lisp_Object printcharfun, bool escapeflag,
     case PVEC_CHAR_TABLE:
     case PVEC_NORMAL_VECTOR:
       {
+#ifdef HAVE_CHEZ_SCHEME
+        eassert (!HAVE_CHEZ_SCHEME);  // TODO(jrw)
+#else
 	ptrdiff_t size = ASIZE (obj);
 	if (COMPILEDP (obj))
 	  {
@@ -1695,6 +1716,7 @@ print_vectorlike (Lisp_Object obj, Lisp_Object printcharfun, bool escapeflag,
 	if (size < real_size)
 	  print_c_string (" ...", printcharfun);
 	printchar (']', printcharfun);
+#endif
       }
       break;
 

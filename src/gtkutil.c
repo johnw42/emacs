@@ -2401,6 +2401,7 @@ unref_cl_data (xg_menu_cb_data *cl_data)
 void
 xg_mark_data (void)
 {
+#ifndef HAVE_CHEZ_SCHEME
   xg_list_node *iter;
   Lisp_Object rest, frame;
 
@@ -2431,6 +2432,7 @@ xg_mark_data (void)
             }
         }
     }
+#endif
 }
 
 /* Callback called when a menu item is destroyed.  Used to free data.

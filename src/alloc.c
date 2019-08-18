@@ -30,6 +30,10 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 #include <pthread.h>
 #endif
 
+#ifdef HAVE_CHEZ_SCHEME
+#define DEFINE_SYMBOLS
+#endif
+
 #include "lisp.h"
 #include "dispextern.h"
 #include "intervals.h"
@@ -103,8 +107,7 @@ static bool valgrind_p;
 #include "w32heap.h"	/* for sbrk */
 #endif
 
-#ifndef HAVE_CHEZ_SCHEME // XXX TODO(jrw)
-
+#ifndef HAVE_CHEZ_SCHEME
 #ifdef GNU_LINUX
 /* The address where the heap starts.  */
 void *
@@ -115,6 +118,7 @@ my_heap_start (void)
     start = sbrk (0);
   return start;
 }
+#endif
 #endif
 
 #ifdef DOUG_LEA_MALLOC
@@ -128,6 +132,7 @@ my_heap_start (void)
    inside glibc's malloc.  */
 static void *malloc_state_ptr;
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Restore the dumped malloc state.  Because malloc can be invoked
    even before main (e.g. by the dynamic linker), the dumped malloc
    state must be restored as early as possible using this special hook.  */
@@ -170,7 +175,9 @@ malloc_initialize_hook (void)
 # endif
     }
 }
+#endif
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Declare the malloc initialization hook, which runs before 'main' starts.
    EXTERNALLY_VISIBLE works around Bug#22522.  */
 # ifndef __MALLOC_HOOK_VOLATILE
@@ -181,6 +188,7 @@ voidfuncptr __MALLOC_HOOK_VOLATILE __malloc_initialize_hook EXTERNALLY_VISIBLE
 
 #endif
 
+#ifndef HAVE_CHEZ_SCHEME
 #if defined DOUG_LEA_MALLOC || !defined CANNOT_DUMP
 
 /* Allocator-related actions to do just before and after unexec.  */
@@ -209,7 +217,9 @@ alloc_unexec_post (void)
 # endif
 }
 #endif
+#endif
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Mark, unmark, query mark bit of a Lisp string.  S must be a pointer
    to a struct Lisp_String.  */
 
@@ -220,13 +230,20 @@ alloc_unexec_post (void)
 #define VECTOR_MARK(V)		((V)->header.size |= ARRAY_MARK_FLAG)
 #define VECTOR_UNMARK(V)	((V)->header.size &= ~ARRAY_MARK_FLAG)
 #define VECTOR_MARKED_P(V)	(((V)->header.size & ARRAY_MARK_FLAG) != 0)
+#endif
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Default value of gc_cons_threshold (see below).  */
 
 #define GC_DEFAULT_THRESHOLD (100000 * word_size)
+#endif
+
+#endif
 
 /* Global variables.  */
 struct emacs_globals globals;
+
+#ifndef HAVE_CHEZ_SCHEME
 
 /* Number of bytes of consing done since the last gc.  */
 
@@ -240,11 +257,13 @@ EMACS_INT gc_relative_threshold;
    when memory is full.  */
 
 EMACS_INT memory_full_cons_threshold;
+#endif
 
 /* True during GC.  */
 
 bool gc_in_progress;
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Number of live and free conses etc.  */
 
 static EMACS_INT total_conses, total_markers, total_symbols, total_buffers;
@@ -288,12 +307,14 @@ static ptrdiff_t pure_bytes_used_lisp;
 /* Number of bytes allocated for non-Lisp objects in pure storage.  */
 
 static ptrdiff_t pure_bytes_used_non_lisp;
+#endif
 
 /* If nonzero, this is a warning delivered by malloc and not yet
    displayed.  */
 
 const char *pending_malloc_warning;
 
+#ifndef HAVE_CHEZ_SCHEME
 #if 0 /* Normally, pointer sanity only on request... */
 #ifdef ENABLE_CHECKING
 #define SUSPICIOUS_OBJECT_CHECKING 1
@@ -368,6 +389,12 @@ static void compact_small_strings (void);
 static void free_large_strings (void);
 extern Lisp_Object which_symbols (Lisp_Object, EMACS_INT) EXTERNALLY_VISIBLE;
 
+#endif
+
+#ifdef HAVE_CHEZ_SCHEME
+static void refill_memory_reserve (void);
+#endif
+
 /* When scanning the C stack for live Lisp objects, Emacs keeps track of
    what memory allocated via lisp_malloc and lisp_align_malloc is intended
    for what purpose.  This enumeration specifies the type of memory.  */
@@ -391,6 +418,7 @@ enum mem_type
   MEM_TYPE_SPARE
 };
 
+#ifndef HAVE_CHEZ_SCHEME
 /* A unique object in pure space used to make some Lisp objects
    on free lists recognizable in O(1).  */
 
@@ -482,6 +510,7 @@ static Lisp_Object *staticvec[NSTATICS] = {&Vpurify_flag};
 static int staticidx;
 
 static void *pure_alloc (size_t, int);
+#endif
 
 /* True if N is a power of 2.  N should be positive.  */
 
@@ -496,6 +525,11 @@ static void *pure_alloc (size_t, int);
 		       ? ((y) - 1 + (x)) & ~ ((y) - 1)			\
 		       : ((y) - 1 + (x)) - ((y) - 1 + (x)) % (y))
 
+#ifdef HAVE_CHEZ_SCHEME
+#define XMALLOC_OVERRUN_CHECK_OVERHEAD 0
+#endif
+
+#ifndef HAVE_CHEZ_SCHEME
 /* Return PTR rounded up to the next multiple of ALIGNMENT.  */
 
 static void *
@@ -503,7 +537,9 @@ pointer_align (void *ptr, int alignment)
 {
   return (void *) ROUNDUP ((uintptr_t) ptr, alignment);
 }
+#endif
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Extract the pointer hidden within A, if A is not a symbol.
    If A is a symbol, extract the hidden pointer's offset from lispsym,
    converted to void *.  */
@@ -516,7 +552,9 @@ pointer_align (void *ptr, int alignment)
 #define macro_XPNTR(a) \
   ((void *) ((intptr_t) XPNTR_OR_SYMBOL_OFFSET (a) \
 	     + (SYMBOLP (a) ? (char *) lispsym : NULL)))
+#endif
 
+#ifndef HAVE_CHEZ_SCHEME
 /* For pointer access, define XPNTR and XPNTR_OR_SYMBOL_OFFSET as
    functions, as functions are cleaner and can be used in debuggers.
    Also, define them as macros if being compiled with GCC without
@@ -528,15 +566,20 @@ XPNTR_OR_SYMBOL_OFFSET (Lisp_Object a)
 {
   return macro_XPNTR_OR_SYMBOL_OFFSET (a);
 }
+#endif
+#ifndef HAVE_CHEZ_SCHEME
 static ATTRIBUTE_UNUSED void *
 XPNTR (Lisp_Object a)
 {
   return macro_XPNTR (a);
 }
+#endif
 
+#ifndef HAVE_CHEZ_SCHEME
 #if DEFINE_KEY_OPS_AS_MACROS
 # define XPNTR_OR_SYMBOL_OFFSET(a) macro_XPNTR_OR_SYMBOL_OFFSET (a)
 # define XPNTR(a) macro_XPNTR (a)
+#endif
 #endif
 
 #ifndef HAVE_CHEZ_SCHEME
@@ -547,13 +590,16 @@ XFLOAT_INIT (Lisp_Object f, double n)
 }
 #endif
 
+#ifndef HAVE_CHEZ_SCHEME
 #ifdef DOUG_LEA_MALLOC
 static bool
 pointers_fit_in_lispobj_p (void)
 {
   return (UINTPTR_MAX <= VAL_MAX) || USE_LSB_TAG;
 }
+#endif
 
+#ifndef HAVE_CHEZ_SCHEME
 static bool
 mmap_lisp_allowed_p (void)
 {
@@ -565,7 +611,9 @@ mmap_lisp_allowed_p (void)
   return pointers_fit_in_lispobj_p () && !might_dump;
 }
 #endif
+#endif
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Head of a circularly-linked list of extant finalizers. */
 static struct Lisp_Finalizer finalizers;
 
@@ -574,6 +622,7 @@ static struct Lisp_Finalizer finalizers;
    not a local inside garbage_collect_1, in case we GC again while
    running finalizers.  */
 static struct Lisp_Finalizer doomed_finalizers;
+#endif
 
 
 /************************************************************************
@@ -631,6 +680,7 @@ buffer_memory_full (ptrdiff_t nbytes)
 #define COMMON_MULTIPLE(a, b) \
   ((a) % (b) == 0 ? (a) : (b) % (a) == 0 ? (b) : (a) * (b))
 
+#ifndef HAVE_CHEZ_SCHEME
 #ifndef XMALLOC_OVERRUN_CHECK
 #define XMALLOC_OVERRUN_CHECK_OVERHEAD 0
 #else
@@ -801,6 +851,16 @@ overrun_check_free (void *block)
 #define free overrun_check_free
 #endif
 
+#endif /* not HAVE_CHEZ_SCHEME */
+
+#ifdef HAVE_CHEZ_SCHEME
+
+#define MALLOC_BLOCK_INPUT ((void) 0)
+#define MALLOC_UNBLOCK_INPUT ((void) 0)
+#define MALLOC_PROBE(size) ((void) 0)
+
+#else
+
 /* If compiled with XMALLOC_BLOCK_INPUT_CHECK, define a symbol
    BLOCK_INPUT_IN_MEMORY_ALLOCATORS that is visible to the debugger.
    If that variable is set, block input while in one of Emacs's memory
@@ -835,6 +895,8 @@ malloc_unblock_input (void)
     if (profiler_memory_running)		\
       malloc_probe (size);			\
   } while (0)
+
+#endif /* HAVE_CHEZ_SCHEME */
 
 static void *lmalloc (size_t) ATTRIBUTE_MALLOC_SIZE ((1));
 static void *lrealloc (void *, size_t);
@@ -1085,6 +1147,9 @@ lisp_malloc (size_t nbytes, enum mem_type type)
 
   MALLOC_BLOCK_INPUT;
 
+#ifdef HAVE_CHEZ_SCHEME
+  val = lmalloc (nbytes);
+#else
 #ifdef GC_MALLOC_CHECK
   allocated_mem_type = type;
 #endif
@@ -1112,6 +1177,7 @@ lisp_malloc (size_t nbytes, enum mem_type type)
   if (val && type != MEM_TYPE_NON_LISP)
     mem_insert (val, (char *) val + nbytes, type);
 #endif
+#endif
 
   MALLOC_UNBLOCK_INPUT;
   if (!val && nbytes)
@@ -1128,8 +1194,10 @@ lisp_free (void *block)
 {
   MALLOC_BLOCK_INPUT;
   free (block);
+#ifndef HAVE_CHEZ_SCHEME
 #ifndef GC_MALLOC_CHECK
   mem_delete (mem_find (block));
+#endif
 #endif
   MALLOC_UNBLOCK_INPUT;
 }
@@ -1247,6 +1315,7 @@ struct ablocks
 /* The list of free ablock.   */
 static struct ablock *free_ablock;
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Allocate an aligned block of nbytes.
    Alignment is on a multiple of BLOCK_ALIGN and `nbytes' has to be
    smaller or equal to BLOCK_BYTES.  */
@@ -1352,7 +1421,9 @@ lisp_align_malloc (size_t nbytes, enum mem_type type)
   eassert (0 == ((uintptr_t) val) % BLOCK_ALIGN);
   return val;
 }
+#endif
 
+#ifndef HAVE_CHEZ_SCHEME
 static void
 lisp_align_free (void *block)
 {
@@ -1397,6 +1468,7 @@ lisp_align_free (void *block)
     }
   MALLOC_UNBLOCK_INPUT;
 }
+#endif
 
 #if !defined __GNUC__ && !defined __alignof__
 # define __alignof__(type) alignof (type)
@@ -1514,6 +1586,7 @@ static EMACS_INT total_free_intervals, total_intervals;
 
 static INTERVAL interval_free_list;
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Return a new interval.  */
 
 INTERVAL
@@ -1552,8 +1625,10 @@ make_interval (void)
   val->gcmarkbit = 0;
   return val;
 }
+#endif
 
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Mark Lisp objects in interval I.  */
 
 static void
@@ -1565,7 +1640,9 @@ mark_interval (INTERVAL i, void *dummy)
   i->gcmarkbit = 1;
   mark_object (i->plist);
 }
+#endif
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Mark the interval tree rooted in I.  */
 
 #define MARK_INTERVAL_TREE(i)					\
@@ -1573,6 +1650,7 @@ mark_interval (INTERVAL i, void *dummy)
     if (i && !i->gcmarkbit)					\
       traverse_intervals_noorder (i, mark_interval, NULL);	\
   } while (0)
+#endif
 
 /***********************************************************************
 			  String Allocation
@@ -1670,6 +1748,7 @@ typedef union
 
 enum { SDATA_DATA_OFFSET = offsetof (struct sdata, data) };
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Structure describing a block of memory which is sub-allocated to
    obtain string data memory for strings.  Blocks for small strings
    are of fixed size SBLOCK_SIZE.  Blocks for large strings are made
@@ -1735,6 +1814,7 @@ static EMACS_INT total_string_bytes;
    free-list.  */
 
 #define NEXT_FREE_LISP_STRING(S) ((S)->u.next)
+#endif
 
 /* Return a pointer to the sdata structure belonging to Lisp string S.
    S must be live, i.e. S->data must not be null.  S->data is actually
@@ -1744,6 +1824,7 @@ static EMACS_INT total_string_bytes;
 #define SDATA_OF_STRING(S) ((sdata *) ((S)->u.s.data - SDATA_DATA_OFFSET))
 
 
+#ifndef HAVE_CHEZ_SCHEME
 #ifdef GC_CHECK_STRING_OVERRUN
 
 /* We check for overrun in string data blocks by appending a small
@@ -1800,6 +1881,7 @@ static ptrdiff_t const STRING_BYTES_MAX =
 	 - offsetof (struct sblock, data)
 	 - SDATA_DATA_OFFSET)
 	& ~(sizeof (EMACS_INT) - 1)));
+#endif
 
 /* Initialize string allocation.  Called from init_alloc_once.  */
 
@@ -1913,6 +1995,10 @@ check_string_free_list (void)
 static struct Lisp_String *
 allocate_string (void)
 {
+#ifdef HAVE_CHEZ_SCHEME
+  eassert (!HAVE_CHEZ_SCHEME);
+  return NULL;
+#else
   struct Lisp_String *s;
 
   MALLOC_BLOCK_INPUT;
@@ -1966,6 +2052,7 @@ allocate_string (void)
 #endif /* GC_CHECK_STRING_BYTES */
 
   return s;
+#endif
 }
 
 
@@ -1979,6 +2066,9 @@ void
 allocate_string_data (struct Lisp_String *s,
 		      EMACS_INT nchars, EMACS_INT nbytes)
 {
+#ifdef HAVE_CHEZ_SCHEME
+  eassert (!HAVE_CHEZ_SCHEME);
+#else
   sdata *data, *old_data;
   struct sblock *b;
   ptrdiff_t needed, old_nbytes;
@@ -2070,9 +2160,11 @@ allocate_string_data (struct Lisp_String *s,
     }
 
   consing_since_gc += needed;
+#endif
 }
 
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Sweep and compact strings.  */
 
 NO_INLINE /* For better stack traces */
@@ -2178,6 +2270,7 @@ sweep_strings (void)
 static void
 free_large_strings (void)
 {
+#ifndef HAVE_CHEZ_SCHEME
   struct sblock *b, *next;
   struct sblock *live_blocks = NULL;
 
@@ -2195,6 +2288,7 @@ free_large_strings (void)
     }
 
   large_sblocks = live_blocks;
+#endif
 }
 
 
@@ -2204,6 +2298,7 @@ free_large_strings (void)
 static void
 compact_small_strings (void)
 {
+#ifndef HAVE_CHEZ_SCHEME
   /* TB is the sblock we copy to, TO is the sdata within TB we copy
      to, and TB_END is the end of TB.  */
   struct sblock *tb = oldest_sblock;
@@ -2295,7 +2390,9 @@ compact_small_strings (void)
     }
 
   current_sblock = tb;
+#endif
 }
+#endif
 
 void
 string_overflow (void)
@@ -2376,35 +2473,24 @@ bool_vector_fill (Lisp_Object a, Lisp_Object init)
   return a;
 }
 
-#endif /* not HAVE_CHEZ_SCHEME */
-
-#ifdef HAVE_CHEZ_SCHEME
-static ptr
-make_bool_vector(iptr num_bits, bool fill)
-{
-  eassert(num_bits >= 0);
-  iptr num_bytes = (num_bits + 7) / 8;
-  ptr vec = scheme_make_pvec(1, PVEC_BOOL_VECTOR, num_bytes, fill ? -1 : 0);
-  Svector_set(vec, 0, Sfixnum(num_bits));
-  return vec;
-}
-
-#endif
-
 /* Return a newly allocated, uninitialized bool vector of size NBITS.  */
 
 Lisp_Object
 make_uninit_bool_vector (EMACS_INT nbits)
 {
-#ifdef HAVE_CHEZ_SCHEME
-  return make_bool_vector(nbits, false);
-#else
   Lisp_Object val;
   EMACS_INT words = bool_vector_words (nbits);
   EMACS_INT word_bytes = words * sizeof (bits_word);
   EMACS_INT needed_elements = ((bool_header_size - header_size + word_bytes
 				+ word_size - 1)
 			       / word_size);
+#ifdef HAVE_CHEZ_SCHEME
+  struct Lisp_Bool_Vector *p =
+    (struct Lisp_Bool_Vector *) allocate_pseudovector
+    (0, needed_elements, needed_elements, PVEC_BOOL_VECTOR);
+  p->size = nbits;
+  val = p->header.s.scheme_obj;
+#else
   struct Lisp_Bool_Vector *p
     = (struct Lisp_Bool_Vector *) allocate_vector (needed_elements);
   XSETVECTOR (val, p);
@@ -2414,9 +2500,9 @@ make_uninit_bool_vector (EMACS_INT nbits)
   /* Clear padding at the end.  */
   if (words)
     p->data[words - 1] = 0;
+#endif
 
   return val;
-#endif
 }
 
 DEFUN ("make-bool-vector", Fmake_bool_vector, Smake_bool_vector, 2, 2, 0,
@@ -2424,17 +2510,11 @@ DEFUN ("make-bool-vector", Fmake_bool_vector, Smake_bool_vector, 2, 2, 0,
 LENGTH must be a number.  INIT matters only in whether it is t or nil.  */)
   (Lisp_Object length, Lisp_Object init)
 {
-#ifdef HAVE_CHEZ_SCHEME
-  CHECK_NATNUM (length);
-  iptr num_bits = Sfixnum_value(length);
-  return make_bool_vector(num_bits, !NILP(init));
-#else
   Lisp_Object val;
 
   CHECK_NATNUM (length);
   val = make_uninit_bool_vector (XFASTINT (length));
   return bool_vector_fill (val, init);
-#endif
 }
 
 DEFUN ("bool-vector", Fbool_vector, Sbool_vector, 0, MANY, 0,
@@ -2771,11 +2851,15 @@ free_cons (struct Lisp_Cons *ptr)
   consing_since_gc -= sizeof *ptr;
   total_free_conses++;
 }
+#endif
 
 DEFUN ("cons", Fcons, Scons, 2, 2, 0,
        doc: /* Create a new cons, give it CAR and CDR as components, and return it.  */)
   (Lisp_Object car, Lisp_Object cdr)
 {
+#ifdef HAVE_CHEZ_SCHEME
+  return scheme_cons (car, cdr);
+#else
   register Lisp_Object val;
 
   MALLOC_BLOCK_INPUT;
@@ -2810,7 +2894,10 @@ DEFUN ("cons", Fcons, Scons, 2, 2, 0,
   total_free_conses--;
   cons_cells_consed++;
   return val;
+#endif
 }
+
+#ifndef HAVE_CHEZ_SCHEME
 
 #ifdef GC_CHECK_CONS_LIST
 /* Get an error now if there's any junk in the cons free list.  */
@@ -2822,6 +2909,8 @@ check_cons_list (void)
   while (tail)
     tail = tail->u.s.u.chain;
 }
+#endif
+
 #endif
 
 /* Make a list of 1, 2, 3, 4 or 5 specified objects.  */
@@ -2925,15 +3014,14 @@ DEFUN ("make-list", Fmake_list, Smake_list, 2, 2, 0,
 
   return val;
 }
-#endif /* HAVE_CHEZ_SCHEME */
 
 
 
-#ifndef HAVE_CHEZ_SCHEME
 /***********************************************************************
 			   Vector Allocation
  ***********************************************************************/
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Sometimes a vector's contents are merely a pointer internally used
    in vector allocation code.  On the rare platforms where a null
    pointer cannot be tagged, represent it with a Lisp 0.
@@ -2944,13 +3032,17 @@ next_vector (struct Lisp_Vector *v)
 {
   return XUNTAG (v->contents[0], Lisp_Int0);
 }
+#endif
 
+#ifndef HAVE_CHEZ_SCHEME
 static void
 set_next_vector (struct Lisp_Vector *v, struct Lisp_Vector *p)
 {
   v->contents[0] = make_lisp_ptr (p, Lisp_Int0);
 }
+#endif
 
+#ifndef HAVE_CHEZ_SCHEME
 /* This value is balanced well enough to avoid too much internal overhead
    for the most common cases; it's not required to be a power of two, but
    it's expected to be a mult-of-ROUNDUP_SIZE (see below).  */
@@ -2995,7 +3087,9 @@ verify (VECTOR_BLOCK_SIZE <= (1 << PSEUDOVECTOR_SIZE_BITS));
 
 #define VECTOR_MAX_FREE_LIST_INDEX				\
   ((VECTOR_BLOCK_BYTES - VBLOCK_BYTES_MIN) / roundup_size + 1)
+#endif
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Common shortcut to advance vector pointer over a block data.  */
 
 static struct Lisp_Vector *
@@ -3006,7 +3100,9 @@ ADVANCE (struct Lisp_Vector *v, ptrdiff_t nbytes)
   void *p = cv + nbytes;
   return p;
 }
+#endif
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Common shortcut to calculate NBYTES-vector index in VECTOR_FREE_LISTS.  */
 
 static ptrdiff_t
@@ -3015,7 +3111,9 @@ VINDEX (ptrdiff_t nbytes)
   eassume (VBLOCK_BYTES_MIN <= nbytes);
   return (nbytes - VBLOCK_BYTES_MIN) / roundup_size;
 }
+#endif
 
+#ifndef HAVE_CHEZ_SCHEME
 /* This internal type is used to maintain the list of large vectors
    which are allocated at their own, e.g. outside of vector blocks.
 
@@ -3030,18 +3128,26 @@ struct large_vector
 {
   struct large_vector *next;
 };
+#endif
 
+
+#ifndef HAVE_CHEZ_SCHEME
 enum
 {
   large_vector_offset = ROUNDUP (sizeof (struct large_vector), vector_alignment)
 };
+#endif
 
+
+#ifndef HAVE_CHEZ_SCHEME
 static struct Lisp_Vector *
 large_vector_vec (struct large_vector *p)
 {
   return (struct Lisp_Vector *) ((char *) p + large_vector_offset);
 }
+#endif
 
+#ifndef HAVE_CHEZ_SCHEME
 /* This internal type is used to maintain an underlying storage
    for small vectors.  */
 
@@ -3050,24 +3156,33 @@ struct vector_block
   char data[VECTOR_BLOCK_BYTES];
   struct vector_block *next;
 };
+#endif
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Chain of vector blocks.  */
 
 static struct vector_block *vector_blocks;
+#endif
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Vector free lists, where NTH item points to a chain of free
    vectors of the same NBYTES size, so NTH == VINDEX (NBYTES).  */
 
 static struct Lisp_Vector *vector_free_lists[VECTOR_MAX_FREE_LIST_INDEX];
+#endif
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Singly-linked list of large vectors.  */
 
 static struct large_vector *large_vectors;
+#endif
 
 /* The only vector with 0 slots, allocated from pure space.  */
 
 Lisp_Object zero_vector;
 
+
+#ifndef HAVE_CHEZ_SCHEME
 /* Number of live vectors.  */
 
 static EMACS_INT total_vectors;
@@ -3075,7 +3190,9 @@ static EMACS_INT total_vectors;
 /* Total size of live and free vectors, in Lisp_Object units.  */
 
 static EMACS_INT total_vector_slots, total_free_vector_slots;
+#endif
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Common shortcut to setup vector on a free list.  */
 
 static void
@@ -3091,7 +3208,9 @@ setup_on_free_list (struct Lisp_Vector *v, ptrdiff_t nbytes)
   vector_free_lists[vindex] = v;
   total_free_vector_slots += nbytes / word_size;
 }
+#endif
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Get a new vector block.  */
 
 static struct vector_block *
@@ -3108,15 +3227,21 @@ allocate_vector_block (void)
   vector_blocks = block;
   return block;
 }
+#endif
 
 /* Called once to initialize vector allocation.  */
 
 static void
 init_vectors (void)
 {
+#ifdef HAVE_CHEZ_SCHEME
+  zero_vector = scheme_make_vector (0, Qnil);
+#else
   zero_vector = make_pure_vector (0);
+#endif
 }
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Allocate vector from a vector block.  */
 
 static struct Lisp_Vector *
@@ -3176,13 +3301,17 @@ allocate_vector_from_block (size_t nbytes)
     }
   return vector;
 }
+#endif
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Nonzero if VECTOR pointer is valid pointer inside BLOCK.  */
 
 #define VECTOR_IN_BLOCK(vector, block)		\
   ((char *) (vector) <= (block)->data		\
    + VECTOR_BLOCK_BYTES - VBLOCK_BYTES_MIN)
+#endif
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Return the memory footprint of V in bytes.  */
 
 static ptrdiff_t
@@ -3211,7 +3340,9 @@ vector_nbytes (struct Lisp_Vector *v)
     nwords = size;
   return vroundup (header_size + word_size * nwords);
 }
+#endif
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Release extra resources still in use by VECTOR, which may be any
    vector-like object.  */
 
@@ -3242,7 +3373,9 @@ cleanup_vector (struct Lisp_Vector *vector)
   else if (PSEUDOVECTOR_TYPEP (&vector->header, PVEC_CONDVAR))
     finalize_one_condvar ((struct Lisp_CondVar *) vector);
 }
+#endif
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Reclaim space used by unmarked vectors.  */
 
 NO_INLINE /* For better stack traces */
@@ -3343,7 +3476,9 @@ sweep_vectors (void)
 	}
     }
 }
+#endif
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Value is a pointer to a newly allocated Lisp_Vector structure
    with room for LEN Lisp_Objects.  */
 
@@ -3394,8 +3529,10 @@ allocate_vectorlike (ptrdiff_t len)
 
   return p;
 }
+#endif
 
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Allocate a vector with LEN slots.  */
 
 struct Lisp_Vector *
@@ -3411,6 +3548,7 @@ allocate_vector (EMACS_INT len)
     v->header.size = len;
   return v;
 }
+#endif
 
 
 /* Allocate other vector-like structures.  */
@@ -3419,11 +3557,28 @@ struct Lisp_Vector *
 allocate_pseudovector (int memlen, int lisplen,
 		       int zerolen, enum pvec_type tag)
 {
+#ifndef HAVE_CHEZ_SCHEME
   struct Lisp_Vector *v = allocate_vectorlike (memlen);
+#endif
 
   /* Catch bogus values.  */
   eassert (0 <= tag && tag <= PVEC_FONT);
   eassert (0 <= lisplen && lisplen <= zerolen && zerolen <= memlen);
+
+#ifdef HAVE_CHEZ_SCHEME
+  ptr bytes = Smake_bytevector(memlen * word_size, 0);
+  Slock_object(bytes);
+
+  void *data = Sbytevector_data (bytes);
+  scheme_ptr_fill (data, Qnil, lisplen);
+
+  ptr vec = scheme_make_vector(NUM_PVEC_FIELDS, Qnil);
+  Slock_object(vec);
+  PVEC_FIELD_SET(vec, BYTES, bytes);
+  PVEC_FIELD_SET(vec, SYMBOL, scheme_pseudovector_symbol);
+  PVEC_FIELD_SET(vec, PVEC_TYPE, Sfixnum(tag));
+  PVEC_FIELD_SET(vec, NUM_LISP_FIELDS, Sfixnum(lisplen));
+#else
   eassert (memlen - lisplen <= (1 << PSEUDOVECTOR_REST_BITS) - 1);
   eassert (lisplen <= PSEUDOVECTOR_SIZE_MASK);
 
@@ -3431,15 +3586,14 @@ allocate_pseudovector (int memlen, int lisplen,
   memclear (v->contents, zerolen * word_size);
   XSETPVECTYPESIZE (as_xv (v), tag, lisplen, memlen - lisplen);
   return v;
-}
-
 #endif /* not HAVE_CHEZ_SCHEME */
+}
 
 struct buffer *
 allocate_buffer (void)
 {
 #ifdef HAVE_CHEZ_SCHEME
-  struct buffer *b = ALLOCATE_PSEUDOVECTOR_(struct buffer, own_text, PVEC_BUFFER);
+  struct buffer *b = ALLOCATE_PSEUDOVECTOR (struct buffer, own_text, PVEC_BUFFER);
   b->undo_list_ = Qnil;
 #else
   struct buffer *b = lisp_malloc (sizeof *b, MEM_TYPE_BUFFER);  
@@ -3456,16 +3610,15 @@ allocate_buffer (void)
 
 
 #ifdef HAVE_CHEZ_SCHEME
-
 static struct Lisp_Pseudovector *
-scheme_allocate_record (iptr num_slots)
+allocate_record (iptr num_slots)
 {
-  iptr num_bytes =
-    sizeof (struct Lisp_Pseudovector) + (num_slots - 1) * sizeof (ptr);
-  return (void *) scheme_make_pvec (PVEC_RECORD, num_bytes, num_bytes, 0);
+  return allocate_pseudovector
+    (num_slots, num_slots, num_slots, PVEC_RECORD);
 }
+#endif
 
-#else
+#ifndef HAVE_CHEZ_SCHEME
 /* Allocate a record with COUNT slots.  COUNT must be positive, and
    includes the type slot.  */
 
@@ -3493,10 +3646,8 @@ each initialized to INIT.  */)
   CHECK_NATNUM (slots);
 #ifdef HAVE_CHEZ_SCHEME
   iptr num_slots = XFASTINT (slots);
-  struct Lisp_Pseudovector *p =
-    scheme_allocate_record (num_slots);
-  scheme_ptr_fill (&p->first_lisp_field, Qnil, num_slots);
-  return p->header.scheme_obj;
+  struct Lisp_Pseudovector *p = allocate_record (num_slots);
+  return p->header.s.scheme_obj;
 #else
   EMACS_INT size = XFASTINT (slots) + 1;
   struct Lisp_Vector *p = allocate_record (size);
@@ -3517,10 +3668,9 @@ usage: (record TYPE &rest SLOTS) */)
   (ptrdiff_t nargs, Lisp_Object *args)
 {
 #ifdef HAVE_CHEZ_SCHEME
-  struct Lisp_Pseudovector *p =
-    scheme_allocate_record (nargs);
+  struct Lisp_Pseudovector *p = allocate_record (nargs);
   scheme_ptr_copy (&p->first_lisp_field, args, nargs);
-  return p->header.scheme_obj;
+  return p->header.s.scheme_obj;
 #else
   struct Lisp_Vector *p = allocate_record (nargs);
   memcpy (p->contents, args, nargs * sizeof *args);
@@ -3580,6 +3730,7 @@ make_byte_code (struct Lisp_Vector *v)
     v->contents[1] = Fstring_as_unibyte (v->contents[1]);
   XSETPVECTYPE (as_xv (v), PVEC_COMPILED);
 }
+#endif
 
 DEFUN ("make-byte-code", Fmake_byte_code, Smake_byte_code, 4, MANY, 0,
        doc: /* Create a byte-code object with specified arguments as elements.
@@ -3599,6 +3750,10 @@ stack before executing the byte-code.
 usage: (make-byte-code ARGLIST BYTE-CODE CONSTANTS DEPTH &optional DOCSTRING INTERACTIVE-SPEC &rest ELEMENTS)  */)
   (ptrdiff_t nargs, Lisp_Object *args)
 {
+#ifdef HAVE_CHEZ_SCHEME
+  eassert (!HAVE_CHEZ_SCHEME);
+  return Qnil;
+#else
   Lisp_Object val = make_uninit_vector (nargs);
   struct Lisp_Vector *p = xv_unwrap (XVECTOR (val));
 
@@ -3614,8 +3769,8 @@ usage: (make-byte-code ARGLIST BYTE-CODE CONSTANTS DEPTH &optional DOCSTRING INT
   make_byte_code (p);
   XSETCOMPILED (val, p);
   return val;
-}
 #endif  /* not HAVE_CHEZ_SCHEME */
+}
 
 
 
@@ -3768,11 +3923,8 @@ static Lisp_Object
 allocate_misc (enum Lisp_Misc_Type type)
 {
 #ifdef HAVE_CHEZ_SCHEME
-  struct Lisp_Misc_Any *pv = (struct Lisp_Misc_Any *) scheme_make_pvec
-    (PVEC_MISC,
-     sizeof (union vectorlike_header),
-     sizeof (union Lisp_Misc),
-     0);
+  struct Lisp_Misc_Any *pv = (struct Lisp_Misc_Any *) allocate_pseudovector
+    (VECSIZE (union Lisp_Misc), 0, 0, PVEC_MISC);
   pv->type = type;
   return pv;
 #else
@@ -3810,19 +3962,21 @@ allocate_misc (enum Lisp_Misc_Type type)
 #endif /* HAVE_CHEZ_SCHEME */
 }
 
-#ifndef HAVE_CHEZ_SCHEME
 /* Free a Lisp_Misc object.  */
 
 void
 free_misc (Lisp_Object misc)
 {
+#ifndef HAVE_CHEZ_SCHEME
   XMISCANY (misc)->type = Lisp_Misc_Free;
   XMISC (misc)->u_free.chain = marker_free_list;
   marker_free_list = XMISC (misc);
   consing_since_gc -= sizeof (union Lisp_Misc);
   total_free_markers++;
+#endif /* not HAVE_CHEZ_SCHEME */
 }
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Verify properties of Lisp_Save_Value's representation
    that are assumed here and elsewhere.  */
 
@@ -4078,6 +4232,7 @@ unchain_finalizer (struct Lisp_Finalizer *finalizer)
 static void
 mark_finalizer_list (struct Lisp_Finalizer *head)
 {
+#ifndef HAVE_CHEZ_SCHEME
   for (struct Lisp_Finalizer *finalizer = head->next;
        finalizer != head;
        finalizer = finalizer->next)
@@ -4085,6 +4240,7 @@ mark_finalizer_list (struct Lisp_Finalizer *head)
       finalizer->base.gcmarkbit = true;
       mark_object (finalizer->function);
     }
+#endif
 }
 
 /* Move doomed finalizers to list DEST from list SRC.  A doomed
@@ -4168,7 +4324,6 @@ FUNCTION.  FUNCTION will be run once per finalizer object.  */)
 }
 
 
-#ifndef HAVE_CHEZ_SCHEME
 /************************************************************************
 			   Memory Full Handling
  ************************************************************************/
@@ -4184,6 +4339,9 @@ FUNCTION.  FUNCTION will be run once per finalizer object.  */)
 void
 memory_full (size_t nbytes)
 {
+#ifdef HAVE_CHEZ_SCHEME
+  eassert (!HAVE_CHEZ_SCHEME);
+#else
   /* Do not go into hysterics merely because a large request failed.  */
   bool enough_free_memory = 0;
   if (SPARE_MEMORY < nbytes)
@@ -4225,6 +4383,7 @@ memory_full (size_t nbytes)
   /* This used to call error, but if we've run out of memory, we could
      get infinite recursion trying to build the string.  */
   xsignal (Qnil, Vmemory_signal_data);
+#endif
 }
 
 /* If we released our reserve (due to running out of memory),
@@ -4237,6 +4396,7 @@ memory_full (size_t nbytes)
 void
 refill_memory_reserve (void)
 {
+#ifndef HAVE_CHEZ_SCHEME
 #if !defined SYSTEM_MALLOC && !defined HYBRID_MALLOC
   if (spare_memory[0] == 0)
     spare_memory[0] = malloc (SPARE_MEMORY);
@@ -4261,10 +4421,9 @@ refill_memory_reserve (void)
   if (spare_memory[0] && spare_memory[1] && spare_memory[5])
     Vmemory_full = Qnil;
 #endif
-}
 #endif
+}
 
-#ifndef HAVE_CHEZ_SCHEME
 /************************************************************************
 			   C Stack Marking
  ************************************************************************/
@@ -4285,14 +4444,17 @@ refill_memory_reserve (void)
 static void
 mem_init (void)
 {
+#ifndef HAVE_CHEZ_SCHEME
   mem_z.left = mem_z.right = MEM_NIL;
   mem_z.parent = NULL;
   mem_z.color = MEM_BLACK;
   mem_z.start = mem_z.end = NULL;
   mem_root = MEM_NIL;
+#endif
 }
 
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Value is a pointer to the mem_node containing START.  Value is
    MEM_NIL if there is no node in the tree containing START.  */
 
@@ -4313,8 +4475,10 @@ mem_find (void *start)
     p = start < p->start ? p->left : p->right;
   return p;
 }
+#endif
 
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Insert a new node into the tree for a block of memory with start
    address START, end address END, and type TYPE.  Value is a
    pointer to the node that was inserted.  */
@@ -4372,8 +4536,10 @@ mem_insert (void *start, void *end, enum mem_type type)
 
   return x;
 }
+#endif
 
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Re-establish the red-black properties of the tree, and thereby
    balance the tree, after node X has been inserted; X is always red.  */
 
@@ -4447,8 +4613,10 @@ mem_insert_fixup (struct mem_node *x)
      it to black so that property #5 is satisfied.  */
   mem_root->color = MEM_BLACK;
 }
+#endif
 
 
+#ifndef HAVE_CHEZ_SCHEME
 /*   (x)                   (y)
      / \                   / \
     a   (y)      ===>    (x)  c
@@ -4486,8 +4654,10 @@ mem_rotate_left (struct mem_node *x)
   if (x != MEM_NIL)
     x->parent = y;
 }
+#endif
 
 
+#ifndef HAVE_CHEZ_SCHEME
 /*     (x)                (Y)
        / \                / \
      (y)  c      ===>    a  (x)
@@ -4519,8 +4689,10 @@ mem_rotate_right (struct mem_node *x)
   if (x != MEM_NIL)
     x->parent = y;
 }
+#endif
 
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Delete node Z from the tree.  If Z is null or MEM_NIL, do nothing.  */
 
 static void
@@ -4572,8 +4744,10 @@ mem_delete (struct mem_node *z)
   xfree (y);
 #endif
 }
+#endif
 
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Re-establish the red-black properties of the tree, after a
    deletion.  */
 
@@ -4653,8 +4827,10 @@ mem_delete_fixup (struct mem_node *x)
 
   x->color = MEM_BLACK;
 }
+#endif
 
 
+#ifndef HAVE_CHEZ_SCHEME
 /* If P is a pointer into a live Lisp string object on the heap,
    return the object.  Otherwise, return nil.  M is a pointer to the
    mem_block for P.
@@ -4684,13 +4860,17 @@ live_string_holding (struct mem_node *m, void *p)
     }
   return Qnil;
 }
+#endif
 
+#ifndef HAVE_CHEZ_SCHEME
 static bool
 live_string_p (struct mem_node *m, void *p)
 {
   return !NILP (live_string_holding (m, p));
 }
+#endif
 
+#ifndef HAVE_CHEZ_SCHEME
 /* If P is a pointer into a live Lisp cons object on the heap, return
    the object.  Otherwise, return nil.  M is a pointer to the
    mem_block for P.  */
@@ -4718,14 +4898,18 @@ live_cons_holding (struct mem_node *m, void *p)
     }
   return Qnil;
 }
+#endif
 
+#ifndef HAVE_CHEZ_SCHEME
 static bool
 live_cons_p (struct mem_node *m, void *p)
 {
   return !NILP (live_cons_holding (m, p));
 }
+#endif
 
 
+#ifndef HAVE_CHEZ_SCHEME
 /* If P is a pointer into a live Lisp symbol object on the heap,
    return the object.  Otherwise, return nil.  M is a pointer to the
    mem_block for P.  */
@@ -4754,13 +4938,18 @@ live_symbol_holding (struct mem_node *m, void *p)
   return Qnil;
 }
 
+#endif
+
+#ifndef HAVE_CHEZ_SCHEME
 static bool
 live_symbol_p (struct mem_node *m, void *p)
 {
   return !NILP (live_symbol_holding (m, p));
 }
+#endif
 
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Return true if P is a pointer to a live Lisp float on
    the heap.  M is a pointer to the mem_block for P.  */
 
@@ -4784,8 +4973,10 @@ live_float_p (struct mem_node *m, void *p)
   else
     return 0;
 }
+#endif
 
 
+#ifndef HAVE_CHEZ_SCHEME
 /* If P is a pointer to a live Lisp Misc on the heap, return the object.
    Otherwise, return nil.  M is a pointer to the mem_block for P.  */
 
@@ -4812,13 +5003,17 @@ live_misc_holding (struct mem_node *m, void *p)
     }
   return Qnil;
 }
+#endif
 
+#ifndef HAVE_CHEZ_SCHEME
 static bool
 live_misc_p (struct mem_node *m, void *p)
 {
   return !NILP (live_misc_holding (m, p));
 }
+#endif
 
+#ifndef HAVE_CHEZ_SCHEME
 /* If P is a pointer to a live vector-like object, return the object.
    Otherwise, return nil.
    M is a pointer to the mem_block for P.  */
@@ -4857,13 +5052,17 @@ live_vector_holding (struct mem_node *m, void *p)
     }
   return Qnil;
 }
+#endif
 
+#ifndef HAVE_CHEZ_SCHEME
 static bool
 live_vector_p (struct mem_node *m, void *p)
 {
   return !NILP (live_vector_holding (m, p));
 }
+#endif
 
+#ifndef HAVE_CHEZ_SCHEME
 /* If P is a pointer into a live buffer, return the buffer.
    Otherwise, return nil.  M is a pointer to the mem_block for P.  */
 
@@ -4887,13 +5086,17 @@ live_buffer_holding (struct mem_node *m, void *p)
     }
   return Qnil;
 }
+#endif
 
+#ifndef HAVE_CHEZ_SCHEME
 static bool
 live_buffer_p (struct mem_node *m, void *p)
 {
   return !NILP (live_buffer_holding (m, p));
 }
+#endif
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Mark OBJ if we can prove it's a Lisp_Object.  */
 
 static void
@@ -4949,7 +5152,9 @@ mark_maybe_object (Lisp_Object obj)
 	mark_object (obj);
     }
 }
+#endif
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Return true if P can point to Lisp data, and false otherwise.
    Symbols are implemented via offsets not pointers, but the offsets
    are also multiples of GCALIGNMENT.  */
@@ -4959,11 +5164,15 @@ maybe_lisp_pointer (void *p)
 {
   return (uintptr_t) p % GCALIGNMENT == 0;
 }
+#endif
 
+#ifndef HAVE_CHEZ_SCHEME
 #ifndef HAVE_MODULES
 enum { HAVE_MODULES = false };
 #endif
+#endif
 
+#ifndef HAVE_CHEZ_SCHEME
 /* If P points to Lisp data, mark that as live if it isn't already
    marked.  */
 
@@ -5039,8 +5248,10 @@ mark_maybe_pointer (void *p)
 	mark_object (obj);
     }
 }
+#endif
 
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Alignment of pointer values.  Use alignof, as it sometimes returns
    a smaller alignment than GCC's __alignof__ and mark_memory might
    miss objects if __alignof__ were used.  */
@@ -5093,7 +5304,9 @@ mark_memory (void *start, void *end)
 	mark_maybe_object (*(Lisp_Object *) pp);
     }
 }
+#endif
 
+#ifndef HAVE_CHEZ_SCHEME
 #ifndef HAVE___BUILTIN_UNWIND_INIT
 
 # ifdef GC_SETJMP_WORKS
@@ -5186,7 +5399,9 @@ test_setjmp (void)
 }
 # endif /* ! GC_SETJMP_WORKS */
 #endif /* ! HAVE___BUILTIN_UNWIND_INIT */
+#endif
 
+#ifndef HAVE_CHEZ_SCHEME
 /* The type of an object near the stack top, whose address can be used
    as a stack scan limit.  */
 typedef union
@@ -5199,7 +5414,9 @@ typedef union
   char c;
 #endif
 } stacktop_sentry;
+#endif
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Force callee-saved registers and register windows onto the stack.
    Use the platform-defined __builtin_unwind_init if available,
    obviating the need for machine dependent methods.  */
@@ -5220,7 +5437,9 @@ typedef union
 #  define __builtin_unwind_init() ((void) 0)
 # endif
 #endif
+#endif
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Yield an address close enough to the top of the stack that the
    garbage collector need not scan above it.  Callers should be
    declared NO_INLINE.  */
@@ -5229,7 +5448,9 @@ typedef union
 #else
 # define NEAR_STACK_TOP(addr) (addr)
 #endif
+#endif
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Set *P to the address of the top of the stack.  This must be a
    macro, not a function, so that it is executed in the caller's
    environment.  It is not inside a do-while so that its storage
@@ -5247,7 +5468,10 @@ typedef union
    sys_setjmp (sentry.j);			\
    *(p) = NEAR_STACK_TOP (&sentry + (stack_bottom < &sentry.c))
 #endif
+#endif
 
+
+#ifndef HAVE_CHEZ_SCHEME
 /* Mark live Lisp objects on the C stack.
 
    There are several system-dependent problems to consider when
@@ -5305,7 +5529,10 @@ mark_stack (char *bottom, char *end)
   GC_MARK_SECONDARY_STACK ();
 #endif
 }
+#endif
 
+
+#ifndef HAVE_CHEZ_SCHEME
 /* This is a trampoline function that flushes registers to the stack,
    and then calls FUNC.  ARG is passed through to FUNC verbatim.
 
@@ -5327,7 +5554,9 @@ flush_stack_call_func (void (*func) (void *arg), void *arg)
   func (arg);
   eassert (current_thread == self);
 }
+#endif
 
+#ifndef HAVE_CHEZ_SCHEME
 static bool
 c_symbol_p (struct Lisp_Symbol *sym)
 {
@@ -5336,7 +5565,9 @@ c_symbol_p (struct Lisp_Symbol *sym)
   ptrdiff_t lispsym_offset = sym_ptr - lispsym_ptr;
   return 0 <= lispsym_offset && lispsym_offset < sizeof lispsym;
 }
+#endif
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Determine whether it is safe to access memory at address P.  */
 static int
 valid_pointer_p (void *p)
@@ -5366,6 +5597,7 @@ valid_pointer_p (void *p)
   return -1;
 #endif
 }
+#endif
 
 /* Return 2 if OBJ is a killed or special buffer object, 1 if OBJ is a
    valid lisp object, 0 if OBJ is NOT a valid lisp object, or -1 if we
@@ -5377,6 +5609,9 @@ valid_pointer_p (void *p)
 int
 valid_lisp_object_p (Lisp_Object obj)
 {
+#ifdef HAVE_CHEZ_SCHEME
+  return 1;
+#else
   if (INTEGERP (obj))
     return 1;
 
@@ -5437,12 +5672,14 @@ valid_lisp_object_p (Lisp_Object obj)
     }
 
   return 0;
+#endif
 }
 
 /***********************************************************************
 		       Pure Storage Management
  ***********************************************************************/
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Allocate room for SIZE bytes from pure Lisp storage and return a
    pointer to it.  TYPE is the Lisp type for which the memory is
    allocated.  TYPE < 0 means it's not used for a Lisp object.  */
@@ -5482,6 +5719,7 @@ pure_alloc (size_t size, int type)
   pure_bytes_used_lisp = pure_bytes_used_non_lisp = 0;
   goto again;
 }
+#endif
 
 
 #ifndef CANNOT_DUMP
@@ -5491,14 +5729,17 @@ pure_alloc (size_t size, int type)
 void
 check_pure_size (void)
 {
+#ifndef HAVE_CHEZ_SCHEME
   if (pure_bytes_used_before_overflow)
     message (("emacs:0:Pure Lisp storage overflow (approx. %"pI"d"
 	      " bytes needed)"),
 	     pure_bytes_used + pure_bytes_used_before_overflow);
+#endif
 }
 #endif
 
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Find the byte sequence {DATA[0], ..., DATA[NBYTES-1], '\0'} from
    the non-Lisp data pool of the pure storage, and return its start
    address.  Return NULL if not found.  */
@@ -5563,6 +5804,7 @@ find_string_data_in_pure (const char *data, ptrdiff_t nbytes)
 
   return NULL;
 }
+#endif
 
 
 /* Return a string allocated in pure space.  DATA is a buffer holding
@@ -5577,6 +5819,9 @@ Lisp_Object
 make_pure_string (const char *data,
 		  ptrdiff_t nchars, ptrdiff_t nbytes, bool multibyte)
 {
+#ifdef HAVE_CHEZ_SCHEME
+  return make_specified_string (data, nchars, nbytes, multibyte);
+#else
   Lisp_Object string;
   struct Lisp_String *s = pure_alloc (sizeof *s, Lisp_String);
   s->u.s.data = (unsigned char *) find_string_data_in_pure (data, nbytes);
@@ -5591,6 +5836,7 @@ make_pure_string (const char *data,
   s->u.s.intervals = NULL;
   XSETSTRING (string, s);
   return string;
+#endif
 }
 
 /* Return a string allocated in pure space.  Do not
@@ -5599,6 +5845,9 @@ make_pure_string (const char *data,
 Lisp_Object
 make_pure_c_string (const char *data, ptrdiff_t nchars)
 {
+#ifdef HAVE_CHEZ_SCHEME
+  return make_unibyte_string (data, nchars);
+#else
   Lisp_Object string;
   struct Lisp_String *s = pure_alloc (sizeof *s, Lisp_String);
   s->u.s.size = nchars;
@@ -5607,6 +5856,7 @@ make_pure_c_string (const char *data, ptrdiff_t nchars)
   s->u.s.intervals = NULL;
   XSETSTRING (string, s);
   return string;
+#endif
 }
 
 static Lisp_Object purecopy (Lisp_Object obj);
@@ -5617,15 +5867,20 @@ static Lisp_Object purecopy (Lisp_Object obj);
 Lisp_Object
 pure_cons (Lisp_Object car, Lisp_Object cdr)
 {
+#ifdef HAVE_CHEZ_SCHEME
+  return Fcons (car, cdr);
+#else
   Lisp_Object new;
   struct Lisp_Cons *p = pure_alloc (sizeof *p, Lisp_Cons);
   XSETCONS (new, p);
   XSETCAR (new, purecopy (car));
   XSETCDR (new, purecopy (cdr));
   return new;
+#endif
 }
 
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Value is a float object with value NUM allocated from pure space.  */
 
 static Lisp_Object
@@ -5637,8 +5892,10 @@ make_pure_float (double num)
   XFLOAT_INIT (new, num);
   return new;
 }
+#endif
 
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Return a vector with room for LEN Lisp_Objects allocated from
    pure space.  */
 
@@ -5652,7 +5909,9 @@ make_pure_vector (ptrdiff_t len)
   xv_unwrap (XVECTOR (new))->header.size = len;
   return new;
 }
+#endif
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Copy all contents and parameters of TABLE to a new table allocated
    from pure space, return the purified table.  */
 static struct Lisp_Hash_Table *
@@ -5684,6 +5943,7 @@ purecopy_hash_table (struct Lisp_Hash_Table *table)
 
   return pure;
 }
+#endif
 
 DEFUN ("purecopy", Fpurecopy, Spurecopy, 1, 1, 0,
        doc: /* Make a copy of object OBJ in pure storage.
@@ -5691,6 +5951,9 @@ Recursively copies contents of vectors and cons cells.
 Does not copy symbols.  Copies strings without text properties.  */)
   (register Lisp_Object obj)
 {
+#ifdef HAVE_CHEZ_SCHEME
+  return obj;
+#else
   if (NILP (Vpurify_flag))
     return obj;
   else if (MARKERP (obj) || OVERLAYP (obj) || SYMBOLP (obj))
@@ -5698,18 +5961,25 @@ Does not copy symbols.  Copies strings without text properties.  */)
     return obj;
   else
     return purecopy (obj);
+#endif
 }
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Pinned objects are marked before every GC cycle.  */
 static struct pinned_object
 {
   Lisp_Object object;
   struct pinned_object *next;
 } *pinned_objects;
+#endif
 
 static Lisp_Object
 purecopy (Lisp_Object obj)
 {
+#ifdef HAVE_CHEZ_SCHEME
+  return obj;
+#else
+  
   if (INTEGERP (obj)
       || (! SYMBOLP (obj) && PURE_P (XPNTR_OR_SYMBOL_OFFSET (obj)))
       || SUBRP (obj))
@@ -5789,8 +6059,8 @@ purecopy (Lisp_Object obj)
     Fputhash (obj, obj, Vpurify_flag);
 
   return obj;
-}
 #endif
+}
 
 
 #ifndef HAVE_CHEZ_SCHEME
@@ -5811,7 +6081,6 @@ staticpro (Lisp_Object *varaddress)
 #endif
 
 
-#ifndef HAVE_CHEZ_SCHEME
 /***********************************************************************
 			  Protection from GC
  ***********************************************************************/
@@ -5827,6 +6096,8 @@ inhibit_garbage_collection (void)
   return count;
 }
 
+
+#ifndef HAVE_CHEZ_SCHEME
 /* Used to avoid possible overflows when
    converting from C to Lisp integers.  */
 
@@ -5835,7 +6106,9 @@ bounded_number (EMACS_INT number)
 {
   return make_number (min (MOST_POSITIVE_FIXNUM, number));
 }
+#endif
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Calculate total bytes of live objects.  */
 
 static size_t
@@ -5852,9 +6125,11 @@ total_bytes_of_live_objects (void)
   tot += total_strings * sizeof (struct Lisp_String);
   return tot;
 }
+#endif
 
 #ifdef HAVE_WINDOW_SYSTEM
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Remove unmarked font-spec and font-entity objects from ENTRY, which is
    (DRIVER-TYPE NUM-FRAMES FONT-CACHE-DATA ...), and return changed entry.  */
 
@@ -5920,7 +6195,9 @@ compact_font_cache_entry (Lisp_Object entry)
     }
   return entry;
 }
+#endif
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Compact font caches on all terminals and mark
    everything which is still here after compaction.  */
 
@@ -5946,6 +6223,7 @@ compact_font_caches (void)
       mark_object (cache);
     }
 }
+#endif
 
 #else /* not HAVE_WINDOW_SYSTEM */
 
@@ -5953,6 +6231,7 @@ compact_font_caches (void)
 
 #endif /* HAVE_WINDOW_SYSTEM */
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Remove (MARKER . DATA) entries with unmarked MARKER
    from buffer undo LIST and return changed list.  */
 
@@ -5972,14 +6251,18 @@ compact_undo_list (Lisp_Object list)
     }
   return list;
 }
+#endif
 
+#ifndef HAVE_CHEZ_SCHEME
 static void
 mark_pinned_objects (void)
 {
   for (struct pinned_object *pobj = pinned_objects; pobj; pobj = pobj->next)
     mark_object (pobj->object);
 }
+#endif
 
+#ifndef HAVE_CHEZ_SCHEME
 static void
 mark_pinned_symbols (void)
 {
@@ -5997,7 +6280,9 @@ mark_pinned_symbols (void)
       lim = SYMBOL_BLOCK_SIZE;
     }
 }
+#endif
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Subroutine of Fgarbage_collect that does most of the work.  It is a
    separate function so that we could limit mark_stack in searching
    the stack frames below this function, thus avoiding the rare cases
@@ -6258,6 +6543,7 @@ garbage_collect_1 (void *end)
 
   return retval;
 }
+#endif
 
 DEFUN ("garbage-collect", Fgarbage_collect, Sgarbage_collect, 0, 0, "",
        doc: /* Reclaim storage for Lisp objects no longer needed.
@@ -6277,11 +6563,14 @@ See Info node `(elisp)Garbage Collection'.  */
        attributes: noinline)
   (void)
 {
+#ifndef HAVE_CHEZ_SCHEME
   void *end;
   SET_STACK_TOP_ADDRESS (&end);
   return garbage_collect_1 (end);
+#endif
 }
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Mark Lisp objects in glyph matrix MATRIX.  Currently the
    only interesting objects referenced from glyphs are strings.  */
 
@@ -6307,7 +6596,9 @@ mark_glyph_matrix (struct glyph_matrix *matrix)
 	  }
       }
 }
+#endif
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Mark reference to a Lisp_Object.
    If the object referred to has not been seen yet, recursively mark
    all the references contained in it.  */
@@ -6321,7 +6612,9 @@ static int last_marked_index;
    the call to abort will hit a breakpoint.
    Normally this is zero and the check never goes off.  */
 ptrdiff_t mark_object_loop_halt EXTERNALLY_VISIBLE;
+#endif
 
+#ifndef HAVE_CHEZ_SCHEME
 static void
 mark_vectorlike (struct Lisp_Vector *ptr)
 {
@@ -6340,7 +6633,9 @@ mark_vectorlike (struct Lisp_Vector *ptr)
   for (i = 0; i < size; i++) /* ...and then mark its elements.  */
     mark_object (ptr->contents[i]);
 }
+#endif
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Like mark_vectorlike but optimized for char-tables (and
    sub-char-tables) assuming that the contents are mostly integers or
    symbols.  */
@@ -6369,7 +6664,9 @@ mark_char_table (struct Lisp_Vector *ptr, enum pvec_type pvectype)
 	mark_object (val);
     }
 }
+#endif
 
+#ifndef HAVE_CHEZ_SCHEME
 NO_INLINE /* To reduce stack depth in mark_object.  */
 static Lisp_Object
 mark_compiled (struct Lisp_Vector *ptr)
@@ -6382,7 +6679,9 @@ mark_compiled (struct Lisp_Vector *ptr)
       mark_object (ptr->contents[i]);
   return size > COMPILED_CONSTANTS ? ptr->contents[COMPILED_CONSTANTS] : Qnil;
 }
+#endif
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Mark the chain of overlays starting at PTR.  */
 
 static void
@@ -6397,7 +6696,9 @@ mark_overlay (struct Lisp_Overlay *ptr)
       mark_object (ptr->plist);
     }
 }
+#endif
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Mark Lisp_Objects and special pointers in BUFFER.  */
 
 static void
@@ -6421,7 +6722,9 @@ mark_buffer (struct buffer *buffer)
   if (buffer->base_buffer && !VECTOR_MARKED_P (buffer->base_buffer))
     mark_buffer (buffer->base_buffer);
 }
+#endif
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Mark Lisp faces in the face cache C.  */
 
 NO_INLINE /* To reduce stack depth in mark_object.  */
@@ -6446,7 +6749,9 @@ mark_face_cache (struct face_cache *c)
 	}
     }
 }
+#endif
 
+#ifndef HAVE_CHEZ_SCHEME
 NO_INLINE /* To reduce stack depth in mark_object.  */
 static void
 mark_localized_symbol (struct Lisp_Symbol *ptr)
@@ -6460,7 +6765,9 @@ mark_localized_symbol (struct Lisp_Symbol *ptr)
   mark_object (blv->valcell);
   mark_object (blv->defcell);
 }
+#endif
 
+#ifndef HAVE_CHEZ_SCHEME
 NO_INLINE /* To reduce stack depth in mark_object.  */
 static void
 mark_save_value (struct Lisp_Save_Value *ptr)
@@ -6484,7 +6791,9 @@ mark_save_value (struct Lisp_Save_Value *ptr)
 	  mark_object (ptr->data[i].object);
     }
 }
+#endif
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Remove killed buffers or items whose car is a killed buffer from
    LIST, and mark other items.  Return changed LIST, which is marked.  */
 
@@ -6511,6 +6820,7 @@ mark_discard_killed_buffers (Lisp_Object list)
   mark_object (tail);
   return list;
 }
+#endif
 
 /* Determine type of generic Lisp_Object and mark it accordingly.
 
@@ -6523,6 +6833,7 @@ mark_discard_killed_buffers (Lisp_Object list)
 void
 mark_object (Lisp_Object arg)
 {
+#ifndef HAVE_CHEZ_SCHEME
   register Lisp_Object obj;
   void *po;
 #if GC_CHECK_MARKED_OBJECTS
@@ -6862,7 +7173,9 @@ mark_object (Lisp_Object arg)
 #undef CHECK_LIVE
 #undef CHECK_ALLOCATED
 #undef CHECK_ALLOCATED_AND_LIVE
+#endif
 }
+#ifndef HAVE_CHEZ_SCHEME
 /* Mark the Lisp pointers in the terminal objects.
    Called by Fgarbage_collect.  */
 
@@ -6883,9 +7196,11 @@ mark_terminals (void)
 	mark_vectorlike ((struct Lisp_Vector *)t);
     }
 }
+#endif
 
 
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Value is non-zero if OBJ will survive the current GC because it's
    either marked or does not need to be marked to survive.  */
 
@@ -7458,8 +7773,6 @@ which_symbols (Lisp_Object obj, EMACS_INT find_max)
    return found;
 }
 
-#ifndef HAVE_CHEZ_SCHEME
-
 #ifdef SUSPICIOUS_OBJECT_CHECKING
 
 static void *
@@ -7548,6 +7861,8 @@ die (const char *msg, const char *file, int line)
 
 #endif /* ENABLE_CHECKING */
 
+#ifndef HAVE_CHEZ_SCHEME
+
 #if defined (ENABLE_CHECKING) && USE_STACK_LISP_OBJECTS
 
 /* Stress alloca with inconveniently sized requests and check
@@ -7571,12 +7886,26 @@ verify_alloca (void)
 #define verify_alloca() ((void) 0)
 
 #endif /* ENABLE_CHECKING && USE_STACK_LISP_OBJECTS */
+#endif /* HAVE_CHEZ_SCHEME */
 
 /* Initialization.  */
 
 void
 init_alloc_once (void)
 {
+#ifdef HAVE_CHEZ_SCHEME
+  for (iptr i = 0; i < sizeof (lispsym) / sizeof (ptr); i++)
+    {
+      lispsym[i] = Sstring_to_symbol (defsym_name[i]);
+    }
+  eassert (Ssymbolp (Qnil));
+  for (iptr i = 0; i < sizeof (globals) / sizeof (ptr); i++)
+    {
+      ((ptr *) &globals)[i] = Qnil;
+    }
+#endif
+
+#ifndef HAVE_CHEZ_SCHEME
   /* Even though Qt's contents are not set up, its address is known.  */
   Vpurify_flag = Qt;
 
@@ -7586,9 +7915,12 @@ init_alloc_once (void)
   verify_alloca ();
   init_finalizer_list (&finalizers);
   init_finalizer_list (&doomed_finalizers);
+#endif
 
   mem_init ();
+#ifndef HAVE_CHEZ_SCHEME
   Vdead = make_pure_string ("DEAD", 4, 4, 0);
+#endif
 
 #ifdef DOUG_LEA_MALLOC
   mallopt (M_TRIM_THRESHOLD, 128 * 1024); /* Trim threshold.  */
@@ -7599,7 +7931,9 @@ init_alloc_once (void)
   init_vectors ();
 
   refill_memory_reserve ();
+#ifndef HAVE_CHEZ_SCHEME
   gc_cons_threshold = GC_DEFAULT_THRESHOLD;
+#endif
 }
 
 void
@@ -7729,12 +8063,15 @@ The time is in seconds as a floating point value.  */);
   defsubr (&Smake_finalizer);
   defsubr (&Spurecopy);
   defsubr (&Sgarbage_collect);
+#ifndef HAVE_CHEZ_SCHEME
   defsubr (&Smemory_limit);
   defsubr (&Smemory_info);
   defsubr (&Smemory_use_counts);
   defsubr (&Ssuspicious_object);
+#endif
 }
 
+#ifndef HAVE_CHEZ_SCHEME
 /* When compiled with GCC, GDB might say "No enum type named
    pvec_type" if we don't have at least one symbol with that type, and
    then xbacktrace could fail.  Similarly for the other enums and
@@ -7755,5 +8092,4 @@ union
   enum pvec_type pvec_type;
 } const EXTERNALLY_VISIBLE gdb_make_enums_visible = {0};
 #endif	/* __GNUC__ */
-
-#endif /* HAVE_CHEZ_SCHEME */
+#endif

@@ -732,6 +732,7 @@ main (int argc, char **argv)
 #ifndef CANNOT_DUMP
   might_dump = !initialized;
 
+#ifndef HAVE_CHEZ_SCHEME
 # ifdef GNU_LINUX
   if (!initialized)
     {
@@ -739,6 +740,7 @@ main (int argc, char **argv)
       heap_bss_diff = heap_start - max (my_endbss, my_endbss_static);
     }
 # endif
+#endif
 #endif
 
 #if defined WINDOWSNT || defined HAVE_NTGUI
@@ -2153,6 +2155,7 @@ shut_down_emacs (int sig, Lisp_Object stuff)
 
 
 
+#ifndef HAVE_CHEZ_SCHEME
 #ifndef CANNOT_DUMP
 
 #include "unexec.h"
@@ -2258,6 +2261,7 @@ You must run Emacs in batch mode in order to dump it.  */)
 }
 
 #endif /* not CANNOT_DUMP */
+#endif /* HAVE_CHEZ_SCHEME */
 
 #if HAVE_SETLOCALE
 /* Recover from setlocale (LC_ALL, "").  */
@@ -2538,8 +2542,10 @@ syms_of_emacs (void)
   DEFSYM (Qkill_emacs, "kill-emacs");
   DEFSYM (Qkill_emacs_hook, "kill-emacs-hook");
 
+#ifndef HAVE_CHEZ_SCHEME
 #ifndef CANNOT_DUMP
   defsubr (&Sdump_emacs);
+#endif
 #endif
 
   defsubr (&Skill_emacs);

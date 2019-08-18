@@ -3723,15 +3723,11 @@ temp_output_buffer_show (register Lisp_Object buf)
 static struct window *
 allocate_window (void)
 {
-#ifdef HAVE_CHEZ_SCHEME
-  struct window *w = ALLOCATE_PSEUDOVECTOR_
+  struct window *w = ALLOCATE_ZEROED_PSEUDOVECTOR
     (struct window, current_matrix, PVEC_WINDOW);
+#ifdef HAVE_CHEZ_SCHEME
   w->prev_buffers = Qnil;
   w->next_buffers = Qnil;
-  return w;
-#else
-  return ALLOCATE_ZEROED_PSEUDOVECTOR
-    (struct window, current_matrix, PVEC_WINDOW);
 #endif
 }
 
@@ -6996,7 +6992,7 @@ saved by this function.  */)
   struct frame *f = decode_live_frame (frame);
 
   n_windows = count_windows (XWINDOW (FRAME_ROOT_WINDOW (f)));
-  data = ALLOCATE_PSEUDOVECTOR_ (struct save_window_data, frame_cols,
+  data = ALLOCATE_PSEUDOVECTOR (struct save_window_data, frame_cols,
 			       PVEC_WINDOW_CONFIGURATION);
 
   data->frame_cols = FRAME_COLS (f);

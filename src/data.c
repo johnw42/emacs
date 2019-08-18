@@ -242,12 +242,17 @@ for example, (type-of 1) returns `integer'.  */)
 
     case Lisp_Vectorlike:
 #ifdef HAVE_CHEZ_SCHEME
-      switch ((enum pvec_type) PVEC_FIELD_REF (object, PVEC_TYPE)))
+      if (!scheme_pvecp (object))
+        return Qvector;
+      switch (Sfixnum_value ((enum pvec_type)
+                             PVEC_FIELD_REF (object, PVEC_TYPE)))
 #else
       switch (PSEUDOVECTOR_TYPE (XVECTOR (object)))
 #endif
         {
+#ifndef HAVE_CHEZ_SCHEME
         case PVEC_NORMAL_VECTOR: return Qvector;
+#endif
         case PVEC_WINDOW_CONFIGURATION: return Qwindow_configuration;
         case PVEC_PROCESS: return Qprocess;
         case PVEC_WINDOW: return Qwindow;
@@ -289,7 +294,11 @@ for example, (type-of 1) returns `integer'.  */)
         /* "Impossible" cases.  */
         case PVEC_OTHER:
         case PVEC_SUB_CHAR_TABLE:
+#ifdef HAVE_CHEZ_SCHEME
+          ;
+#else
         case PVEC_FREE: ;
+#endif
         }
       emacs_abort ();
 

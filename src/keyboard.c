@@ -11985,11 +11985,12 @@ keys_of_keyboard (void)
 			    "handle-move-frame");
 }
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Mark the pointers in the kboard objects.
    Called by Fgarbage_collect.  */
 void
 mark_kboards (void)
-{
+{ 
   KBOARD *kb;
   Lisp_Object *p;
   for (kb = all_kboards; kb; kb = kb->next_kboard)
@@ -12039,3 +12040,4 @@ mark_kboards (void)
       }
   }
 }
+#endif

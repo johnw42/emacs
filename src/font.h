@@ -431,7 +431,7 @@ FONT_SPEC_P (Lisp_Object x)
 INLINE bool
 GC_FONT_SPEC_P (Lisp_Object x)
 {
-  return FONTP (x) && (gc_asize (x) & PSEUDOVECTOR_SIZE_MASK) == FONT_SPEC_MAX;
+  return FONTP (x) && gc_pvsize(x) == FONT_SPEC_MAX;
 }
 
 /* True iff X is font-entity.  */
@@ -445,7 +445,7 @@ FONT_ENTITY_P (Lisp_Object x)
 INLINE bool
 GC_FONT_ENTITY_P (Lisp_Object x)
 {
-  return FONTP (x) && (gc_asize (x) & PSEUDOVECTOR_SIZE_MASK) == FONT_ENTITY_MAX;
+  return FONTP (x) && gc_pvsize (x) == FONT_ENTITY_MAX;
 }
 
 /* True iff X is font-object.  */
@@ -459,7 +459,7 @@ FONT_OBJECT_P (Lisp_Object x)
 INLINE bool
 GC_FONT_OBJECT_P (Lisp_Object x)
 {
-  return FONTP (x) && (gc_asize (x) & PSEUDOVECTOR_SIZE_MASK) == FONT_OBJECT_MAX;
+  return FONTP (x) && gc_pvsize (x) == FONT_OBJECT_MAX;
 }
 
 /* Type checking functions for various font-related objects.  */

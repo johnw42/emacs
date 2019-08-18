@@ -24,8 +24,6 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 #include "character.h"
 #include "charset.h"
 
-#ifndef HAVE_CHEZ_SCHEME
-
 /* 64/16/32/128 */
 
 /* Number of elements in Nth level char-table.  */
@@ -1372,13 +1370,11 @@ CHAR-TABLE must be what returned by `unicode-property-table-internal'. */)
   CHAR_TABLE_SET (char_table, XINT (ch), value);
   return Qnil;
 }
-#endif /* not HAVE_CHEZ_SCHEME */
 
 
 void
 syms_of_chartab (void)
 {
-#ifndef HAVE_CHEZ_SCHEME
   /* Purpose of uniprop tables. */
   DEFSYM (Qchar_code_property_table, "char-code-property-table");
 
@@ -1407,5 +1403,4 @@ syms_of_chartab (void)
 	       doc: /* Alist of character property name vs char-table containing property values.
 Internal use only.  */);
   Vchar_code_property_alist = Qnil;
-#endif /* not HAVE_CHEZ_SCHEME */
 }

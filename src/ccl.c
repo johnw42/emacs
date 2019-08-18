@@ -34,8 +34,6 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 #include "ccl.h"
 #include "coding.h"
 
-#ifndef HAVE_CHEZ_SCHEME
-
 /* Table of registered CCL programs.  Each element is a vector of
    NAME, CCL_PROG, RESOLVEDP, and UPDATEDP, where NAME (symbol) is the
    name of the program, CCL_PROG (vector) is the compiled code of the
@@ -2285,13 +2283,10 @@ Return index number of the registered map.  */)
   return idx;
 }
 
-#endif
-
 
 void
 syms_of_ccl (void)
 {
-#ifndef HAVE_CHEZ_SCHEME
   staticpro (&Vccl_program_table);
   Vccl_program_table = Fmake_vector (make_number (32), Qnil);
 
@@ -2336,5 +2331,4 @@ used by CCL.  */);
   defsubr (&Sccl_execute_on_string);
   defsubr (&Sregister_ccl_program);
   defsubr (&Sregister_code_conversion_map);
-#endif
 }
