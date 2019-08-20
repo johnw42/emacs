@@ -491,13 +491,7 @@ the same empty object instead of its copy.  */)
 
   if (RECORDP (arg))
     {
-#ifdef HAVE_CHEZ_SCHEME
-      return Frecord (PVSIZE (arg),
-                      &((struct Lisp_Pseudovector *) XUNTAG_PVEC (arg))
-                      ->first_lisp_field);
-#else
-      return Frecord (PVSIZE (arg), XVECTOR (arg).vptr->contents);
-#endif
+      return Frecord (PVSIZE (arg), xv_ref_addr (XVECTOR (arg), 0));
     }
 
   if (CHAR_TABLE_P (arg))
@@ -2278,67 +2272,6 @@ internal_equal (Lisp_Object o1, Lisp_Object o2, enum equal_kind equal_kind,
 
     case Lisp_Vectorlike:
       {
-#ifdef HAVE_CHEZ_SCHEME
-        eassume (Svectorp (o1) && Svectorp (o2));
-        if (Svector_length (o1) != Svector_length (o2) ||
-            scheme_pvecp (o1) != scheme_pvecp (o2))
-          return false;
-        if (scheme_pvecp (o1))
-          {
-            /* Compare pseudovectors. */
-            if (scheme_pvec_type (o1) != scheme_pvec_type (o2))
-              return false;
-
-            /* Boolvectors are compared much like strings.  */
-            if (BOOL_VECTOR_P (o1))
-              {
-                EMACS_INT size = bool_vector_size (o1);
-                if (size != bool_vector_size (o2))
-                  return false;
-                if (memcmp (bool_vector_data (o1), bool_vector_data (o2),
-                            bool_vector_bytes (size)))
-                  return false;
-                return true;
-              }
-            if (WINDOW_CONFIGURATIONP (o1))
-              {
-                eassert (equal_kind != EQUAL_NO_QUIT);
-                return compare_window_configurations (o1, o2, false);
-              }
-
-            /* Aside from them, only true vectors, char-tables, compiled
-               functions, and fonts (font-spec, font-entity, font-object)
-               are sensible to compare, so eliminate the others now.  */
-            if (scheme_pvec_type (o1) < PVEC_COMPILED)
-              return false;
-
-            iptr size1 = scheme_pvec_asize (o1);
-            iptr size2 = scheme_pvec_asize (o2);
-            eassert (size1 == size2);
-
-            ptr *fields1 = scheme_pvec_lisp_fields (o1);
-            ptr *fields2 = scheme_pvec_lisp_fields (o2);            
-            for (iptr i = 0; i < size1; i++)
-              {
-                if (!internal_equal (fields1[i],
-                                     fields2[i],
-                                     equal_kind, depth + 1, ht))
-                  return false;
-              }
-          }
-        else
-          {
-            /* Comapre true vectors. */
-            iptr size = Svector_length (o1);
-            for (iptr i = 0; i < size; i++)
-              {
-                if (!internal_equal (Svector_ref (o1, i),
-                                     Svector_ref (o2, i),
-                                     equal_kind, depth + 1, ht))
-                  return false;
-              }
-          }
-#else
 	register int i;
 	ptrdiff_t size = ASIZE (o1);
 	/* Pseudovectors have the type encoded in the size field, so this test
@@ -2381,7 +2314,6 @@ internal_equal (Lisp_Object o1, Lisp_Object o2, enum equal_kind equal_kind,
 	    if (!internal_equal (v1, v2, equal_kind, depth + 1, ht))
 	      return false;
 	  }
-#endif
 	return true;
       }
       break;

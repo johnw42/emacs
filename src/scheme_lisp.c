@@ -12,7 +12,8 @@
 static bool scheme_initialized = false;
 static ptr c_data_table;
 
-ptr scheme_pseudovector_symbol = Sfalse;
+ptr scheme_vectorlike_symbol = Sfalse;
+ptr scheme_misc_symbol = Sfalse;
 ptr scheme_string_symbol = Sfalse;
 
 static ptr lisp_to_scheme(Lisp_Object lisp_obj) {
@@ -212,8 +213,10 @@ void scheme_init(void) {
   c_data_table = scheme_call0("make-eq-hashtable");
   Slock_object(c_data_table);
 
-  scheme_pseudovector_symbol = scheme_call1("gensym", Sstring("emacs-pseudeovector"));
-  Slock_object(scheme_pseudovector_symbol);
+  scheme_vectorlike_symbol = scheme_call1("gensym", Sstring("emacs-vectorlike"));
+  Slock_object(scheme_vectorlike_symbol);
+  scheme_misc_symbol = scheme_call1("gensym", Sstring("emacs-misc"));
+  Slock_object(scheme_misc_symbol);
   scheme_string_symbol = scheme_call1("gensym", Sstring("emacs-string"));
   Slock_object(scheme_string_symbol);
 
@@ -228,6 +231,20 @@ scheme_malloc(ptrdiff_t size)
   ptr bvec = Smake_bytevector(size, 0);
   Slock_object(bvec);
   return bvec;
+}
+
+void
+scheme_obarray_insert(ptr obarray_table, ptr sym, ptr opt_name)
+{
+  eassert(scheme_call1("hashtable?", obarray_table) != Sfalse);
+  if (opt_name == Sfalse)
+    opt_name = scheme_call1("symbol->string", sym);
+  eassert (Sstringp (opt_name));
+  struct Lisp_Symbol *data =
+    SCHEME_ALLOC_C_DATA(sym, struct Lisp_Symbol);
+  data->u.s.plist = Qnil;
+  data->u.s.scheme_obj = sym;
+  scheme_call3("hashtable-set!", obarray_table, opt_name, sym);
 }
 
 ptr
@@ -324,28 +341,24 @@ scheme_ptr_fill (ptr *p, ptr init, iptr num_words)
 enum Lisp_Type
 XTYPE (Lisp_Object a)
 {
-  if (Ssymbolp(a)) {
+  if (lisp_h_SYMBOLP(a)) {
     return Lisp_Symbol;
-  } else if (Sfixnump(a)) {
+  } else if (lisp_h_INTEGERP(a)) {
     return Lisp_Int0;
-  } else if (Svectorp(a)) {
-    if (Svector_length (a) > 0)
-      {
-        if (Svector_ref (a, 0) == scheme_string_symbol)
-          return Lisp_String;
-        verify (PVEC_FIELD_SYMBOL == 0);
-        if (Svector_ref (a, 0) == scheme_pseudovector_symbol &&
-            Sfixnum_value (PVEC_FIELD_REF (a, PVEC_TYPE)) == PVEC_MISC)
-          return Lisp_Misc;
-      }
-    return Lisp_Vectorlike;
-  } else if (Spairp(a)) {
+  } else if (lisp_h_CONSP(a)) {
     return Lisp_Cons;
-  } else if (Sflonump(a)) {
+  } else if (Svectorp(a)) {
+    if (STRINGP(a)) {
+      return Lisp_String;
+    } else if (lisp_h_MISCP(a)) {
+      return Lisp_Misc;
+    } else if (lisp_h_VECTORLIKEP(a)) {
+      return Lisp_Vectorlike;
+    }
+  } else if (lisp_h_FLOATP(a)) {
     return Lisp_Float;
-  } else {
-    return Lisp_Chez_Internal;
   }
+  return Lisp_Chez_Internal;
 }
 
 void

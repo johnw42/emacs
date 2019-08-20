@@ -695,8 +695,10 @@ main (int argc, char **argv)
   /* If we use --chdir, this records the original directory.  */
   char *original_pwd = 0;
 
+#ifndef HAVE_CHEZ_SCHEME
   /* Record (approximately) where the stack begins.  */
   stack_bottom = (char *) &stack_bottom_variable;
+#endif
 
 
 #ifndef CANNOT_DUMP
@@ -1212,6 +1214,9 @@ Using an Emacs configured with --with-x-toolkit=lucid does not have this problem
 
   if (!initialized)
     {
+#ifdef HAVE_CHEZ_SCHEME
+      scheme_init();
+#endif
       init_alloc_once ();
       init_threads_once ();
       init_obarray ();
@@ -1721,13 +1726,6 @@ Using an Emacs configured with --with-x-toolkit=lucid does not have this problem
   else
     moncontrol (0);
 #endif
-#endif
-
-
-#ifdef HAVE_CHEZ_SCHEME
-  if (initialized) {
-    scheme_init();
-  }
 #endif
 
   initialized = 1;

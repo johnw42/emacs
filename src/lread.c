@@ -18,12 +18,13 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 
+#include <config.h>
+
 /* Tell globals.h to define tables needed by init_obarray.  */
 #ifndef HAVE_CHEZ_SCHEME
 #define DEFINE_SYMBOLS
 #endif
 
-#include <config.h>
 #include "sysstdio.h"
 #include <stdlib.h>
 #include <sys/types.h>
@@ -4029,32 +4030,30 @@ read_list (bool flag, Lisp_Object readcharfun)
 static Lisp_Object initial_obarray;
 
 #ifdef HAVE_CHEZ_SCHEME
-
 ptr
 scheme_obarray_table (ptr obarray)
 {
   if (NILP (obarray)) obarray = Vobarray;
-  if (!fatal_error_in_progress
-      && (!VECTORP (obarray) || ASIZE (obarray) != 1))
+  if (!fatal_error_in_progress && (!VECTORP (obarray) || ASIZE (obarray) == 0))
     {
       /* If Vobarray is now invalid, force it to be valid.  */
       if (EQ (Vobarray, obarray)) Vobarray = initial_obarray;
       wrong_type_argument (Qvectorp, obarray);
     }
   ptr table = AREF(obarray, 0);
-  if (table == Sfalse)
+  if (scheme_call1("hashtable?", table) == Sfalse)
     {
       table = scheme_call2("make-hashtable",
                            Stop_level_value(Sstring_to_symbol("string-hash")),
                            Stop_level_value(Sstring_to_symbol("string=")));
       ASET(obarray, 0, table);
     }
-  eassert(scheme_call1("hashable?", table) != Sfalse);
+  eassert(scheme_call1("hashtable?", table) != Sfalse);
   return table;
 }
+#endif
 
-#else
-
+#ifndef HAVE_CHEZ_SCHEME
 /* `oblookup' stores the bucket number here, for the sake of Funintern.  */
 
 static size_t oblookup_last_bucket_number;
@@ -4077,15 +4076,15 @@ check_obarray (Lisp_Object obarray)
     }
   return obarray;
 }
+#endif
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Intern symbol SYM in OBARRAY using bucket INDEX.  */
 
 static Lisp_Object
 intern_sym (Lisp_Object sym, Lisp_Object obarray, Lisp_Object index)
 {
-#ifndef HAVE_CHEZ_SCHEME
   Lisp_Object *ptr;
-#endif
 
   XSYMBOL (sym)->u.s.interned = (EQ (obarray, initial_obarray)
 				 ? SYMBOL_INTERNED_IN_INITIAL_OBARRAY
@@ -4098,19 +4097,14 @@ intern_sym (Lisp_Object sym, Lisp_Object obarray, Lisp_Object index)
       SET_SYMBOL_VAL (XSYMBOL (sym), sym);
     }
 
-#ifdef HAVE_CHEZ_SCHEME
-  Scall3(Stop_level_value(Sstring_to_symbol("hashtable-set!")),
-         AREF(obarray, 0),
-         sym,
-         Strue);
-#else
   ptr = aref_addr (obarray, XINT (index));
   set_symbol_next (sym, SYMBOLP (*ptr) ? XSYMBOL (*ptr) : NULL);
   *ptr = sym;
-#endif
   return sym;
 }
+#endif
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Intern a symbol with name STRING in OBARRAY using bucket INDEX.  */
 
 Lisp_Object
@@ -4118,7 +4112,9 @@ intern_driver (Lisp_Object string, Lisp_Object obarray, Lisp_Object index)
 {
   return intern_sym (Fmake_symbol (string), obarray, index);
 }
+#endif
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Intern the C string STR: return a symbol with that name,
    interned in the current obarray.  */
 
@@ -4179,19 +4175,14 @@ it defaults to the value of `obarray'.  */)
   (Lisp_Object string, Lisp_Object obarray)
 {
 #ifdef HAVE_CHEZ_SCHEME
-  bool is_global_obarray = NILP(obarray) || obarray == Vobarray;
   ptr table = scheme_obarray_table (obarray);
-
+  bool is_global_obarray = NILP(obarray) || obarray == Vobarray;
   ptr sym = scheme_call3("hashtable-ref", table, string, Sfalse);
   if (sym == Sfalse)
     {
       sym = scheme_call1(is_global_obarray ? "string->symbol" : "gensym", string);
       Slock_object(sym);
-      struct Lisp_Symbol *data =
-        SCHEME_ALLOC_C_DATA(sym, struct Lisp_Symbol);
-      data->u.s.plist = Qnil;
-      data->u.s.scheme_obj = sym;
-      scheme_call3("hashtable-set!", table, string, sym);
+      scheme_obarray_insert (table, sym, string);
     }
   return sym;
 #else
@@ -4433,20 +4424,15 @@ OBARRAY defaults to the value of `obarray'.  */)
 void
 init_obarray (void)
 {
-#ifdef HAVE_CHEZ_SCHEME
-  Vobarray = Fmake_vector(make_number(1), Qnil);
-  initial_obarray = Vobarray;
-  staticpro (&initial_obarray);
-
-  for (int i = 0; i < ARRAYELTS (lispsym); i++)
-    {
-      lispsym[i] = scheme_intern(defsym_name[i], -1, Vobarray);
-    }
-#else
   Vobarray = Fmake_vector (make_number (OBARRAY_SIZE), make_number (0));
   initial_obarray = Vobarray;
   staticpro (&initial_obarray);
 
+#ifdef HAVE_CHEZ_SCHEME
+  ptr table = scheme_obarray_table (initial_obarray);
+  for (int i = 0; i < ARRAYELTS (lispsym); i++)
+      scheme_obarray_insert (table, lispsym[i], Sfalse);
+#else
   for (int i = 0; i < ARRAYELTS (lispsym); i++)
     define_symbol (builtin_lisp_symbol (i), defsym_name[i]);
 #endif

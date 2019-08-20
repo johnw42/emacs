@@ -1230,14 +1230,12 @@ print_preprocess (Lisp_Object obj)
 	  goto loop;
 
 	case Lisp_Vectorlike:
-#ifndef HAVE_CHEZ_SCHEME
 	  size = ASIZE (obj);
 	  if (size & PSEUDOVECTOR_FLAG)
 	    size &= PSEUDOVECTOR_SIZE_MASK;
 	  for (i = (SUB_CHAR_TABLE_P (obj)
 		    ? SUB_CHAR_TABLE_OFFSET : 0); i < size; i++)
 	    print_preprocess (AREF (obj, i));
-#endif
 	  if (HASH_TABLE_P (obj))
 	    { /* For hash tables, the key_and_value slot is past
 		 `size' because it needs to be marked specially in case
@@ -1245,22 +1243,6 @@ print_preprocess (Lisp_Object obj)
 	      struct Lisp_Hash_Table *h = XHASH_TABLE (obj);
 	      print_preprocess (h->key_and_value);
 	    }
-#ifdef HAVE_CHEZ_SCHEME
-          else if (scheme_pvecp (obj))
-            {
-              size = scheme_pvec_asize (obj);
-              ptr *data = scheme_pvec_lisp_fields (obj);
-              for (i = (SUB_CHAR_TABLE_P (obj)
-                        ? SUB_CHAR_TABLE_OFFSET : 0); i < size; i++)
-                print_preprocess (data[i]);
-            }
-          else
-            {
-              size = Svector_length (obj);
-              for (iptr i = 0; i < size; i++)
-                print_preprocess (Svector_ref (obj, i));
-            }
-#endif
 	  break;
 
 	default:
