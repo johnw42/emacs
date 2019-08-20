@@ -364,7 +364,7 @@ XTYPE (Lisp_Object a)
 void
 staticpro (Lisp_Object *varaddress)
 {
-  eassert (!HAVE_CHEZ_SCHEME);
+  //eassert (!HAVE_CHEZ_SCHEME);
 }
 
 #endif

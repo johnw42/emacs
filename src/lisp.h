@@ -72,22 +72,6 @@ scheme_locked_symbol(const char *name) {
   return sym;
 }
 
-enum
-  {
-   PVEC_FIELD_SYMBOL,
-   PVEC_FIELD_PVEC_TYPE,
-   PVEC_FIELD_BYTES,
-   PVEC_FIELD_NUM_LISP_FIELDS,
-
-   // Must be last.
-   NUM_PVEC_FIELDS
-  };
-
-// TODO: Get rid if these macros. */
-#define PVEC_FIELD_INDEX(x, field) ((iptr)(PVEC_FIELD_ ## field))
-#define PVEC_FIELD_REF(x, field) Svector_ref(x, PVEC_FIELD_INDEX(x, field))
-#define PVEC_FIELD_SET(x, field, value) Svector_set(x, PVEC_FIELD_INDEX(x, field), value)
-
 INLINE ptr
 scheme_cons (ptr car, ptr cdr)
 {
@@ -99,6 +83,30 @@ scheme_make_vector (iptr size, ptr fill)
 {
   return Smake_vector (size, fill);
 }
+
+INLINE bool scheme_fixnump(ptr x) { return Sfixnump(x); }
+INLINE bool scheme_charp(ptr x) { return Scharp(x); }
+INLINE bool scheme_nullp(ptr x) { return Snullp(x); }
+INLINE bool scheme_eof_objectp(x) { return Seof_objectp(x); }
+INLINE bool scheme_bwp_objectp(x) { return Sbwp_objectp(x); }
+INLINE bool scheme_booleanp(ptr x) { return Sbooleanp(x); }
+INLINE bool scheme_pairp(ptr x) { return Spairp(x); }
+INLINE bool scheme_symbolp(ptr x) { return Ssymbolp(x); }
+INLINE bool scheme_procedurep(ptr x) { return Sprocedurep(x); }
+INLINE bool scheme_flonump(ptr x) { return Sflonump(x); }
+INLINE bool scheme_vectorp(ptr x) { return Svectorp(x); }
+INLINE bool scheme_fxvectorp(ptr x) { return Sfxvectorp(x); }
+INLINE bool scheme_bytevectorp(ptr x) { return Sbytevectorp(x); }
+INLINE bool scheme_stringp(ptr x) { return Sstringp(x); }
+INLINE bool scheme_bignump(ptr x) { return Sbignump(x); }
+INLINE bool scheme_boxp(ptr x) { return Sboxp(x); }
+INLINE bool scheme_inexactnump(ptr x) { return Sinexactnump(x); }
+INLINE bool scheme_exactnump(ptr x) { return Sexactnump(x); }
+INLINE bool scheme_ratnump(ptr x) { return Sratnump(x); }
+INLINE bool scheme_inputportp(ptr x) { return Sinputportp(x); }
+INLINE bool scheme_outputportp(ptr x) { return Soutputportp(x); }
+INLINE bool scheme_recordp(ptr x) { return Srecordp(x); }
+
 
 #define Scons emacs_Scons
 #define Smake_vector emacs_Smake_vector
@@ -1313,7 +1321,7 @@ INLINE bool
 /* #define XSETPSEUDOVECTOR(a, b, code) ((a) = (b)->header.s.scheme_obj) */
 /* #define XSETTYPED_PSEUDOVECTOR(a, b, size, code) XSETPSEUDOVECTOR(a, b, code) */
 
-#define XUNTAG_VECTORLIKE(a) ((void *) Sbytevector_data (PVEC_FIELD_REF (a, BYTES)))
+#define XUNTAG_VECTORLIKE(a) ((void *) Sbytevector_data (Svector_ref (a, 1)))
 #define XUNTAG_MISC(a) XUNTAG_VECTORLIKE (a)
 
 #else /* HAVE_CHEZ_SCHEME */
