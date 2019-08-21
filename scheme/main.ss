@@ -121,10 +121,27 @@
 
   (define (emacs-init)
     (printf "called scheme emacs-init\n")
+    (let ([abort (foreign-procedure "abort" () void)]
+          #;[stderr (transcoded-port (standard-error-port)
+                                   (native-transcoder))])
+      (base-exception-handler
+       (lambda (x)
+         (base-exception-handler default-exception-handler)
+         (display-condition x)
+         (newline)
+         (abort)
+         )))
+
+    #;(when #t
+      (printf "running alloc_test\n")
+      (collect-notify #t)
+      ((foreign-procedure __collect_safe "alloc_test" () void))
+      (exit 1))
 
     ;; (elisp-funcall 'load "scheme-internal")
     #;(when (elisp-fboundp 'message)
-    (elisp-apply 'message '("Hello, world: %S %S\n" 42 1.0)))))
+    (elisp-apply 'message '("Hello, world: %S %S\n" 42 1.0))))
+  )
 
 ;; Local Variables:
 ;; mode: scheme

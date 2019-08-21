@@ -34,13 +34,13 @@ static struct thread_state *main_thread_ptr;
 struct thread_state *current_thread = NULL;
 
 static struct thread_state *all_threads = NULL;
-#else
+#else /* HAVE_CHEZ_SCHEME */
 static struct thread_state main_thread;
 
 struct thread_state *current_thread = &main_thread;
 
 static struct thread_state *all_threads = &main_thread;
-#endif
+#endif /* HAVE_CHEZ_SCHEME */
 
 static sys_mutex_t global_lock;
 
@@ -776,7 +776,7 @@ If NAME is given, it must be a string; it names the new thread.  */)
   const char *c_name = NULL;
 #ifndef HAVE_CHEZ_SCHEME
   size_t offset = offsetof (struct thread_state, m_stack_bottom);
-#endif
+#endif /* not HAVE_CHEZ_SCHEME */
 
   /* Can't start a thread in temacs.  */
   if (!initialized)
@@ -789,11 +789,11 @@ If NAME is given, it must be a string; it names the new thread.  */)
 				      PVEC_THREAD);
 #ifdef HAVE_CHEZ_SCHEME
   new_thread->m_re_match_object = Qnil;
-#else
+#else /* HAVE_CHEZ_SCHEME */
   memset ((char *) condvar + offsetof (struct Lisp_CondVar, cond),
 	  0, sizeof (struct Lisp_CondVar) - offsetof (struct Lisp_CondVar,
 						      cond));
-#endif
+#endif /* HAVE_CHEZ_SCHEME */
 
   new_thread->function = function;
   new_thread->name = name;
@@ -1021,11 +1021,11 @@ init_main_thread (void)
   main_thread_ptr->m_re_match_object = Qnil;
   current_thread = main_thread_ptr;
   all_threads = main_thread_ptr;
-#else
+#else /* HAVE_CHEZ_SCHEME */
   main_thread.header.size
     = PSEUDOVECSIZE (struct thread_state, m_stack_bottom);
   XSETPVECTYPE (AS_XV (&main_thread), PVEC_THREAD);
-#endif
+#endif /* HAVE_CHEZ_SCHEME */
   main_thread.m_last_thing_searched = Qnil;
   main_thread.m_saved_last_thing_searched = Qnil;
   main_thread.name = Qnil;

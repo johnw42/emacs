@@ -1123,7 +1123,7 @@ bset_width_table (struct buffer *b, Lisp_Object val)
 #define BUFFER_PVEC_INIT(b)                                    \
   XSETPVECTYPESIZE (AS_XV (b), PVEC_BUFFER, BUFFER_LISP_SIZE, BUFFER_REST_SIZE)
 
-#endif
+#endif /* not HAVE_CHEZ_SCHEME */
 
 /* Convenient check whether buffer B is live.  */
 
@@ -1167,7 +1167,7 @@ extern struct buffer *buffer_local_symbols_ptr;
 #define buffer_defaults (*buffer_defaults_ptr)
 #define buffer_local_flags (*buffer_local_flags_ptr)
 #define buffer_local_symbols (*buffer_local_symbols_ptr)
-#else
+#else /* HAVE_CHEZ_SCHEME */
 /* This structure holds the default values of the buffer-local variables
    that have special slots in each buffer.
    The default value occupies the same slot in this structure
@@ -1198,7 +1198,7 @@ extern struct buffer buffer_local_flags;
    that don't have such names.  */
 
 extern struct buffer buffer_local_symbols;
-#endif
+#endif /* HAVE_CHEZ_SCHEME */
 
 extern void delete_all_overlays (struct buffer *);
 extern void reset_buffer (struct buffer *);

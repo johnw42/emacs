@@ -339,10 +339,10 @@ ftxfont_end_for_frame (struct frame *f)
 
 
 
-struct font_driver const ftxfont_driver =
+struct font_driver CONST_UNLESS_SCHEME ftxfont_driver =
   {
   /* We can't draw a text without device dependent functions.  */
-  .type = LISPSYM_INITIALLY (Qftx),
+  .type = LISPSYM_INITIALLY_ (Qftx),
   .get_cache = ftfont_get_cache,
   .list = ftxfont_list,
   .match = ftxfont_match,

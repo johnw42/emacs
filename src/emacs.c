@@ -698,7 +698,7 @@ main (int argc, char **argv)
 #ifndef HAVE_CHEZ_SCHEME
   /* Record (approximately) where the stack begins.  */
   stack_bottom = (char *) &stack_bottom_variable;
-#endif
+#endif /* not HAVE_CHEZ_SCHEME */
 
 
 #ifndef CANNOT_DUMP
@@ -742,7 +742,7 @@ main (int argc, char **argv)
       heap_bss_diff = heap_start - max (my_endbss, my_endbss_static);
     }
 # endif
-#endif
+#endif /* not HAVE_CHEZ_SCHEME */
 #endif
 
 #if defined WINDOWSNT || defined HAVE_NTGUI
@@ -1216,8 +1216,9 @@ Using an Emacs configured with --with-x-toolkit=lucid does not have this problem
     {
 #ifdef HAVE_CHEZ_SCHEME
       scheme_init();
-#endif
+#endif /* HAVE_CHEZ_SCHEME */
       init_alloc_once ();
+      scheme_init_buffer_once ();
       init_threads_once ();
       init_obarray ();
       init_eval_once ();
@@ -1619,7 +1620,7 @@ Using an Emacs configured with --with-x-toolkit=lucid does not have this problem
 
 #ifdef HAVE_CHEZ_SCHEME
       syms_of_scheme_lisp();
-#endif
+#endif /* HAVE_CHEZ_SCHEME */
 
 #ifdef WINDOWSNT
       syms_of_ntterm ();
@@ -2259,7 +2260,7 @@ You must run Emacs in batch mode in order to dump it.  */)
 }
 
 #endif /* not CANNOT_DUMP */
-#endif /* HAVE_CHEZ_SCHEME */
+#endif /* not HAVE_CHEZ_SCHEME */
 
 #if HAVE_SETLOCALE
 /* Recover from setlocale (LC_ALL, "").  */
@@ -2544,7 +2545,7 @@ syms_of_emacs (void)
 #ifndef CANNOT_DUMP
   defsubr (&Sdump_emacs);
 #endif
-#endif
+#endif /* not HAVE_CHEZ_SCHEME */
 
   defsubr (&Skill_emacs);
 

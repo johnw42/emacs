@@ -186,11 +186,11 @@ font_make_object (int size, Lisp_Object entity, int pixelsize)
   struct font *font =
     ALLOCATE_PSEUDOVECTOR_EX(struct font, min_width, PVEC_FONT,
                              size * sizeof(ptr));
-#else
+#else /* not HAVE_CHEZ_SCHEME */
   struct font *font
     = (struct font *) allocate_pseudovector (size, FONT_OBJECT_MAX,
 					     FONT_OBJECT_MAX, PVEC_FONT);
-#endif
+#endif /* not HAVE_CHEZ_SCHEME */
   int i;
 
   /* GC can happen before the driver is set up,
@@ -286,8 +286,12 @@ font_intern_prop (const char *str, ptrdiff_t len, bool force_symbol)
     }
 
 #ifdef HAVE_CHEZ_SCHEME
-  return Fintern(make_string(str, nbytes), Qnil);
-#else
+  SCHEME_UNUSED(tem);
+  parse_str_as_multibyte ((unsigned char *) str, len, &nchars, &nbytes);
+  name = make_specified_string (str, nchars, len,
+				len != nchars && len == nbytes);
+  return Fintern (name, obarray);
+#else /* HAVE_CHEZ_SCHEME */
   /* This code is similar to intern function from lread.c.  */
   obarray = check_obarray (Vobarray);
   parse_str_as_multibyte ((unsigned char *) str, len, &nchars, &nbytes);
@@ -298,7 +302,7 @@ font_intern_prop (const char *str, ptrdiff_t len, bool force_symbol)
   name = make_specified_string (str, nchars, len,
 				len != nchars && len == nbytes);
   return intern_driver (name, obarray, tem);
-#endif
+#endif /* HAVE_CHEZ_SCHEME */
 }
 
 /* Return a pixel size of font-spec SPEC on frame F.  */
@@ -3485,8 +3489,10 @@ font_open_by_name (struct frame *f, Lisp_Object name)
    (e.g. syms_of_xfont).  */
 
 void
-register_font_driver (struct font_driver const *driver, struct frame *f)
+register_font_driver (struct font_driver CONST_UNLESS_SCHEME *driver, struct frame *f)
 {
+  fixup_lispsym_init(&driver->type);
+  
   struct font_driver_list *root = f ? f->font_driver_list : font_driver_list;
   struct font_driver_list *prev, *list;
 
@@ -4016,7 +4022,7 @@ copy_font_spec (Lisp_Object font)
   pcdr = spec->props + FONT_EXTRA_INDEX;
 #ifdef HAVE_CHEZ_SCHEME
   ptr cell = Qnil;
-#endif
+#endif /* HAVE_CHEZ_SCHEME */
   for (tail = AREF (font, FONT_EXTRA_INDEX); CONSP (tail); tail = XCDR (tail))
     if (!EQ (XCAR (XCAR (tail)), QCfont_entity))
       {
@@ -4027,10 +4033,10 @@ copy_font_spec (Lisp_Object font)
             *pcdr = cell;
             pcdr = NULL;
           }
-#else
+#else /* HAVE_CHEZ_SCHEME */
         *pcdr = Fcons (Fcons (XCAR (XCAR (tail)), CDR (XCAR (tail))), Qnil);
         pcdr = xcdr_addr (*pcdr);
-#endif
+#endif /* HAVE_CHEZ_SCHEME */
       }
 
   XSETFONT (new_spec, spec);

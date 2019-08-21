@@ -1078,9 +1078,9 @@ xfont_check (struct frame *f, struct font *font)
 
 
 
-struct font_driver const xfont_driver =
+struct font_driver CONST_UNLESS_SCHEME xfont_driver =
   {
-  .type = LISPSYM_INITIALLY (Qx),
+  .type = LISPSYM_INITIALLY_ (Qx),
   .get_cache = xfont_get_cache,
   .list = xfont_list,
   .match = xfont_match,

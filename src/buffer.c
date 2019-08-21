@@ -58,7 +58,7 @@ struct buffer *all_buffers;
 struct buffer *buffer_defaults_ptr = NULL;
 struct buffer *buffer_local_flags_ptr = NULL;
 struct buffer *buffer_local_symbols_ptr = NULL;
-#else
+#else /* HAVE_CHEZ_SCHEME */
 /* This structure holds the default values of the buffer-local variables
    defined with DEFVAR_PER_BUFFER, that have special slots in each buffer.
    The default value occupies the same slot in this structure
@@ -90,7 +90,7 @@ struct buffer buffer_local_flags;
    buffer-local.  It is indexed and accessed in the same way as the above.  */
 
 struct buffer buffer_local_symbols;
-#endif
+#endif /* HAVE_CHEZ_SCHEME */
 
 /* Return the symbol of the per-buffer variable at offset OFFSET in
    the buffer structure.  */
@@ -5064,15 +5064,19 @@ free_buffer_text (struct buffer *b)
 			    Initialization
  ***********************************************************************/
 
-void
-init_buffer_once (void)
-{
 #ifdef HAVE_CHEZ_SCHEME
+void
+scheme_init_buffer_once (void)
+{
   buffer_defaults_ptr = allocate_buffer();
   buffer_local_symbols_ptr = allocate_buffer();
   buffer_local_flags_ptr = allocate_buffer();
-#endif
-  
+}
+#endif /* HAVE_CHEZ_SCHEME */
+
+void
+init_buffer_once (void)
+{
   int idx;
 
   /* Items flagged permanent get an explicit permanent-local property
@@ -5082,7 +5086,7 @@ init_buffer_once (void)
   /* 0 means not a lisp var, -1 means always local, else mask.  */
 #ifndef HAVE_CHEZ_SCHEME
   memset (&buffer_local_flags, 0, sizeof buffer_local_flags);
-#endif
+#endif /* not HAVE_CHEZ_SCHEME */
   bset_filename (&buffer_local_flags, make_number (-1));
   bset_directory (&buffer_local_flags, make_number (-1));
   bset_backed_up (&buffer_local_flags, make_number (-1));

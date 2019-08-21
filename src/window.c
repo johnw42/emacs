@@ -3728,7 +3728,8 @@ allocate_window (void)
 #ifdef HAVE_CHEZ_SCHEME
   w->prev_buffers = Qnil;
   w->next_buffers = Qnil;
-#endif
+#endif /* HAVE_CHEZ_SCHEME */
+  return w;
 }
 
 /* Make new window, have it replace WINDOW in window-tree, and make

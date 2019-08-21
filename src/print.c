@@ -1410,7 +1410,11 @@ print_vectorlike (Lisp_Object obj, Lisp_Object printcharfun, bool escapeflag,
 
     case PVEC_SUBR:
       print_c_string ("#<subr ", printcharfun);
+#ifdef HAVE_CHEZ_SCHEME
+      print_object (XSUBR (obj)->symbol, printcharfun, false);
+#else
       print_c_string (XSUBR (obj)->symbol_name, printcharfun);
+#endif
       printchar ('>', printcharfun);
       break;
 
@@ -1643,7 +1647,7 @@ print_vectorlike (Lisp_Object obj, Lisp_Object printcharfun, bool escapeflag,
       {
 #ifdef HAVE_CHEZ_SCHEME
         eassert (!HAVE_CHEZ_SCHEME);  // TODO(jrw)
-#else
+#else /* HAVE_CHEZ_SCHEME */
 	ptrdiff_t size = ASIZE (obj);
 	if (COMPILEDP (obj))
 	  {
@@ -1698,7 +1702,7 @@ print_vectorlike (Lisp_Object obj, Lisp_Object printcharfun, bool escapeflag,
 	if (size < real_size)
 	  print_c_string (" ...", printcharfun);
 	printchar (']', printcharfun);
-#endif
+#endif /* HAVE_CHEZ_SCHEME */
       }
       break;
 

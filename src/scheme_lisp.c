@@ -192,6 +192,38 @@ void scheme_deinit(void) {
   }
 }
 
+static bool
+call_guardian(ptr guardian)
+{
+  ptr rep = Scall0(guardian);
+  if (rep != Sfalse)
+    {
+      scheme_call1("write", rep);
+      scheme_call0("newline");
+    }
+  return rep != Sfalse;
+}
+
+static
+void alloc_test(void)
+{
+  ptr x = scheme_cons(Sfalse, Sfalse);
+  printf("&x = %p\n", (void *)&x);
+  //Slock_object(x);
+  ptr g = scheme_call0("make-guardian");
+  Slock_object(g);
+  Scall2(g, x, Sfixnum(42));
+  Scall2(g, scheme_cons(Sfalse, Sfalse), Sfixnum(13));
+  for (int i = 0; call_guardian(g) && i < 1000; i++)
+    {
+      scheme_make_vector(1000*1000, Sfalse);
+    }
+  /* scheme_call0("collect-rendezvous"); */
+  /* scheme_call0("collect"); */
+  while (call_guardian(g)) continue;
+  printf("&x = %p\n", (void *)&x);
+}
+
 void scheme_init(void) {
   const char *char_ptr = NULL;
   const char **argv = &char_ptr;
@@ -201,12 +233,14 @@ void scheme_init(void) {
   Sscheme_init(NULL);
   Sregister_boot_file("/usr/local/google/home/jrw/.local/lib/csv9.5.2/a6le/scheme.boot");
   Sbuild_heap(NULL, NULL);
-  
+
+  Sforeign_symbol("abort", abort);
   Sforeign_symbol("scheme_elisp_boundp", scheme_elisp_boundp);
   Sforeign_symbol("scheme_elisp_fboundp", scheme_elisp_fboundp);
   Sforeign_symbol("scheme_elisp_call0", scheme_elisp_call0);
   Sforeign_symbol("scheme_elisp_call1", scheme_elisp_call1);
   Sforeign_symbol("scheme_elisp_apply", scheme_elisp_apply);
+  Sforeign_symbol("alloc_test", alloc_test);
   Sscheme_script("/usr/local/google/home/jrw/git/schemacs/scheme/main.ss", 0, argv);
   scheme_call0("emacs-init");
   
@@ -220,7 +254,7 @@ void scheme_init(void) {
   scheme_string_symbol = scheme_call1("gensym", Sstring("emacs-string"));
   Slock_object(scheme_string_symbol);
 
-  atexit(scheme_deinit);
+  //atexit(scheme_deinit);
   scheme_initialized = true;
 }
 
@@ -233,29 +267,91 @@ scheme_malloc(ptrdiff_t size)
   return bvec;
 }
 
-void
-scheme_obarray_insert(ptr obarray_table, ptr sym, ptr opt_name)
+ptr
+scheme_make_lisp_string(ptr str)
 {
-  eassert(scheme_call1("hashtable?", obarray_table) != Sfalse);
-  if (opt_name == Sfalse)
-    opt_name = scheme_call1("symbol->string", sym);
-  eassert (Sstringp (opt_name));
-  struct Lisp_Symbol *data =
-    SCHEME_ALLOC_C_DATA(sym, struct Lisp_Symbol);
+  if (STRINGP (str))
+    return str;
+
+  eassert (Sstringp (str));
+  iptr n = Sstring_length(str);
+  Lisp_Object lstr = Fmake_string (Sfixnum (n), Sfixnum (0));
+  for (int i = 0; i < n; i++)
+    Faset (lstr, Sfixnum (i), Sfixnum (Sstring_ref (str, i)));
+  return lstr;
+}
+
+struct Lisp_Symbol *
+scheme_make_symbol(ptr name, enum symbol_interned interned)
+{
+  ptr scheme_str;
+  ptr scheme_symbol = Sfalse;
+  Lisp_Object lisp_str = Sfalse;
+  if (Ssymbolp(name))
+    {
+      scheme_str = scheme_call1("symbol->string", name);
+      scheme_symbol = name;
+    }
+  else if (Sstringp(name))
+    {
+      scheme_str = name;
+    }
+  else
+    {
+      scheme_str = Sstring_of_length(SSDATA(name), SBYTES(name));
+      lisp_str = name;
+    }
+    
+  if (scheme_symbol == Sfalse)
+      scheme_symbol = scheme_call1
+        (interned == SYMBOL_UNINTERNED ? "gensym" : "string->symbol",
+         scheme_str);
+  if (lisp_str == Sfalse)
+    lisp_str = scheme_make_lisp_string (scheme_str);
+    
+  eassert (Sstringp (scheme_str));
+  eassert (Ssymbolp (scheme_symbol));
+
+  struct Lisp_Symbol *data = scheme_find_c_data (scheme_symbol);
+  if (data == NULL)
+    data = SCHEME_ALLOC_C_DATA(scheme_symbol, struct Lisp_Symbol);
+  data->u.s.interned = interned;
+  data->u.s.redirect = SYMBOL_PLAINVAL;
+  data->u.s.trapped_write = SYMBOL_UNTRAPPED_WRITE;
   data->u.s.plist = Qnil;
-  data->u.s.scheme_obj = sym;
-  scheme_call3("hashtable-set!", obarray_table, opt_name, sym);
+  data->u.s.scheme_obj = scheme_symbol;
+  data->u.s.name = lisp_str;
+  return data;
 }
 
 ptr
-scheme_intern(const char *str, iptr len, ptr obarray)
+scheme_obarray_ensure(ptr obarray, ptr sym)
 {
-  ptr name = len < 0 ? Sstring(str) : Sstring_of_length(str, len);
-  Slock_object(name);
-  ptr sym = Fintern(name, obarray);
-  Sunlock_object(name);
-  return sym;
+  struct Lisp_Symbol *data =
+    scheme_make_symbol(sym,
+                       (NILP(obarray) || obarray == Vobarray)
+                       ? SYMBOL_INTERNED_IN_INITIAL_OBARRAY
+                       : SYMBOL_INTERNED);
+  ptr table = scheme_obarray_table(obarray);
+  ptr scheme_symbol = data->u.s.scheme_obj;
+  ptr scheme_str = scheme_call1("symbol->string", scheme_symbol);
+  eassert (Ssymbolp (scheme_symbol));
+  eassert (Sstringp (scheme_str));
+  scheme_call3("hashtable-set!", table, scheme_str, scheme_symbol);
+  return scheme_symbol;
 }
+
+/* ptr */
+/* scheme_intern(const char *str, iptr len, ptr obarray) */
+/* { */
+/*   if (len < 0) */
+/*     len = strlen(str); */
+/*   ptr name = make_string(str, len); */
+/*   Slock_object(name); */
+/*   ptr sym = Fintern(name, obarray); */
+/*   Sunlock_object(name); */
+/*   return sym; */
+/* } */
 
 void *
 scheme_alloc_c_data (ptr key, iptr size)
@@ -362,9 +458,110 @@ XTYPE (Lisp_Object a)
 }
 
 void
-staticpro (Lisp_Object *varaddress)
+fixup_lispsym_init(ptr *p)
 {
-  //eassert (!HAVE_CHEZ_SCHEME);
+  eassert (Sfixnump (*p));
+  ptr sym = lispsym[Sfixnum_value(*p)];
+  eassert (SYMBOLP (sym));
+  *p = sym;
 }
 
-#endif
+static const char *scheme_classify(ptr x)
+{
+  switch (XTYPE(x)) {
+  case Lisp_Symbol: return "Lisp_Symbol";
+  case Lisp_Misc:
+    switch (XMISCTYPE(x)) {
+    case Lisp_Misc_Free: return "Lisp_Misc_Free";
+    case Lisp_Misc_Marker: return "Lisp_Misc_Marker";
+    case Lisp_Misc_Overlay: return "Lisp_Misc_Overlay";
+    case Lisp_Misc_Save_Value: return "Lisp_Misc_Save_Value";
+    case Lisp_Misc_Finalizer: return "Lisp_Misc_Finalizer";
+    case Lisp_Misc_Limit: return "Lisp_Misc_Limit";
+    default:
+      return "Lisp_Misc";
+    }
+  case Lisp_Int0: return "Lisp_Int0";
+  case Lisp_Int1: return "Lisp_Int1";
+  case Lisp_String: return "Lisp_String";
+  case Lisp_Vectorlike:    
+    switch (PSEUDOVECTOR_TYPE(XVECTOR(x))) {
+    case PVEC_NORMAL_VECTOR: return "PVEC_NORMAL_VECTOR";
+    case PVEC_PROCESS: return "PVEC_PROCESS";
+    case PVEC_FRAME: return "PVEC_FRAME";
+    case PVEC_WINDOW: return "PVEC_WINDOW";
+    case PVEC_BOOL_VECTOR: return "PVEC_BOOL_VECTOR";
+    case PVEC_BUFFER: return "PVEC_BUFFER";
+    case PVEC_HASH_TABLE: return "PVEC_HASH_TABLE";
+    case PVEC_TERMINAL: return "PVEC_TERMINAL";
+    case PVEC_WINDOW_CONFIGURATION: return "PVEC_WINDOW_CONFIGURATION";
+    case PVEC_SUBR: return "PVEC_SUBR";
+    case PVEC_OTHER: return "PVEC_OTHER";
+    case PVEC_XWIDGET: return "PVEC_XWIDGET";
+    case PVEC_XWIDGET_VIEW: return "PVEC_XWIDGET_VIEW";
+    case PVEC_THREAD: return "PVEC_THREAD";
+    case PVEC_MUTEX: return "PVEC_MUTEX";
+    case PVEC_CONDVAR: return "PVEC_CONDVAR";
+    case PVEC_MODULE_FUNCTION: return "PVEC_MODULE_FUNCTION";
+    case PVEC_COMPILED: return "PVEC_COMPILED";
+    case PVEC_CHAR_TABLE: return "PVEC_CHAR_TABLE";
+    case PVEC_SUB_CHAR_TABLE: return "PVEC_SUB_CHAR_TABLE";
+    case PVEC_RECORD: return "PVEC_RECORD";
+    case PVEC_FONT: return "PVEC_FONT";
+    default:
+      return "Lisp_Vectorlike";
+    }
+  case Lisp_Cons: return "Lisp_Cons";
+  case Lisp_Float: return "Lisp_Float";
+  default:
+    if (Sfixnump(x)) return "fixnum?";
+    if (Scharp(x)) return "char?";
+    if (Snullp(x)) return "null?";
+    if (Seof_objectp(x)) return "eof_object?";
+    if (Sbwp_objectp(x)) return "bwp_object?";
+    if (Sbooleanp(x)) return "boolean?";
+    if (Spairp(x)) return "pair?";
+    if (Ssymbolp(x)) return "symbol?";
+    if (Sprocedurep(x)) return "procedure?";
+    if (Sflonump(x)) return "flonum?";
+    if (Svectorp(x)) return "vector?";
+    if (Sfxvectorp(x)) return "fxvector?";
+    if (Sbytevectorp(x)) return "bytevector?";
+    if (Sstringp(x)) return "string?";
+    if (Sbignump(x)) return "bignum?";
+    if (Sboxp(x)) return "box?";
+    if (Sinexactnump(x)) return "inexactnum?";
+    if (Sexactnump(x)) return "exactnum?";
+    if (Sratnump(x)) return "ratnum?";
+    if (Sinputportp(x)) return "inputport?";
+    if (Soutputportp(x)) return "outputport?";
+    if (Srecordp(x)) return "record?";
+    return NULL;
+  }
+}
+
+static bool scheme_fixnump(ptr x) { return Sfixnump(x); }
+static bool scheme_charp(ptr x) { return Scharp(x); }
+static bool scheme_nullp(ptr x) { return Snullp(x); }
+static bool scheme_eof_objectp(ptr x) { return Seof_objectp(x); }
+static bool scheme_bwp_objectp(ptr x) { return Sbwp_objectp(x); }
+static bool scheme_booleanp(ptr x) { return Sbooleanp(x); }
+static bool scheme_pairp(ptr x) { return Spairp(x); }
+static bool scheme_symbolp(ptr x) { return Ssymbolp(x); }
+static bool scheme_procedurep(ptr x) { return Sprocedurep(x); }
+static bool scheme_flonump(ptr x) { return Sflonump(x); }
+static bool scheme_vectorp(ptr x) { return Svectorp(x); }
+static bool scheme_fxvectorp(ptr x) { return Sfxvectorp(x); }
+static bool scheme_bytevectorp(ptr x) { return Sbytevectorp(x); }
+static bool scheme_stringp(ptr x) { return Sstringp(x); }
+static bool scheme_bignump(ptr x) { return Sbignump(x); }
+static bool scheme_boxp(ptr x) { return Sboxp(x); }
+static bool scheme_inexactnump(ptr x) { return Sinexactnump(x); }
+static bool scheme_exactnump(ptr x) { return Sexactnump(x); }
+static bool scheme_ratnump(ptr x) { return Sratnump(x); }
+static bool scheme_inputportp(ptr x) { return Sinputportp(x); }
+static bool scheme_outputportp(ptr x) { return Soutputportp(x); }
+static bool scheme_recordp(ptr x) { return Srecordp(x); }
+
+
+#endif /* HAVE_CHEZ_SCHEME */

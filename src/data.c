@@ -160,7 +160,7 @@ pure_write_error (Lisp_Object obj)
 {
   xsignal2 (Qerror, build_string ("Attempt to modify read-only object"), obj);
 }
-#endif
+#endif /* not HAVE_CHEZ_SCHEME */
 
 void
 args_out_of_range (Lisp_Object a1, Lisp_Object a2)
@@ -243,6 +243,7 @@ for example, (type-of 1) returns `integer'.  */)
     case Lisp_Vectorlike:
       switch (PSEUDOVECTOR_TYPE (XVECTOR (object)))
         {
+        case PVEC_NORMAL_VECTOR: return Qvector;
         case PVEC_WINDOW_CONFIGURATION: return Qwindow_configuration;
         case PVEC_PROCESS: return Qprocess;
         case PVEC_WINDOW: return Qwindow;
@@ -284,11 +285,7 @@ for example, (type-of 1) returns `integer'.  */)
         /* "Impossible" cases.  */
         case PVEC_OTHER:
         case PVEC_SUB_CHAR_TABLE:
-#ifdef HAVE_CHEZ_SCHEME
-          ;
-#else
         case PVEC_FREE: ;
-#endif
         }
       emacs_abort ();
 
@@ -647,11 +644,11 @@ DEFUN ("setcar", Fsetcar, Ssetcar, 2, 2, 0,
 {
 #ifdef HAVE_CHEZ_SCHEME
   Sset_car(cell, newcar);
-#else
+#else /* HAVE_CHEZ_SCHEME */
   CHECK_CONS (cell);
   CHECK_IMPURE (cell, XCONS (cell));
   XSETCAR (cell, newcar);
-#endif
+#endif /* HAVE_CHEZ_SCHEME */
   return newcar;
 }
 
@@ -661,11 +658,11 @@ DEFUN ("setcdr", Fsetcdr, Ssetcdr, 2, 2, 0,
 {
 #ifdef HAVE_CHEZ_SCHEME
   Sset_cdr(cell, newcdr);
-#else
+#else /* HAVE_CHEZ_SCHEME */
   CHECK_CONS (cell);
   CHECK_IMPURE (cell, XCONS (cell));
   XSETCDR (cell, newcdr);
-#endif
+#endif /* HAVE_CHEZ_SCHEME */
   return newcdr;
 }
 
@@ -882,10 +879,15 @@ DEFUN ("subr-name", Fsubr_name, Ssubr_name, 1, 1, 0,
 SUBR must be a built-in function.  */)
   (Lisp_Object subr)
 {
+#ifdef HAVE_CHEZ_SCHEME
+  CHECK_SUBR (subr);
+  return Fsymbol_name (XSUBR (subr)->symbol);
+#else
   const char *name;
   CHECK_SUBR (subr);
   name = XSUBR (subr)->symbol_name;
   return build_string (name);
+#endif
 }
 
 DEFUN ("interactive-form", Finteractive_form, Sinteractive_form, 1, 1, 0,

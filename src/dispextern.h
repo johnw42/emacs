@@ -544,7 +544,7 @@ INLINE void glyph_clear (struct glyph *p, ptrdiff_t n)
 #ifdef HAVE_CHEZ_SCHEME
   for (ptrdiff_t i = 0; i < n; i++)
     p[i].object = Qnil;
-#endif
+#endif /* HAVE_CHEZ_SCHEME */
 }
 
 
@@ -2707,9 +2707,9 @@ INLINE void it_clear(struct it *it)
   it->space_width = Qnil;
   it->font_height = Qnil;
   it->object = Qnil;
-#else
+#else /* HAVE_CHEZ_SCHEME */
   memclear (it, sizeof (struct it));
-#endif
+#endif /* HAVE_CHEZ_SCHEME */
 }
 
 

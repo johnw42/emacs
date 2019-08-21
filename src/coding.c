@@ -930,7 +930,7 @@ coding_set_source (struct coding_system *coding)
 {
 #ifdef HAVE_CHEZ_SCHEME
   eassert (!HAVE_CHEZ_SCHEME);
-#else
+#else /* HAVE_CHEZ_SCHEME */
   if (BUFFERP (coding->src_object))
     {
       struct buffer *buf = XBUFFER (coding->src_object);
@@ -949,7 +949,7 @@ coding_set_source (struct coding_system *coding)
       /* Otherwise, the source is C string and is never relocated
 	 automatically.  Thus we don't have to update anything.  */
     }
-#endif
+#endif /* HAVE_CHEZ_SCHEME */
 }
 
 

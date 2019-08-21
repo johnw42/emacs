@@ -12040,4 +12040,4 @@ mark_kboards (void)
       }
   }
 }
-#endif
+#endif /* not HAVE_CHEZ_SCHEME */

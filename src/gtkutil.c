@@ -2432,7 +2432,7 @@ xg_mark_data (void)
             }
         }
     }
-#endif
+#endif /* not HAVE_CHEZ_SCHEME */
 }
 
 /* Callback called when a menu item is destroyed.  Used to free data.

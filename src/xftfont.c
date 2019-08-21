@@ -751,10 +751,10 @@ xftfont_cached_font_ok (struct frame *f, Lisp_Object font_object,
   return ok;
 }
 
-struct font_driver const xftfont_driver =
+struct font_driver CONST_UNLESS_SCHEME xftfont_driver =
   {
     /* We can't draw a text without device dependent functions.  */
-  .type = LISPSYM_INITIALLY (Qxft),
+  .type = LISPSYM_INITIALLY_ (Qxft),
   .get_cache = xfont_get_cache,
   .list = xftfont_list,
   .match = xftfont_match,

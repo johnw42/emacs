@@ -1556,7 +1556,7 @@ changing the value of a sequence `foo'.  */)
 	    if (NILP (Fequal (AREF (seq, i), elt)))
               Svector_set (new_seq, i, AREF (seq, i));
           seq = new_seq;
-#else
+#else /* HAVE_CHEZ_SCHEME */
 	  struct Lisp_Vector *p = allocate_vector (n);
 
 	  for (i = n = 0; i < ASIZE (seq); ++i)
@@ -1564,7 +1564,7 @@ changing the value of a sequence `foo'.  */)
 	      p->contents[n++] = AREF (seq, i);
 
 	  XSETVECTOR (seq, p);
-#endif
+#endif /* HAVE_CHEZ_SCHEME */
 	}
     }
   else if (STRINGP (seq))
@@ -1900,9 +1900,9 @@ sort_vector (Lisp_Object vector, Lisp_Object predicate)
     tmp[i] = make_number (0);
 #ifdef HAVE_CHEZ_SCHEME
   eassert(!HAVE_CHEZ_SCHEME);
-#else
+#else /* HAVE_CHEZ_SCHEME */
   sort_vector_inplace (predicate, len, XVECTOR (vector).vptr->contents, tmp);
-#endif
+#endif /* HAVE_CHEZ_SCHEME */
   SAFE_FREE ();
 }
 
@@ -3598,7 +3598,7 @@ larger_vecalloc (Lisp_Object vec, ptrdiff_t incr_min, ptrdiff_t nitems_max)
 {
 #ifndef HAVE_CHEZ_SCHEME
   struct Lisp_Vector *v;
-#endif
+#endif /* not HAVE_CHEZ_SCHEME */
   ptrdiff_t incr, incr_max, old_size, new_size;
   ptrdiff_t C_language_max = min (PTRDIFF_MAX, SIZE_MAX) / sizeof (Lisp_Object);
   ptrdiff_t n_max = (0 <= nitems_max && nitems_max < C_language_max
@@ -3615,11 +3615,11 @@ larger_vecalloc (Lisp_Object vec, ptrdiff_t incr_min, ptrdiff_t nitems_max)
   ptr new_vec = scheme_make_vector (new_size, Qnil);
   vector_copy (new_vec, vec, old_size);
   vec = new_vec;
-#else
+#else /* HAVE_CHEZ_SCHEME */
   v = allocate_vector (new_size);
   xvector_copy(as_xv (v), XVECTOR (vec), old_size);
   XSETVECTOR (vec, v);
-#endif
+#endif /* HAVE_CHEZ_SCHEME */
   return vec;
 }
 
@@ -3630,13 +3630,13 @@ larger_vector (Lisp_Object vec, ptrdiff_t incr_min, ptrdiff_t nitems_max)
 {
 #ifndef HAVE_CHEZ_SCHEME
   ptrdiff_t old_size = ASIZE (vec);
-#endif
+#endif /* not HAVE_CHEZ_SCHEME */
   Lisp_Object v = larger_vecalloc (vec, incr_min, nitems_max);
 #ifndef HAVE_CHEZ_SCHEME
   ptrdiff_t new_size = ASIZE (v);
   memclear (XVECTOR (v).vptr->contents + old_size,
 	    (new_size - old_size) * word_size);
-#endif
+#endif /* not HAVE_CHEZ_SCHEME */
   return v;
 }
 
@@ -3744,13 +3744,13 @@ hashfn_user_defined (struct hash_table_test *ht, Lisp_Object key)
   return hashfn_eq (ht, hash);
 }
 
-struct hash_table_test const
-  hashtest_eq = { LISPSYM_INITIALLY (Qeq), LISPSYM_INITIALLY (Qnil),
-		  LISPSYM_INITIALLY (Qnil), 0, hashfn_eq },
-  hashtest_eql = { LISPSYM_INITIALLY (Qeql), LISPSYM_INITIALLY (Qnil),
-		   LISPSYM_INITIALLY (Qnil), cmpfn_eql, hashfn_eql },
-  hashtest_equal = { LISPSYM_INITIALLY (Qequal), LISPSYM_INITIALLY (Qnil),
-		     LISPSYM_INITIALLY (Qnil), cmpfn_equal, hashfn_equal };
+struct hash_table_test CONST_UNLESS_SCHEME
+  hashtest_eq = { LISPSYM_INITIALLY_ (Qeq), LISPSYM_INITIALLY_ (Qnil),
+		  LISPSYM_INITIALLY_ (Qnil), 0, hashfn_eq },
+  hashtest_eql = { LISPSYM_INITIALLY_ (Qeql), LISPSYM_INITIALLY_ (Qnil),
+		   LISPSYM_INITIALLY_ (Qnil), cmpfn_eql, hashfn_eql },
+  hashtest_equal = { LISPSYM_INITIALLY_ (Qequal), LISPSYM_INITIALLY_ (Qnil),
+		     LISPSYM_INITIALLY_ (Qnil), cmpfn_equal, hashfn_equal };
 
 /* Allocate basically initialized hash table.  */
 
@@ -4234,7 +4234,7 @@ sweep_weak_hash_tables (void)
 
   weak_hash_tables = used;
 }
-#endif
+#endif /* not HAVE_CHEZ_SCHEME */
 
 
 
@@ -5159,6 +5159,15 @@ syms_of_fns (void)
   DEFSYM (Qhash_table_test, "hash-table-test");
   DEFSYM (Qkey_or_value, "key-or-value");
   DEFSYM (Qkey_and_value, "key-and-value");
+  fixup_lispsym_init(&hashtest_eq.name);
+  fixup_lispsym_init(&hashtest_eq.user_hash_function);
+  fixup_lispsym_init(&hashtest_eq.user_cmp_function);
+  fixup_lispsym_init(&hashtest_eql.name);
+  fixup_lispsym_init(&hashtest_eql.user_hash_function);
+  fixup_lispsym_init(&hashtest_eql.user_cmp_function);
+  fixup_lispsym_init(&hashtest_equal.name);
+  fixup_lispsym_init(&hashtest_equal.user_hash_function);
+  fixup_lispsym_init(&hashtest_equal.user_cmp_function);
 
   defsubr (&Ssxhash_eq);
   defsubr (&Ssxhash_eql);

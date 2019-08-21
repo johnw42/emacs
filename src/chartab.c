@@ -107,10 +107,6 @@ that specifies how many extra slots the char-table has.  Otherwise,
 the char-table has no extra slot.  */)
   (register Lisp_Object purpose, Lisp_Object init)
 {
-#ifdef HAVE_CHEZ_SCHEME
-  eassert(!HAVE_CHEZ_SCHEME);
-  return Qnil;
-#else
   Lisp_Object vector;
   Lisp_Object n;
   int n_extras;
@@ -135,7 +131,6 @@ the char-table has no extra slot.  */)
   set_char_table_purpose (vector, purpose);
   XSETCHAR_TABLE (vector, XCHAR_TABLE (vector));
   return vector;
-#endif
 }
 
 static Lisp_Object
@@ -189,10 +184,6 @@ copy_sub_char_table (Lisp_Object table)
 Lisp_Object
 copy_char_table (Lisp_Object table)
 {
-#ifdef HAVE_CHEZ_SCHEME
-  eassert(!HAVE_CHEZ_SCHEME);
-  return table;
-#else
   Lisp_Object copy;
   int size = PVSIZE (table);
   int i;
@@ -215,7 +206,6 @@ copy_char_table (Lisp_Object table)
 
   XSETCHAR_TABLE (copy, XCHAR_TABLE (copy));
   return copy;
-#endif
 }
 
 static Lisp_Object

@@ -418,7 +418,7 @@ truncate_undo_list (struct buffer *b)
     bset_undo_list (b, Qnil);
 
   unbind_to (count, Qnil);
-#endif
+#endif /* not HAVE_CHEZ_SCHEME */
 }
 
 

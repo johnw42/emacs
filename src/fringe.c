@@ -1758,10 +1758,10 @@ init_fringe (void)
   fringe_faces = xmalloc (max_fringe_bitmaps * sizeof *fringe_faces);
   for (int i = 0; i < max_fringe_bitmaps; i++)
     fringe_faces[i] = Qnil;
-#else
+#else /* HAVE_CHEZ_SCHEME */
   verify (NIL_IS_ZERO);
   fringe_faces = xzalloc (max_fringe_bitmaps * sizeof *fringe_faces);
-#endif
+#endif /* HAVE_CHEZ_SCHEME */
 }
 
 #if defined (HAVE_NTGUI) || defined (USE_CAIRO)

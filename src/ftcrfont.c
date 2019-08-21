@@ -282,9 +282,9 @@ ftcrfont_draw (struct glyph_string *s,
 
 
 
-struct font_driver const ftcrfont_driver =
+struct font_driver CONST_UNLESS_SCHEME ftcrfont_driver =
   {
-  .type = LISPSYM_INITIALLY (Qftcr),
+  .type = LISPSYM_INITIALLY_ (Qftcr),
   .get_cache = ftfont_get_cache,
   .list = ftcrfont_list,
   .match = ftcrfont_match,

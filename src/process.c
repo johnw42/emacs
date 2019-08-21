@@ -4344,7 +4344,7 @@ static const struct ifflag_def ifflag_table[] = {
 #endif
   { 0, 0 }
 };
-#endif
+#endif /* not HAVE_CHEZ_SCHEME */
 
 static Lisp_Object
 network_interface_info (Lisp_Object ifname)
@@ -4352,7 +4352,7 @@ network_interface_info (Lisp_Object ifname)
 #ifdef HAVE_CHEZ_SCHEME
   eassert (!HAVE_CHEZ_SCHEME);
   return Qnil;
-#else
+#else /* HAVE_CHEZ_SCHEME */
   struct ifreq rq;
   Lisp_Object res = Qnil;
   Lisp_Object elt;
@@ -4494,7 +4494,7 @@ network_interface_info (Lisp_Object ifname)
   res = Fcons (elt, res);
 
   return unbind_to (count, any ? res : Qnil);
-#endif
+#endif /* HAVE_CHEZ_SCHEME */
 }
 #endif	/* !SIOCGIFADDR && !SIOCGIFHWADDR && !SIOCGIFFLAGS */
 #endif	/* defined (HAVE_NET_IF_H) */

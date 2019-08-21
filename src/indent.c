@@ -136,7 +136,7 @@ recompute_width_table (struct buffer *buf, struct Lisp_Char_Table *disptab)
 
   for (iptr i = 0; i < 256; i++)
     Svector_set(widthtab, i, Sfixnum (character_width (i, disptab)));
-#else
+#else /* HAVE_CHEZ_SCHEME */
   int i;
 
   if (!VECTORP (BVAR (buf, width_table)))
@@ -146,7 +146,7 @@ recompute_width_table (struct buffer *buf, struct Lisp_Char_Table *disptab)
 
   for (i = 0; i < 256; i++)
     XV_SETFASTINT (widthtab, i, character_width (i, disptab));
-#endif
+#endif /* HAVE_CHEZ_SCHEME */
 }
 
 /* Allocate or free the width run cache, as requested by the

@@ -1369,6 +1369,22 @@ AC_CACHE_CHECK([whether addresses are sanitized],
      [emacs_cv_sanitize_address=yes],
      [emacs_cv_sanitize_address=no])])
 
+dnl Chez Scheme
+CHEZ_SCHEME_CFLAGS=
+CHEZ_SCHEME_OBJ=
+CHEZ_SCHEME_LIBS=
+if test "$with_chez_scheme" != no; then
+   AC_DEFINE(HAVE_CHEZ_SCHEME, 1, [Define to 1 to use Chez Scheme.])
+   AC_DEFINE(USE_STACK_LISP_OBJECTS, true, [Define to true or false to avoid auto-detection.])
+   CHEZ_SCHEME_CFLAGS="-DCHEZ_SCHEME -I$HOME/.local/lib/csv9.5.2/a6le -fPIC"
+   CHEZ_SCHEME_OBJ="$HOME/.local/lib/csv9.5.2/a6le/kernel.o"
+   CHEZ_SCHEME_LIBS="-luuid -lm -ltinfo -lrt -lc -lpthread -ldl"
+   CANNOT_DUMP=yes
+fi
+AC_SUBST(CHEZ_SCHEME_CFLAGS)
+AC_SUBST(CHEZ_SCHEME_OBJ)
+AC_SUBST(CHEZ_SCHEME_LIBS)
+
 dnl The function dump-emacs will not be defined and temacs will do
 dnl (load "loadup") automatically unless told otherwise.
 test "x$CANNOT_DUMP" = "x" && CANNOT_DUMP=no
@@ -2903,21 +2919,6 @@ case $with_file_notification,$NOTIFY_OBJ in
        fi
     fi ;;
 esac
-
-dnl Chez Scheme
-CHEZ_SCHEME_CFLAGS=
-CHEZ_SCHEME_OBJ=
-CHEZ_SCHEME_LIBS=
-if test "$with_chez_scheme" != no; then
-   AC_DEFINE(HAVE_CHEZ_SCHEME, 1, [Define to 1 to use Chez Scheme.])
-   AC_DEFINE(USE_STACK_LISP_OBJECTS, true, [Define to true or false to avoid auto-detection.])
-   CHEZ_SCHEME_CFLAGS="-DCHEZ_SCHEME -I$HOME/.local/lib/csv9.5.2/a6le -fPIC"
-   CHEZ_SCHEME_OBJ="$HOME/.local/lib/csv9.5.2/a6le/kernel.o"
-   CHEZ_SCHEME_LIBS="-luuid -lm -ltinfo -lrt -lc -lpthread -ldl"
-fi
-AC_SUBST(CHEZ_SCHEME_CFLAGS)
-AC_SUBST(CHEZ_SCHEME_OBJ)
-AC_SUBST(CHEZ_SCHEME_LIBS)
 
 dnl kqueue is available on BSD-like systems.
 case $with_file_notification,$NOTIFY_OBJ in

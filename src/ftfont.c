@@ -35,7 +35,7 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 #include "font.h"
 #include "ftfont.h"
 
-static struct font_driver const ftfont_driver;
+static struct font_driver CONST_UNLESS_SCHEME ftfont_driver;
 
 /* Flag to tell if FcInit is already called or not.  */
 static bool fc_initialized;
@@ -2702,10 +2702,10 @@ ftfont_combining_capability (struct font *font)
 #endif
 }
 
-static struct font_driver const ftfont_driver =
+static struct font_driver CONST_UNLESS_SCHEME ftfont_driver =
   {
   /* We can't draw a text without device dependent functions.  */
-  .type = LISPSYM_INITIALLY (Qfreetype),
+  .type = LISPSYM_INITIALLY_ (Qfreetype),
   .get_cache = ftfont_get_cache,
   .list = ftfont_list,
   .match = ftfont_match,

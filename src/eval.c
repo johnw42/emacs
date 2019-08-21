@@ -2839,10 +2839,10 @@ funcall_subr (struct Lisp_Subr *subr, ptrdiff_t numargs, Lisp_Object *args)
           internal_args = internal_argbuf;
           memcpy (internal_args, args, numargs * word_size);
 #ifdef HAVE_CHEZ_SCHEME
-#else
+#else /* HAVE_CHEZ_SCHEME */
           memclear (internal_args + numargs,
                     (subr->max_args - numargs) * word_size);
-#endif
+#endif /* HAVE_CHEZ_SCHEME */
         }
       else
         internal_args = args;

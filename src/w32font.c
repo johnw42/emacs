@@ -2591,7 +2591,7 @@ w32font_filter_properties (Lisp_Object font, Lisp_Object alist)
 
 struct font_driver w32font_driver =
   {
-    LISPSYM_INITIALLY (Qgdi),
+    LISPSYM_INITIALLY_ (Qgdi),
     false, /* case insensitive */
     w32font_get_cache,
     w32font_list,

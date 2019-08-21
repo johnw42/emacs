@@ -1,6 +1,7 @@
 #! /bin/bash
 
-if make -C src -j temacs 2>/dev/null || make -C src -k temacs; then
+#if make -C src -j temacs 2>/dev/null || make -C src -k temacs; then
+if make -C src -j temacs; then
   true
 #   EMACS_CMD="src/emacs --batch"
   EMACS_CMD="src/temacs --batch --load loadup"
