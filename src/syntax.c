@@ -3614,6 +3614,13 @@ init_syntax_once (void)
   register int i, c;
   Lisp_Object temp;
 
+#ifndef NIL_IS_ZERO
+  gl_state.object = Qnil;
+  gl_state.global_code = Qnil;
+  gl_state.current_syntax_table = Qnil;
+  gl_state.old_prop = Qnil;
+#endif
+
   /* This has to be done here, before we call Fmake_char_table.  */
   DEFSYM (Qsyntax_table, "syntax-table");
 

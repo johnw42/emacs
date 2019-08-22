@@ -3611,8 +3611,8 @@ larger_vector (Lisp_Object vec, ptrdiff_t incr_min, ptrdiff_t nitems_max)
   ptrdiff_t old_size = ASIZE (vec);
   Lisp_Object v = larger_vecalloc (vec, incr_min, nitems_max);
   ptrdiff_t new_size = ASIZE (v);
-  memclear (XVECTOR (v)->contents + old_size,
-	    (new_size - old_size) * word_size);
+  mem_nil (XVECTOR (v)->contents + old_size,
+           (new_size - old_size) * word_size);
   return v;
 }
 

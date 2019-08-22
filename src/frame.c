@@ -55,7 +55,7 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 
 /* The currently selected frame.  */
 
-Lisp_Object selected_frame;
+Lisp_Object selected_frame = NIL_INIT;
 
 /* A frame which is not just a mini-buffer, or NULL if there are no such
    frames.  This is usually the most recent such frame that was selected.  */
@@ -234,7 +234,7 @@ set_menu_bar_lines (struct frame *f, Lisp_Object value, Lisp_Object oldval)
     }
 }
 
-Lisp_Object Vframe_list;
+Lisp_Object Vframe_list = NIL_INIT;
 
 
 DEFUN ("framep", Fframep, Sframep, 1, 1, 0,

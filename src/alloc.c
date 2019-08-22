@@ -870,6 +870,18 @@ xzalloc (size_t size)
   return val;
 }
 
+#ifndef NIL_IS_ZERO
+/* Lisp xzalloc, but fills memory with nil. */
+Lisp_Object *
+xnalloc (size_t size)
+{
+  void *val = xmalloc (size);
+  if (val)
+    mem_nil (val, size);
+  return val;
+}
+#endif
+
 /* Like realloc but check for no memory and block interrupt input..  */
 
 void *
@@ -3027,7 +3039,7 @@ static struct large_vector *large_vectors;
 
 /* The only vector with 0 slots, allocated from pure space.  */
 
-Lisp_Object zero_vector;
+Lisp_Object zero_vector = NIL_INIT;
 
 /* Number of live vectors.  */
 
@@ -3389,7 +3401,10 @@ allocate_pseudovector (int memlen, int lisplen,
   eassert (lisplen <= PSEUDOVECTOR_SIZE_MASK);
 
   /* Only the first LISPLEN slots will be traced normally by the GC.  */
-  memclear (v->contents, zerolen * word_size);
+  memzero (v->contents, zerolen * word_size);
+#ifndef NIL_IS_ZERO
+  set_nil (v->contents, lisplen);
+#endif
   XSETPVECTYPESIZE (v, tag, lisplen, memlen - lisplen);
   return v;
 }
@@ -7437,6 +7452,10 @@ verify_alloca (void)
 void
 init_alloc_once (void)
 {
+#ifndef NIL_IS_ZERO
+  mem_nil (&globals, sizeof (globals));
+#endif
+  
   /* Even though Qt's contents are not set up, its address is known.  */
   Vpurify_flag = Qt;
 
@@ -7551,6 +7570,13 @@ do hash-consing of the objects allocated to pure space.  */);
 	       doc: /* Non-nil means Emacs cannot get much more Lisp memory.  */);
   Vmemory_full = Qnil;
 
+#ifndef NIL_IS_ZERO
+  // Declare a symbol that is never used, which comes before any other
+  // global symbol in alphabetical order.  This ensures no "real"
+  // symbol has a integer value of 0.
+  DEFSYM (QAAAAA_unused, "AAAAA-unused");
+#endif
+
   DEFSYM (Qconses, "conses");
   DEFSYM (Qsymbols, "symbols");
   DEFSYM (Qmiscs, "miscs");
@@ -7594,6 +7620,22 @@ The time is in seconds as a floating point value.  */);
   defsubr (&Smemory_use_counts);
   defsubr (&Ssuspicious_object);
 }
+
+#ifndef NIL_IS_ZERO
+void memzero_with_nil (void *p, ptrdiff_t nbytes, ...)
+{
+  memzero (p, nbytes);
+  va_list ap;
+  va_start (ap, nbytes);
+  while (true)
+    {
+      Lisp_Object *op = va_arg(ap, Lisp_Object *);
+      if (op == NULL) break;
+      *op = Qnil;
+    }
+  va_end(ap);
+}
+#endif
 
 /* When compiled with GCC, GDB might say "No enum type named
    pvec_type" if we don't have at least one symbol with that type, and

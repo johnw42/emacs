@@ -493,7 +493,7 @@ invoke it.  If KEYS is omitted or nil, the return value of
   visargs = args + nargs;
   varies = (signed char *) (visargs + nargs);
 
-  memclear (args, nargs * (2 * word_size + 1));
+  set_nil (args, 3 * nargs);
 
   if (!NILP (enable))
     specbind (Qenable_recursive_minibuffers, Qt);

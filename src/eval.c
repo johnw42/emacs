@@ -48,12 +48,12 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
    They are recorded by being consed onto the front of Vautoload_queue:
    (FUN . ODEF) for a defun, (0 . OFEATURES) for a provide.  */
 
-Lisp_Object Vautoload_queue;
+Lisp_Object Vautoload_queue = NIL_INIT;
 
 /* This holds either the symbol `run-hooks' or nil.
    It is nil at an early stage of startup, and when Emacs
    is shutting down.  */
-Lisp_Object Vrun_hooks;
+Lisp_Object Vrun_hooks = NIL_INIT;
 
 /* The commented-out variables below are macros defined in thread.h.  */
 
@@ -87,11 +87,11 @@ static EMACS_INT when_entered_debugger;
 /* The function from which the last `signal' was called.  Set in
    Fsignal.  */
 /* FIXME: We should probably get rid of this!  */
-Lisp_Object Vsignaling_function;
+Lisp_Object Vsignaling_function = NIL_INIT;
 
 /* If non-nil, Lisp code must not be run since some part of Emacs is in
    an inconsistent state.  Currently unused.  */
-Lisp_Object inhibit_lisp_code;
+Lisp_Object inhibit_lisp_code = NIL_INIT;
 
 /* These would ordinarily be static, but they need to be visible to GDB.  */
 bool backtrace_p (union specbinding *) EXTERNALLY_VISIBLE;
@@ -2372,8 +2372,8 @@ usage: (apply FUNCTION &rest ARGUMENTS)  */)
       /* Avoid making funcall cons up a yet another new vector of arguments
 	 by explicitly supplying nil's for optional values.  */
       SAFE_ALLOCA_LISP (funcall_args, 1 + XSUBR (fun)->max_args);
-      memclear (funcall_args + numargs + 1,
-		(XSUBR (fun)->max_args - numargs) * word_size);
+      mem_nil (funcall_args + numargs + 1,
+               (XSUBR (fun)->max_args - numargs) * word_size);
       funcall_nargs = 1 + XSUBR (fun)->max_args;
     }
   else
@@ -2838,8 +2838,8 @@ funcall_subr (struct Lisp_Subr *subr, ptrdiff_t numargs, Lisp_Object *args)
           eassert (subr->max_args <= ARRAYELTS (internal_argbuf));
           internal_args = internal_argbuf;
           memcpy (internal_args, args, numargs * word_size);
-          memclear (internal_args + numargs,
-                    (subr->max_args - numargs) * word_size);
+          mem_nil (internal_args + numargs,
+                   (subr->max_args - numargs) * word_size);
         }
       else
         internal_args = args;

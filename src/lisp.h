@@ -322,7 +322,7 @@ error !;
 #define lisp_h_INTEGERP(x) ((XTYPE (x) & (Lisp_Int0 | ~Lisp_Int1)) == Lisp_Int0)
 #define lisp_h_MARKERP(x) (MISCP (x) && XMISCTYPE (x) == Lisp_Misc_Marker)
 #define lisp_h_MISCP(x) (XTYPE (x) == Lisp_Misc)
-#define lisp_h_NILP(x) EQ (x, Qnil)
+#define lisp_h_NILP(x) (eassert (XLI(x) != 0), EQ (x, Qnil))
 #define lisp_h_SET_SYMBOL_VAL(sym, v) \
    (eassert ((sym)->u.s.redirect == SYMBOL_PLAINVAL), \
     (sym)->u.s.val.value = (v))
@@ -767,6 +767,8 @@ verify (alignof (struct Lisp_Symbol) % GCALIGNMENT == 0);
 /* LISPSYM_INITIALLY (Qfoo) is equivalent to Qfoo except it is
    designed for use as an initializer, even for a constant initializer.  */
 #define LISPSYM_INITIALLY(name) LISP_INITIALLY (XLI_BUILTIN_LISPSYM (i##name))
+
+#define NIL_INIT LISPSYM_INITIALLY(Qnil)
 
 /* Declare extern constants for Lisp symbols.  These can be helpful
    when using a debugger like GDB, on older platforms where the debug
@@ -1643,21 +1645,52 @@ gc_aset (Lisp_Object array, ptrdiff_t idx, Lisp_Object val)
   XVECTOR (array)->contents[idx] = val;
 }
 
-/* True, since Qnil's representation is zero.  Every place in the code
-   that assumes Qnil is zero should verify (NIL_IS_ZERO), to make it easy
-   to find such assumptions later if we change Qnil to be nonzero.  */
-enum { NIL_IS_ZERO = XLI_BUILTIN_LISPSYM (iQnil) == 0 };
-
 /* Clear the object addressed by P, with size NBYTES, so that all its
    bytes are zero and all its Lisp values are nil.  */
 INLINE void
-memclear (void *p, ptrdiff_t nbytes)
+memzero (void *p, ptrdiff_t nbytes)
 {
   eassert (0 <= nbytes);
-  verify (NIL_IS_ZERO);
-  /* Since Qnil is zero, memset suffices.  */
   memset (p, 0, nbytes);
 }
+
+#ifdef NIL_IS_ZERO
+verify (XLI_BUILTIN_LISPSYM (iQnil) == 0);
+#endif
+
+INLINE void
+set_nil (Lisp_Object *p, ptrdiff_t n)
+{
+#ifdef NIL_IS_ZERO
+  memzero (p, n * sizeof (Lisp_Object));
+#else
+  eassert (0 <= n);
+  for (ptrdiff_t i = 0; i < n; i++)
+    p[i] = Qnil;
+#endif
+}
+
+INLINE void
+mem_nil (void *p, ptrdiff_t nbytes)
+{
+#ifdef NIL_IS_ZERO
+  memset (p, 0, nbytes);
+#else
+  eassert (0 <= nbytes);
+  eassert (nbytes % sizeof (Lisp_Object) == 0);
+  set_nil (p, nbytes / sizeof (Lisp_Object));
+#endif
+}
+
+#ifdef NIL_IS_ZERO
+INLINE void
+memzero_with_nil (void *p, ptrdiff_t nbytes, ...)
+{
+  memzero (p, nbytes);
+}
+#else
+void memzero_with_nil (void *p, ptrdiff_t nbytes, ...);
+#endif
 
 /* If a struct is made to look like a vector, this macro returns the length
    of the shortest vector that would hold that struct.  */
@@ -4468,6 +4501,16 @@ extern void *xpalloc (void *, ptrdiff_t *, ptrdiff_t, ptrdiff_t, ptrdiff_t);
 extern char *xstrdup (const char *) ATTRIBUTE_MALLOC;
 extern char *xlispstrdup (Lisp_Object) ATTRIBUTE_MALLOC;
 extern void dupstring (char **, char const *);
+
+#ifdef NIL_IS_ZERO
+INLINE Lisp_Object *xnalloc (size_t size)
+{
+  return xzalloc (size);
+}
+#else
+Lisp_Object *xnalloc (size_t size);
+#endif
+
 
 /* Make DEST a copy of STRING's data.  Return a pointer to DEST's terminating
    null byte.  This is like stpcpy, except the source is a Lisp string.  */

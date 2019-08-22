@@ -1,0 +1,20 @@
+#! /bin/bash
+
+flags=
+case "$1" in
+  true)
+    flags=--with-chez-scheme
+    ;;
+  false)
+    flags=--without-chez-scheme
+    ;;
+  *)
+    echo missing arg
+    exit 1
+esac
+shift
+
+if [[ -f Makefile ]]; then
+  make configure
+fi
+./configure --enable-checking=yes $flags CFLAGS=-g "$@"

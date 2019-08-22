@@ -2832,7 +2832,17 @@ init_iterator (struct it *it, struct window *w,
 
   /* Clear IT, and set it->object and other IT's Lisp objects to Qnil.
      Other parts of redisplay rely on that.  */
-  memclear (it, sizeof *it);
+  memzero (it, sizeof *it);
+#ifndef NIL_IS_ZERO
+  mem_nil (it->ctl_chars, sizeof (it->ctl_chars));
+  mem_nil (it->overlay_strings, sizeof (it->overlay_strings));
+  mem_nil (it->string_overlays, sizeof (it->string_overlays));
+  it->string = Qnil;
+  it->from_overlay = Qnil;
+  it->space_width = Qnil;
+  it->font_height = Qnil;
+  it->object = Qnil;
+#endif
   it->current.overlay_string_index = -1;
   it->current.dpvec_index = -1;
   it->base_face_id = remapped_base_face_id;

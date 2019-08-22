@@ -11282,7 +11282,7 @@ internal character representation.  */);
   Vtranslation_table_for_input = Qnil;
 
   Lisp_Object args[coding_arg_undecided_max];
-  memclear (args, sizeof args);
+  mem_nil (args, sizeof args);
 
   Lisp_Object plist[] =
     {
