@@ -103,6 +103,11 @@ static bool valgrind_p;
 #include "w32heap.h"	/* for sbrk */
 #endif
 
+#ifndef NIL_IS_ZERO
+#undef CHECK_NOT_ZERO
+#define CHECK_NOT_ZERO(x) x
+#endif
+
 #ifdef GNU_LINUX
 /* The address where the heap starts.  */
 void *
@@ -392,7 +397,7 @@ enum mem_type
 /* A unique object in pure space used to make some Lisp objects
    on free lists recognizable in O(1).  */
 
-static Lisp_Object Vdead;
+static Lisp_Object Vdead = NIL_INIT;
 #define DEADP(x) EQ (x, Vdead)
 
 #ifdef GC_MALLOC_CHECK
@@ -7589,6 +7594,7 @@ do hash-consing of the objects allocated to pure space.  */);
   DEFSYM (Qvector_slots, "vector-slots");
   DEFSYM (Qheap, "heap");
   DEFSYM (QAutomatic_GC, "Automatic GC");
+  DEFSYM (Qpcase, "pcase");
 
   DEFSYM (Qgc_cons_threshold, "gc-cons-threshold");
   DEFSYM (Qchar_table_extra_slots, "char-table-extra-slots");

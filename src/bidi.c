@@ -248,7 +248,7 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 
 static bool bidi_initialized = 0;
 
-static Lisp_Object bidi_type_table, bidi_mirror_table, bidi_brackets_table;
+static Lisp_Object bidi_type_table = NIL_INIT, bidi_mirror_table = NIL_INIT, bidi_brackets_table = NIL_INIT;
 
 #define BIDI_EOB   (-1)
 
@@ -261,7 +261,7 @@ typedef enum {
   EXPLICIT_FORMATTING
 } bidi_category_t;
 
-static Lisp_Object paragraph_start_re, paragraph_separate_re;
+static Lisp_Object paragraph_start_re = NIL_INIT, paragraph_separate_re = NIL_INIT;
 
 
 /***********************************************************************

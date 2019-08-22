@@ -29,7 +29,7 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
    which will be added to the list at the end of the command.
    This ensures we can't run out of space while trying to make
    an undo-boundary.  */
-static Lisp_Object pending_boundary;
+static Lisp_Object pending_boundary = NIL_INIT;
 
 /* Prepare the undo info for recording a change. */
 static void

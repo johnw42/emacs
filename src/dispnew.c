@@ -5846,7 +5846,7 @@ immediately by pending input.  */)
    session's frames, frame names, buffers, buffer-read-only flags, and
    buffer-modified-flags.  */
 
-static Lisp_Object frame_and_buffer_state;
+static Lisp_Object frame_and_buffer_state = NIL_INIT;
 
 
 DEFUN ("frame-or-buffer-changed-p", Fframe_or_buffer_changed_p,

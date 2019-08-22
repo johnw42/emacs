@@ -343,7 +343,7 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 #define DISP_INFINITY 10000000
 
 /* Holds the list (error).  */
-static Lisp_Object list_of_error;
+static Lisp_Object list_of_error = NIL_INIT;
 
 #ifdef HAVE_WINDOW_SYSTEM
 
@@ -389,9 +389,9 @@ static bool message_log_need_newline;
 /* Three markers that message_dolog uses.
    It could allocate them itself, but that causes trouble
    in handling memory-full errors.  */
-static Lisp_Object message_dolog_marker1;
-static Lisp_Object message_dolog_marker2;
-static Lisp_Object message_dolog_marker3;
+static Lisp_Object message_dolog_marker1 = NIL_INIT;
+static Lisp_Object message_dolog_marker2 = NIL_INIT;
+static Lisp_Object message_dolog_marker3 = NIL_INIT;
 
 /* The buffer position of the first character appearing entirely or
    partially on the line of the selected window which contains the
@@ -438,14 +438,14 @@ static Lisp_Object default_invis_vector[3];
    is always a mini-buffer window, but it may not be the same window
    currently active as a mini-buffer.  */
 
-Lisp_Object echo_area_window;
+Lisp_Object echo_area_window = NIL_INIT;
 
 /* List of pairs (MESSAGE . MULTIBYTE).  The function save_message
    pushes the current message and the value of
    message_enable_multibyte on the stack, the function restore_message
    pops the stack and displays MESSAGE again.  */
 
-static Lisp_Object Vmessage_stack;
+static Lisp_Object Vmessage_stack = NIL_INIT;
 
 /* True means multibyte characters were enabled when the echo area
    message was specified.  */
@@ -512,20 +512,20 @@ static bool line_number_displayed;
 
 /* The name of the *Messages* buffer, a string.  */
 
-static Lisp_Object Vmessages_buffer_name;
+static Lisp_Object Vmessages_buffer_name = NIL_INIT;
 
 /* Current, index 0, and last displayed echo area message.  Either
    buffers from echo_buffers, or nil to indicate no message.  */
 
-Lisp_Object echo_area_buffer[2];
+Lisp_Object echo_area_buffer[2] = { NIL_INIT, NIL_INIT };
 
 /* The buffers referenced from echo_area_buffer.  */
 
-static Lisp_Object echo_buffer[2];
+static Lisp_Object echo_buffer[2] = { NIL_INIT, NIL_INIT };
 
 /* A vector saved used in with_area_buffer to reduce consing.  */
 
-static Lisp_Object Vwith_echo_area_save_vector;
+static Lisp_Object Vwith_echo_area_save_vector = NIL_INIT;
 
 /* True means display_echo_area should display the last echo area
    message again.  Set by redisplay_preserve_echo_area.  */
@@ -773,14 +773,14 @@ bool redisplaying_p;
 /* If a string, XTread_socket generates an event to display that string.
    (The display is done in read_char.)  */
 
-Lisp_Object help_echo_string;
-Lisp_Object help_echo_window;
-Lisp_Object help_echo_object;
+Lisp_Object help_echo_string = NIL_INIT;
+Lisp_Object help_echo_window = NIL_INIT;
+Lisp_Object help_echo_object = NIL_INIT;
 ptrdiff_t help_echo_pos;
 
 /* Temporary variable for XTread_socket.  */
 
-Lisp_Object previous_help_echo_string;
+Lisp_Object previous_help_echo_string = NIL_INIT;
 
 /* Platform-independent portion of hourglass implementation.  */
 
@@ -11812,19 +11812,19 @@ static enum {
 
 /* Alist that caches the results of :propertize.
    Each element is (PROPERTIZED-STRING . PROPERTY-LIST).  */
-static Lisp_Object mode_line_proptrans_alist;
+static Lisp_Object mode_line_proptrans_alist = NIL_INIT;
 
 /* List of strings making up the mode-line.  */
-static Lisp_Object mode_line_string_list;
+static Lisp_Object mode_line_string_list = NIL_INIT;
 
 /* Base face property when building propertized mode line string.  */
-static Lisp_Object mode_line_string_face;
-static Lisp_Object mode_line_string_face_prop;
+static Lisp_Object mode_line_string_face = NIL_INIT;
+static Lisp_Object mode_line_string_face_prop = NIL_INIT;
 
 
 /* Unwind data for mode line strings */
 
-static Lisp_Object Vmode_line_unwind_vector;
+static Lisp_Object Vmode_line_unwind_vector = NIL_INIT;
 
 static Lisp_Object
 format_mode_line_unwind_data (struct frame *target_frame,

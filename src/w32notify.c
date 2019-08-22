@@ -119,7 +119,7 @@ struct notification {
 /* Used for communicating notifications to the main thread.  */
 struct notifications_set *notifications_set_head;
 
-static Lisp_Object watch_list;
+static Lisp_Object watch_list = NIL_INIT;
 
 /* Signal to the main thread that we have file notifications for it to
    process.  */

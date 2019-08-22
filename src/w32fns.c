@@ -3114,7 +3114,7 @@ map_keypad_keys (unsigned int virt_key, unsigned int extended)
    key code and modifier combination to capture.
    Note: This code is not used if keyboard hooks are active
    (Windows 2000 and later).  */
-static Lisp_Object w32_grabbed_keys;
+static Lisp_Object w32_grabbed_keys = NIL_INIT;
 
 #define HOTKEY(vk, mods)      make_number (((vk) & 255) | ((mods) << 8))
 #define HOTKEY_ID(k)          (XFASTINT (k) & 0xbfff)
@@ -6923,18 +6923,18 @@ static void compute_tip_xy (struct frame *, Lisp_Object, Lisp_Object,
 
 /* The frame of a currently visible tooltip.  */
 
-Lisp_Object tip_frame;
+Lisp_Object tip_frame = NIL_INIT;
 
 /* If non-nil, a timer started that hides the last tooltip when it
    fires.  */
 
-Lisp_Object tip_timer;
+Lisp_Object tip_timer = NIL_INIT;
 Window tip_window;
 
 /* If non-nil, a vector of 3 elements containing the last args
    with which x-show-tip was called.  See there.  */
 
-Lisp_Object last_show_tip_args;
+Lisp_Object last_show_tip_args = NIL_INIT;
 
 
 static void

@@ -299,13 +299,13 @@ encode_coding_XXX (struct coding_system *coding)
 #include "coding.h"
 #include "termhooks.h"
 
-Lisp_Object Vcoding_system_hash_table;
+Lisp_Object Vcoding_system_hash_table = NIL_INIT;
 
 /* Format of end-of-line decided by system.  This is Qunix on
    Unix and Mac, Qdos on DOS/Windows.
    This has an effect only for external encoding (i.e. for output to
    file and process), not for in-buffer or Lisp string encoding.  */
-static Lisp_Object system_eol_type;
+static Lisp_Object system_eol_type = NIL_INIT;
 
 #ifdef emacs
 
@@ -318,8 +318,8 @@ struct coding_system safe_terminal_coding;
 #endif /* emacs */
 
 /* Two special coding systems.  */
-static Lisp_Object Vsjis_coding_system;
-static Lisp_Object Vbig5_coding_system;
+static Lisp_Object Vsjis_coding_system = NIL_INIT;
+static Lisp_Object Vbig5_coding_system = NIL_INIT;
 
 /* ISO2022 section */
 
@@ -587,7 +587,7 @@ enum coding_category
 
 /* Table of coding categories (Lisp symbols).  This variable is for
    internal use only.  */
-static Lisp_Object Vcoding_category_table;
+static Lisp_Object Vcoding_category_table = NIL_INIT;
 
 /* Table of coding-categories ordered by priority.  */
 static enum coding_category coding_priorities[coding_category_max];
@@ -7784,14 +7784,14 @@ encode_coding (struct coding_system *coding)
 
 
 /* Name (or base name) of work buffer for code conversion.  */
-static Lisp_Object Vcode_conversion_workbuf_name;
+static Lisp_Object Vcode_conversion_workbuf_name = NIL_INIT;
 
 /* A working buffer used by the top level conversion.  Once it is
    created, it is never destroyed.  It has the name
    Vcode_conversion_workbuf_name.  The other working buffers are
    destroyed after the use is finished, and their names are modified
    versions of Vcode_conversion_workbuf_name.  */
-static Lisp_Object Vcode_conversion_reused_workbuf;
+static Lisp_Object Vcode_conversion_reused_workbuf = NIL_INIT;
 
 /* True iff Vcode_conversion_reused_workbuf is already in use.  */
 static bool reused_workbuf_in_use;

@@ -3254,7 +3254,7 @@ int_from_hex (char * s)
 
 /* We need to build a global list, since the EnumSystemLocale callback
    function isn't given a context pointer.  */
-Lisp_Object Vw32_valid_locale_ids;
+Lisp_Object Vw32_valid_locale_ids = NIL_INIT;
 
 static BOOL CALLBACK ALIGN_STACK
 enum_locale_fn (LPTSTR localeNum)
@@ -3318,7 +3318,7 @@ If successful, the new locale id is returned, otherwise nil.  */)
 
 /* We need to build a global list, since the EnumCodePages callback
    function isn't given a context pointer.  */
-Lisp_Object Vw32_valid_codepages;
+Lisp_Object Vw32_valid_codepages = NIL_INIT;
 
 static BOOL CALLBACK ALIGN_STACK
 enum_codepage_fn (LPTSTR codepageNum)

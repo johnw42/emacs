@@ -84,7 +84,7 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
    top-level calls to read0.  In between calls, it may be an empty
    hash table left unused from the previous call (to reduce
    allocations), or nil.  */
-static Lisp_Object read_objects_map;
+static Lisp_Object read_objects_map = NIL_INIT;
 
 /* The recursive objects read with the #n=object form.
 
@@ -101,7 +101,7 @@ static Lisp_Object read_objects_map;
    hash table before all top-level calls to read0.  In between calls,
    it may be an empty hash table left unused from the previous call
    (to reduce allocations), or nil.  */
-static Lisp_Object read_objects_completed;
+static Lisp_Object read_objects_completed = NIL_INIT;
 
 /* File and lookahead for get-file-char and get-emacs-mule-file-char
    to read from.  Used by Fload.  */
@@ -156,7 +156,7 @@ static bool new_backquote_flag;
 /* A list of file names for files being loaded in Fload.  Used to
    check for recursive loads.  */
 
-static Lisp_Object Vloads_in_progress;
+static Lisp_Object Vloads_in_progress = NIL_INIT;
 
 static int read_emacs_mule_char (int, int (*) (int, Lisp_Object),
                                  Lisp_Object);
@@ -4003,7 +4003,7 @@ read_list (bool flag, Lisp_Object readcharfun)
     }
 }
 
-static Lisp_Object initial_obarray;
+static Lisp_Object initial_obarray = NIL_INIT;
 
 /* `oblookup' stores the bucket number here, for the sake of Funintern.  */
 

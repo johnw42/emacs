@@ -117,11 +117,11 @@ static const char emacs_copyright[] = COPYRIGHT;
 static const char emacs_bugreport[] = PACKAGE_BUGREPORT;
 
 /* Empty lisp strings.  To avoid having to build any others.  */
-Lisp_Object empty_unibyte_string, empty_multibyte_string;
+Lisp_Object empty_unibyte_string = NIL_INIT, empty_multibyte_string = NIL_INIT;
 
 #ifdef WINDOWSNT
 /* Cache for externally loaded libraries.  */
-Lisp_Object Vlibrary_cache;
+Lisp_Object Vlibrary_cache = NIL_INIT;
 #endif
 
 /* Set after Emacs has started up the first time.

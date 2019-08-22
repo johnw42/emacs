@@ -399,3 +399,5 @@ extern int emacs_setenv_TZ (char const *);
 #else
 # define UNINIT /* empty */
 #endif
+
+#define NIL_IS_ZERO 1

@@ -31,6 +31,8 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 #include <inttypes.h>
 #include <limits.h>
 
+#include <stdlib.h> // for abort()
+
 #include <intprops.h>
 #include <verify.h>
 
@@ -305,11 +307,17 @@ error !;
    Commentary for these macros can be found near their corresponding
    functions, below.  */
 
+#ifdef NIL_IS_ZERO
+#define CHECK_NOT_ZERO(x) x
+#else
+#define CHECK_NOT_ZERO(x) ((eassert ((x) != 0), x))
+#endif
+
 #if CHECK_LISP_OBJECT_TYPE
-# define lisp_h_XLI(o) ((o).i)
+# define lisp_h_XLI(o) CHECK_NOT_ZERO ((o).i)
 # define lisp_h_XIL(i) ((Lisp_Object) { i })
 #else
-# define lisp_h_XLI(o) (o)
+# define lisp_h_XLI(o) CHECK_NOT_ZERO (o)
 # define lisp_h_XIL(i) (i)
 #endif
 #define lisp_h_CHECK_NUMBER(x) CHECK_TYPE (INTEGERP (x), Qintegerp, x)
@@ -322,7 +330,7 @@ error !;
 #define lisp_h_INTEGERP(x) ((XTYPE (x) & (Lisp_Int0 | ~Lisp_Int1)) == Lisp_Int0)
 #define lisp_h_MARKERP(x) (MISCP (x) && XMISCTYPE (x) == Lisp_Misc_Marker)
 #define lisp_h_MISCP(x) (XTYPE (x) == Lisp_Misc)
-#define lisp_h_NILP(x) (eassert (XLI(x) != 0), EQ (x, Qnil))
+#define lisp_h_NILP(x) EQ (x, Qnil)
 #define lisp_h_SET_SYMBOL_VAL(sym, v) \
    (eassert ((sym)->u.s.redirect == SYMBOL_PLAINVAL), \
     (sym)->u.s.val.value = (v))
@@ -768,8 +776,6 @@ verify (alignof (struct Lisp_Symbol) % GCALIGNMENT == 0);
    designed for use as an initializer, even for a constant initializer.  */
 #define LISPSYM_INITIALLY(name) LISP_INITIALLY (XLI_BUILTIN_LISPSYM (i##name))
 
-#define NIL_INIT LISPSYM_INITIALLY(Qnil)
-
 /* Declare extern constants for Lisp symbols.  These can be helpful
    when using a debugger like GDB, on older platforms where the debug
    format does not represent C macros.  */
@@ -854,6 +860,9 @@ make_lisp_symbol (struct Lisp_Symbol *sym)
 INLINE Lisp_Object
 builtin_lisp_symbol (int index)
 {
+#ifndef NIL_IS_ZERO
+  if (index == 0) return Qnil;
+#endif
   return make_lisp_symbol (&lispsym[index]);
 }
 
@@ -3266,6 +3275,8 @@ set_hash_value_slot (struct Lisp_Hash_Table *h, ptrdiff_t idx, Lisp_Object val)
 INLINE void
 set_symbol_function (Lisp_Object sym, Lisp_Object function)
 {
+  if (EQ (sym, Qpcase) && !NILP (function))
+    abort();
   XSYMBOL (sym)->u.s.function = function;
 }
 
@@ -4786,6 +4797,8 @@ maybe_gc (void)
 	  && consing_since_gc > memory_full_cons_threshold))
     Fgarbage_collect ();
 }
+
+#define NIL_INIT LISPSYM_INITIALLY(Qnil)
 
 INLINE_HEADER_END
 

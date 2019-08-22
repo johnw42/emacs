@@ -1079,7 +1079,7 @@ char const syntax_code_spec[16] =
    shared among syntax tables, we generate them in advance.  By
    sharing objects, the function `describe-syntax' can give a more
    compact listing.  */
-static Lisp_Object Vsyntax_code_object;
+static Lisp_Object Vsyntax_code_object = NIL_INIT;
 
 
 DEFUN ("char-syntax", Fchar_syntax, Schar_syntax, 1, 1, 0,

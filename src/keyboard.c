@@ -109,19 +109,19 @@ static int recent_keys_index;
 static int total_keys;
 
 /* This vector holds the last NUM_RECENT_KEYS keystrokes.  */
-static Lisp_Object recent_keys;
+static Lisp_Object recent_keys = NIL_INIT;
 
 /* Vector holding the key sequence that invoked the current command.
    It is reused for each command, and it may be longer than the current
    sequence; this_command_key_count indicates how many elements
    actually mean something.
    It's easier to staticpro a single Lisp_Object than an array.  */
-Lisp_Object this_command_keys;
+Lisp_Object this_command_keys = NIL_INIT;
 ptrdiff_t this_command_key_count;
 
 /* This vector is used as a buffer to record the events that were actually read
    by read_key_sequence.  */
-static Lisp_Object raw_keybuf;
+static Lisp_Object raw_keybuf = NIL_INIT;
 static int raw_keybuf_count;
 
 #define GROW_RAW_KEYBUF							\
@@ -138,12 +138,12 @@ static ptrdiff_t this_single_command_key_start;
 sigjmp_buf return_to_command_loop;
 
 /* Message displayed by Vtop_level when recovering from C stack overflow.  */
-static Lisp_Object recover_top_level_message;
+static Lisp_Object recover_top_level_message = NIL_INIT;
 
 #endif /* HAVE_STACK_OVERFLOW_HANDLING */
 
 /* Message normally displayed by Vtop_level.  */
-static Lisp_Object regular_top_level_message;
+static Lisp_Object regular_top_level_message = NIL_INIT;
 
 /* True while displaying for echoing.   Delays C-g throwing.  */
 
@@ -164,7 +164,7 @@ struct kboard *echo_kboard;
 /* The buffer used for echoing.  Set in echo_now, reset in
    cancel_echoing.  */
 
-Lisp_Object echo_message_buffer;
+Lisp_Object echo_message_buffer = NIL_INIT;
 
 /* Character that causes a quit.  Normally C-g.
 
@@ -194,7 +194,7 @@ EMACS_INT command_loop_level;
    read_key_sequence uses this to delay switch-frame events until the
    end of the key sequence; Fread_char uses it to put off switch-frame
    events until a non-ASCII event is acceptable as input.  */
-Lisp_Object unread_switch_frame;
+Lisp_Object unread_switch_frame = NIL_INIT;
 
 /* Last size recorded for a current buffer which is not a minibuffer.  */
 static ptrdiff_t last_non_minibuf_size;
@@ -219,12 +219,12 @@ static ptrdiff_t last_point_position;
    FIXME: This is modified by a signal handler so it should be volatile.
    It's exported to Lisp, though, so it can't simply be marked
    'volatile' here.  */
-Lisp_Object internal_last_event_frame;
+Lisp_Object internal_last_event_frame = NIL_INIT;
 
 /* `read_key_sequence' stores here the command definition of the
    key sequence that it reads.  */
-static Lisp_Object read_key_sequence_cmd;
-static Lisp_Object read_key_sequence_remapped;
+static Lisp_Object read_key_sequence_cmd = NIL_INIT;
+static Lisp_Object read_key_sequence_remapped = NIL_INIT;
 
 /* File in which we write all commands we read.  */
 static FILE *dribble;
@@ -2108,7 +2108,7 @@ static Lisp_Object kbd_buffer_get_event (KBOARD **kbp, bool *used_mouse_menu,
 					 struct timespec *end_time);
 static void record_char (Lisp_Object c);
 
-static Lisp_Object help_form_saved_window_configs;
+static Lisp_Object help_form_saved_window_configs = NIL_INIT;
 static void
 read_char_help_form_unwind (void)
 {
@@ -4316,7 +4316,7 @@ timer_resume_idle (void)
 /* List of elisp functions to call, delayed because they were generated in
    a context where Elisp could not be safely run (e.g. redisplay, signal,
    ...).  Each element has the form (FUN . ARGS).  */
-Lisp_Object pending_funcalls;
+Lisp_Object pending_funcalls = NIL_INIT;
 
 /* Return true if TIMER is a valid timer, placing its value into *RESULT.  */
 static bool
@@ -4556,11 +4556,11 @@ PSEC is a multiple of the system clock resolution.  */)
 }
 
 /* Caches for modify_event_symbol.  */
-static Lisp_Object accent_key_syms;
-static Lisp_Object func_key_syms;
-static Lisp_Object mouse_syms;
-static Lisp_Object wheel_syms;
-static Lisp_Object drag_n_drop_syms;
+static Lisp_Object accent_key_syms = NIL_INIT;
+static Lisp_Object func_key_syms = NIL_INIT;
+static Lisp_Object mouse_syms = NIL_INIT;
+static Lisp_Object wheel_syms = NIL_INIT;
+static Lisp_Object drag_n_drop_syms = NIL_INIT;
 
 /* This is a list of keysym codes for special "accent" characters.
    It parallels lispy_accent_keys.  */
@@ -5103,7 +5103,7 @@ static const char *const iso_lispy_function_keys[] =
 
 #endif /* not HAVE_NTGUI */
 
-static Lisp_Object Vlispy_mouse_stem;
+static Lisp_Object Vlispy_mouse_stem = NIL_INIT;
 
 static const char *const lispy_wheel_names[] =
 {
@@ -5154,7 +5154,7 @@ static short const internal_border_parts[] = {
    difference between click and drag events, and to store the starting
    location to be included in drag events.  */
 
-static Lisp_Object button_down_location;
+static Lisp_Object button_down_location = NIL_INIT;
 
 /* Information about the most recent up-going button event:  Which
    button, what location, and what time.  */
@@ -6333,7 +6333,7 @@ static const char *const modifier_names[] =
 };
 #define NUM_MOD_NAMES ARRAYELTS (modifier_names)
 
-static Lisp_Object modifier_symbols;
+static Lisp_Object modifier_symbols = NIL_INIT;
 
 /* Return the list of modifier symbols corresponding to the mask MODIFIERS.  */
 static Lisp_Object
@@ -7362,12 +7362,12 @@ store_user_signal_events (void)
 
 
 static void menu_bar_item (Lisp_Object, Lisp_Object, Lisp_Object, void *);
-static Lisp_Object menu_bar_one_keymap_changed_items;
+static Lisp_Object menu_bar_one_keymap_changed_items = NIL_INIT;
 
 /* These variables hold the vector under construction within
    menu_bar_items and its subroutines, and the current index
    for storing into that vector.  */
-static Lisp_Object menu_bar_items_vector;
+static Lisp_Object menu_bar_items_vector = NIL_INIT;
 static int menu_bar_items_index;
 
 
@@ -7568,7 +7568,7 @@ menu_bar_items (Lisp_Object old)
 /* Add one item to menu_bar_items_vector, for KEY, ITEM_STRING and DEF.
    If there's already an item for KEY, add this DEF to it.  */
 
-Lisp_Object item_properties;
+Lisp_Object item_properties = NIL_INIT;
 
 static void
 menu_bar_item (Lisp_Object key, Lisp_Object item, Lisp_Object dummy1, void *dummy2)
@@ -7968,12 +7968,12 @@ parse_menu_item (Lisp_Object item, int inmenubar)
    tool_bar_items. Each item occupies TOOL_BAR_ITEM_NSCLOTS elements
    in the vector.  */
 
-static Lisp_Object tool_bar_items_vector;
+static Lisp_Object tool_bar_items_vector = NIL_INIT;
 
 /* A vector holding the result of parse_tool_bar_item.  Layout is like
    the one for a single item in tool_bar_items_vector.  */
 
-static Lisp_Object tool_bar_item_properties;
+static Lisp_Object tool_bar_item_properties = NIL_INIT;
 
 /* Next free index in tool_bar_items_vector.  */
 

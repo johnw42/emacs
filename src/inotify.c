@@ -68,7 +68,7 @@ static int inotifyfd = -1;
    DESCRIPTOR and MASK are ordinarily integers, they are conses when
    representing integers outside of fixnum range.  */
 
-static Lisp_Object watch_list;
+static Lisp_Object watch_list = NIL_INIT;
 
 static Lisp_Object
 mask_to_aspects (uint32_t mask)

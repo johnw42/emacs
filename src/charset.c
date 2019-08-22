@@ -1735,7 +1735,7 @@ decode_char (struct charset *charset, unsigned int code)
 }
 
 /* Variable used temporarily by the macro ENCODE_CHAR.  */
-Lisp_Object charset_work;
+Lisp_Object charset_work = NIL_INIT;
 
 /* Return a code-point of C in CHARSET.  If C doesn't belong to
    CHARSET, return CHARSET_INVALID_CODE (CHARSET).  If STRICT is true,

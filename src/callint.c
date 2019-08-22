@@ -26,13 +26,13 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 #include "keyboard.h"
 #include "window.h"
 
-static Lisp_Object preserved_fns;
+static Lisp_Object preserved_fns = NIL_INIT;
 
 /* Marker used within call-interactively to refer to point.  */
-static Lisp_Object point_marker;
+static Lisp_Object point_marker = NIL_INIT;
 
 /* String for the prompt text used in Fcall_interactively.  */
-static Lisp_Object callint_message;
+static Lisp_Object callint_message = NIL_INIT;
 
 /* ARGSUSED */
 DEFUN ("interactive", Finteractive, Sinteractive, 0, UNEVALLED, 0,

@@ -130,7 +130,7 @@ static dev_t timestamp_file_system;
 
 /* Each time an annotation function changes the buffer, the new buffer
    is added here.  */
-static Lisp_Object Vwrite_region_annotation_buffers;
+static Lisp_Object Vwrite_region_annotation_buffers = NIL_INIT;
 
 static bool a_write (int, Lisp_Object, ptrdiff_t, ptrdiff_t,
 		     Lisp_Object *, struct coding_system *);

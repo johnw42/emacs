@@ -109,7 +109,7 @@ static void setup_windows_coding_system (Lisp_Object coding_system,
    based on current system parameters. */
 static LCID DEFAULT_LCID;
 static UINT ANSICP, OEMCP;
-static Lisp_Object QANSICP, QOEMCP;
+static Lisp_Object QANSICP = NIL_INIT, QOEMCP = NIL_INIT;
 
 /* A hidden window just for the clipboard management. */
 static HWND clipboard_owner;
@@ -119,14 +119,14 @@ static int modifying_clipboard = 0;
 
 /* Configured transfer parameters, based on the last inspection of
    selection-coding-system.  */
-static Lisp_Object cfg_coding_system;
+static Lisp_Object cfg_coding_system = NIL_INIT;
 static UINT cfg_codepage;
 static LCID cfg_lcid;
 static UINT cfg_clipboard_type;
 
 /* The current state for delayed rendering. */
-static Lisp_Object current_text;
-static Lisp_Object current_coding_system;
+static Lisp_Object current_text = NIL_INIT;
+static Lisp_Object current_coding_system = NIL_INIT;
 static int current_requires_encoding, current_num_nls;
 static UINT current_clipboard_type;
 static LCID current_lcid;

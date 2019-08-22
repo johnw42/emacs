@@ -530,7 +530,7 @@ struct prop_location
 
 static int prop_location_identifier;
 
-static Lisp_Object property_change_reply;
+static Lisp_Object property_change_reply = NIL_INIT;
 
 static struct prop_location *property_change_reply_object;
 
@@ -1136,7 +1136,7 @@ x_handle_property_notify (const XPropertyEvent *event)
 
 /* Variables for communication with x_handle_selection_notify.  */
 static Atom reading_which_selection;
-static Lisp_Object reading_selection_reply;
+static Lisp_Object reading_selection_reply = NIL_INIT;
 static Window reading_selection_window;
 
 /* Do protocol to read selection-data from the server.

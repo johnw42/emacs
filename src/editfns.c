@@ -88,7 +88,7 @@ static timezone_t const utc_tz = 0;
 
 /* The cached value of Vsystem_name.  This is used only to compare it
    to Vsystem_name, so it need not be visible to the GC.  */
-static Lisp_Object cached_system_name;
+static Lisp_Object cached_system_name = NIL_INIT;
 
 static void
 init_and_cache_system_name (void)
