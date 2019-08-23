@@ -8025,7 +8025,9 @@ restore_nofile_limit (void)
 void
 init_process_emacs (int sockfd)
 {
+#ifndef NIL_IS_ZERO
   mem_nil (chan_process, sizeof (chan_process));
+#endif
   
 #ifdef subprocesses
   int i;

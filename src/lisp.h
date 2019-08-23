@@ -1239,11 +1239,13 @@ INLINE Lisp_Object
 INLINE void
 XSETCAR (Lisp_Object c, Lisp_Object n)
 {
+  (void) XLI (n);
   *xcar_addr (c) = n;
 }
 INLINE void
 XSETCDR (Lisp_Object c, Lisp_Object n)
 {
+  (void) XLI (n);
   *xcdr_addr (c) = n;
 }
 
@@ -1642,6 +1644,7 @@ INLINE void
 ASET (Lisp_Object array, ptrdiff_t idx, Lisp_Object val)
 {
   eassert (0 <= idx && idx < ASIZE (array));
+  (void) XLI(val);
   XVECTOR (array)->contents[idx] = val;
 }
 
@@ -1651,6 +1654,7 @@ gc_aset (Lisp_Object array, ptrdiff_t idx, Lisp_Object val)
   /* Like ASET, but also can be used in the garbage collector:
      sweep_weak_table calls set_hash_key etc. while the table is marked.  */
   eassert (0 <= idx && idx < gc_asize (array));
+  (void) XLI(val);
   XVECTOR (array)->contents[idx] = val;
 }
 
@@ -1683,7 +1687,7 @@ INLINE void
 mem_nil (void *p, ptrdiff_t nbytes)
 {
 #ifdef NIL_IS_ZERO
-  memset (p, 0, nbytes);
+  memzero (p, nbytes);
 #else
   eassert (0 <= nbytes);
   eassert (nbytes % sizeof (Lisp_Object) == 0);
@@ -1986,6 +1990,7 @@ SYMBOL_FWD (struct Lisp_Symbol *sym)
 INLINE void
 (SET_SYMBOL_VAL) (struct Lisp_Symbol *sym, Lisp_Object v)
 {
+  (void) XLI(v);
   lisp_h_SET_SYMBOL_VAL (sym, v);
 }
 
@@ -3260,12 +3265,14 @@ vcopy (Lisp_Object v, ptrdiff_t offset, Lisp_Object *args, ptrdiff_t count)
 INLINE void
 set_hash_key_slot (struct Lisp_Hash_Table *h, ptrdiff_t idx, Lisp_Object val)
 {
+  (void) XLI(val);
   gc_aset (h->key_and_value, 2 * idx, val);
 }
 
 INLINE void
 set_hash_value_slot (struct Lisp_Hash_Table *h, ptrdiff_t idx, Lisp_Object val)
 {
+  (void) XLI(val);
   gc_aset (h->key_and_value, 2 * idx + 1, val);
 }
 
@@ -3275,14 +3282,16 @@ set_hash_value_slot (struct Lisp_Hash_Table *h, ptrdiff_t idx, Lisp_Object val)
 INLINE void
 set_symbol_function (Lisp_Object sym, Lisp_Object function)
 {
-  if (EQ (sym, Qpcase) && !NILP (function))
-    abort();
+  (void) XLI(function);
+  /* if (EQ (sym, Qpcase) && !NILP (function)) */
+  /*   abort(); */
   XSYMBOL (sym)->u.s.function = function;
 }
 
 INLINE void
 set_symbol_plist (Lisp_Object sym, Lisp_Object plist)
 {
+  (void) XLI(plist);
   XSYMBOL (sym)->u.s.plist = plist;
 }
 
@@ -3312,6 +3321,7 @@ blv_found (struct Lisp_Buffer_Local_Value *blv)
 INLINE void
 set_overlay_plist (Lisp_Object overlay, Lisp_Object plist)
 {
+  (void) XLI(plist);
   XOVERLAY (overlay)->plist = plist;
 }
 
@@ -3337,11 +3347,13 @@ set_string_intervals (Lisp_Object s, INTERVAL i)
 INLINE void
 set_char_table_defalt (Lisp_Object table, Lisp_Object val)
 {
+  (void) XLI(val);
   XCHAR_TABLE (table)->defalt = val;
 }
 INLINE void
 set_char_table_purpose (Lisp_Object table, Lisp_Object val)
 {
+  (void) XLI(val);
   XCHAR_TABLE (table)->purpose = val;
 }
 
@@ -3351,6 +3363,7 @@ INLINE void
 set_char_table_extras (Lisp_Object table, ptrdiff_t idx, Lisp_Object val)
 {
   eassert (0 <= idx && idx < CHAR_TABLE_EXTRA_SLOTS (XCHAR_TABLE (table)));
+  (void) XLI(val);
   XCHAR_TABLE (table)->extras[idx] = val;
 }
 
@@ -3358,12 +3371,14 @@ INLINE void
 set_char_table_contents (Lisp_Object table, ptrdiff_t idx, Lisp_Object val)
 {
   eassert (0 <= idx && idx < (1 << CHARTAB_SIZE_BITS_0));
+  (void) XLI(val);
   XCHAR_TABLE (table)->contents[idx] = val;
 }
 
 INLINE void
 set_sub_char_table_contents (Lisp_Object table, ptrdiff_t idx, Lisp_Object val)
 {
+  (void) XLI(val);
   XSUB_CHAR_TABLE (table)->contents[idx] = val;
 }
 
@@ -4801,5 +4816,7 @@ maybe_gc (void)
 #define NIL_INIT LISPSYM_INITIALLY(Qnil)
 
 INLINE_HEADER_END
+
+void gdb_break(void);
 
 #endif /* EMACS_LISP_H */

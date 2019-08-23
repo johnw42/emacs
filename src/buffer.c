@@ -124,6 +124,16 @@ static void modify_overlay (struct buffer *, ptrdiff_t, ptrdiff_t);
 static Lisp_Object buffer_lisp_local_variables (struct buffer *, bool);
 
 static void
+nil_buffer (struct buffer *b)
+{
+  //#ifndef NIL_IS_ZERO
+  set_nil (((struct Lisp_Vector *)b)->contents,
+           PSEUDOVECSIZE (struct buffer, own_text));
+  eassert (NILP (BVAR (b, name)));
+  //#endif
+}
+
+static void
 CHECK_OVERLAY (Lisp_Object x)
 {
   CHECK_TYPE (OVERLAYP (x), Qoverlayp, x);
@@ -520,6 +530,7 @@ even if it is dead.  The return value is never nil.  */)
     error ("Empty string for buffer name is not allowed");
 
   b = allocate_buffer ();
+  nil_buffer (b);
 
   /* An ordinary buffer uses its own struct buffer_text.  */
   b->text = &b->own_text;
@@ -904,16 +915,6 @@ delete_all_overlays (struct buffer *b)
 
   set_buffer_overlays_before (b, NULL);
   set_buffer_overlays_after (b, NULL);
-}
-
-static void
-nil_buffer (struct buffer *b)
-{
-#ifndef NIL_IS_ZERO
-  set_nil (((struct Lisp_Vector *)b)->contents,
-           PSEUDOVECSIZE (struct buffer, own_text));
-  eassert (NILP (BVAR (b, name)));
-#endif  
 }
 
 /* Reinitialize everything about a buffer except its name and contents
@@ -5073,9 +5074,16 @@ void
 init_buffer_once (void)
 {
   int idx;
-  
+
+  // TODO(jrw): Why is this necessary?
+  Lisp_Object syntax_table = buffer_defaults.syntax_table_;
+  Lisp_Object category_table = buffer_defaults.category_table_;
+
   nil_buffer (&buffer_defaults);
   nil_buffer (&buffer_local_symbols);
+
+  buffer_defaults.syntax_table_ = syntax_table;
+  buffer_defaults.category_table_ = category_table;
 
   /* Items flagged permanent get an explicit permanent-local property
      added in bindings.el, for clarity.  */

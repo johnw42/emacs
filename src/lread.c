@@ -4398,6 +4398,7 @@ void
 defvar_lisp_nopro (struct Lisp_Objfwd *o_fwd,
 		   const char *namestring, Lisp_Object *address)
 {
+  (void) XLI (*address);
   Lisp_Object sym;
   sym = intern_c_string (namestring);
   o_fwd->type = Lisp_Fwd_Obj;

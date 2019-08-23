@@ -202,7 +202,14 @@ syntax_prefix_flag_p (int c)
   return SYNTAX_FLAGS_PREFIX (SYNTAX_WITH_FLAGS (c));
 }
 
-struct gl_state_s gl_state;		/* Global state of syntax parser.  */
+/* Global state of syntax parser.  */
+struct gl_state_s gl_state =
+  {
+   .object = NIL_INIT,
+   .global_code = NIL_INIT,
+   .current_syntax_table = NIL_INIT,
+   .old_prop = NIL_INIT,
+  };
 
 enum { INTERVALS_AT_ONCE = 10 };	/* 1 + max-number of intervals
 					   to scan to property-change.  */
@@ -3613,13 +3620,6 @@ init_syntax_once (void)
 {
   register int i, c;
   Lisp_Object temp;
-
-#ifndef NIL_IS_ZERO
-  gl_state.object = Qnil;
-  gl_state.global_code = Qnil;
-  gl_state.current_syntax_table = Qnil;
-  gl_state.old_prop = Qnil;
-#endif
 
   /* This has to be done here, before we call Fmake_char_table.  */
   DEFSYM (Qsyntax_table, "syntax-table");

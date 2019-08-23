@@ -2290,7 +2290,9 @@ print_interval (INTERVAL interval, Lisp_Object printcharfun)
 void
 init_print_once (void)
 {
+#ifndef NIL_IS_ZERO
   mem_nil (being_printed, sizeof (being_printed));
+#endif
   
   /* The subroutine object for external-debugging-output is kept here
      for the convenience of the debugger.  */

@@ -2113,6 +2113,7 @@ record_in_backtrace (Lisp_Object function, Lisp_Object *args, ptrdiff_t nargs)
   return count;
 }
 
+void gdb_break(void) {}
 /* Eval a sub-expression of the current expression (i.e. in the same
    lexical scope).  */
 Lisp_Object
@@ -2169,6 +2170,9 @@ eval_sub (Lisp_Object form)
   /* At this point, only original_fun and original_args
      have values that will be used below.  */
  retry:
+
+  /* if (EQ (original_fun, Qpcase)) */
+  /*   gdb_break(); */
 
   /* Optimize for no indirection.  */
   fun = original_fun;
