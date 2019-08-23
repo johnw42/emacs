@@ -20,8 +20,10 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 /* New display code by Gerd Moellmann <gerd@gnu.org>.  */
 /* Xt features made by Fred Pierresteguy.  */
 
-#include <cstdlib>
 #include <config.h>
+#ifdef __cplusplus
+#include <cstdlib>
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>

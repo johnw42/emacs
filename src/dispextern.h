@@ -2208,6 +2208,62 @@ struct composition_it
   int width;
 };
 
+/* Stack of saved values.  New entries are pushed when we begin to
+   process an overlay string or a string from a `glyph' property.
+   Entries are popped when we return to deliver display elements
+   from what we previously had.  */
+struct iterator_stack_entry
+{
+  Lisp_Object string;
+  int string_nchars;
+  ptrdiff_t end_charpos;
+  ptrdiff_t stop_charpos;
+  ptrdiff_t prev_stop;
+  ptrdiff_t base_level_stop;
+  struct composition_it cmp_it;
+  int face_id;
+
+  /* Save values specific to a given method.  */
+  union {
+    /* method == GET_FROM_IMAGE */
+    struct {
+      Lisp_Object object;
+      struct it_slice slice;
+      ptrdiff_t image_id;
+    } image;
+    /* method == GET_FROM_STRETCH */
+    struct {
+      Lisp_Object object;
+    } stretch;
+    /* method == GET_FROM_XWIDGET */
+    struct {
+      Lisp_Object object;
+    } xwidget;
+  } u;
+
+  /* Current text and display positions.  */
+  struct text_pos position;
+  struct display_pos current;
+  Lisp_Object from_overlay;
+  enum glyph_row_area area;
+  enum it_method method;
+  bidi_dir_t paragraph_embedding;
+  bool_bf multibyte_p : 1;
+  bool_bf string_from_display_prop_p : 1;
+  bool_bf string_from_prefix_prop_p : 1;
+  bool_bf display_ellipsis_p : 1;
+  bool_bf avoid_cursor_p : 1;
+  bool_bf bidi_p : 1;
+  bool_bf from_disp_prop_p : 1;
+  enum line_wrap_method line_wrap;
+
+  /* Properties from display property that are reset by another display
+     property.  */
+  short voffset;
+  Lisp_Object space_width;
+  Lisp_Object font_height;
+};
+
 struct it
 {
   /* The window in which we iterate over current_buffer (or a string).  */
@@ -2349,62 +2405,7 @@ struct it
      from a `display' property given by an overlay.  */
   Lisp_Object from_overlay;
 
-  /* Stack of saved values.  New entries are pushed when we begin to
-     process an overlay string or a string from a `glyph' property.
-     Entries are popped when we return to deliver display elements
-     from what we previously had.  */
-  struct iterator_stack_entry
-  {
-    Lisp_Object string;
-    int string_nchars;
-    ptrdiff_t end_charpos;
-    ptrdiff_t stop_charpos;
-    ptrdiff_t prev_stop;
-    ptrdiff_t base_level_stop;
-    struct composition_it cmp_it;
-    int face_id;
-
-    /* Save values specific to a given method.  */
-    union {
-      /* method == GET_FROM_IMAGE */
-      struct {
-	Lisp_Object object;
-	struct it_slice slice;
-	ptrdiff_t image_id;
-      } image;
-      /* method == GET_FROM_STRETCH */
-      struct {
-	Lisp_Object object;
-      } stretch;
-      /* method == GET_FROM_XWIDGET */
-      struct {
-	Lisp_Object object;
-      } xwidget;
-    } u;
-
-    /* Current text and display positions.  */
-    struct text_pos position;
-    struct display_pos current;
-    Lisp_Object from_overlay;
-    enum glyph_row_area area;
-    enum it_method method;
-    bidi_dir_t paragraph_embedding;
-    bool_bf multibyte_p : 1;
-    bool_bf string_from_display_prop_p : 1;
-    bool_bf string_from_prefix_prop_p : 1;
-    bool_bf display_ellipsis_p : 1;
-    bool_bf avoid_cursor_p : 1;
-    bool_bf bidi_p : 1;
-    bool_bf from_disp_prop_p : 1;
-    enum line_wrap_method line_wrap;
-
-    /* Properties from display property that are reset by another display
-       property.  */
-    short voffset;
-    Lisp_Object space_width;
-    Lisp_Object font_height;
-  }
-  stack[IT_STACK_SIZE];
+  struct iterator_stack_entry stack[IT_STACK_SIZE];
 
   /* Stack pointer.  */
   int sp;

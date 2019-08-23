@@ -794,12 +794,12 @@ scan_c_file (char *filename, const char *mode)
 
   if (extension == 'o')
     {
-      int n = strlen(filename);
-      char *buf = alloca(n + 2);
-      memcpy (buf, filename, n - 2);
-      memcpy (buf + n - 2, ".cc", 4);
-      filename = buf;
-      //filename[strlen (filename) - 1] = 'c';
+      /* int n = strlen(filename); */
+      /* char *buf = alloca(n + 2); */
+      /* memcpy (buf, filename, n - 2); */
+      /* memcpy (buf + n - 2, ".cc", 4); */
+      /* filename = buf; */
+      filename[strlen (filename) - 1] = 'c';
     }
 
   infile = fopen (filename, mode);

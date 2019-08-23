@@ -30,9 +30,9 @@ SHELL = @SHELL@
 srcdir = @srcdir@
 top_srcdir = @top_srcdir@
 # MinGW CPPFLAGS may use this.
-CXX = @CXX@
+CC = @CC@
 CFLAGS = @CFLAGS@
-CXXFLAGS = @CXXFLAGS@
+CFLAGS = @CFLAGS@
 CPPFLAGS = @CPPFLAGS@
 LDFLAGS = @LDFLAGS@
 EXEEXT = @EXEEXT@
@@ -365,16 +365,16 @@ EMACS_CFLAGS=-Demacs $(MYCPPFLAGS) -I. -I$(srcdir) \
   $(LIBSYSTEMD_CFLAGS) \
   $(LIBGNUTLS_CFLAGS) $(NOTIFY_CFLAGS) $(CAIRO_CFLAGS) \
   $(WERROR_CFLAGS)
-ALL_CFLAGS = $(EMACS_CFLAGS) $(WARN_CFLAGS) $(CFLAGS) $(CXXFLAGS)
+ALL_CFLAGS = $(EMACS_CFLAGS) $(WARN_CFLAGS) $(CFLAGS)
 ALL_OBJC_CFLAGS = $(EMACS_CFLAGS) \
   $(filter-out $(NON_OBJC_CFLAGS),$(WARN_CFLAGS)) $(CFLAGS) \
   $(GNU_OBJC_CFLAGS)
 
 .SUFFIXES: .m
-.cc.o:
-	$(AM_V_CC)$(CXX) -c $(CPPFLAGS) $(ALL_CFLAGS) $(PROFILING_CFLAGS) $<
+.c.o:
+	$(AM_V_CC)$(CC) -c $(CPPFLAGS) $(ALL_CFLAGS) $(PROFILING_CFLAGS) $<
 .m.o:
-	$(AM_V_CC)$(CXX) -c $(CPPFLAGS) $(ALL_OBJC_CFLAGS) $(PROFILING_CFLAGS) $<
+	$(AM_V_CC)$(CC) -c $(CPPFLAGS) $(ALL_OBJC_CFLAGS) $(PROFILING_CFLAGS) $<
 
 ## lastfile must follow all files whose initialized data areas should
 ## be dumped as pure by dump-emacs.
@@ -570,7 +570,7 @@ buildobj.h: Makefile
 	done >$@.tmp
 	$(AM_V_at)mv $@.tmp $@
 
-GLOBAL_SOURCES = $(base_obj:.o=.cc) $(NS_OBJC_OBJ:.o=.m)
+GLOBAL_SOURCES = $(base_obj:.o=.c) $(NS_OBJC_OBJ:.o=.m)
 
 AM_V_GLOBALS = $(am__v_GLOBALS_@AM_V@)
 am__v_GLOBALS_ = $(am__v_GLOBALS_@AM_DEFAULT_V@)
@@ -597,7 +597,7 @@ $(LIBEGNU_ARCHIVE): $(config_h)
 ## to start if Vinstallation_directory has the wrong value.
 temacs$(EXEEXT): $(LIBXMENU) $(ALLOBJS) \
 	         $(LIBEGNU_ARCHIVE) $(EMACSRES) ${charsets} ${charscript}
-	$(AM_V_CCLD)$(CXX) $(ALL_CFLAGS) $(TEMACS_LDFLAGS) $(LDFLAGS) \
+	$(AM_V_CCLD)$(CC) $(ALL_CFLAGS) $(TEMACS_LDFLAGS) $(LDFLAGS) \
 	  -o temacs $(ALLOBJS) $(LIBEGNU_ARCHIVE) $(W32_RES_LINK) $(LIBES)
 	$(MKDIR_P) $(etc)
 ifneq ($(CANNOT_DUMP),yes)

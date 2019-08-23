@@ -6089,7 +6089,7 @@ get_overlay_strings (struct it *it, ptrdiff_t charpos)
 static void
 push_it (struct it *it, struct text_pos *position)
 {
-  it::iterator_stack_entry *p;
+  struct iterator_stack_entry *p;
 
   eassert (it->sp < IT_STACK_SIZE);
   p = it->stack + it->sp;
@@ -6191,7 +6191,7 @@ iterate_out_of_display_property (struct it *it)
 static void
 pop_it (struct it *it)
 {
-  it::iterator_stack_entry *p;
+  struct iterator_stack_entry *p;
   bool from_display_prop = it->from_disp_prop_p;
   ptrdiff_t prev_pos = IT_CHARPOS (*it);
 

@@ -766,26 +766,36 @@ fi
 
 #### Choose a compiler.
 
+have_cxx=no
+if test $have_cxx != yes; then
+AC_SUBST(HAVE_CXX, 0)
+
+dnl Don't bother to test for C89.
+AC_DEFUN([_AC_PROG_CC_C89], [$2])
+
 dnl Sets GCC=yes if using gcc.
-have_cxx=yes
-if test $have_cxx = yes; then
-  AC_LANG(C++)
-  AC_PROG_CXX([g++ c++ clang++ "$XCRUN g++" "$XCRUN clang++"])
-  if test -n "$XCRUN"; then
-    AC_CHECK_PROGS(AR, [ar "$XCRUN ar"])
-    test -n "$AR" && export AR
-  fi
+AC_PROG_CC([gcc cc cl clang "$XCRUN gcc" "$XCRUN clang"])
+if test -n "$XCRUN"; then
+  AC_CHECK_PROGS(AR, [ar "$XCRUN ar"])
+  test -n "$AR" && export AR
+fi
 
-  AC_PROG_CXX_C_O
+dnl Emacs needs C99 or later.
+gl_PROG_CC_C99
+
+AC_PROG_CC_C_O
 else
-  AC_LANG(C)
-  AC_PROG_CC([gcc cc clang "$XCRUN gcc" "$XCRUN clang"])
-  if test -n "$XCRUN"; then
-    AC_CHECK_PROGS(AR, [ar "$XCRUN ar"])
-    test -n "$AR" && export AR
-  fi
+AC_SUBST(HAVE_CXX, 1)
+dnl AC_LANG(C++)
+AC_PROG_CXX([g++ c++ clang++ "$XCRUN g++" "$XCRUN clang++"])
+if test -n "$XCRUN"; then
+  AC_CHECK_PROGS(AR, [ar "$XCRUN ar"])
+  test -n "$AR" && export AR
+fi
 
-  AC_PROG_CC_C_O
+AC_PROG_CXX_C_O
+
+CC="$CXX -fpermissive"
 fi
 
 if test x$GCC = xyes; then
@@ -928,7 +938,7 @@ AC_CACHE_CHECK([whether the compiler is clang], [emacs_cv_clang],
 WERROR_CFLAGS=
 # When compiling with GCC, prefer -isystem to -I when including system
 # include files, to avoid generating useless diagnostics for the files.
-AS_IF([test $gl_gcc_warnings = no],
+AS_IF([test $gl_gcc_warnings = no && test $have_cxx != yes],
  [
   isystem='-I'
   AS_IF([test "$emacs_cv_clang" = yes],
@@ -1008,9 +1018,7 @@ AS_IF([test $gl_gcc_warnings = no],
     nw="$nw -Wsuggest-attribute=format"
   fi
 
-  if test $have_cxx = no; then
-    gl_MANYWARN_ALL_GCC([ws])
-  fi
+  gl_MANYWARN_ALL_GCC([ws])
   gl_MANYWARN_COMPLEMENT([ws], [$ws], [$nw])
   for w in $ws; do
     gl_WARN_ADD([$w])
@@ -2240,8 +2248,10 @@ if test "${system_malloc}" != yes && test "${doug_lea_malloc}" != yes \
   hybrid_malloc=yes
 fi
 
+if test $have_cxx != yes; then
 hybrid_malloc=no
 system_malloc=yes
+fi
 
 GMALLOC_OBJ=
 HYBRID_MALLOC=
@@ -4043,7 +4053,12 @@ dnl tputs in the test program, due to portability hassles.  When
 dnl cross-compiling, assume the test program will run if it links.
 AC_DEFUN([tputs_link_source], [
   AC_LANG_SOURCE(
-     [[extern "C" void tputs (const char *, int, int (*)(int));
+     [[
+       extern
+       #ifdef __cplusplus
+       "C"
+       #endif
+       void tputs (const char *, int, int (*)(int));
        int main (int argc, char **argv)
        {
 	  if (argc == 10000)
