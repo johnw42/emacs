@@ -768,10 +768,7 @@ fi
 
 OPTION_DEFAULT_OFF([cxx], [])
 
-with_cxx=no
 if test $with_cxx != yes; then
-AC_SUBST(HAVE_CXX, 0)
-
 dnl Don't bother to test for C89.
 AC_DEFUN([_AC_PROG_CC_C89], [$2])
 
@@ -940,7 +937,7 @@ AC_CACHE_CHECK([whether the compiler is clang], [emacs_cv_clang],
 WERROR_CFLAGS=
 # When compiling with GCC, prefer -isystem to -I when including system
 # include files, to avoid generating useless diagnostics for the files.
-AS_IF([test $gl_gcc_warnings = no && test $with_cxx != yes],
+AS_IF([test $gl_gcc_warnings = no || test $with_cxx = yes],
  [
   isystem='-I'
   AS_IF([test "$emacs_cv_clang" = yes],
@@ -2235,6 +2232,7 @@ doug_lea_malloc=$emacs_cv_var_doug_lea_malloc
 hybrid_malloc=
 system_malloc=yes
 
+AS_IF([test $with_cxx != yes], [
 test "$CANNOT_DUMP" = yes ||
 case "$opsys" in
   ## darwin ld insists on the use of malloc routines in the System framework.
@@ -2248,12 +2246,7 @@ esac
 if test "${system_malloc}" != yes && test "${doug_lea_malloc}" != yes \
    && test "${UNEXEC_OBJ}" = unexelf.o; then
   hybrid_malloc=yes
-fi
-
-if test $with_cxx != yes; then
-hybrid_malloc=no
-system_malloc=yes
-fi
+fi])
 
 GMALLOC_OBJ=
 HYBRID_MALLOC=
