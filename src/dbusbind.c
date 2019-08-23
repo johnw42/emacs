@@ -28,12 +28,7 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 #include "keyboard.h"
 #include "process.h"
 
-#ifdef __cplusplus
-#define this this_
-#define class class_
-#define private private_
-#define new new_
-#endif
+#include "cxx_kw.h"
 
 #ifndef DBUS_NUM_MESSAGE_TYPES
 #define DBUS_NUM_MESSAGE_TYPES 5

@@ -140,12 +140,17 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 #endif
 
 #ifdef __cplusplus
-#define this this_
-#define class class_
-#define private private_
-#define new new_
-#define delete delete_
+class QuasiXPointer {
+ public:
+  QuasiXPointer(void* arg): m_arg(arg) {}
+  operator XPointer() const { return (XPointer)m_arg; }
+  operator XPointer*() const { return (XPointer*)m_arg; }
+ private:
+  void* m_arg;
+};
 #endif
+
+#include "cxx_kw.h"
 
 /* Default to using XIM if available.  */
 #ifdef USE_XIM
@@ -10192,7 +10197,7 @@ xim_initialize (struct x_display_info *dpyinfo, char *resource_name)
 	 emacs_class, xim_instantiate_callback,
 	 /* This is XPointer in XFree86 but (XPointer *)
 	    on Tru64, at least, hence the configure test.  */
-	 (XRegisterIMInstantiateCallback_arg6) xim_inst);
+	 XRegisterIMInstantiateCallback_arg6 (xim_inst));
       eassert (ret == True);
 #else /* not HAVE_X11R6_XIM */
       xim_open_dpy (dpyinfo, resource_name);
@@ -10200,7 +10205,6 @@ xim_initialize (struct x_display_info *dpyinfo, char *resource_name)
     }
 #endif /* HAVE_XIM */
 }
-
 
 /* Close the connection to the XIM server on display DPYINFO. */
 
@@ -10218,7 +10222,7 @@ xim_close_dpy (struct x_display_info *dpyinfo)
 	  Bool ret = XUnregisterIMInstantiateCallback
 	    (dpyinfo->display, dpyinfo->xrdb, xim_inst->resource_name,
 	     emacs_class, xim_instantiate_callback,
-	     (XRegisterIMInstantiateCallback_arg6) xim_inst);
+	     XRegisterIMInstantiateCallback_arg6 (xim_inst));
 	  eassert (ret == True);
 	}
       xfree (xim_inst->resource_name);

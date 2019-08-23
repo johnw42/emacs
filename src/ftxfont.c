@@ -29,6 +29,8 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 #include "blockinput.h"
 #include "font.h"
 
+#include "cxx_kw.h"
+
 /* FTX font driver.  */
 
 struct ftxfont_frame_data

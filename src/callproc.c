@@ -617,17 +617,17 @@ call_process (ptrdiff_t nargs, Lisp_Object *args, int filefd,
 
     pid = vfork ();
 
-    buffer = buffer_volatile;
-    coding_systems = coding_systems_volatile;
-    current_dir = current_dir_volatile;
-    display_p = display_p_volatile;
-    sa_must_free = sa_must_free_volatile;
-    fd_error = fd_error_volatile;
-    filefd = filefd_volatile;
-    count = count_volatile;
-    sa_avail = sa_avail_volatile;
-    sa_count = sa_count_volatile;
-    new_argv = new_argv_volatile;
+    buffer = nonvol (buffer_volatile);
+    coding_systems = nonvol (coding_systems_volatile);
+    current_dir = nonvol (current_dir_volatile);
+    display_p = nonvol (display_p_volatile);
+    sa_must_free = nonvol (sa_must_free_volatile);
+    fd_error = nonvol (fd_error_volatile);
+    filefd = nonvol (filefd_volatile);
+    count = nonvol (count_volatile);
+    sa_avail = nonvol (sa_avail_volatile);
+    sa_count = nonvol (sa_count_volatile);
+    new_argv = nonvol (new_argv_volatile);
 
     for (i = 0; i < CALLPROC_FDS; i++)
       callproc_fd[i] = callproc_fd_volatile[i];

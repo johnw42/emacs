@@ -130,13 +130,15 @@ int _cdecl _spawnlp (int, const char *, const char *, ...);
 #include "syssignal.h"
 #include "systime.h"
 
+#include "cxx_kw.h"
+
 /* ULLONG_MAX is missing on Red Hat Linux 7.3; see Bug#11781.  */
 #ifndef ULLONG_MAX
 #define ULLONG_MAX TYPE_MAXIMUM (unsigned long long int)
 #endif
 
 /* Declare here, including term.h is problematic on some systems.  */
-extern void tputs (const char *, int, int (*)(int));
+EXTERN_C void tputs (const char *, int, int (*)(int));
 
 static const int baud_convert[] =
   {

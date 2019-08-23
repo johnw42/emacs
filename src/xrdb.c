@@ -43,13 +43,7 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 #include <pwd.h>
 #endif
 
-#ifdef __cplusplus
-#define this this_
-#define class class_
-#define private private_
-#define new new_
-#define delete delete_
-#endif
+#include "cxx_kw.h"
 
 /* X file search path processing.  */
 

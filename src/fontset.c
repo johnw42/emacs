@@ -40,6 +40,8 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 #endif /* HAVE_WINDOW_SYSTEM */
 #include "font.h"
 
+#include "cxx_kw.h"
+
 /* FONTSET
 
    A fontset is a collection of font related information to give

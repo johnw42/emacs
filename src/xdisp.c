@@ -336,13 +336,7 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 #include TERM_HEADER
 #endif /* HAVE_WINDOW_SYSTEM */
 
-#ifdef __cplusplus
-#define this this_
-#define class class_
-#define private private_
-#define new new_
-#define delete delete_
-#endif
+#include "cxx_kw.h"
 
 #ifndef FRAME_X_OUTPUT
 #define FRAME_X_OUTPUT(f) ((f)->output_data.x)
@@ -32097,7 +32091,7 @@ x_draw_bottom_divider (struct window *w)
       int x1 = WINDOW_RIGHT_EDGE_X (w);
       int y0 = WINDOW_BOTTOM_EDGE_Y (w) - WINDOW_BOTTOM_DIVIDER_WIDTH (w);
       int y1 = WINDOW_BOTTOM_EDGE_Y (w);
-      struct window *p = !NILP (w->parent) ? XWINDOW (w->parent) : false;
+      struct window *p = !NILP (w->parent) ? XWINDOW (w->parent) : NULL;
 
       /* If W is vertically combined and has a sibling below, don't draw
 	 over any right divider.  */

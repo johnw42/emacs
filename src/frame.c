@@ -53,12 +53,7 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 #include "widget.h"
 #endif
 
-#ifdef __cplusplus
-#define this this_
-#define class class_
-#define private private_
-#define new new_
-#endif
+#include "cxx_kw.h"
 
 /* The currently selected frame.  */
 

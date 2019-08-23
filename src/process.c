@@ -2072,13 +2072,13 @@ create_process (Lisp_Object process, char **new_argv, Lisp_Object current_dir)
   pid = vfork ();
 #endif
 
-  current_dir = current_dir_volatile;
-  lisp_pty_name = lisp_pty_name_volatile;
-  new_argv = new_argv_volatile;
-  forkin = forkin_volatile;
-  forkout = forkout_volatile;
-  forkerr = forkerr_volatile;
-  p = p_volatile;
+  current_dir = nonvol (current_dir_volatile);
+  lisp_pty_name = nonvol (lisp_pty_name_volatile);
+  new_argv = nonvol (new_argv_volatile);
+  forkin = nonvol (forkin_volatile);
+  forkout = nonvol (forkout_volatile);
+  forkerr = nonvol (forkerr_volatile);
+  p = nonvol (p_volatile);
 
   pty_flag = p->pty_flag;
 
@@ -2736,6 +2736,9 @@ set up yet, this function will block until socket setup has completed.  */)
 #endif
 
 
+enum opttype_t { SOPT_UNKNOWN, SOPT_BOOL, SOPT_INT, SOPT_IFNAME, SOPT_LINGER };
+enum optbit_t { OPIX_NONE = 0, OPIX_MISC = 1, OPIX_REUSEADDR = 2 };
+
 static const struct socket_options {
   /* The name of this option.  Should be lowercase version of option
      name without SO_ prefix.  */
@@ -2744,8 +2747,8 @@ static const struct socket_options {
   int optlevel;
   /* Option number SO_...  */
   int optnum;
-  enum { SOPT_UNKNOWN, SOPT_BOOL, SOPT_INT, SOPT_IFNAME, SOPT_LINGER } opttype;
-  enum { OPIX_NONE = 0, OPIX_MISC = 1, OPIX_REUSEADDR = 2 } optbit;
+  enum opttype_t opttype;
+  enum optbit_t optbit;
 } socket_options[] =
   {
 #ifdef SO_BINDTODEVICE

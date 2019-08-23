@@ -97,12 +97,8 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 #include "../lwlib/xlwmenu.h"
 #endif
 
-#ifdef __cplusplus
-#define this this_
-#define class class_
-#define private private_
-#define new new_
-#define delete delete_
+#ifndef explicit
+#error oops
 #endif
 
 /* Unique id counter for widgets created by the Lucid Widget Library.  */
@@ -118,6 +114,8 @@ extern LWLIB_ID widget_id_tick;
 #ifdef USE_GTK
 
 #endif /* USE_GTK */
+
+#include "cxx_kw.h"
 
 #define MAXREQUEST(dpy) (XMaxRequestSize (dpy))
 
@@ -848,6 +846,7 @@ x_set_undecorated (struct frame *f, Lisp_Object new_value, Lisp_Object old_value
  *
  * Some window managers may not honor this parameter.
  */
+
 static void
 x_set_parent_frame (struct frame *f, Lisp_Object new_value, Lisp_Object old_value)
 {
@@ -1214,6 +1213,7 @@ x_set_mouse_color_handler (Display *dpy, XErrorEvent *event,
     /* If we failed to allocate it, don't try to free it.  */
     cursor_data->cursor[cursor_data->error_cursor] = 0;
 }
+
 
 static void
 x_set_mouse_color (struct frame *f, Lisp_Object arg, Lisp_Object oldval)
@@ -1979,7 +1979,6 @@ x_set_name_internal (struct frame *f, Lisp_Object name)
    If EXPLICIT is false, that indicates that Emacs redisplay code is
        suggesting a new name, which lisp code should override; if
        F->explicit_name is set, ignore the new name; otherwise, set it.  */
-
 static void
 x_set_name (struct frame *f, Lisp_Object name, bool explicit)
 {
@@ -7270,6 +7269,8 @@ nil, it defaults to the selected frame. */)
 #include <X11/XKBlib.h>
 #include <X11/keysym.h>
 #endif
+
+#include "cxx_kw.h"
 
 DEFUN ("x-backspace-delete-keys-p", Fx_backspace_delete_keys_p,
        Sx_backspace_delete_keys_p, 0, 1, 0,

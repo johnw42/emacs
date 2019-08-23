@@ -62,9 +62,7 @@ static int been_here = -1;
 #include "w32term.h"
 #endif
 
-#ifdef __cplusplus
-#define try try_
-#endif
+#include "cxx_kw.h"
 
 static void tty_set_scroll_region (struct frame *f, int start, int stop);
 static void turn_on_face (struct frame *, int face_id);

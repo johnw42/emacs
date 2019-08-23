@@ -30,6 +30,8 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 #include "dispextern.h"
 #include "buffer.h"
 
+#include "cxx_kw.h"
+
 /* CACHEABLE is ordinarily nothing, except it is 'volatile' if
    necessary to cajole GCC into not warning incorrectly that a
    variable should be volatile.  */
@@ -1269,7 +1271,7 @@ internal_lisp_condition_case (Lisp_Object var, Lisp_Object bodyform,
     *--clauses = XCAR (tail);
   for (ptrdiff_t i = 0; i < clausenb; i++)
     {
-      Lisp_Object clause = clauses[i];
+      Lisp_Object clause = nonvol (clauses[i]);
       Lisp_Object condition = CONSP (clause) ? XCAR (clause) : Qnil;
       if (!CONSP (condition))
 	condition = list1 (condition);

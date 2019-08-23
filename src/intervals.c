@@ -47,6 +47,8 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 #include "puresize.h"
 #include "keymap.h"
 
+#include "cxx_kw.h"
+
 /* Test for membership, allowing for t (actually any non-cons) to mean the
    universal set.  */
 

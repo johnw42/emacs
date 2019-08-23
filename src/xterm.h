@@ -49,14 +49,6 @@ typedef Widget xt_or_gtk_widget;
 #include <gtk/gtk.h>
 #include <gdk/gdkx.h>
 
-#ifdef __cplusplus
-#define this this_
-#define class class_
-#define private private_
-#define new new_
-#define delete delete_
-#endif
-
 /* Some definitions to reduce conditionals.  */
 typedef GtkWidget *xt_or_gtk_widget;
 #undef XSync
@@ -124,6 +116,8 @@ typedef GtkWidget *xt_or_gtk_widget;
 
 #include "dispextern.h"
 #include "termhooks.h"
+
+#include "cxx_kw.h"
 
 INLINE_HEADER_BEGIN
 
@@ -1313,10 +1307,6 @@ extern void x_session_close (void);
 
 INLINE_HEADER_END
 
-#undef this
-#undef class
-#undef private
-#undef new
-#undef delete
+#include "cxx_kw_off.h"
 
 #endif /* XTERM_H */

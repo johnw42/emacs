@@ -48,12 +48,7 @@ typedef struct {
 #include "msdos.h"
 #endif
 
-#ifdef __cplusplus
-#define this this_
-#define class class_
-#define private private_
-#define new new_
-#endif
+#include "cxx_kw.h"
 
 INLINE_HEADER_BEGIN
 
@@ -787,6 +782,8 @@ enum glyph_row_area
   RIGHT_MARGIN_AREA,
   LAST_AREA
 };
+
+ENUM_OPS (glyph_row_area)
 
 
 /* Rows of glyphs in a windows or frame glyph matrix.

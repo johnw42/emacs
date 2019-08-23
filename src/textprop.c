@@ -24,6 +24,8 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 #include "buffer.h"
 #include "window.h"
 
+#include "cxx_kw.h"
+
 /* Test for membership, allowing for t (actually any non-cons) to mean the
    universal set.  */
 

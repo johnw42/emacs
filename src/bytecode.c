@@ -48,7 +48,9 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
    BYTE_CODE_METER.  */
 #if (defined __GNUC__ && !defined __STRICT_ANSI__ && !defined __CHKP__ \
      && !BYTE_CODE_SAFE && !defined BYTE_CODE_METER)
+#ifndef __cplusplus
 #define BYTE_CODE_THREADED
+#endif
 #endif
 
 

@@ -29,6 +29,12 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
    only) because it historically was included here and changing that
    would take some work.  */
 
+#ifdef __cplusplus
+#define EXTERN_C extern "C"
+#else
+#define EXTERN_C extern
+#endif
+
 #include <stdbool.h>
 
 #if defined WINDOWSNT && !defined DEFER_MS_W32_H
@@ -227,8 +233,8 @@ extern void _DebPrint (const char *fmt, ...);
    Only Emacs uses time_rz so this is OK.  */
 #define getenv_TZ emacs_getenv_TZ
 #define setenv_TZ emacs_setenv_TZ
-extern char *emacs_getenv_TZ (void);
-extern int emacs_setenv_TZ (char const *);
+EXTERN_C char *emacs_getenv_TZ (void);
+EXTERN_C int emacs_setenv_TZ (char const *);
 
 #if __GNUC__ >= 3  /* On GCC 3.0 we might get a warning.  */
 #define NO_INLINE __attribute__((noinline))
@@ -399,3 +405,21 @@ extern int emacs_setenv_TZ (char const *);
 #else
 # define UNINIT /* empty */
 #endif
+
+#ifdef __cplusplus
+#undef restrict
+#define restrict
+#endif
+
+#ifdef __cplusplus
+#define ENUM_OPS(etype) \
+  inline void \
+  operator++ (etype& it, int) { it = it + 1; }      \
+  inline void \
+  operator-- (etype& it, int) { it = it - 1; }
+#else
+#define ENUM_OPS(e)
+#endif
+
+#define TO_XPOINTER_STAR(x) ((XPointer*)(x))
+#define TO_XPOINTER(x) ((XPointer)(x))

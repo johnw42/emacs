@@ -34,7 +34,7 @@ char *UP, *BC, PC;
    format is different too.
 */
 
-extern char *tparm (const char *str, ...);
+EXTERN_C char *tparm (const char *str, ...);
 
 
 char *

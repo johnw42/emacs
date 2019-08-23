@@ -55,6 +55,8 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 #include "keymap.h"
 #include "window.h"
 
+#include "cxx_kw.h"
+
 /* Actually allocate storage for these variables.  */
 
 Lisp_Object current_global_map;	/* Current global keymap.  */

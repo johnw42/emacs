@@ -23,21 +23,21 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 /* Don't try to include termcap.h.  On some systems, configure finds a
    non-standard termcap.h that the main build won't find.  */
 
-void tputs (const char *, int, int (*) (int));
-int tgetent (char *, const char *);
-int tgetflag (const char *);
-int tgetnum (const char *);
-char *tgetstr (const char *, char **);
-char *tgoto (const char *, int, int);
+EXTERN_C void tputs (const char *, int, int (*) (int));
+EXTERN_C int tgetent (char *, const char *);
+EXTERN_C int tgetflag (const char *);
+EXTERN_C int tgetnum (const char *);
+EXTERN_C char *tgetstr (const char *, char **);
+EXTERN_C char *tgoto (const char *, int, int);
 
-char *tparam (const char *, char *, int, int, int, int, int);
+EXTERN_C char *tparam (const char *, char *, int, int, int, int, int);
 
 extern char PC;
 extern char *BC;
 extern char *UP;
 
 #ifdef TERMINFO
-char *tigetstr(const char *);
+EXTERN_C char *tigetstr(const char *);
 #endif
 
 #endif /* EMACS_TPARAM_H */

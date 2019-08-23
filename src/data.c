@@ -1033,7 +1033,7 @@ wrong_choice (Lisp_Object choice, Lisp_Object wrong)
   Lisp_Object obj, *args;
   AUTO_STRING (one_of, "One of ");
   AUTO_STRING (comma, ", ");
-  AUTO_STRING (or, " or ");
+  AUTO_STRING (or_, " or ");
   AUTO_STRING (should_be_specified, " should be specified");
 
   USE_SAFE_ALLOCA;
@@ -1045,7 +1045,7 @@ wrong_choice (Lisp_Object choice, Lisp_Object wrong)
     {
       args[i++] = SYMBOL_NAME (XCAR (obj));
       args[i++] = (NILP (XCDR (obj)) ? should_be_specified
-		   : NILP (XCDR (XCDR (obj))) ? or : comma);
+		   : NILP (XCDR (XCDR (obj))) ? or_ : comma);
     }
 
   obj = Fconcat (i, args);

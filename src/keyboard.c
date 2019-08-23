@@ -71,6 +71,8 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 #include TERM_HEADER
 #endif /* HAVE_WINDOW_SYSTEM */
 
+#include "cxx_kw.h"
+
 /* Work around GCC bug 54561.  */
 #if GNUC_PREREQ (4, 3, 0)
 # pragma GCC diagnostic ignored "-Wclobbered"
@@ -1853,7 +1855,7 @@ safe_run_hooks (Lisp_Object hook)
   ptrdiff_t count = SPECPDL_INDEX ();
 
   specbind (Qinhibit_quit, Qt);
-  run_hook_with_args (2, ((Lisp_Object []) {hook, hook}), safe_run_hook_funcall);
+  run_hook_with_args (2, INLINE_ARRAY(Lisp_Object, hook, hook), safe_run_hook_funcall);
   unbind_to (count, Qnil);
 }
 
@@ -2937,7 +2939,7 @@ read_char (int commandflag, Lisp_Object map,
   record_char (c);
   recorded = true;
   if (! NILP (also_record))
-    record_char (also_record);
+    record_char (nonvol (also_record));
 
   /* Wipe the echo area.
      But first, if we are about to use an input method,
@@ -2947,7 +2949,7 @@ read_char (int commandflag, Lisp_Object map,
       && ' ' <= XINT (c) && XINT (c) < 256 && XINT (c) != 127)
     {
       previous_echo_area_message = Fcurrent_message ();
-      Vinput_method_previous_message = previous_echo_area_message;
+      Vinput_method_previous_message = nonvol (previous_echo_area_message);
     }
 
   /* Now wipe the echo area, except for help events which do their
@@ -3037,7 +3039,7 @@ read_char (int commandflag, Lisp_Object map,
 	{
 	  /* Bring back the previous message, if any.  */
 	  if (! NILP (previous_echo_area_message))
-	    message_with_string ("%s", previous_echo_area_message, 0);
+	    message_with_string ("%s", nonvol (previous_echo_area_message), 0);
 	  goto retry;
 	}
       /* It returned one event or more.  */
@@ -3093,7 +3095,7 @@ read_char (int commandflag, Lisp_Object map,
       /* Record this character as part of the current key.  */
       add_command_key (c);
       if (! NILP (also_record))
-	add_command_key (also_record);
+	add_command_key (nonvol (also_record));
 
       echo_update ();
     }
@@ -8814,7 +8816,7 @@ keyremap_step (Lisp_Object *keybuf, int bufsize, volatile keyremap *fkey,
   key = keybuf[fkey->end++];
 
   if (KEYMAPP (fkey->parent))
-    next = access_keymap_keyremap (fkey->map, key, prompt, doit);
+    next = access_keymap_keyremap (nonvol (fkey->map), key, prompt, doit);
   else
     next = Qnil;
 
@@ -8844,7 +8846,7 @@ keyremap_step (Lisp_Object *keybuf, int bufsize, volatile keyremap *fkey,
 	  = Faref (next, make_number (i));
 
       fkey->start = fkey->end += *diff;
-      fkey->map = fkey->parent;
+      fkey->map = nonvol (fkey->parent);
 
       return 1;
     }
@@ -8856,7 +8858,7 @@ keyremap_step (Lisp_Object *keybuf, int bufsize, volatile keyremap *fkey,
   if (!CONSP (fkey->map))
     {
       fkey->end = ++fkey->start;
-      fkey->map = fkey->parent;
+      fkey->map = nonvol (fkey->parent);
     }
   return 0;
 }

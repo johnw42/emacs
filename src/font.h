@@ -183,6 +183,8 @@ enum font_property_index
     FONT_OBJECT_MAX
   };
 
+ENUM_OPS(font_property_index)
+
 /* Return the numeric weight value of FONT.  */
 #define FONT_WEIGHT_NUMERIC(font)		\
   (INTEGERP (AREF ((font), FONT_WEIGHT_INDEX))	\

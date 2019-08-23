@@ -19,6 +19,10 @@
 #ifndef FILEVERCMP_H
 #define FILEVERCMP_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* Compare version strings:
 
    This function compares strings S1 and S2:
@@ -38,5 +42,9 @@
 
    This function is intended to be a replacement for strverscmp. */
 int filevercmp (const char *s1, const char *s2) _GL_ATTRIBUTE_PURE;
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* FILEVERCMP_H */

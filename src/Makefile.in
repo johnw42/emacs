@@ -32,8 +32,8 @@ top_srcdir = @top_srcdir@
 # MinGW CPPFLAGS may use this.
 abs_top_srcdir=@abs_top_srcdir@
 VPATH = $(srcdir)
-CC = @CC@
-CFLAGS = @CFLAGS@
+CC = @CC_OR_CXX@
+CFLAGS = @CFLAGS@ @CXXFLAGS@
 CPPFLAGS = @CPPFLAGS@
 LDFLAGS = @LDFLAGS@
 EXEEXT = @EXEEXT@

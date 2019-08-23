@@ -3817,7 +3817,7 @@ analyze_first (const_re_char *p, const_re_char *pend, char *fastmap,
 	       const int multibyte)
 {
   int j, k;
-  boolean not;
+  boolean not_;
 
   /* If all elements for base leading-codes in fastmap is set, this
      flag is set true.  */
@@ -3908,16 +3908,16 @@ analyze_first (const_re_char *p, const_re_char *pend, char *fastmap,
 	  FALLTHROUGH;
 	case charset:
 	  if (!fastmap) break;
-	  not = (re_opcode_t) *(p - 1) == charset_not;
+	  not_ = (re_opcode_t) *(p - 1) == charset_not;
 	  for (j = CHARSET_BITMAP_SIZE (&p[-1]) * BYTEWIDTH - 1, p++;
 	       j >= 0; j--)
-	    if (!!(p[j / BYTEWIDTH] & (1 << (j % BYTEWIDTH))) ^ not)
+	    if (!!(p[j / BYTEWIDTH] & (1 << (j % BYTEWIDTH))) ^ not_)
 	      fastmap[j] = 1;
 
 #ifdef emacs
 	  if (/* Any leading code can possibly start a character
 		 which doesn't match the specified set of characters.  */
-	      not
+	      not_
 	      ||
 	      /* If we can match a character class, we can match any
 		 multibyte characters.  */
@@ -3934,7 +3934,7 @@ analyze_first (const_re_char *p, const_re_char *pend, char *fastmap,
 		}
 	    }
 
-	  else if (!not && CHARSET_RANGE_TABLE_EXISTS_P (&p[-2])
+	  else if (!not_ && CHARSET_RANGE_TABLE_EXISTS_P (&p[-2])
 		   && match_any_multibyte_characters == false)
 	    {
 	      /* Set fastmap[I] to 1 where I is a leading code of each
@@ -3967,10 +3967,10 @@ analyze_first (const_re_char *p, const_re_char *pend, char *fastmap,
 	case notsyntaxspec:
 	  if (!fastmap) break;
 #ifndef emacs
-	  not = (re_opcode_t)p[-1] == notsyntaxspec;
+	  not_ = (re_opcode_t)p[-1] == notsyntaxspec;
 	  k = *p++;
 	  for (j = 0; j < (1 << BYTEWIDTH); j++)
-	    if ((SYNTAX (j) == (enum syntaxcode) k) ^ not)
+	    if ((SYNTAX (j) == (enum syntaxcode) k) ^ not_)
 	      fastmap[j] = 1;
 	  break;
 #else  /* emacs */
@@ -3981,10 +3981,10 @@ analyze_first (const_re_char *p, const_re_char *pend, char *fastmap,
 	case categoryspec:
 	case notcategoryspec:
 	  if (!fastmap) break;
-	  not = (re_opcode_t)p[-1] == notcategoryspec;
+	  not_ = (re_opcode_t)p[-1] == notcategoryspec;
 	  k = *p++;
 	  for (j = (1 << BYTEWIDTH); j >= 0; j--)
-	    if ((CHAR_HAS_CATEGORY (j, k)) ^ not)
+	    if ((CHAR_HAS_CATEGORY (j, k)) ^ not_)
 	      fastmap[j] = 1;
 
 	  /* Any leading code can possibly start a character which
@@ -4630,7 +4630,7 @@ static bool
 execute_charset (const_re_char **pp, unsigned c, unsigned corig, bool unibyte)
 {
   re_char *p = *pp, *rtp = NULL;
-  bool not = (re_opcode_t) *p == charset_not;
+  bool not_ = (re_opcode_t) *p == charset_not;
 
   if (CHARSET_RANGE_TABLE_EXISTS_P (p))
     {
@@ -4648,7 +4648,7 @@ execute_charset (const_re_char **pp, unsigned c, unsigned corig, bool unibyte)
 	 case the bit list is a full 32 bytes long.  */
       if (c < (unsigned) (CHARSET_BITMAP_SIZE (p) * BYTEWIDTH)
 	  && p[2 + c / BYTEWIDTH] & (1 << (c % BYTEWIDTH)))
-	return !not;
+	return !not_;
     }
 #ifdef emacs
   else if (rtp)
@@ -4675,18 +4675,18 @@ execute_charset (const_re_char **pp, unsigned c, unsigned corig, bool unibyte)
 	  (class_bits & BIT_PUNCT && ISPUNCT (c)) ||
 	  (class_bits & BIT_GRAPH && ISGRAPH (c)) ||
 	  (class_bits & BIT_PRINT && ISPRINT (c)))
-	return !not;
+	return !not_;
 
       for (p = *pp; rtp < p; rtp += 2 * 3)
 	{
 	  EXTRACT_CHARACTER (range_start, rtp);
 	  EXTRACT_CHARACTER (range_end, rtp + 3);
 	  if (range_start <= c && c <= range_end)
-	    return !not;
+	    return !not_;
 	}
     }
 #endif /* emacs */
-  return not;
+  return not_;
 }
 
 /* Non-zero if "p1 matches something" implies "p2 fails".  */
@@ -5882,14 +5882,14 @@ re_match_2_internal (struct re_pattern_buffer *bufp, const_re_char *string1,
 	case wordbound:
 	case notwordbound:
 	  {
-	    boolean not = (re_opcode_t) *(p - 1) == notwordbound;
-	    DEBUG_PRINT ("EXECUTING %swordbound.\n", not ? "not" : "");
+	    boolean not_ = (re_opcode_t) *(p - 1) == notwordbound;
+	    DEBUG_PRINT ("EXECUTING %swordbound.\n", not_ ? "not" : "");
 
 	    /* We SUCCEED (or FAIL) in one of the following cases: */
 
 	    /* Case 1: D is at the beginning or the end of string.  */
 	    if (AT_STRINGS_BEG (d) || AT_STRINGS_END (d))
-	      not = !not;
+	      not_ = !not_;
 	    else
 	      {
 		/* C1 is the character before D, S1 is the syntax of C1, C2
@@ -5916,9 +5916,9 @@ re_match_2_internal (struct re_pattern_buffer *bufp, const_re_char *string1,
 		    /* Case 3: Both of S1 and S2 are Sword, and macro
 		       WORD_BOUNDARY_P (C1, C2) returns nonzero.  */
 		    || ((s1 == Sword) && WORD_BOUNDARY_P (c1, c2)))
-		  not = !not;
+		  not_ = !not_;
 	      }
-	    if (not)
+	    if (not_)
 	      break;
 	    else
 	      goto fail;
@@ -6103,9 +6103,9 @@ re_match_2_internal (struct re_pattern_buffer *bufp, const_re_char *string1,
 	case syntaxspec:
 	case notsyntaxspec:
 	  {
-	    boolean not = (re_opcode_t) *(p - 1) == notsyntaxspec;
+	    boolean not_ = (re_opcode_t) *(p - 1) == notsyntaxspec;
 	    mcnt = *p++;
-	    DEBUG_PRINT ("EXECUTING %ssyntaxspec %d.\n", not ? "not" : "",
+	    DEBUG_PRINT ("EXECUTING %ssyntaxspec %d.\n", not_ ? "not" : "",
 			 mcnt);
 	    PREFETCH ();
 #ifdef emacs
@@ -6120,7 +6120,7 @@ re_match_2_internal (struct re_pattern_buffer *bufp, const_re_char *string1,
 	      re_wchar_t c;
 
 	      GET_CHAR_AFTER (c, d, len);
-	      if ((SYNTAX (c) != (enum syntaxcode) mcnt) ^ not)
+	      if ((SYNTAX (c) != (enum syntaxcode) mcnt) ^ not_)
 		goto fail;
 	      d += len;
 	    }
@@ -6137,17 +6137,17 @@ re_match_2_internal (struct re_pattern_buffer *bufp, const_re_char *string1,
 	case categoryspec:
 	case notcategoryspec:
 	  {
-	    boolean not = (re_opcode_t) *(p - 1) == notcategoryspec;
+	    boolean not_ = (re_opcode_t) *(p - 1) == notcategoryspec;
 	    mcnt = *p++;
 	    DEBUG_PRINT ("EXECUTING %scategoryspec %d.\n",
-			 not ? "not" : "", mcnt);
+			 not_ ? "not" : "", mcnt);
 	    PREFETCH ();
 
 	    {
 	      int len;
 	      re_wchar_t c;
 	      GET_CHAR_AFTER (c, d, len);
-	      if ((!CHAR_HAS_CATEGORY (c, mcnt)) ^ not)
+	      if ((!CHAR_HAS_CATEGORY (c, mcnt)) ^ not_)
 		goto fail;
 	      d += len;
 	    }

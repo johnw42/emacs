@@ -3190,6 +3190,8 @@ static bool xpm_load (struct frame *f, struct image *img);
 #endif /* not HAVE_NTGUI */
 #endif /* HAVE_XPM */
 
+#include "cxx_kw.h"
+
 #if defined (HAVE_XPM) || defined (HAVE_NS)
 
 /* Indices of image specification fields in xpm_format, below.  */
@@ -6474,6 +6476,14 @@ jpeg_resync_to_restart_wrapper (j_decompress_ptr cinfo, int desired)
 
 # endif /* WINDOWSNT */
 
+enum failure_code_t
+  {
+   MY_JPEG_ERROR_EXIT,
+   MY_JPEG_INVALID_IMAGE_SIZE,
+   MY_JPEG_CANNOT_CREATE_X
+  };
+
+
 struct my_jpeg_error_mgr
 {
   struct jpeg_error_mgr pub;
@@ -6482,12 +6492,7 @@ struct my_jpeg_error_mgr
   /* The remaining members are so that longjmp doesn't munge local
      variables.  */
   struct jpeg_decompress_struct cinfo;
-  enum
-    {
-      MY_JPEG_ERROR_EXIT,
-      MY_JPEG_INVALID_IMAGE_SIZE,
-      MY_JPEG_CANNOT_CREATE_X
-    } failure_code;
+  enum failure_code_t failure_code;
 };
 
 

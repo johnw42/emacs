@@ -37,6 +37,8 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 #include "puresize.h"
 #include "gnutls.h"
 
+#include "cxx_kw.h"
+
 #if defined WINDOWSNT && defined HAVE_GNUTLS3
 # define gnutls_rnd w32_gnutls_rnd
 #endif
@@ -437,14 +439,14 @@ static Lisp_Object concat (ptrdiff_t nargs, Lisp_Object *args,
 Lisp_Object
 concat2 (Lisp_Object s1, Lisp_Object s2)
 {
-  return concat (2, ((Lisp_Object []) {s1, s2}), Lisp_String, 0);
+  return concat (2, INLINE_ARRAY(Lisp_Object, s1, s2), Lisp_String, 0);
 }
 
 /* ARGSUSED */
 Lisp_Object
 concat3 (Lisp_Object s1, Lisp_Object s2, Lisp_Object s3)
 {
-  return concat (3, ((Lisp_Object []) {s1, s2, s3}), Lisp_String, 0);
+  return concat (3, INLINE_ARRAY(Lisp_Object, s1, s2, s3), Lisp_String, 0);
 }
 
 DEFUN ("append", Fappend, Sappend, 0, MANY, 0,

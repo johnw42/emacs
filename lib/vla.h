@@ -25,3 +25,8 @@
 #else
 # define VLA_ELEMS(n) static n
 #endif
+
+#ifdef __cplusplus
+#undef VLA_ELEMS
+#define VLA_ELEMS(n)
+#endif

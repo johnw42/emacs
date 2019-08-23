@@ -60,6 +60,8 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 #include <utmp.h>
 #endif
 
+#include "cxx_kw.h"
+
 /* A file whose last-modified time is just after the most recent boot.
    Define this to be NULL to disable checking for this file.  */
 #ifndef BOOT_TIME_FILE
@@ -751,6 +753,8 @@ unlock_file (Lisp_Object fn)
 }
 
 #endif	/* MSDOS */
+
+#include "cxx_kw.h"
 
 void
 unlock_all_files (void)

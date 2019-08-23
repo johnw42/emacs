@@ -261,12 +261,7 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 
 #include <c-ctype.h>
 
-#ifdef __cplusplus
-#define this this_
-#define class class_
-#define private private_
-#define new new_
-#endif
+#include "cxx_kw.h"
 
 /* True if face attribute ATTR is unspecified.  */
 

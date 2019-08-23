@@ -299,12 +299,7 @@ encode_coding_XXX (struct coding_system *coding)
 #include "coding.h"
 #include "termhooks.h"
 
-#ifdef __cplusplus
-#define this this_
-#define class class_
-#define private private_
-#define new new_
-#endif
+#include "cxx_kw.h"
 
 Lisp_Object Vcoding_system_hash_table;
 
@@ -3458,7 +3453,7 @@ finish_composition (int *charbuf, struct composition_status *cmp_status)
     *charbuf++ = -2;			\
     *charbuf++ = rule;			\
     cmp_status->length += 2;		\
-    cmp_status->state = cmp_status->state - 1;		\
+    cmp_status->state--;		\
   } while (0)
 
 /* Store a composed char or a component char C in charbuf, and update
@@ -3475,7 +3470,7 @@ finish_composition (int *charbuf, struct composition_status *cmp_status)
     if (cmp_status->method == COMPOSITION_WITH_RULE			\
 	|| (cmp_status->method == COMPOSITION_WITH_RULE_ALTCHARS	\
 	    && cmp_status->state == COMPOSING_COMPONENT_CHAR))		\
-      cmp_status->state = cmp_status->state + 1;						\
+      cmp_status->state++;						\
   } while (0)
 
 

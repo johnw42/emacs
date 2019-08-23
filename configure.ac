@@ -768,7 +768,6 @@ fi
 
 OPTION_DEFAULT_OFF([cxx], [])
 
-if test $with_cxx != yes; then
 dnl Don't bother to test for C89.
 AC_DEFUN([_AC_PROG_CC_C89], [$2])
 
@@ -783,7 +782,8 @@ dnl Emacs needs C99 or later.
 gl_PROG_CC_C99
 
 AC_PROG_CC_C_O
-else
+
+if test $with_cxx = yes; then
 AC_SUBST(HAVE_CXX, 1)
 dnl AC_LANG(C++)
 AC_PROG_CXX([g++ c++ clang++ "$XCRUN g++" "$XCRUN clang++"])
@@ -793,9 +793,17 @@ if test -n "$XCRUN"; then
 fi
 
 AC_PROG_CXX_C_O
+CC_OR_CXX="$CXX -fpermissive"
 
-CC="$CXX -fpermissive"
+else
+
+CC_OR_CXX=$CC
+CXXFLAGS=0
+AC_SUBST(CXXFLAGS)
+
 fi
+
+AC_SUBST(CC_OR_CXX)
 
 if test x$GCC = xyes; then
   test "x$GCC_TEST_OPTIONS" != x && CC="$CC $GCC_TEST_OPTIONS"
@@ -3179,6 +3187,10 @@ if test "${HAVE_XIM}" != "no"; then
   if test "$GCC" = yes; then
     CFLAGS="$CFLAGS --pedantic-errors"
   fi
+  if test $with_cxx = yes; then
+    emacs_cv_arg6_star=no
+    AC_DEFINE(XRegisterIMInstantiateCallback_arg6, [QuasiXPointer])
+  else
   AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
 #include <X11/Xlib.h>
 #include <X11/Xresource.h>]],
@@ -3188,7 +3200,6 @@ char *res_name;
 char *res_class;
 XIMProc  callback;
 XPointer *client_data;
-#ifndef __GNUC__
 /* If we're not using GCC, it's probably not XFree86, and this is
    probably right, but we can't use something like --pedantic-errors.  */
 extern Bool XRegisterIMInstantiateCallback(Display*, XrmDatabase, char*,
@@ -3201,9 +3212,10 @@ extern Bool XRegisterIMInstantiateCallback(Display*, XrmDatabase, char*,
          [Define to the type of the 6th arg of XRegisterIMInstantiateCallback,
 either XPointer or XPointer*.])dnl
   if test "$emacs_cv_arg6_star" = yes; then
-    AC_DEFINE(XRegisterIMInstantiateCallback_arg6, [XPointer*])
+    AC_DEFINE(XRegisterIMInstantiateCallback_arg6, [TO_XPOINTER_STAR])
   else
-    AC_DEFINE(XRegisterIMInstantiateCallback_arg6, [XPointer])
+    AC_DEFINE(XRegisterIMInstantiateCallback_arg6, [TO_XPOINTER])
+  fi
   fi
   CFLAGS=$late_CFLAGS
 fi

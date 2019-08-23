@@ -107,6 +107,8 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 
 #include "commands.h"
 
+#include "cxx_kw.h"
+
 /* True during writing of auto-save files.  */
 static bool auto_saving;
 
@@ -705,12 +707,19 @@ This function does not grok magic file names.  */)
     }
   if (failed)
     {
+#ifdef __cplusplus
+      static char kind_message[GT_FILE + GT_DIR + GT_NOCREATE][32];
+      strcpy(kind_message[GT_FILE], "Creating file with prefix");
+      strcpy(kind_message[GT_DIR], "Creating directory with prefix");
+      strcpy(kind_message[GT_NOCREATE], "Creating file name with prefix");
+#else
       static char const kind_message[][32] =
 	{
 	  [GT_FILE] = "Creating file with prefix",
 	  [GT_DIR] = "Creating directory with prefix",
 	  [GT_NOCREATE] = "Creating file name with prefix"
 	};
+#endif
       report_file_error (kind_message[kind], prefix);
     }
   return val;

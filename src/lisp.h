@@ -41,13 +41,6 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 #define INLINE_ARRAY(type, ...) ((type[]) {__VA_ARGS__})
 #endif
 
-#ifdef __cplusplus
-#define this this_
-#define class class_
-#define private private_
-#define new new_
-#endif
-
 INLINE_HEADER_BEGIN
 
 /* Define a TYPE constant ID as an externally visible name.  Use like this:
@@ -560,7 +553,27 @@ enum Lisp_Fwd_Type
 
 #ifdef CHECK_LISP_OBJECT_TYPE
 
+#ifdef __cplusplus
+struct Lisp_Object {
+  EMACS_INT i;
+
+  /* Lisp_Object() {} // no initialization! */
+  /* Lisp_Object(EMACS_INT i): i(i) {} */
+  /* Lisp_Object(const Lisp_Object&) = default; */
+  /* Lisp_Object(Lisp_Object&&) = default; */
+  /* Lisp_Object(const volatile Lisp_Object& o): i(o.i) {} */
+  /* Lisp_Object& operator=(const Lisp_Object&) = default; */
+  /* Lisp_Object& operator=(Lisp_Object&&) = default; */
+  /* Lisp_Object& operator=(const volatile Lisp_Object& o) { i = o.i; return *this; } */
+  /* ~Lisp_Object() = default; */
+};
+template <typename T> inline T& nonvol (volatile T& t) {
+  return const_cast<T&>(t);
+}
+#else
 typedef struct Lisp_Object { EMACS_INT i; } Lisp_Object;
+#define nonvol(x) (x)
+#endif
 
 #define LISP_INITIALLY(i) {i}
 
@@ -729,7 +742,7 @@ struct Lisp_Symbol
       /* Next symbol in obarray bucket, if the symbol is interned.  */
       struct Lisp_Symbol *next;
     } s;
-    char alignas (GCALIGNMENT) gcaligned;
+    alignas (GCALIGNMENT) char gcaligned;
   } u;
 };
 verify (alignof (struct Lisp_Symbol) % GCALIGNMENT == 0);
@@ -832,7 +845,7 @@ union vectorlike_header
 	 Current layout limits the pseudovectors to 63 PVEC_xxx subtypes,
 	 4095 Lisp_Objects in GC-ed area and 4095 word-sized other slots.  */
     ptrdiff_t size;
-    char alignas (GCALIGNMENT) gcaligned;
+    alignas (GCALIGNMENT) char gcaligned;
   };
 verify (alignof (union vectorlike_header) % GCALIGNMENT == 0);
 
@@ -1174,7 +1187,7 @@ struct Lisp_Cons
 	struct Lisp_Cons *chain;
       } u;
     } s;
-    char alignas (GCALIGNMENT) gcaligned;
+    alignas (GCALIGNMENT) char gcaligned;
   } u;
 };
 verify (alignof (struct Lisp_Cons) % GCALIGNMENT == 0);
@@ -1296,7 +1309,7 @@ struct Lisp_String
       unsigned char *data;
     } s;
     struct Lisp_String *next;
-    char alignas (GCALIGNMENT) gcaligned;
+    alignas (GCALIGNMENT) char gcaligned;
   } u;
 };
 verify (alignof (struct Lisp_String) % GCALIGNMENT == 0);
@@ -1380,11 +1393,13 @@ SREF (Lisp_Object string, ptrdiff_t index)
 {
   return SDATA (string)[index];
 }
+#include "cxx_kw.h"
 INLINE void
 SSET (Lisp_Object string, ptrdiff_t index, unsigned char new)
 {
   SDATA (string)[index] = new;
 }
+#include "cxx_kw_off.h"
 INLINE ptrdiff_t
 SCHARS (Lisp_Object string)
 {
@@ -4759,10 +4774,5 @@ maybe_gc (void)
 }
 
 INLINE_HEADER_END
-
-#undef this
-#undef class
-#undef private
-#undef new
 
 #endif /* EMACS_LISP_H */

@@ -701,7 +701,7 @@ char_table_translate (Lisp_Object obj, int ch)
   return CHARACTERP (obj) ? XINT (obj) : ch;
 }
 
-#if defined __GNUC__ && !defined __STRICT_ANSI__
+#if defined __GNUC__ && !defined __STRICT_ANSI__ && !defined(__cplusplus)
 # define HEXDIGIT_CONST const
 # define HEXDIGIT_IS_CONST true
 #else

@@ -103,6 +103,8 @@ static bool valgrind_p;
 #include "w32heap.h"	/* for sbrk */
 #endif
 
+#include "cxx_kw.h"
+
 #ifdef GNU_LINUX
 /* The address where the heap starts.  */
 void *
@@ -401,6 +403,8 @@ enum mem_type allocated_mem_type;
 
 #endif /* GC_MALLOC_CHECK */
 
+enum mem_color {MEM_BLACK, MEM_RED};
+
 /* A node in the red-black tree describing allocated memory containing
    Lisp data.  Each such block is recorded with its start and end
    address when it is allocated, and removed from the tree when it
@@ -438,7 +442,7 @@ struct mem_node
   void *start, *end;
 
   /* Node color.  */
-  enum {MEM_BLACK, MEM_RED} color;
+  enum mem_color color;
 
   /* Memory type.  */
   enum mem_type type;
@@ -1611,7 +1615,7 @@ mark_interval (INTERVAL i, void *dummy)
    sub-allocated from an sblock.  This is where the contents of Lisp
    strings are stored.  */
 
-struct sdata
+struct s_sdata
 {
   /* Back-pointer to the string this sdata belongs to.  If null, this
      structure is free, and NBYTES (in this structure or in the union below)
@@ -1630,7 +1634,7 @@ struct sdata
 
 #ifdef GC_CHECK_STRING_BYTES
 
-typedef struct sdata sdata;
+typedef struct s_sdata sdata;
 #define SDATA_NBYTES(S)	(S)->nbytes
 #define SDATA_DATA(S)	(S)->data
 
@@ -1640,15 +1644,15 @@ typedef union
 {
   struct Lisp_String *string;
 
-  /* When STRING is nonnull, this union is actually of type 'struct sdata',
+  /* When STRING is nonnull, this union is actually of type 'struct s_sdata',
      which has a flexible array member.  However, if implemented by
-     giving this union a member of type 'struct sdata', the union
+     giving this union a member of type 'struct s_sdata', the union
      could not be the last (flexible) member of 'struct sblock',
      because C99 prohibits a flexible array member from having a type
      that is itself a flexible array.  So, comment this member out here,
      but remember that the option's there when using this union.  */
 #if 0
-  struct sdata u;
+  struct s_sdata u;
 #endif
 
   /* When STRING is null.  */
@@ -1660,11 +1664,11 @@ typedef union
 } sdata;
 
 #define SDATA_NBYTES(S)	(S)->n.nbytes
-#define SDATA_DATA(S)	((struct sdata *) (S))->data
+#define SDATA_DATA(S)	((struct s_sdata *) (S))->data
 
 #endif /* not GC_CHECK_STRING_BYTES */
 
-enum { SDATA_DATA_OFFSET = offsetof (struct sdata, data) };
+enum { SDATA_DATA_OFFSET = offsetof (struct s_sdata, data) };
 
 /* Structure describing a block of memory which is sub-allocated to
    obtain string data memory for strings.  Blocks for small strings
@@ -1760,23 +1764,23 @@ static char const string_overrun_cookie[GC_STRING_OVERRUN_COOKIE_SIZE] =
 
 #ifdef GC_CHECK_STRING_BYTES
 
-#define SDATA_SIZE(NBYTES) FLEXSIZEOF (struct sdata, data, (NBYTES) + 1)
+#define SDATA_SIZE(NBYTES) FLEXSIZEOF (struct s_sdata, data, (NBYTES) + 1)
 
 #else /* not GC_CHECK_STRING_BYTES */
 
 /* The 'max' reserves space for the nbytes union member even when NBYTES + 1 is
    less than the size of that member.  The 'max' is not needed when
-   SDATA_DATA_OFFSET is a multiple of FLEXALIGNOF (struct sdata),
+   SDATA_DATA_OFFSET is a multiple of FLEXALIGNOF (struct s_sdata),
    because then the alignment code reserves enough space.  */
 
 #define SDATA_SIZE(NBYTES)				      \
      ((SDATA_DATA_OFFSET				      \
-       + (SDATA_DATA_OFFSET % FLEXALIGNOF (struct sdata) == 0 \
+       + (SDATA_DATA_OFFSET % FLEXALIGNOF (struct s_sdata) == 0 \
 	  ? NBYTES					      \
-	  : max (NBYTES, FLEXALIGNOF (struct sdata) - 1))     \
+	  : max (NBYTES, FLEXALIGNOF (struct s_sdata) - 1))     \
        + 1						      \
-       + FLEXALIGNOF (struct sdata) - 1)		      \
-      & ~(FLEXALIGNOF (struct sdata) - 1))
+       + FLEXALIGNOF (struct s_sdata) - 1)		      \
+      & ~(FLEXALIGNOF (struct s_sdata) - 1))
 
 #endif /* not GC_CHECK_STRING_BYTES */
 

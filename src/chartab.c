@@ -24,9 +24,7 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 #include "character.h"
 #include "charset.h"
 
-#ifdef __cplusplus
-#define this this_
-#endif
+#include "cxx_kw.h"
 
 /* 64/16/32/128 */
 

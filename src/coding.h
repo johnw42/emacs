@@ -293,6 +293,8 @@ enum composition_state
     COMPOSING_COMPONENT_RULE
   };
 
+ENUM_OPS (composition_state)
+
 /* Structure for the current composition status.  */
 struct composition_status
 {

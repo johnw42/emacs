@@ -1820,6 +1820,7 @@ cleaning up all windows currently displaying the buffer to be killed. */)
       && BUF_SAVE_MODIFF (b) < BUF_MODIFF (b)
       && NILP (Fsymbol_value (intern ("auto-save-visited-file-name"))))
     {
+#include "cxx_kw.h"
       Lisp_Object delete;
       delete = Fsymbol_value (intern ("delete-auto-save-files"));
       if (! NILP (delete))
