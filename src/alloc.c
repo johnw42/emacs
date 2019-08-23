@@ -841,7 +841,7 @@ static void *lrealloc (void *, size_t);
 
 /* Like malloc but check for no memory and block interrupt input.  */
 
-void *
+UrPtr
 xmalloc (size_t size)
 {
   void *val;
@@ -858,7 +858,7 @@ xmalloc (size_t size)
 
 /* Like the above, but zeroes out the memory just allocated.  */
 
-void *
+UrPtr
 xzalloc (size_t size)
 {
   void *val;
@@ -876,7 +876,7 @@ xzalloc (size_t size)
 
 /* Like realloc but check for no memory and block interrupt input..  */
 
-void *
+UrPtr
 xrealloc (void *block, size_t size)
 {
   void *val;
@@ -921,7 +921,7 @@ verify (INT_MAX <= PTRDIFF_MAX);
 /* Allocate an array of NITEMS items, each of size ITEM_SIZE.
    Signal an error on memory exhaustion, and block interrupt input.  */
 
-void *
+UrPtr
 xnmalloc (ptrdiff_t nitems, ptrdiff_t item_size)
 {
   eassert (0 <= nitems && 0 < item_size);
@@ -935,7 +935,7 @@ xnmalloc (ptrdiff_t nitems, ptrdiff_t item_size)
 /* Reallocate an array PA to make it of NITEMS items, each of size ITEM_SIZE.
    Signal an error on memory exhaustion, and block interrupt input.  */
 
-void *
+UrPtr
 xnrealloc (void *pa, ptrdiff_t nitems, ptrdiff_t item_size)
 {
   eassert (0 <= nitems && 0 < item_size);

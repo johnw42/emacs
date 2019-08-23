@@ -1952,13 +1952,13 @@ re_wctype_parse (const unsigned char **strp, unsigned limit)
   const char *beg = (const char *)*strp, *it;
 
   if (limit < 4 || beg[0] != '[' || beg[1] != ':')
-    return -1;
+    return (re_wctype_t) (-1);
 
   beg += 2;  /* skip opening "[:" */
   limit -= 3;  /* opening "[:" and half of closing ":]"; --limit handles rest */
   for (it = beg; it[0] != ':' || it[1] != ']'; ++it)
     if (!--limit)
-      return -1;
+      return (re_wctype_t) (-1);
 
   *strp = (const unsigned char *)(it + 2);
 

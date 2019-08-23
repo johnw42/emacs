@@ -793,7 +793,7 @@ if test -n "$XCRUN"; then
 fi
 
 AC_PROG_CXX_C_O
-CC_OR_CXX="$CXX -fpermissive"
+CC_OR_CXX=$CXX
 
 else
 
@@ -3189,7 +3189,7 @@ if test "${HAVE_XIM}" != "no"; then
   fi
   if test $with_cxx = yes; then
     emacs_cv_arg6_star=no
-    AC_DEFINE(XRegisterIMInstantiateCallback_arg6, [QuasiXPointer])
+    AC_DEFINE(XRegisterIMInstantiateCallback_arg6, [UrPtr])
   else
   AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
 #include <X11/Xlib.h>

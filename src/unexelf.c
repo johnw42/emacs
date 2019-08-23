@@ -197,7 +197,7 @@ verify ((! TYPE_SIGNED (ElfW (Half))
 static void *
 entry_address (void *section_h, ptrdiff_t idx, ptrdiff_t entsize)
 {
-  char *h = section_h;
+  char *h = (char *)section_h;
   return h + idx * entsize;
 }
 
@@ -277,7 +277,7 @@ unexec (const char *new_name, const char *old_name)
   old_file_size = stat_buf.st_size;
   if (! (0 <= old_file_size && old_file_size <= SIZE_MAX))
     fatal ("File size out of range");
-  old_base = mmap (NULL, old_file_size, PROT_READ | PROT_WRITE,
+  old_base = (UrPtr) mmap (NULL, old_file_size, PROT_READ | PROT_WRITE,
 		   MAP_ANON | MAP_PRIVATE, mmap_fd, 0);
   if (old_base == MAP_FAILED)
     fatal ("Can't allocate buffer for %s: %s", old_name, strerror (errno));
@@ -368,7 +368,7 @@ unexec (const char *new_name, const char *old_name)
   if (ftruncate (new_file, new_file_size))
     fatal ("Can't ftruncate (%s): %s", new_name, strerror (errno));
 
-  new_base = mmap (NULL, new_file_size, PROT_READ | PROT_WRITE,
+  new_base = (UrPtr) mmap (NULL, new_file_size, PROT_READ | PROT_WRITE,
 		   MAP_ANON | MAP_PRIVATE, mmap_fd, 0);
   if (new_base == MAP_FAILED)
     fatal ("Can't allocate buffer for %s: %s", old_name, strerror (errno));

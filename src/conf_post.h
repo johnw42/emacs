@@ -414,11 +414,29 @@ EXTERN_C int emacs_setenv_TZ (char const *);
 #ifdef __cplusplus
 #define ENUM_OPS(etype) \
   inline void \
-  operator++ (etype& it, int) { it = it + 1; }      \
+  operator++ (etype& it, int) { it = etype(it + 1); }   \
   inline void \
-  operator-- (etype& it, int) { it = it - 1; }
+  operator-- (etype& it, int) { it = etype(it - 1); }
 #else
 #define ENUM_OPS(e)
+#endif
+
+#ifdef __cplusplus
+class UrPtr {
+ public:
+  template <typename T>
+    UrPtr(T* arg): m_arg(arg) {}
+  template <typename T>
+    UrPtr(const T& lisp_obj): m_arg(reinterpret_cast<void*>(lisp_obj.i)) {}
+  template <typename T>
+  operator T*() const { return (T*)m_arg; }
+ private:
+  void* m_arg;
+};
+#define INT_TO_URPTR(x) (UrPtr(reinterpret_cast<void*>(x)))
+#else
+typedef void *UrPtr;
+#define INT_TO_URPTR(x) ((UrPtr)(intptr_t)(x))
 #endif
 
 #define TO_XPOINTER_STAR(x) ((XPointer*)(x))

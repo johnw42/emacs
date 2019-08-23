@@ -139,17 +139,6 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 #include <X11/XKBlib.h>
 #endif
 
-#ifdef __cplusplus
-class QuasiXPointer {
- public:
-  QuasiXPointer(void* arg): m_arg(arg) {}
-  operator XPointer() const { return (XPointer)m_arg; }
-  operator XPointer*() const { return (XPointer*)m_arg; }
- private:
-  void* m_arg;
-};
-#endif
-
 #include "cxx_kw.h"
 
 /* Default to using XIM if available.  */

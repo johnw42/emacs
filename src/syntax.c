@@ -1761,7 +1761,7 @@ skip_chars (bool forwardp, Lisp_Object string, Lisp_Object lim,
 	  SAFE_NALLOCA (char_ranges, 2, 128);
 	  i = 0;
 
-	  while ((p1 = memchr (himap + i, 1, 0200 - i)))
+	  while ((p1 = (UrPtr) memchr (himap + i, 1, 0200 - i)))
 	    {
 	      /* Deduce the next range C..C2 from the next clump of 1s
 		 in HIMAP starting with &HIMAP[I].  HIMAP is the high
@@ -2254,7 +2254,7 @@ in_classes (int c, Lisp_Object iso_classes)
       elt = XCAR (iso_classes);
       iso_classes = XCDR (iso_classes);
 
-      if (re_iswctype (c, XFASTINT (elt)))
+      if (re_iswctype (c, (re_wctype_t) XFASTINT (elt)))
 	fits_class = 1;
     }
 

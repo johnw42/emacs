@@ -828,7 +828,7 @@ emacs_gnutls_handle_error (gnutls_session_t session, int err)
     {
       int alert = gnutls_alert_get (session);
       int level = (err == GNUTLS_E_FATAL_ALERT_RECEIVED) ? 0 : 1;
-      str = gnutls_alert_get_name (alert);
+      str = gnutls_alert_get_name ((gnutls_alert_description_t) alert);
       if (!str)
 	str = "unknown";
 
@@ -1051,7 +1051,7 @@ gnutls_certificate_details (gnutls_x509_crt_t cert)
       check_memory_full (err);
       if (err >= GNUTLS_E_SUCCESS)
 	res = nconc2 (res, list2 (intern (":serial-number"),
-				  gnutls_hex_string (serial, buf_size, "")));
+				  gnutls_hex_string ((UrPtr) serial, buf_size, "")));
       xfree (serial);
     }
 

@@ -2084,7 +2084,7 @@ struct rvoe_arg
 static void
 reset_var_on_error (void *ptr)
 {
-  struct rvoe_arg *p = ptr;
+  struct rvoe_arg *p = (UrPtr) ptr;
   if (p->errorp)
     *p->location = Qnil;
 }

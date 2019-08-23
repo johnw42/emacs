@@ -603,7 +603,7 @@ the same file name is found in the `doc-directory'.  */)
 
       buf[filled] = 0;
       char *end = buf + (filled < 512 ? filled : filled - 128);
-      p = memchr (buf, '\037', end - buf);
+      p = (UrPtr) memchr (buf, '\037', end - buf);
       /* p points to ^_Ffunctionname\n or ^_Vvarname\n or ^_Sfilename\n.  */
       if (p)
 	{
@@ -806,7 +806,7 @@ Otherwise, return a new string.  */)
 	}
       else if (strp[0] == '\\' && strp[1] == '['
 	       && (close_bracket
-		   = memchr (strp + 2, ']',
+		   = (UrPtr) memchr (strp + 2, ']',
 			     SDATA (str) + strbytes - (strp + 2))))
 	{
 	  bool follow_remap = 1;
@@ -852,7 +852,7 @@ Otherwise, return a new string.  */)
 	 \<foo> just sets the keymap used for \[cmd].  */
       else if (strp[0] == '\\' && (strp[1] == '{' || strp[1] == '<')
 	       && (close_bracket
-		   = memchr (strp + 2, strp[1] == '{' ? '}' : '>',
+		   = (UrPtr) memchr (strp + 2, strp[1] == '{' ? '}' : '>',
 			     SDATA (str) + strbytes - (strp + 2))))
 	{
 	 {

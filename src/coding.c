@@ -2183,7 +2183,7 @@ emacs_mule_char (struct coding_system *coding, const unsigned char *src,
 
 #define DECODE_EMACS_MULE_21_COMPOSITION()				\
   do {									\
-    enum composition_method method = c - 0xF2;				\
+    enum composition_method method = (enum composition_method) (c - 0xF2);   \
     int nbytes, nchars;							\
     									\
     ONE_MORE_BYTE (c);							\
@@ -7603,7 +7603,7 @@ consume_chars (struct coding_system *coding, Lisp_Object translation_table,
   int *lookup_buf = NULL;
 
   if (! NILP (translation_table))
-    lookup_buf = alloca (sizeof (int) * max_lookup);
+    lookup_buf = (UrPtr) alloca (sizeof (int) * max_lookup);
 
   eol_type = inhibit_eol_conversion ? Qunix : CODING_ID_EOL_TYPE (coding->id);
   if (VECTORP (eol_type))
@@ -8601,7 +8601,7 @@ detect_coding_system (const unsigned char *src,
   detect_info.checked = detect_info.found = detect_info.rejected = 0;
 
   /* At first, detect text-format if necessary.  */
-  base_category = XINT (CODING_ATTR_CATEGORY (attrs));
+  base_category = (enum coding_category) XINT (CODING_ATTR_CATEGORY (attrs));
   if (base_category == coding_category_undecided)
     {
       enum coding_category category UNINIT;
@@ -8854,7 +8854,7 @@ detect_coding_system (const unsigned char *src,
 
 	id = XINT (XCAR (tail));
 	attrs = CODING_ID_ATTRS (id);
-	category = XINT (CODING_ATTR_CATEGORY (attrs));
+	category = (enum coding_category) XINT (CODING_ATTR_CATEGORY (attrs));
 	eol_type = CODING_ID_EOL_TYPE (id);
 	if (VECTORP (eol_type))
 	  {
@@ -9950,7 +9950,7 @@ usage: (set-coding-system-priority &rest coding-systems)  */)
 
       CHECK_CODING_SYSTEM_GET_SPEC (args[i], spec);
       attrs = AREF (spec, 0);
-      category = XINT (CODING_ATTR_CATEGORY (attrs));
+      category = (enum coding_category) XINT (CODING_ATTR_CATEGORY (attrs));
       if (changed[category])
 	/* Ignore this coding system because a coding system of the
 	   same category already had a higher priority.  */
@@ -10765,7 +10765,7 @@ init_coding_once (void)
   for (i = 0; i < coding_category_max; i++)
     {
       coding_categories[i].id = -1;
-      coding_priorities[i] = i;
+      coding_priorities[i] = (enum coding_category) i;
     }
 
   /* ISO2022 specific initialize routine.  */

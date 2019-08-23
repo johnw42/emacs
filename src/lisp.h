@@ -36,7 +36,7 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 
 #ifdef __cplusplus
 #include <initializer_list>
-#define INLINE_ARRAY(type, ...) (std::initializer_list<type>({__VA_ARGS__}).begin())
+#define INLINE_ARRAY(type, ...) ((Lisp_Object *) std::initializer_list<type>({__VA_ARGS__}).begin())
 #else
 #define INLINE_ARRAY(type, ...) ((type[]) {__VA_ARGS__})
 #endif
@@ -313,12 +313,18 @@ error !;
    functions, below.  */
 
 #if CHECK_LISP_OBJECT_TYPE
+#ifdef __cplusplus
+# define lisp_h_XLI(o) ((o).i)
+# define lisp_h_XIL(i) ((Lisp_Object) { reinterpret_cast<intptr_t>(i) })
+#else
 # define lisp_h_XLI(o) ((o).i)
 # define lisp_h_XIL(i) ((Lisp_Object) { i })
+#endif
 #else
 # define lisp_h_XLI(o) (o)
 # define lisp_h_XIL(i) (i)
 #endif
+
 #define lisp_h_CHECK_NUMBER(x) CHECK_TYPE (INTEGERP (x), Qintegerp, x)
 #define lisp_h_CHECK_SYMBOL(x) CHECK_TYPE (SYMBOLP (x), Qsymbolp, x)
 #define lisp_h_CHECK_TYPE(ok, predicate, x) \
@@ -358,9 +364,13 @@ error !;
      (struct Lisp_Symbol *) ((intptr_t) XLI (a) - Lisp_Symbol \
 			     + (char *) lispsym))
 # define lisp_h_XTYPE(a) ((enum Lisp_Type) (XLI (a) & ~VALMASK))
-# define lisp_h_XUNTAG(a, type) \
-    __builtin_assume_aligned ((void *) (intptr_t) (XLI (a) - (type)), \
-			      GCALIGNMENT)
+# define lisp_h_XUNTAG(a, type)                                         \
+  ((UrPtr)(                                                             \
+           __builtin_assume_aligned ((void *)(XLI (a) - (type)),        \
+                                     GCALIGNMENT)))
+/* # define lisp_h_XUNTAG(a, type) \ */
+/*     __builtin_assume_aligned (INT_TO_URPTR (XLI (a) - (type)), \ */
+/* 			      GCALIGNMENT) */
 #endif
 
 /* When compiling via gcc -O0, define the key operations as macros, as
@@ -654,14 +664,14 @@ INLINE void
 
 /* Extract A's pointer value, assuming A's type is TYPE.  */
 
-INLINE void *
+INLINE UrPtr
 (XUNTAG) (Lisp_Object a, int type)
 {
 #if USE_LSB_TAG
   return lisp_h_XUNTAG (a, type);
 #else
   intptr_t i = USE_LSB_TAG ? XLI (a) - type : XLI (a) & VALMASK;
-  return (void *) i;
+  return (UrPtr) i;
 #endif
 }
 
@@ -1151,7 +1161,7 @@ INLINE bool
    does not know about it.  The pointer should not have both Lisp_Int1
    bits set, which makes this conversion inherently unportable.  */
 
-INLINE void *
+INLINE UrPtr
 XINTPTR (Lisp_Object a)
 {
   return XUNTAG (a, Lisp_Int0);
@@ -1494,7 +1504,7 @@ PSEUDOVECTOR_TYPE (struct Lisp_Vector *v)
 {
   ptrdiff_t size = v->header.size;
   return (size & PSEUDOVECTOR_FLAG
-          ? (size & PVEC_TYPE_MASK) >> PSEUDOVECTOR_AREA_BITS
+          ? (pvec_type) ((size & PVEC_TYPE_MASK) >> PSEUDOVECTOR_AREA_BITS)
           : PVEC_NORMAL_VECTOR);
 }
 
@@ -1518,7 +1528,7 @@ PSEUDOVECTORP (Lisp_Object a, int code)
     {
       /* Converting to union vectorlike_header * avoids aliasing issues.  */
       union vectorlike_header *h = XUNTAG (a, Lisp_Vectorlike);
-      return PSEUDOVECTOR_TYPEP (h, code);
+      return PSEUDOVECTOR_TYPEP (h, (pvec_type) code);
     }
 }
 
@@ -2414,7 +2424,7 @@ save_type (struct Lisp_Save_Value *v, int n)
 
 /* Get and set the Nth saved pointer.  */
 
-INLINE void *
+INLINE UrPtr
 XSAVE_POINTER (Lisp_Object obj, int n)
 {
   eassert (save_type (XSAVE_VALUE (obj), n) == SAVE_POINTER);
@@ -4485,14 +4495,14 @@ extern char my_edata[];
 extern char my_endbss[];
 extern char *my_endbss_static;
 
-extern void *xmalloc (size_t) ATTRIBUTE_MALLOC_SIZE ((1));
-extern void *xzalloc (size_t) ATTRIBUTE_MALLOC_SIZE ((1));
-extern void *xrealloc (void *, size_t) ATTRIBUTE_ALLOC_SIZE ((2));
+extern UrPtr xmalloc (size_t) ATTRIBUTE_MALLOC_SIZE ((1));
+extern UrPtr xzalloc (size_t) ATTRIBUTE_MALLOC_SIZE ((1));
+extern UrPtr xrealloc (void *, size_t) ATTRIBUTE_ALLOC_SIZE ((2));
 extern void xfree (void *);
-extern void *xnmalloc (ptrdiff_t, ptrdiff_t) ATTRIBUTE_MALLOC_SIZE ((1,2));
-extern void *xnrealloc (void *, ptrdiff_t, ptrdiff_t)
+extern UrPtr xnmalloc (ptrdiff_t, ptrdiff_t) ATTRIBUTE_MALLOC_SIZE ((1,2));
+extern UrPtr xnrealloc (void *, ptrdiff_t, ptrdiff_t)
   ATTRIBUTE_ALLOC_SIZE ((2,3));
-extern void *xpalloc (void *, ptrdiff_t *, ptrdiff_t, ptrdiff_t, ptrdiff_t);
+extern UrPtr xpalloc (void *, ptrdiff_t *, ptrdiff_t, ptrdiff_t, ptrdiff_t);
 
 extern char *xstrdup (const char *) ATTRIBUTE_MALLOC;
 extern char *xlispstrdup (Lisp_Object) ATTRIBUTE_MALLOC;
@@ -4540,13 +4550,13 @@ extern void init_system_name (void);
 
 enum MAX_ALLOCA { MAX_ALLOCA = 16 * 1024 };
 
-extern void *record_xmalloc (size_t) ATTRIBUTE_ALLOC_SIZE ((1));
+extern UrPtr record_xmalloc (size_t) ATTRIBUTE_ALLOC_SIZE ((1));
 
 #define USE_SAFE_ALLOCA			\
   ptrdiff_t sa_avail = MAX_ALLOCA;	\
   ptrdiff_t sa_count = SPECPDL_INDEX (); bool sa_must_free = false
 
-#define AVAIL_ALLOCA(size) (sa_avail -= (size), alloca (size))
+#define AVAIL_ALLOCA(size) (sa_avail -= (size), (UrPtr) alloca (size))
 
 /* SAFE_ALLOCA allocates a simple buffer.  */
 
@@ -4654,8 +4664,12 @@ enum
 /* Auxiliary macros used for auto allocation of Lisp objects.  Please
    use these only in macros like AUTO_CONS that declare a local
    variable whose lifetime will be clear to the programmer.  */
+#ifdef __cplusplus
+#define STACK_CONS Fcons
+#else
 #define STACK_CONS(a, b) \
   make_lisp_ptr (&((struct Lisp_Cons) {{{a, {b}}}}), Lisp_Cons)
+#endif
 #define AUTO_CONS_EXPR(a, b) \
   (USE_STACK_CONS ? STACK_CONS (a, b) : Fcons (a, b))
 
@@ -4697,6 +4711,10 @@ enum
    STR's value is not necessarily copied.  The resulting Lisp string
    should not be modified or made visible to user code.  */
 
+#ifdef __cplusplus
+#define AUTO_STRING_WITH_LEN(name, str, len)				\
+  Lisp_Object name = make_unibyte_string (str, len)
+#else
 #define AUTO_STRING_WITH_LEN(name, str, len)				\
   Lisp_Object name =							\
     (USE_STACK_STRING							\
@@ -4704,6 +4722,7 @@ enum
 	((&(struct Lisp_String) {{{len, -1, 0, (unsigned char *) (str)}}}), \
 	 Lisp_String))							\
      : make_unibyte_string (str, len))
+#endif
 
 /* Loop over conses of the list TAIL, signaling if a cycle is found,
    and possibly quitting after each loop iteration.  In the loop body,
