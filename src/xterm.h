@@ -179,6 +179,20 @@ Status x_parse_color (struct frame *f, const char *color_name,
 		      XColor *color);
 
 
+
+/* The type of window manager we have.  If we move FRAME_OUTER_WINDOW
+   to x/y 0/0, some window managers (type A) puts the window manager
+   decorations outside the screen and FRAME_OUTER_WINDOW exactly at 0/0.
+   Other window managers (type B) puts the window including decorations
+   at 0/0, so FRAME_OUTER_WINDOW is a bit below 0/0.
+   Record the type of WM in use so we can compensate for type A WMs.  */
+enum wm_type
+  {
+   X_WMTYPE_UNKNOWN,
+   X_WMTYPE_A,
+   X_WMTYPE_B
+  };
+
 /* For each X display, we have a structure that records
    information about it.  */
 
@@ -422,19 +436,7 @@ struct x_display_info
   /* Bits and shifts to use to compose pixel values on TrueColor visuals.  */
   int red_bits, blue_bits, green_bits;
   int red_offset, blue_offset, green_offset;
-
-  /* The type of window manager we have.  If we move FRAME_OUTER_WINDOW
-     to x/y 0/0, some window managers (type A) puts the window manager
-     decorations outside the screen and FRAME_OUTER_WINDOW exactly at 0/0.
-     Other window managers (type B) puts the window including decorations
-     at 0/0, so FRAME_OUTER_WINDOW is a bit below 0/0.
-     Record the type of WM in use so we can compensate for type A WMs.  */
-  enum
-    {
-      X_WMTYPE_UNKNOWN,
-      X_WMTYPE_A,
-      X_WMTYPE_B
-    } wm_type;
+  enum wm_type wm_type;
 
 
   /* Atoms that are drag and drop atoms */
@@ -502,6 +504,13 @@ extern struct x_display_info *x_term_init (Lisp_Object, char *, char *);
 extern bool x_display_ok (const char *);
 
 extern void select_visual (struct x_display_info *);
+
+/* Relief GCs, colors etc.  */
+struct relief
+{
+  GC gc;
+  unsigned long pixel;
+};
 
 /* Each X frame object points to its own struct x_output object
    in the output_data.x field.  The x_output structure contains
@@ -709,13 +718,7 @@ struct x_output
   XFontSet xic_xfs;
 #endif
 
-  /* Relief GCs, colors etc.  */
-  struct relief
-  {
-    GC gc;
-    unsigned long pixel;
-  }
-  black_relief, white_relief;
+  struct relief black_relief, white_relief;
 
   /* The background for which the above relief GCs were set up.
      They are changed only when a different background is involved.  */
@@ -1178,8 +1181,8 @@ x_make_truecolor_pixel (struct x_display_info *dpyinfo, int r, int g, int b)
 INLINE bool
 x_mutable_colormap (Visual *visual)
 {
-  int class = visual->class;
-  return (class != StaticColor && class != StaticGray && class != TrueColor);
+  int class_ = visual->c_class;
+  return (class_ != StaticColor && class_ != StaticGray && class_ != TrueColor);
 }
 
 extern void x_set_sticky (struct frame *, Lisp_Object, Lisp_Object);

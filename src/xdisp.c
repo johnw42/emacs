@@ -6089,7 +6089,7 @@ get_overlay_strings (struct it *it, ptrdiff_t charpos)
 static void
 push_it (struct it *it, struct text_pos *position)
 {
-  struct iterator_stack_entry *p;
+  it::iterator_stack_entry *p;
 
   eassert (it->sp < IT_STACK_SIZE);
   p = it->stack + it->sp;
@@ -6191,7 +6191,7 @@ iterate_out_of_display_property (struct it *it)
 static void
 pop_it (struct it *it)
 {
-  struct iterator_stack_entry *p;
+  it::iterator_stack_entry *p;
   bool from_display_prop = it->from_disp_prop_p;
   ptrdiff_t prev_pos = IT_CHARPOS (*it);
 
@@ -12079,13 +12079,13 @@ prepare_menu_bars (void)
 	  Lisp_Object ws = window_list ();
 	  for (windows = Qnil; CONSP (ws); ws = XCDR (ws))
 	    {
-	      Lisp_Object this = XCAR (ws);
-	      struct window *w = XWINDOW (this);
+	      Lisp_Object this_ = XCAR (ws);
+	      struct window *w = XWINDOW (this_);
 	      if (w->redisplay
 		  || XFRAME (w->frame)->redisplay
 		  || XBUFFER (w->contents)->text->redisplay)
 		{
-		  windows = Fcons (this, windows);
+		  windows = Fcons (this_, windows);
 		}
 	    }
 	}

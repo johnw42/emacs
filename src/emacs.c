@@ -1855,7 +1855,7 @@ static const struct standard_args standard_args[] =
 static void
 sort_args (int argc, char **argv)
 {
-  char **new = xmalloc (argc * sizeof *new);
+  char **new_ = xmalloc (argc * sizeof *new_);
   /* For each element of argv,
      the corresponding element of options is:
      0 for an option that takes no arguments,
@@ -1951,7 +1951,7 @@ sort_args (int argc, char **argv)
     }
 
   /* Copy the arguments, in order of decreasing priority, to NEW.  */
-  new[0] = argv[0];
+  new_[0] = argv[0];
   while (incoming_used < argc)
     {
       int best = -1;
@@ -1977,11 +1977,11 @@ sort_args (int argc, char **argv)
       /* Copy the highest priority remaining option, with its args, to NEW.
          Unless it is a duplicate of the previous one.  */
       if (! (options[best] == 0
-	     && ! strcmp (new[to - 1], argv[best])))
+	     && ! strcmp (new_[to - 1], argv[best])))
 	{
-	  new[to++] = argv[best];
+	  new_[to++] = argv[best];
 	  for (i = 0; i < options[best]; i++)
-	    new[to++] = argv[best + i + 1];
+	    new_[to++] = argv[best + i + 1];
 	}
 
       incoming_used += 1 + (options[best] > 0 ? options[best] : 0);
@@ -1994,12 +1994,12 @@ sort_args (int argc, char **argv)
 
   /* If duplicate options were deleted, fill up extra space with null ptrs.  */
   while (to < argc)
-    new[to++] = 0;
+    new_[to++] = 0;
 
-  memcpy (argv, new, sizeof (char *) * argc);
+  memcpy (argv, new_, sizeof (char *) * argc);
 
   xfree (options);
-  xfree (new);
+  xfree (new_);
   xfree (priority);
 }
 

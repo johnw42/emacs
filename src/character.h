@@ -690,6 +690,10 @@ extern bool blankp (int);
 /* Look up the element in char table OBJ at index CH, and return it as
    an integer.  If the element is not a character, return CH itself.  */
 
+#ifndef max
+#error max
+#endif
+
 INLINE int
 char_table_translate (Lisp_Object obj, int ch)
 {

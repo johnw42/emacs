@@ -1973,11 +1973,11 @@ x_set_name_internal (struct frame *f, Lisp_Object name)
        F->explicit_name is set, ignore the new name; otherwise, set it.  */
 
 static void
-x_set_name (struct frame *f, Lisp_Object name, bool explicit)
+x_set_name (struct frame *f, Lisp_Object name, bool explicit_)
 {
   /* Make sure that requests from lisp code override requests from
      Emacs redisplay code.  */
-  if (explicit)
+  if (explicit_)
     {
       /* If we're switching from explicit to implicit, we had better
 	 update the mode lines and thereby update the title.  */
@@ -3207,12 +3207,12 @@ x_window (struct frame *f)
      the X server hasn't been told.  */
   {
     Lisp_Object name;
-    bool explicit = f->explicit_name;
+    bool explicit_ = f->explicit_name;
 
     f->explicit_name = false;
     name = f->name;
     fset_name (f, Qnil);
-    x_set_name (f, name, explicit);
+    x_set_name (f, name, explicit_);
   }
 
   if (FRAME_UNDECORATED (f))
@@ -4164,7 +4164,7 @@ DEFUN ("xw-display-color-p", Fxw_display_color_p, Sxw_display_color_p, 0, 1, 0,
   if (dpyinfo->n_planes <= 2)
     return Qnil;
 
-  switch (dpyinfo->visual->class)
+  switch (dpyinfo->visual->c_class)
     {
     case StaticColor:
     case PseudoColor:
@@ -4191,7 +4191,7 @@ If omitted or nil, that stands for the selected frame's display.  */)
   if (dpyinfo->n_planes <= 1)
     return Qnil;
 
-  switch (dpyinfo->visual->class)
+  switch (dpyinfo->visual->c_class)
     {
     case StaticColor:
     case PseudoColor:
@@ -4426,7 +4426,7 @@ If omitted or nil, that stands for the selected frame's display.  */)
   struct x_display_info *dpyinfo = check_x_display_info (terminal);
   Lisp_Object result;
 
-  switch (dpyinfo->visual->class)
+  switch (dpyinfo->visual->c_class)
     {
     case StaticGray:
       result = intern ("static-gray");
@@ -5471,7 +5471,7 @@ The coordinates X and Y are interpreted in pixels relative to a position
 static struct visual_class
 {
   const char *name;
-  int class;
+  int class_;
 }
 visual_classes[] =
 {
@@ -5529,7 +5529,7 @@ select_visual (struct x_display_info *dpyinfo)
 	 depth, a decimal number.  NAME is compared with case ignored.  */
       char *s = alloca (SBYTES (value) + 1);
       char *dash;
-      int i, class = -1;
+      int i, class_ = -1;
       XVisualInfo vinfo;
 
       lispstpcpy (s, value);
@@ -5548,14 +5548,14 @@ select_visual (struct x_display_info *dpyinfo)
       for (i = 0; visual_classes[i].name; ++i)
 	if (xstrcasecmp (s, visual_classes[i].name) == 0)
 	  {
-	    class = visual_classes[i].class;
+	    class_ = visual_classes[i].class_;
 	    break;
 	  }
 
       /* Look up a matching visual for the specified class.  */
-      if (class == -1
+      if (class_ == -1
 	  || !XMatchVisualInfo (dpy, XScreenNumberOfScreen (screen),
-				dpyinfo->n_planes, class, &vinfo))
+				dpyinfo->n_planes, class_, &vinfo))
 	fatal ("Invalid visual specification '%s'",
 	       SSDATA (ENCODE_SYSTEM (value)));
 
@@ -6355,8 +6355,8 @@ x_create_tip_frame (struct x_display_info *dpyinfo, Lisp_Object parms)
 
     if (FRAME_DISPLAY_INFO (f)->n_planes == 1)
       disptype = Qmono;
-    else if (FRAME_DISPLAY_INFO (f)->visual->class == GrayScale
-             || FRAME_DISPLAY_INFO (f)->visual->class == StaticGray)
+    else if (FRAME_DISPLAY_INFO (f)->visual->c_class == GrayScale
+             || FRAME_DISPLAY_INFO (f)->visual->c_class == StaticGray)
       disptype = intern ("grayscale");
     else
       disptype = intern ("color");
@@ -6519,7 +6519,7 @@ compute_tip_xy (struct frame *f, Lisp_Object parms, Lisp_Object dx, Lisp_Object 
 
 /* Hide tooltip.  Delete its frame if DELETE is true.  */
 static Lisp_Object
-x_hide_tip (bool delete)
+x_hide_tip (bool delete_)
 {
   if (!NILP (tip_timer))
     {
@@ -6529,7 +6529,7 @@ x_hide_tip (bool delete)
 
 
   if (NILP (tip_frame)
-      || (!delete && FRAMEP (tip_frame)
+      || (!delete_ && FRAMEP (tip_frame)
 	  && !FRAME_VISIBLE_P (XFRAME (tip_frame))))
     return Qnil;
   else
@@ -6557,7 +6557,7 @@ x_hide_tip (bool delete)
 
       if (FRAMEP (tip_frame))
 	{
-	  if (delete)
+	  if (delete_)
 	    {
 	      delete_frame (tip_frame, Qnil);
 	      tip_frame = Qnil;
@@ -6720,7 +6720,7 @@ Text larger than the specified size is clipped.  */)
 	}
       else if (tooltip_reuse_hidden_frame && EQ (frame, last_frame))
 	{
-	  bool delete = false;
+	  bool delete_ = false;
 	  Lisp_Object tail, elt, parm, last;
 
 	  /* Check if every parameter in PARMS has the same value in
@@ -6740,7 +6740,7 @@ Text larger than the specified size is clipped.  */)
 		  if (NILP (Fequal (Fcdr (elt), Fcdr (last))))
 		    {
 		      /* We lost, delete the old tooltip.  */
-		      delete = true;
+		      delete_ = true;
 		      break;
 		    }
 		  else
@@ -6762,12 +6762,12 @@ Text larger than the specified size is clipped.  */)
 		  && !EQ (parm, Qbottom) && !NILP (Fcdr (elt)))
 		{
 		  /* We lost, delete the old tooltip.  */
-		  delete = true;
+		  delete_ = true;
 		  break;
 		}
 	    }
 
-	  x_hide_tip (delete);
+	  x_hide_tip (delete_);
 	}
       else
 	x_hide_tip (true);

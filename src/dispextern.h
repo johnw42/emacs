@@ -3605,7 +3605,7 @@ enum resource_types
 
 extern Display_Info *check_x_display_info (Lisp_Object);
 extern Lisp_Object x_get_arg (Display_Info *, Lisp_Object,
-                              Lisp_Object, const char *, const char *class,
+                              Lisp_Object, const char *, const char *class_,
                               enum resource_types);
 extern Lisp_Object x_frame_get_and_record_arg (struct frame *, Lisp_Object,
                                                Lisp_Object,

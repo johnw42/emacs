@@ -1838,7 +1838,7 @@ safe_run_hook_funcall (ptrdiff_t nargs, Lisp_Object *args)
   eassert (nargs == 2);
   /* Yes, run_hook_with_args works with args in the other order.  */
   internal_condition_case_n (safe_run_hooks_1,
-			     2, ((Lisp_Object []) {args[1], args[0]}),
+			     2, INLINE_ARRAY(Lisp_Object, args[1], args[0]),
 			     Qt, safe_run_hooks_error);
   return Qnil;
 }

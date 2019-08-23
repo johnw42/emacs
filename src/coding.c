@@ -2968,18 +2968,18 @@ detect_coding_iso_2022 (struct coding_system *coding,
 
   for (i = coding_category_iso_7; i <= coding_category_iso_8_else; i++)
     {
-      struct coding_system *this = &(coding_categories[i]);
+      struct coding_system *this_ = &(coding_categories[i]);
       Lisp_Object attrs, val;
 
-      if (this->id < 0)
+      if (this_->id < 0)
 	continue;
-      attrs = CODING_ID_ATTRS (this->id);
-      if (CODING_ISO_FLAGS (this) & CODING_ISO_FLAG_FULL_SUPPORT
+      attrs = CODING_ID_ATTRS (this_->id);
+      if (CODING_ISO_FLAGS (this_) & CODING_ISO_FLAG_FULL_SUPPORT
 	  && ! EQ (CODING_ATTR_CHARSET_LIST (attrs), Viso_2022_charset_list))
 	setup_iso_safe_charsets (attrs);
       val = CODING_ATTR_SAFE_CHARSETS (attrs);
-      this->max_charset_id = SCHARS (val) - 1;
-      this->safe_charsets = SDATA (val);
+      this_->max_charset_id = SCHARS (val) - 1;
+      this_->safe_charsets = SDATA (val);
     }
 
   /* A coding system of this category is always ASCII compatible.  */
@@ -3451,7 +3451,7 @@ finish_composition (int *charbuf, struct composition_status *cmp_status)
     *charbuf++ = -2;			\
     *charbuf++ = rule;			\
     cmp_status->length += 2;		\
-    cmp_status->state--;		\
+    cmp_status->state = cmp_status->state - 1;		\
   } while (0)
 
 /* Store a composed char or a component char C in charbuf, and update
@@ -3468,7 +3468,7 @@ finish_composition (int *charbuf, struct composition_status *cmp_status)
     if (cmp_status->method == COMPOSITION_WITH_RULE			\
 	|| (cmp_status->method == COMPOSITION_WITH_RULE_ALTCHARS	\
 	    && cmp_status->state == COMPOSING_COMPONENT_CHAR))		\
-      cmp_status->state++;						\
+      cmp_status->state = cmp_status->state + 1;						\
   } while (0)
 
 
@@ -6592,14 +6592,14 @@ detect_coding (struct coding_system *coding)
 	  || detect_info.found)
 	{
 	  enum coding_category category;
-	  struct coding_system *this;
+	  struct coding_system *this_;
 
 	  if (coding->head_ascii == coding->src_bytes)
 	    /* As all bytes are 7-bit, we can ignore non-ISO-2022 codings.  */
 	    for (i = 0; i < coding_category_raw_text; i++)
 	      {
 		category = coding_priorities[i];
-		this = coding_categories + category;
+		this_ = coding_categories + category;
 		if (detect_info.found & (1 << category))
 		  break;
 	      }
@@ -6619,11 +6619,11 @@ detect_coding (struct coding_system *coding)
 	      for (i = 0; i < coding_category_raw_text; i++)
 		{
 		  category = coding_priorities[i];
-		  this = coding_categories + category;
-		  /* Some of this->detector (e.g. detect_coding_sjis)
+		  this_ = coding_categories + category;
+		  /* Some of this_->detector (e.g. detect_coding_sjis)
 		     require this information.  */
-		  coding->id = this->id;
-		  if (this->id < 0)
+		  coding->id = this_->id;
+		  if (this_->id < 0)
 		    {
 		      /* No coding system of this category is defined.  */
 		      detect_info.rejected |= (1 << category);
@@ -6635,7 +6635,7 @@ detect_coding (struct coding_system *coding)
 		      if (detect_info.found & (1 << category))
 			break;
 		    }
-		  else if ((*(this->detector)) (coding, &detect_info)
+		  else if ((*(this_->detector)) (coding, &detect_info)
 			   && detect_info.found & (1 << category))
 		    break;
 		}
@@ -6647,7 +6647,7 @@ detect_coding (struct coding_system *coding)
 		{
 		  Lisp_Object coding_systems;
 
-		  coding_systems = AREF (CODING_ID_ATTRS (this->id),
+		  coding_systems = AREF (CODING_ID_ATTRS (this_->id),
 					 coding_attr_utf_bom);
 		  if (CONSP (coding_systems))
 		    {
@@ -6657,13 +6657,13 @@ detect_coding (struct coding_system *coding)
 			found = XCDR (coding_systems);
 		    }
 		  else
-		    found = CODING_ID_NAME (this->id);
+		    found = CODING_ID_NAME (this_->id);
 		}
 	      else if (category == coding_category_utf_16_auto)
 		{
 		  Lisp_Object coding_systems;
 
-		  coding_systems = AREF (CODING_ID_ATTRS (this->id),
+		  coding_systems = AREF (CODING_ID_ATTRS (this_->id),
 					 coding_attr_utf_bom);
 		  if (CONSP (coding_systems))
 		    {
@@ -6673,10 +6673,10 @@ detect_coding (struct coding_system *coding)
 			found = XCDR (coding_systems);
 		    }
 		  else
-		    found = CODING_ID_NAME (this->id);
+		    found = CODING_ID_NAME (this_->id);
 		}
 	      else
-		found = CODING_ID_NAME (this->id);
+		found = CODING_ID_NAME (this_->id);
 	    }
 	  else if (null_byte_found)
 	    found = Qno_conversion;
@@ -6687,8 +6687,8 @@ detect_coding (struct coding_system *coding)
 	    for (i = 0; i < coding_category_raw_text; i++)
 	      if (! (detect_info.rejected & (1 << coding_priorities[i])))
 		{
-		  this = coding_categories + coding_priorities[i];
-		  found = CODING_ID_NAME (this->id);
+		  this_ = coding_categories + coding_priorities[i];
+		  found = CODING_ID_NAME (this_->id);
 		  break;
 		}
 	}
@@ -8603,7 +8603,7 @@ detect_coding_system (const unsigned char *src,
   if (base_category == coding_category_undecided)
     {
       enum coding_category category UNINIT;
-      struct coding_system *this UNINIT;
+      struct coding_system *this_ UNINIT;
       int c, i;
       bool inhibit_nbd = inhibit_flag (coding.spec.undecided.inhibit_nbd,
 				       inhibit_null_byte_detection);
@@ -8665,7 +8665,7 @@ detect_coding_system (const unsigned char *src,
 	    for (i = 0; i < coding_category_raw_text; i++)
 	      {
 		category = coding_priorities[i];
-		this = coding_categories + category;
+		this_ = coding_categories + category;
 		if (detect_info.found & (1 << category))
 		  break;
 	      }
@@ -8685,9 +8685,9 @@ detect_coding_system (const unsigned char *src,
 	      for (i = 0; i < coding_category_raw_text; i++)
 		{
 		  category = coding_priorities[i];
-		  this = coding_categories + category;
+		  this_ = coding_categories + category;
 
-		  if (this->id < 0)
+		  if (this_->id < 0)
 		    {
 		      /* No coding system of this category is defined.  */
 		      detect_info.rejected |= (1 << category);
@@ -8700,7 +8700,7 @@ detect_coding_system (const unsigned char *src,
 			  && (detect_info.found & (1 << category)))
 			break;
 		    }
-		  else if ((*(this->detector)) (&coding, &detect_info)
+		  else if ((*(this_->detector)) (&coding, &detect_info)
 			   && highest
 			   && (detect_info.found & (1 << category)))
 		    {
@@ -8735,7 +8735,7 @@ detect_coding_system (const unsigned char *src,
 	  if (detect_info.found)
 	    {
 	      detect_info.found = 1 << category;
-	      val = list1 (make_number (this->id));
+	      val = list1 (make_number (this_->id));
 	    }
 	  else
 	    for (i = 0; i < coding_category_raw_text; i++)
@@ -8779,30 +8779,30 @@ detect_coding_system (const unsigned char *src,
     {
       if (detect_coding_utf_8 (&coding, &detect_info))
 	{
-	  struct coding_system *this;
+	  struct coding_system *this_;
 
 	  if (detect_info.found & CATEGORY_MASK_UTF_8_SIG)
-	    this = coding_categories + coding_category_utf_8_sig;
+	    this_ = coding_categories + coding_category_utf_8_sig;
 	  else
-	    this = coding_categories + coding_category_utf_8_nosig;
-	  val = list1 (make_number (this->id));
+	    this_ = coding_categories + coding_category_utf_8_nosig;
+	  val = list1 (make_number (this_->id));
 	}
     }
   else if (base_category == coding_category_utf_16_auto)
     {
       if (detect_coding_utf_16 (&coding, &detect_info))
 	{
-	  struct coding_system *this;
+	  struct coding_system *this_;
 
 	  if (detect_info.found & CATEGORY_MASK_UTF_16_LE)
-	    this = coding_categories + coding_category_utf_16_le;
+	    this_ = coding_categories + coding_category_utf_16_le;
 	  else if (detect_info.found & CATEGORY_MASK_UTF_16_BE)
-	    this = coding_categories + coding_category_utf_16_be;
+	    this_ = coding_categories + coding_category_utf_16_be;
 	  else if (detect_info.rejected & CATEGORY_MASK_UTF_16_LE_NOSIG)
-	    this = coding_categories + coding_category_utf_16_be_nosig;
+	    this_ = coding_categories + coding_category_utf_16_be_nosig;
 	  else
-	    this = coding_categories + coding_category_utf_16_le_nosig;
-	  val = list1 (make_number (this->id));
+	    this_ = coding_categories + coding_category_utf_16_le_nosig;
+	  val = list1 (make_number (this_->id));
 	}
     }
   else

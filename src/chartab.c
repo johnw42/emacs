@@ -664,7 +664,7 @@ optimize_sub_char_table (Lisp_Object table, Lisp_Object test)
 {
   struct Lisp_Sub_Char_Table *tbl = XSUB_CHAR_TABLE (table);
   int i, depth = tbl->depth;
-  Lisp_Object elt, this;
+  Lisp_Object elt, this_;
   bool optimizable;
 
   elt = XSUB_CHAR_TABLE (table)->contents[0];
@@ -676,16 +676,16 @@ optimize_sub_char_table (Lisp_Object table, Lisp_Object test)
   optimizable = SUB_CHAR_TABLE_P (elt) ? 0 : 1;
   for (i = 1; i < chartab_size[depth]; i++)
     {
-      this = XSUB_CHAR_TABLE (table)->contents[i];
-      if (SUB_CHAR_TABLE_P (this))
+      this_ = XSUB_CHAR_TABLE (table)->contents[i];
+      if (SUB_CHAR_TABLE_P (this_))
 	{
-	  this = optimize_sub_char_table (this, test);
-	  set_sub_char_table_contents (table, i, this);
+	  this_ = optimize_sub_char_table (this_, test);
+	  set_sub_char_table_contents (table, i, this_);
 	}
       if (optimizable
-	  && (NILP (test) ? NILP (Fequal (this, elt)) /* defaults to `equal'. */
-	      : EQ (test, Qeq) ? !EQ (this, elt)      /* Optimize `eq' case.  */
-	      : NILP (call2 (test, this, elt))))
+	  && (NILP (test) ? NILP (Fequal (this_, elt)) /* defaults to `equal'. */
+	      : EQ (test, Qeq) ? !EQ (this_, elt)      /* Optimize `eq' case.  */
+	      : NILP (call2 (test, this_, elt))))
 	optimizable = 0;
     }
 
@@ -773,25 +773,25 @@ map_sub_char_table (void (*c_function) (Lisp_Object, Lisp_Object, Lisp_Object),
   for (c = min_char + chars_in_block * i; c <= max_char;
        i++, c += chars_in_block)
     {
-      Lisp_Object this = (SUB_CHAR_TABLE_P (table)
+      Lisp_Object this_ = (SUB_CHAR_TABLE_P (table)
 			  ? XSUB_CHAR_TABLE (table)->contents[i]
 			  : XCHAR_TABLE (table)->contents[i]);
       int nextc = c + chars_in_block;
 
-      if (is_uniprop && UNIPROP_COMPRESSED_FORM_P (this))
-	this = uniprop_table_uncompress (table, i);
-      if (SUB_CHAR_TABLE_P (this))
+      if (is_uniprop && UNIPROP_COMPRESSED_FORM_P (this_))
+	this_ = uniprop_table_uncompress (table, i);
+      if (SUB_CHAR_TABLE_P (this_))
 	{
 	  if (to >= nextc)
 	    XSETCDR (range, make_number (nextc - 1));
-	  val = map_sub_char_table (c_function, function, this, arg,
+	  val = map_sub_char_table (c_function, function, this_, arg,
 				    val, range, top);
 	}
       else
 	{
-	  if (NILP (this))
-	    this = XCHAR_TABLE (top)->defalt;
-	  if (!EQ (val, this))
+	  if (NILP (this_))
+	    this_ = XCHAR_TABLE (top)->defalt;
+	  if (!EQ (val, this_))
 	    {
 	      bool different_value = 1;
 
@@ -811,7 +811,7 @@ map_sub_char_table (void (*c_function) (Lisp_Object, Lisp_Object, Lisp_Object),
 		      val = map_sub_char_table (c_function, function,
 						parent, arg, val, range,
 						parent);
-		      if (EQ (val, this))
+		      if (EQ (val, this_))
 			different_value = 0;
 		    }
 		}
@@ -841,7 +841,7 @@ map_sub_char_table (void (*c_function) (Lisp_Object, Lisp_Object, Lisp_Object),
 			}
 		    }
 		}
-	      val = this;
+	      val = this_;
 	      from = c;
 	      XSETCAR (range, make_number (c));
 	    }
@@ -947,11 +947,11 @@ map_sub_char_table_for_charset (void (*c_function) (Lisp_Object, Lisp_Object),
   if (depth < 3)
     for (i = 0; i < chartab_size[depth]; i++, c += chartab_chars[depth])
       {
-	Lisp_Object this;
+	Lisp_Object this_;
 
-	this = tbl->contents[i];
-	if (SUB_CHAR_TABLE_P (this))
-	  map_sub_char_table_for_charset (c_function, function, this, arg,
+	this_ = tbl->contents[i];
+	if (SUB_CHAR_TABLE_P (this_))
+	  map_sub_char_table_for_charset (c_function, function, this_, arg,
 					  range, charset, from, to);
 	else
 	  {
@@ -969,11 +969,11 @@ map_sub_char_table_for_charset (void (*c_function) (Lisp_Object, Lisp_Object),
   else
     for (i = 0; i < chartab_size[depth]; i++, c++)
       {
-	Lisp_Object this;
+	Lisp_Object this_;
 	unsigned code;
 
-	this = tbl->contents[i];
-	if (NILP (this)
+	this_ = tbl->contents[i];
+	if (NILP (this_)
 	    || (charset
 		&& (code = ENCODE_CHAR (charset, c),
 		    (code < from || code > to))))
@@ -1031,11 +1031,11 @@ map_char_table_for_charset (void (*c_function) (Lisp_Object, Lisp_Object),
 
   for (i = 0, c = 0; i < chartab_size[0]; i++, c += chartab_chars[0])
     {
-      Lisp_Object this;
+      Lisp_Object this_;
 
-      this = XCHAR_TABLE (table)->contents[i];
-      if (SUB_CHAR_TABLE_P (this))
-	map_sub_char_table_for_charset (c_function, function, this, arg,
+      this_ = XCHAR_TABLE (table)->contents[i];
+      if (SUB_CHAR_TABLE_P (this_))
+	map_sub_char_table_for_charset (c_function, function, this_, arg,
 					range, charset, from, to);
       else
 	{

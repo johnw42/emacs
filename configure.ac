@@ -767,14 +767,26 @@ fi
 #### Choose a compiler.
 
 dnl Sets GCC=yes if using gcc.
-AC_LANG(C++)
-AC_PROG_CXX([clang++ g++ c++ "$XCRUN g++" "$XCRUN clang++"])
-if test -n "$XCRUN"; then
-  AC_CHECK_PROGS(AR, [ar "$XCRUN ar"])
-  test -n "$AR" && export AR
-fi
+have_cxx=yes
+if test $have_cxx = yes; then
+  AC_LANG(C++)
+  AC_PROG_CXX([g++ c++ clang++ "$XCRUN g++" "$XCRUN clang++"])
+  if test -n "$XCRUN"; then
+    AC_CHECK_PROGS(AR, [ar "$XCRUN ar"])
+    test -n "$AR" && export AR
+  fi
 
-AC_PROG_CXX_C_O
+  AC_PROG_CXX_C_O
+else
+  AC_LANG(C)
+  AC_PROG_CC([gcc cc clang "$XCRUN gcc" "$XCRUN clang"])
+  if test -n "$XCRUN"; then
+    AC_CHECK_PROGS(AR, [ar "$XCRUN ar"])
+    test -n "$AR" && export AR
+  fi
+
+  AC_PROG_CC_C_O
+fi
 
 if test x$GCC = xyes; then
   test "x$GCC_TEST_OPTIONS" != x && CC="$CC $GCC_TEST_OPTIONS"
@@ -996,7 +1008,9 @@ AS_IF([test $gl_gcc_warnings = no],
     nw="$nw -Wsuggest-attribute=format"
   fi
 
-  gl_MANYWARN_ALL_GCC([ws])
+  if test $have_cxx = no; then
+    gl_MANYWARN_ALL_GCC([ws])
+  fi
   gl_MANYWARN_COMPLEMENT([ws], [$ws], [$nw])
   for w in $ws; do
     gl_WARN_ADD([$w])
@@ -2225,6 +2239,9 @@ if test "${system_malloc}" != yes && test "${doug_lea_malloc}" != yes \
    && test "${UNEXEC_OBJ}" = unexelf.o; then
   hybrid_malloc=yes
 fi
+
+hybrid_malloc=no
+system_malloc=yes
 
 GMALLOC_OBJ=
 HYBRID_MALLOC=

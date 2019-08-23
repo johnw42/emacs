@@ -2266,15 +2266,15 @@ unshow_buffer (register struct window *w)
    means change window structure only.  Otherwise store geometry and
    other settings as well.  */
 static void
-replace_window (Lisp_Object old, Lisp_Object new, bool setflag)
+replace_window (Lisp_Object old, Lisp_Object new_, bool setflag)
 {
   Lisp_Object tem;
-  struct window *o = XWINDOW (old), *n = XWINDOW (new);
+  struct window *o = XWINDOW (old), *n = XWINDOW (new_);
 
   /* If OLD is its frame's root window, then NEW is the new
      root window for that frame.  */
   if (EQ (old, FRAME_ROOT_WINDOW (XFRAME (o->frame))))
-    fset_root_window (XFRAME (o->frame), new);
+    fset_root_window (XFRAME (o->frame), new_);
 
   if (setflag)
     {
@@ -2309,17 +2309,17 @@ replace_window (Lisp_Object old, Lisp_Object new, bool setflag)
   tem = o->next;
   wset_next (n, tem);
   if (!NILP (tem))
-    wset_prev (XWINDOW (tem), new);
+    wset_prev (XWINDOW (tem), new_);
 
   tem = o->prev;
   wset_prev (n, tem);
   if (!NILP (tem))
-    wset_next (XWINDOW (tem), new);
+    wset_next (XWINDOW (tem), new_);
 
   tem = o->parent;
   wset_parent (n, tem);
   if (!NILP (tem) && EQ (XWINDOW (tem)->contents, old))
-    wset_combination (XWINDOW (tem), XWINDOW (tem)->horizontal, new);
+    wset_combination (XWINDOW (tem), XWINDOW (tem)->horizontal, new_);
 }
 
 /* If window WINDOW and its parent window are iso-combined, merge
@@ -4362,7 +4362,7 @@ set correctly.  See the code of `split-window' for how this is done.  */)
      provided OLD is a leaf window, or to the frame's selected window.
      NEW (*n) is the new window created with some parameters taken from
      REFERENCE (*r).  */
-  Lisp_Object new, frame, reference;
+  Lisp_Object new_, frame, reference;
   struct window *o, *p, *n, *r, *c;
   struct frame *f;
   bool horflag
@@ -4454,8 +4454,8 @@ set correctly.  See the code of `split-window' for how this is done.  */)
     p = XWINDOW (o->parent);
 
   fset_redisplay (f);
-  new = make_window ();
-  n = XWINDOW (new);
+  new_ = make_window ();
+  n = XWINDOW (new_);
   wset_frame (n, frame);
   wset_parent (n, o->parent);
 
@@ -4463,19 +4463,19 @@ set correctly.  See the code of `split-window' for how this is done.  */)
     {
       wset_prev (n, o->prev);
       if (NILP (n->prev))
-	wset_combination (p, horflag, new);
+	wset_combination (p, horflag, new_);
       else
-	wset_next (XWINDOW (n->prev), new);
+	wset_next (XWINDOW (n->prev), new_);
       wset_next (n, old);
-      wset_prev (o, new);
+      wset_prev (o, new_);
     }
   else
     {
       wset_next (n, o->next);
       if (!NILP (n->next))
-	wset_prev (XWINDOW (n->next), new);
+	wset_prev (XWINDOW (n->next), new_);
       wset_prev (n, old);
-      wset_next (o, new);
+      wset_next (o, new_);
     }
 
   n->window_end_valid = false;
@@ -4530,16 +4530,16 @@ set correctly.  See the code of `split-window' for how this is done.  */)
   adjust_frame_glyphs (f);
   /* Set buffer of NEW to buffer of reference window.  Don't run
      any hooks.  */
-  set_window_buffer (new, r->contents, false, true);
+  set_window_buffer (new_, r->contents, false, true);
   unblock_input ();
 
   /* Maybe we should run the scroll functions in Elisp (which already
      runs the configuration change hook).  */
   if (! NILP (Vwindow_scroll_functions))
-    run_hook_with_args_2 (Qwindow_scroll_functions, new,
+    run_hook_with_args_2 (Qwindow_scroll_functions, new_,
 			  Fmarker_position (n->start));
   /* Return NEW.  */
-  return new;
+  return new_;
 }
 
 

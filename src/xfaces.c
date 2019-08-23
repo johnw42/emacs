@@ -3335,17 +3335,17 @@ DEFUN ("internal-face-x-get-resource", Finternal_face_x_get_resource,
 Returned value is for the display of frame FRAME.  If FRAME is not
 specified or nil, use selected frame.  This function exists because
 ordinary `x-get-resource' doesn't take a frame argument.  */)
-  (Lisp_Object resource, Lisp_Object class, Lisp_Object frame)
+  (Lisp_Object resource, Lisp_Object class_, Lisp_Object frame)
 {
   Lisp_Object value = Qnil;
   struct frame *f;
 
   CHECK_STRING (resource);
-  CHECK_STRING (class);
+  CHECK_STRING (class_);
   f = decode_live_frame (frame);
   block_input ();
   value = display_x_get_resource (FRAME_DISPLAY_INFO (f),
-				  resource, class, Qnil, Qnil);
+				  resource, class_, Qnil, Qnil);
   unblock_input ();
   return value;
 }

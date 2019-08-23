@@ -20,6 +20,7 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 /* New display code by Gerd Moellmann <gerd@gnu.org>.  */
 /* Xt features made by Fred Pierresteguy.  */
 
+#include <cstdlib>
 #include <config.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -2551,7 +2552,7 @@ static bool
 x_alloc_lighter_color (struct frame *f, Display *display, Colormap cmap,
 		       unsigned long *pixel, double factor, int delta)
 {
-  XColor color, new;
+  XColor color, new_;
   long bright;
   bool success_p;
 
@@ -2561,9 +2562,9 @@ x_alloc_lighter_color (struct frame *f, Display *display, Colormap cmap,
 
   /* Change RGB values by specified FACTOR.  Avoid overflow!  */
   eassert (factor >= 0);
-  new.red = min (0xffff, factor * color.red);
-  new.green = min (0xffff, factor * color.green);
-  new.blue = min (0xffff, factor * color.blue);
+  new_.red = min (0xffff, factor * color.red);
+  new_.green = min (0xffff, factor * color.green);
+  new_.blue = min (0xffff, factor * color.blue);
 
   /* Calculate brightness of COLOR.  */
   bright = (2 * color.red + 3 * color.green + color.blue) / 6;
@@ -2581,36 +2582,36 @@ x_alloc_lighter_color (struct frame *f, Display *display, Colormap cmap,
 
       if (factor < 1)
 	{
-	  new.red =   max (0, new.red -   min_delta);
-	  new.green = max (0, new.green - min_delta);
-	  new.blue =  max (0, new.blue -  min_delta);
+	  new_.red =   max (0, new_.red -   min_delta);
+	  new_.green = max (0, new_.green - min_delta);
+	  new_.blue =  max (0, new_.blue -  min_delta);
 	}
       else
 	{
-	  new.red =   min (0xffff, min_delta + new.red);
-	  new.green = min (0xffff, min_delta + new.green);
-	  new.blue =  min (0xffff, min_delta + new.blue);
+	  new_.red =   min (0xffff, min_delta + new_.red);
+	  new_.green = min (0xffff, min_delta + new_.green);
+	  new_.blue =  min (0xffff, min_delta + new_.blue);
 	}
     }
 
   /* Try to allocate the color.  */
-  success_p = x_alloc_nearest_color (f, cmap, &new);
+  success_p = x_alloc_nearest_color (f, cmap, &new_);
   if (success_p)
     {
-      if (new.pixel == *pixel)
+      if (new_.pixel == *pixel)
 	{
 	  /* If we end up with the same color as before, try adding
 	     delta to the RGB values.  */
-	  x_free_colors (f, &new.pixel, 1);
+	  x_free_colors (f, &new_.pixel, 1);
 
-	  new.red = min (0xffff, delta + color.red);
-	  new.green = min (0xffff, delta + color.green);
-	  new.blue = min (0xffff, delta + color.blue);
-	  success_p = x_alloc_nearest_color (f, cmap, &new);
+	  new_.red = min (0xffff, delta + color.red);
+	  new_.green = min (0xffff, delta + color.green);
+	  new_.blue = min (0xffff, delta + color.blue);
+	  success_p = x_alloc_nearest_color (f, cmap, &new_);
 	}
       else
 	success_p = true;
-      *pixel = new.pixel;
+      *pixel = new_.pixel;
     }
 
   return success_p;
@@ -2623,7 +2624,6 @@ x_alloc_lighter_color (struct frame *f, Display *display, Colormap cmap,
    DELTA lighter or darker than the relief's background which is found
    in S->f->output_data.x->relief_background.  If such a color cannot
    be allocated, use DEFAULT_PIXEL, instead.  */
-
 static void
 x_setup_relief_color (struct frame *f, struct relief *relief, double factor,
 		      int delta, unsigned long default_pixel)
@@ -12649,7 +12649,7 @@ x_term_init (Lisp_Object display_name, char *xrm_option, char *resource_name)
   reset_mouse_highlight (&dpyinfo->mouse_highlight);
 
   /* See if we can construct pixel values from RGB values.  */
-  if (dpyinfo->visual->class == TrueColor)
+  if (dpyinfo->visual->c_class == TrueColor)
     {
       get_bits_and_offset (dpyinfo->visual->red_mask,
                            &dpyinfo->red_bits, &dpyinfo->red_offset);
@@ -12662,7 +12662,7 @@ x_term_init (Lisp_Object display_name, char *xrm_option, char *resource_name)
   /* See if a private colormap is requested.  */
   if (dpyinfo->visual == DefaultVisualOfScreen (dpyinfo->screen))
     {
-      if (dpyinfo->visual->class == PseudoColor)
+      if (dpyinfo->visual->c_class == PseudoColor)
 	{
 	  AUTO_STRING (privateColormap, "privateColormap");
 	  AUTO_STRING (PrivateColormap, "PrivateColormap");

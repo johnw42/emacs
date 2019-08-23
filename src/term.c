@@ -2754,16 +2754,16 @@ static tty_menu *
 tty_menu_search_pane (tty_menu *menu, int pane)
 {
   int i;
-  tty_menu *try;
+  tty_menu *try_;
 
   for (i = 0; i < menu->count; i++)
     if (menu->submenu[i])
       {
 	if (pane == menu->panenumber[i])
 	  return menu->submenu[i];
-	try = tty_menu_search_pane (menu->submenu[i], pane);
-	if (try)
-	  return try;
+	try_ = tty_menu_search_pane (menu->submenu[i], pane);
+	if (try_)
+	  return try_;
       }
   return (tty_menu *) 0;
 }

@@ -56,14 +56,14 @@ static char *x_customization_string;
    such resource, return zero.  */
 static char *
 x_get_customization_string (XrmDatabase db, const char *name,
-			    const char *class)
+			    const char *class_)
 {
   char *full_name = alloca (strlen (name) + sizeof "customization" + 3);
-  char *full_class = alloca (strlen (class) + sizeof "Customization" + 3);
+  char *full_class = alloca (strlen (class_) + sizeof "Customization" + 3);
   char *result;
 
   sprintf (full_name,  "%s.%s", name,  "customization");
-  sprintf (full_class, "%s.%s", class, "Customization");
+  sprintf (full_class, "%s.%s", class_, "Customization");
 
   result = x_get_string_resource (db, full_name, full_class);
   return result ? xstrdup (result) : NULL;
@@ -99,7 +99,7 @@ x_get_customization_string (XrmDatabase db, const char *name,
    Return NULL otherwise.  */
 
 static XrmDatabase
-magic_db (const char *string, ptrdiff_t string_len, const char *class,
+magic_db (const char *string, ptrdiff_t string_len, const char *class_,
 	  const char *escaped_suffix)
 {
   XrmDatabase db;
@@ -142,8 +142,8 @@ magic_db (const char *string, ptrdiff_t string_len, const char *class,
 		break;
 
 	      case 'N':
-		next = class;
-		next_len = strlen (class);
+		next = class_;
+		next_len = strlen (class_);
 		break;
 
 	      case 'T':
@@ -236,7 +236,7 @@ gethomedir (void)
    the path name of the one we found otherwise.  */
 
 static XrmDatabase
-search_magic_path (const char *search_path, const char *class,
+search_magic_path (const char *search_path, const char *class_,
 		   const char *escaped_suffix)
 {
   const char *s, *p;
@@ -248,14 +248,14 @@ search_magic_path (const char *search_path, const char *class,
 
       if (p > s)
 	{
-	  XrmDatabase db = magic_db (s, p - s, class, escaped_suffix);
+	  XrmDatabase db = magic_db (s, p - s, class_, escaped_suffix);
 	  if (db)
 	    return db;
 	}
       else if (*p == ':')
 	{
 	  static char const ns[] = "%N%S";
-	  XrmDatabase db = magic_db (ns, strlen (ns), class, escaped_suffix);
+	  XrmDatabase db = magic_db (ns, strlen (ns), class_, escaped_suffix);
 	  if (db)
 	    return db;
 	}
@@ -270,14 +270,14 @@ search_magic_path (const char *search_path, const char *class,
 /* Producing databases for individual sources.  */
 
 static XrmDatabase
-get_system_app (const char *class)
+get_system_app (const char *class_)
 {
   const char *path;
 
   path = getenv ("XFILESEARCHPATH");
   if (! path) path = PATH_X_DEFAULTS;
 
-  return search_magic_path (path, class, 0);
+  return search_magic_path (path, class_, 0);
 }
 
 
@@ -289,7 +289,7 @@ get_fallback (Display *display)
 
 
 static XrmDatabase
-get_user_app (const char *class)
+get_user_app (const char *class_)
 {
   XrmDatabase db = 0;
   const char *path;
@@ -298,7 +298,7 @@ get_user_app (const char *class)
      names, not directories.  */
   path = getenv ("XUSERFILESEARCHPATH");
   if (path)
-    db = search_magic_path (path, class, 0);
+    db = search_magic_path (path, class_, 0);
 
   if (! db)
     {
@@ -307,9 +307,9 @@ get_user_app (const char *class)
       path = getenv ("XAPPLRESDIR");
       if (path)
 	{
-	  db = search_magic_path (path, class, "/%L/%N");
+	  db = search_magic_path (path, class_, "/%L/%N");
 	  if (!db)
-	    db = search_magic_path (path, class, "/%N");
+	    db = search_magic_path (path, class_, "/%N");
 	}
     }
 
@@ -318,9 +318,9 @@ get_user_app (const char *class)
       /* Check in the home directory.  This is a bit of a hack; let's
 	 hope one's home directory doesn't contain any %-escapes.  */
       char *home = gethomedir ();
-      db = search_magic_path (home, class, "%L/%N");
+      db = search_magic_path (home, class_, "%L/%N");
       if (! db)
-	db = search_magic_path (home, class, "%N");
+	db = search_magic_path (home, class_, "%N");
       xfree (home);
     }
 
@@ -551,7 +551,7 @@ x_load_resources (Display *display, const char *xrm_string,
    and of type TYPE from database RDB.  The value is returned in RET_VALUE. */
 
 static int
-x_get_resource (XrmDatabase rdb, const char *name, const char *class,
+x_get_resource (XrmDatabase rdb, const char *name, const char *class_,
 		XrmRepresentation expected_type, XrmValue *ret_value)
 {
   XrmValue value;
@@ -560,7 +560,7 @@ x_get_resource (XrmDatabase rdb, const char *name, const char *class,
   XrmRepresentation type;
 
   XrmStringToNameList (name, namelist);
-  XrmStringToClassList (class, classlist);
+  XrmStringToClassList (class_, classlist);
 
   if (XrmQGetResource (rdb, namelist, classlist, &type, &value) == True
       && (type == expected_type))
@@ -580,7 +580,7 @@ x_get_resource (XrmDatabase rdb, const char *name, const char *class,
    database RDB. */
 
 char *
-x_get_string_resource (XrmDatabase rdb, const char *name, const char *class)
+x_get_string_resource (XrmDatabase rdb, const char *name, const char *class_)
 {
   XrmValue value;
 
@@ -588,7 +588,7 @@ x_get_string_resource (XrmDatabase rdb, const char *name, const char *class)
     /* --quick was passed, so this is a no-op.  */
     return NULL;
 
-  if (x_get_resource (rdb, name, class, x_rm_string, &value))
+  if (x_get_resource (rdb, name, class_, x_rm_string, &value))
     return (char *) value.addr;
 
   return 0;
@@ -628,7 +628,7 @@ int
 main (int argc, char **argv)
 {
   Display *display;
-  char *displayname, *resource_string, *class, *name;
+  char *displayname, *resource_string, *class_, *name;
   XrmDatabase xdb;
   List arg_list, lp;
 
@@ -645,9 +645,9 @@ main (int argc, char **argv)
 
   lp = member ("-c", arg_list);
   if (! NIL (lp))
-    class = car (cdr (lp));
+    class_ = car (cdr (lp));
   else
-    class = "Emacs";
+    class_ = "Emacs";
 
   lp = member ("-n", arg_list);
   if (! NIL (lp))
@@ -660,7 +660,7 @@ main (int argc, char **argv)
   if (!(display = XOpenDisplay (displayname)))
     fatal ("Can't open display '%s'\n", XDisplayName (displayname));
 
-  xdb = x_load_resources (display, resource_string, name, class);
+  xdb = x_load_resources (display, resource_string, name, class_);
 
   /* In a real program, you'd want to also do this: */
   display->db = xdb;

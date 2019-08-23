@@ -34,6 +34,14 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 #include <intprops.h>
 #include <verify.h>
 
+#ifdef __cplusplus
+#include <initializer_list>
+#define INLINE_ARRAY(type, ...) (std::initializer_list<type>({__VA_ARGS__}).begin())
+#else
+#define INLINE_ARRAY(type, ...) ((type[]) {__VA_ARGS__})
+#endif
+
+
 INLINE_HEADER_BEGIN
 
 /* Define a TYPE constant ID as an externally visible name.  Use like this:
@@ -1303,7 +1311,7 @@ INLINE struct Lisp_String *
 XSTRING (Lisp_Object a)
 {
   eassert (STRINGP (a));
-  return XUNTAG (a, Lisp_String);
+  return (struct Lisp_String *) XUNTAG (a, Lisp_String);
 }
 
 /* True if STR is a multibyte string.  */
@@ -1367,9 +1375,9 @@ SREF (Lisp_Object string, ptrdiff_t index)
   return SDATA (string)[index];
 }
 INLINE void
-SSET (Lisp_Object string, ptrdiff_t index, unsigned char new)
+SSET (Lisp_Object string, ptrdiff_t index, unsigned char new_)
 {
-  SDATA (string)[index] = new;
+  SDATA (string)[index] = new_;
 }
 INLINE ptrdiff_t
 SCHARS (Lisp_Object string)
@@ -1428,7 +1436,7 @@ INLINE struct Lisp_Vector *
 XVECTOR (Lisp_Object a)
 {
   eassert (VECTORLIKEP (a));
-  return XUNTAG (a, Lisp_Vectorlike);
+  return (struct Lisp_Vector *) XUNTAG (a, Lisp_Vectorlike);
 }
 
 INLINE ptrdiff_t
@@ -2991,7 +2999,7 @@ enum maxargs
    E.g., 'return CALLN (Fformat, fmt, text);' is less error-prone than
    '{ Lisp_Object a[2]; a[0] = fmt; a[1] = text; return Fformat (2, a); }'.
    CALLN is overkill for simple usages like 'Finsert (1, &text);'.  */
-#define CALLN(f, ...) CALLMANY (f, ((Lisp_Object []) {__VA_ARGS__}))
+#define CALLN(f, ...) CALLMANY (f, INLINE_ARRAY(Lisp_Object, __VA_ARGS__))
 
 extern void defvar_lisp (struct Lisp_Objfwd *, const char *, Lisp_Object *);
 extern void defvar_lisp_nopro (struct Lisp_Objfwd *, const char *, Lisp_Object *);

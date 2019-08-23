@@ -1542,7 +1542,7 @@ extern void validate_x_resource_name (void);
 
 extern Lisp_Object display_x_get_resource (Display_Info *,
 					   Lisp_Object attribute,
-					   Lisp_Object class,
+					   Lisp_Object class_,
 					   Lisp_Object component,
 					   Lisp_Object subclass);
 

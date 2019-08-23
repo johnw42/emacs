@@ -219,9 +219,9 @@ _GL_WARN_ON_USE (mempcpy, "mempcpy is unportable - "
 /* Search backwards through a block for a byte (specified as an int).  */
 #if @GNULIB_MEMRCHR@
 # if ! @HAVE_DECL_MEMRCHR@
-_GL_FUNCDECL_SYS (memrchr, void *, (void const *, int, size_t)
-                                   _GL_ATTRIBUTE_PURE
-                                   _GL_ARG_NONNULL ((1)));
+/* _GL_FUNCDECL_SYS (memrchr, void *, (void const *, int, size_t) */
+/*                                    _GL_ATTRIBUTE_PURE */
+/*                                    _GL_ARG_NONNULL ((1))); */
 # endif
   /* On some systems, this function is defined as an overloaded function:
        extern "C++" { const void * std::memrchr (const void *, int, size_t); }

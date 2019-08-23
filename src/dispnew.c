@@ -3279,7 +3279,7 @@ redraw_overlapped_rows (struct window *w, int yb)
 	{
 	  enum glyph_row_area area;
 
-	  for (area = LEFT_MARGIN_AREA; area < LAST_AREA; ++area)
+	  for (area = LEFT_MARGIN_AREA; area < LAST_AREA; area = area + 1)
 	    {
 	      output_cursor_to (w, i, 0, row->y,
 				area == TEXT_AREA ? row->x : 0);
