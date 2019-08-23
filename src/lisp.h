@@ -41,6 +41,12 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 #define INLINE_ARRAY(type, ...) ((type[]) {__VA_ARGS__})
 #endif
 
+#ifdef __cplusplus
+#define this this_
+#define class class_
+#define private private_
+#define new new_
+#endif
 
 INLINE_HEADER_BEGIN
 
@@ -1311,7 +1317,7 @@ INLINE struct Lisp_String *
 XSTRING (Lisp_Object a)
 {
   eassert (STRINGP (a));
-  return (struct Lisp_String *) XUNTAG (a, Lisp_String);
+  return XUNTAG (a, Lisp_String);
 }
 
 /* True if STR is a multibyte string.  */
@@ -1375,9 +1381,9 @@ SREF (Lisp_Object string, ptrdiff_t index)
   return SDATA (string)[index];
 }
 INLINE void
-SSET (Lisp_Object string, ptrdiff_t index, unsigned char new_)
+SSET (Lisp_Object string, ptrdiff_t index, unsigned char new)
 {
-  SDATA (string)[index] = new_;
+  SDATA (string)[index] = new;
 }
 INLINE ptrdiff_t
 SCHARS (Lisp_Object string)
@@ -4753,5 +4759,10 @@ maybe_gc (void)
 }
 
 INLINE_HEADER_END
+
+#undef this
+#undef class
+#undef private
+#undef new
 
 #endif /* EMACS_LISP_H */

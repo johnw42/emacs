@@ -336,6 +336,14 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 #include TERM_HEADER
 #endif /* HAVE_WINDOW_SYSTEM */
 
+#ifdef __cplusplus
+#define this this_
+#define class class_
+#define private private_
+#define new new_
+#define delete delete_
+#endif
+
 #ifndef FRAME_X_OUTPUT
 #define FRAME_X_OUTPUT(f) ((f)->output_data.x)
 #endif
@@ -12079,13 +12087,13 @@ prepare_menu_bars (void)
 	  Lisp_Object ws = window_list ();
 	  for (windows = Qnil; CONSP (ws); ws = XCDR (ws))
 	    {
-	      Lisp_Object this_ = XCAR (ws);
-	      struct window *w = XWINDOW (this_);
+	      Lisp_Object this = XCAR (ws);
+	      struct window *w = XWINDOW (this);
 	      if (w->redisplay
 		  || XFRAME (w->frame)->redisplay
 		  || XBUFFER (w->contents)->text->redisplay)
 		{
-		  windows = Fcons (this_, windows);
+		  windows = Fcons (this, windows);
 		}
 	    }
 	}

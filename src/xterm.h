@@ -49,8 +49,12 @@ typedef Widget xt_or_gtk_widget;
 #include <gtk/gtk.h>
 #include <gdk/gdkx.h>
 
-#ifndef __cplusplus
-#define c_class class
+#ifdef __cplusplus
+#define this this_
+#define class class_
+#define private private_
+#define new new_
+#define delete delete_
 #endif
 
 /* Some definitions to reduce conditionals.  */
@@ -1197,8 +1201,8 @@ x_make_truecolor_pixel (struct x_display_info *dpyinfo, int r, int g, int b)
 INLINE bool
 x_mutable_colormap (Visual *visual)
 {
-  int class_ = visual->c_class;
-  return (class_ != StaticColor && class_ != StaticGray && class_ != TrueColor);
+  int class = visual->class;
+  return (class != StaticColor && class != StaticGray && class != TrueColor);
 }
 
 extern void x_set_sticky (struct frame *, Lisp_Object, Lisp_Object);
@@ -1308,5 +1312,11 @@ extern void x_session_close (void);
    (nr).height = (rheight))
 
 INLINE_HEADER_END
+
+#undef this
+#undef class
+#undef private
+#undef new
+#undef delete
 
 #endif /* XTERM_H */

@@ -53,6 +53,13 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 #include "widget.h"
 #endif
 
+#ifdef __cplusplus
+#define this this_
+#define class class_
+#define private private_
+#define new new_
+#endif
+
 /* The currently selected frame.  */
 
 Lisp_Object selected_frame;
@@ -1794,17 +1801,17 @@ check_minibuf_window (Lisp_Object frame, int select)
 
   if (WINDOWP (minibuf_window) && EQ (f->minibuffer_window, minibuf_window))
     {
-      Lisp_Object frames, this_, window = make_number (0);
+      Lisp_Object frames, this, window = make_number (0);
 
       if (!EQ (frame, selected_frame)
 	  && FRAME_HAS_MINIBUF_P (XFRAME (selected_frame)))
 	window = FRAME_MINIBUF_WINDOW (XFRAME (selected_frame));
       else
-	FOR_EACH_FRAME (frames, this_)
+	FOR_EACH_FRAME (frames, this)
 	  {
-	    if (!EQ (this_, frame) && FRAME_HAS_MINIBUF_P (XFRAME (this_)))
+	    if (!EQ (this, frame) && FRAME_HAS_MINIBUF_P (XFRAME (this)))
 	      {
-		window = FRAME_MINIBUF_WINDOW (XFRAME (this_));
+		window = FRAME_MINIBUF_WINDOW (XFRAME (this));
 		break;
 	      }
 	  }
@@ -4464,10 +4471,10 @@ x_set_right_divider_width (struct frame *f, Lisp_Object arg, Lisp_Object oldval)
 {
   int old = FRAME_RIGHT_DIVIDER_WIDTH (f);
   CHECK_TYPE_RANGED_INTEGER (int, arg);
-  int new_ = max (0, XINT (arg));
-  if (new_ != old)
+  int new = max (0, XINT (arg));
+  if (new != old)
     {
-      f->right_divider_width = new_;
+      f->right_divider_width = new;
       adjust_frame_size (f, -1, -1, 4, 0, Qright_divider_width);
       adjust_frame_glyphs (f);
       SET_FRAME_GARBAGED (f);
@@ -4479,10 +4486,10 @@ x_set_bottom_divider_width (struct frame *f, Lisp_Object arg, Lisp_Object oldval
 {
   int old = FRAME_BOTTOM_DIVIDER_WIDTH (f);
   CHECK_TYPE_RANGED_INTEGER (int, arg);
-  int new_ = max (0, XINT (arg));
-  if (new_ != old)
+  int new = max (0, XINT (arg));
+  if (new != old)
     {
-      f->bottom_divider_width = new_;
+      f->bottom_divider_width = new;
       adjust_frame_size (f, -1, -1, 4, 0, Qbottom_divider_width);
       adjust_frame_glyphs (f);
       SET_FRAME_GARBAGED (f);
@@ -4741,7 +4748,7 @@ validate_x_resource_name (void)
   ptrdiff_t good_count = 0;
   /* Number of invalid characters in the resource name.  */
   ptrdiff_t bad_count = 0;
-  Lisp_Object new_;
+  Lisp_Object new;
   ptrdiff_t i;
 
   if (!STRINGP (Vx_resource_class))
@@ -4786,16 +4793,16 @@ validate_x_resource_name (void)
   /* Name is partly valid.  Copy it and replace the invalid characters
      with underscores.  */
 
-  Vx_resource_name = new_ = Fcopy_sequence (Vx_resource_name);
+  Vx_resource_name = new = Fcopy_sequence (Vx_resource_name);
 
   for (i = 0; i < len; i++)
     {
-      int c = SREF (new_, i);
+      int c = SREF (new, i);
       if (! ((c >= 'a' && c <= 'z')
 	     || (c >= 'A' && c <= 'Z')
 	     || (c >= '0' && c <= '9')
 	     || c == '-' || c == '_'))
-	SSET (new_, i, '_');
+	SSET (new, i, '_');
     }
 }
 
@@ -4803,10 +4810,10 @@ validate_x_resource_name (void)
    See Fx_get_resource below for other parameters.  */
 
 static Lisp_Object
-xrdb_get_resource (XrmDatabase rdb, Lisp_Object attribute, Lisp_Object class_, Lisp_Object component, Lisp_Object subclass)
+xrdb_get_resource (XrmDatabase rdb, Lisp_Object attribute, Lisp_Object class, Lisp_Object component, Lisp_Object subclass)
 {
   CHECK_STRING (attribute);
-  CHECK_STRING (class_);
+  CHECK_STRING (class);
 
   if (!NILP (component))
     CHECK_STRING (component);
@@ -4826,7 +4833,7 @@ xrdb_get_resource (XrmDatabase rdb, Lisp_Object attribute, Lisp_Object class_, L
 			    + 3);
 
   ptrdiff_t class_keysize = (SBYTES (Vx_resource_class)
-			     + SBYTES (class_)
+			     + SBYTES (class)
 			     + (STRINGP (subclass)
 				? SBYTES (subclass) : 0)
 			     + 3);
@@ -4840,7 +4847,7 @@ xrdb_get_resource (XrmDatabase rdb, Lisp_Object attribute, Lisp_Object class_, L
   char *cz = lispstpcpy (class_key, Vx_resource_class);
 
   *cz++ = '.';
-  cz = lispstpcpy (cz, class_);
+  cz = lispstpcpy (cz, class);
 
   if (!NILP (component))
     {
@@ -4874,31 +4881,31 @@ The optional arguments COMPONENT and SUBCLASS add to the key and the
 class, respectively.  You must specify both of them or neither.
 If you specify them, the key is `INSTANCE.COMPONENT.ATTRIBUTE'
 and the class is `Emacs.CLASS.SUBCLASS'.  */)
-  (Lisp_Object attribute, Lisp_Object class_, Lisp_Object component,
+  (Lisp_Object attribute, Lisp_Object class, Lisp_Object component,
    Lisp_Object subclass)
 {
   check_window_system (NULL);
 
   return xrdb_get_resource (check_x_display_info (Qnil)->xrdb,
-			    attribute, class_, component, subclass);
+			    attribute, class, component, subclass);
 }
 
 /* Get an X resource, like Fx_get_resource, but for display DPYINFO.  */
 
 Lisp_Object
 display_x_get_resource (Display_Info *dpyinfo, Lisp_Object attribute,
-			Lisp_Object class_, Lisp_Object component,
+			Lisp_Object class, Lisp_Object component,
 			Lisp_Object subclass)
 {
   return xrdb_get_resource (dpyinfo->xrdb,
-			    attribute, class_, component, subclass);
+			    attribute, class, component, subclass);
 }
 
 #if defined HAVE_X_WINDOWS && !defined USE_X_TOOLKIT && !defined USE_GTK
 /* Used when C code wants a resource value.  */
 /* Called from oldXMenu/Create.c.  */
 char *
-x_get_resource_string (const char *attribute, const char *class_)
+x_get_resource_string (const char *attribute, const char *class)
 {
   char *result;
   struct frame *sf = SELECTED_FRAME ();
@@ -4908,12 +4915,12 @@ x_get_resource_string (const char *attribute, const char *class_)
   /* Allocate space for the components, the dots which separate them,
      and the final '\0'.  */
   ptrdiff_t name_keysize = invocation_namelen + strlen (attribute) + 2;
-  ptrdiff_t class_keysize = sizeof (EMACS_CLASS) - 1 + strlen (class_) + 2;
+  ptrdiff_t class_keysize = sizeof (EMACS_CLASS) - 1 + strlen (class) + 2;
   char *name_key = SAFE_ALLOCA (name_keysize + class_keysize);
   char *class_key = name_key + name_keysize;
 
   esprintf (name_key, "%s.%s", SSDATA (Vinvocation_name), attribute);
-  sprintf (class_key, "%s.%s", EMACS_CLASS, class_);
+  sprintf (class_key, "%s.%s", EMACS_CLASS, class);
 
   result = x_get_string_resource (FRAME_DISPLAY_INFO (sf)->xrdb,
 				  name_key, class_key);
@@ -4935,7 +4942,7 @@ x_get_resource_string (const char *attribute, const char *class_)
 
 Lisp_Object
 x_get_arg (Display_Info *dpyinfo, Lisp_Object alist, Lisp_Object param,
-	   const char *attribute, const char *class_, enum resource_types type)
+	   const char *attribute, const char *class, enum resource_types type)
 {
   Lisp_Object tem;
 
@@ -4964,7 +4971,7 @@ x_get_arg (Display_Info *dpyinfo, Lisp_Object alist, Lisp_Object param,
       if (attribute && dpyinfo)
 	{
 	  AUTO_STRING (at, attribute);
-	  AUTO_STRING (cl, class_);
+	  AUTO_STRING (cl, class);
 	  tem = display_x_get_resource (dpyinfo, at, cl, Qnil, Qnil);
 
 	  if (NILP (tem))
@@ -5033,11 +5040,11 @@ x_get_arg (Display_Info *dpyinfo, Lisp_Object alist, Lisp_Object param,
 
 static Lisp_Object
 x_frame_get_arg (struct frame *f, Lisp_Object alist, Lisp_Object param,
-		 const char *attribute, const char *class_,
+		 const char *attribute, const char *class,
 		 enum resource_types type)
 {
   return x_get_arg (FRAME_DISPLAY_INFO (f),
-		    alist, param, attribute, class_, type);
+		    alist, param, attribute, class, type);
 }
 
 /* Like x_frame_get_arg, but also record the value in f->param_alist.  */
@@ -5045,13 +5052,13 @@ x_frame_get_arg (struct frame *f, Lisp_Object alist, Lisp_Object param,
 Lisp_Object
 x_frame_get_and_record_arg (struct frame *f, Lisp_Object alist,
 			    Lisp_Object param,
-			    const char *attribute, const char *class_,
+			    const char *attribute, const char *class,
 			    enum resource_types type)
 {
   Lisp_Object value;
 
   value = x_get_arg (FRAME_DISPLAY_INFO (f), alist, param,
-		     attribute, class_, type);
+		     attribute, class, type);
   if (! NILP (value) && ! EQ (value, Qunbound))
     store_frame_param (f, param, value);
 

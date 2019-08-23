@@ -28,6 +28,13 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 #include "keyboard.h"
 #include "process.h"
 
+#ifdef __cplusplus
+#define this this_
+#define class class_
+#define private private_
+#define new new_
+#endif
+
 #ifndef DBUS_NUM_MESSAGE_TYPES
 #define DBUS_NUM_MESSAGE_TYPES 5
 #endif
@@ -1113,7 +1120,7 @@ connection used in the same Emacs process, like the one established by
 GTK+.  It should be used with care for at least the `:system' and
 `:session' buses, because other Emacs Lisp packages might already use
 this connection to those buses.  */)
-  (Lisp_Object bus, Lisp_Object private_)
+  (Lisp_Object bus, Lisp_Object private)
 {
   DBusConnection *connection;
   DBusError derror;
@@ -1141,7 +1148,7 @@ this connection to those buses.  */)
 
       /* Open the connection.  */
       if (STRINGP (bus))
-	if (NILP (private_))
+	if (NILP (private))
 	  connection = dbus_connection_open (SSDATA (bus), &derror);
 	else
 	  connection = dbus_connection_open_private (SSDATA (bus), &derror);
@@ -1150,7 +1157,7 @@ this connection to those buses.  */)
 	{
 	  DBusBusType bustype = (EQ (bus, QCsystem)
 				 ? DBUS_BUS_SYSTEM : DBUS_BUS_SESSION);
-	  if (NILP (private_))
+	  if (NILP (private))
 	    connection = dbus_bus_get (bustype, &derror);
 	  else
 	    connection = dbus_bus_get_private (bustype, &derror);

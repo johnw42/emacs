@@ -48,6 +48,13 @@ typedef struct {
 #include "msdos.h"
 #endif
 
+#ifdef __cplusplus
+#define this this_
+#define class class_
+#define private private_
+#define new new_
+#endif
+
 INLINE_HEADER_BEGIN
 
 #include <c-strcase.h>
@@ -3606,7 +3613,7 @@ enum resource_types
 
 extern Display_Info *check_x_display_info (Lisp_Object);
 extern Lisp_Object x_get_arg (Display_Info *, Lisp_Object,
-                              Lisp_Object, const char *, const char *class_,
+                              Lisp_Object, const char *, const char *class,
                               enum resource_types);
 extern Lisp_Object x_frame_get_and_record_arg (struct frame *, Lisp_Object,
                                                Lisp_Object,
@@ -3627,5 +3634,10 @@ extern void x_redo_mouse_highlight (Display_Info *);
 #endif /* HAVE_WINDOW_SYSTEM */
 
 INLINE_HEADER_END
+
+#undef this
+#undef class
+#undef private
+#undef new
 
 #endif /* not DISPEXTERN_H_INCLUDED */

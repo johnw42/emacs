@@ -112,6 +112,13 @@ extern void moncontrol (int mode);
 #include <sys/resource.h>
 #endif
 
+#ifdef __cplusplus
+#define this this_
+#define class class_
+#define private private_
+#define new new_
+#endif
+
 static const char emacs_version[] = PACKAGE_VERSION;
 static const char emacs_copyright[] = COPYRIGHT;
 static const char emacs_bugreport[] = PACKAGE_BUGREPORT;
@@ -1855,7 +1862,7 @@ static const struct standard_args standard_args[] =
 static void
 sort_args (int argc, char **argv)
 {
-  char **new_ = xmalloc (argc * sizeof *new_);
+  char **new = xmalloc (argc * sizeof *new);
   /* For each element of argv,
      the corresponding element of options is:
      0 for an option that takes no arguments,
@@ -1951,7 +1958,7 @@ sort_args (int argc, char **argv)
     }
 
   /* Copy the arguments, in order of decreasing priority, to NEW.  */
-  new_[0] = argv[0];
+  new[0] = argv[0];
   while (incoming_used < argc)
     {
       int best = -1;
@@ -1977,11 +1984,11 @@ sort_args (int argc, char **argv)
       /* Copy the highest priority remaining option, with its args, to NEW.
          Unless it is a duplicate of the previous one.  */
       if (! (options[best] == 0
-	     && ! strcmp (new_[to - 1], argv[best])))
+	     && ! strcmp (new[to - 1], argv[best])))
 	{
-	  new_[to++] = argv[best];
+	  new[to++] = argv[best];
 	  for (i = 0; i < options[best]; i++)
-	    new_[to++] = argv[best + i + 1];
+	    new[to++] = argv[best + i + 1];
 	}
 
       incoming_used += 1 + (options[best] > 0 ? options[best] : 0);
@@ -1994,12 +2001,12 @@ sort_args (int argc, char **argv)
 
   /* If duplicate options were deleted, fill up extra space with null ptrs.  */
   while (to < argc)
-    new_[to++] = 0;
+    new[to++] = 0;
 
-  memcpy (argv, new_, sizeof (char *) * argc);
+  memcpy (argv, new, sizeof (char *) * argc);
 
   xfree (options);
-  xfree (new_);
+  xfree (new);
   xfree (priority);
 }
 

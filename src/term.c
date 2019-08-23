@@ -62,6 +62,10 @@ static int been_here = -1;
 #include "w32term.h"
 #endif
 
+#ifdef __cplusplus
+#define try try_
+#endif
+
 static void tty_set_scroll_region (struct frame *f, int start, int stop);
 static void turn_on_face (struct frame *, int face_id);
 static void turn_off_face (struct frame *, int face_id);
@@ -2754,16 +2758,16 @@ static tty_menu *
 tty_menu_search_pane (tty_menu *menu, int pane)
 {
   int i;
-  tty_menu *try_;
+  tty_menu *try;
 
   for (i = 0; i < menu->count; i++)
     if (menu->submenu[i])
       {
 	if (pane == menu->panenumber[i])
 	  return menu->submenu[i];
-	try_ = tty_menu_search_pane (menu->submenu[i], pane);
-	if (try_)
-	  return try_;
+	try = tty_menu_search_pane (menu->submenu[i], pane);
+	if (try)
+	  return try;
       }
   return (tty_menu *) 0;
 }

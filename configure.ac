@@ -766,8 +766,10 @@ fi
 
 #### Choose a compiler.
 
-have_cxx=no
-if test $have_cxx != yes; then
+OPTION_DEFAULT_OFF([cxx], [])
+
+with_cxx=no
+if test $with_cxx != yes; then
 AC_SUBST(HAVE_CXX, 0)
 
 dnl Don't bother to test for C89.
@@ -938,7 +940,7 @@ AC_CACHE_CHECK([whether the compiler is clang], [emacs_cv_clang],
 WERROR_CFLAGS=
 # When compiling with GCC, prefer -isystem to -I when including system
 # include files, to avoid generating useless diagnostics for the files.
-AS_IF([test $gl_gcc_warnings = no && test $have_cxx != yes],
+AS_IF([test $gl_gcc_warnings = no && test $with_cxx != yes],
  [
   isystem='-I'
   AS_IF([test "$emacs_cv_clang" = yes],
@@ -2248,7 +2250,7 @@ if test "${system_malloc}" != yes && test "${doug_lea_malloc}" != yes \
   hybrid_malloc=yes
 fi
 
-if test $have_cxx != yes; then
+if test $with_cxx != yes; then
 hybrid_malloc=no
 system_malloc=yes
 fi

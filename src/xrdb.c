@@ -43,6 +43,14 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 #include <pwd.h>
 #endif
 
+#ifdef __cplusplus
+#define this this_
+#define class class_
+#define private private_
+#define new new_
+#define delete delete_
+#endif
+
 /* X file search path processing.  */
 
 
@@ -56,14 +64,14 @@ static char *x_customization_string;
    such resource, return zero.  */
 static char *
 x_get_customization_string (XrmDatabase db, const char *name,
-			    const char *class_)
+			    const char *class)
 {
   char *full_name = alloca (strlen (name) + sizeof "customization" + 3);
-  char *full_class = alloca (strlen (class_) + sizeof "Customization" + 3);
+  char *full_class = alloca (strlen (class) + sizeof "Customization" + 3);
   char *result;
 
   sprintf (full_name,  "%s.%s", name,  "customization");
-  sprintf (full_class, "%s.%s", class_, "Customization");
+  sprintf (full_class, "%s.%s", class, "Customization");
 
   result = x_get_string_resource (db, full_name, full_class);
   return result ? xstrdup (result) : NULL;
@@ -99,7 +107,7 @@ x_get_customization_string (XrmDatabase db, const char *name,
    Return NULL otherwise.  */
 
 static XrmDatabase
-magic_db (const char *string, ptrdiff_t string_len, const char *class_,
+magic_db (const char *string, ptrdiff_t string_len, const char *class,
 	  const char *escaped_suffix)
 {
   XrmDatabase db;
@@ -142,8 +150,8 @@ magic_db (const char *string, ptrdiff_t string_len, const char *class_,
 		break;
 
 	      case 'N':
-		next = class_;
-		next_len = strlen (class_);
+		next = class;
+		next_len = strlen (class);
 		break;
 
 	      case 'T':
@@ -236,7 +244,7 @@ gethomedir (void)
    the path name of the one we found otherwise.  */
 
 static XrmDatabase
-search_magic_path (const char *search_path, const char *class_,
+search_magic_path (const char *search_path, const char *class,
 		   const char *escaped_suffix)
 {
   const char *s, *p;
@@ -248,14 +256,14 @@ search_magic_path (const char *search_path, const char *class_,
 
       if (p > s)
 	{
-	  XrmDatabase db = magic_db (s, p - s, class_, escaped_suffix);
+	  XrmDatabase db = magic_db (s, p - s, class, escaped_suffix);
 	  if (db)
 	    return db;
 	}
       else if (*p == ':')
 	{
 	  static char const ns[] = "%N%S";
-	  XrmDatabase db = magic_db (ns, strlen (ns), class_, escaped_suffix);
+	  XrmDatabase db = magic_db (ns, strlen (ns), class, escaped_suffix);
 	  if (db)
 	    return db;
 	}
@@ -270,14 +278,14 @@ search_magic_path (const char *search_path, const char *class_,
 /* Producing databases for individual sources.  */
 
 static XrmDatabase
-get_system_app (const char *class_)
+get_system_app (const char *class)
 {
   const char *path;
 
   path = getenv ("XFILESEARCHPATH");
   if (! path) path = PATH_X_DEFAULTS;
 
-  return search_magic_path (path, class_, 0);
+  return search_magic_path (path, class, 0);
 }
 
 
@@ -289,7 +297,7 @@ get_fallback (Display *display)
 
 
 static XrmDatabase
-get_user_app (const char *class_)
+get_user_app (const char *class)
 {
   XrmDatabase db = 0;
   const char *path;
@@ -298,7 +306,7 @@ get_user_app (const char *class_)
      names, not directories.  */
   path = getenv ("XUSERFILESEARCHPATH");
   if (path)
-    db = search_magic_path (path, class_, 0);
+    db = search_magic_path (path, class, 0);
 
   if (! db)
     {
@@ -307,9 +315,9 @@ get_user_app (const char *class_)
       path = getenv ("XAPPLRESDIR");
       if (path)
 	{
-	  db = search_magic_path (path, class_, "/%L/%N");
+	  db = search_magic_path (path, class, "/%L/%N");
 	  if (!db)
-	    db = search_magic_path (path, class_, "/%N");
+	    db = search_magic_path (path, class, "/%N");
 	}
     }
 
@@ -318,9 +326,9 @@ get_user_app (const char *class_)
       /* Check in the home directory.  This is a bit of a hack; let's
 	 hope one's home directory doesn't contain any %-escapes.  */
       char *home = gethomedir ();
-      db = search_magic_path (home, class_, "%L/%N");
+      db = search_magic_path (home, class, "%L/%N");
       if (! db)
-	db = search_magic_path (home, class_, "%N");
+	db = search_magic_path (home, class, "%N");
       xfree (home);
     }
 
@@ -551,7 +559,7 @@ x_load_resources (Display *display, const char *xrm_string,
    and of type TYPE from database RDB.  The value is returned in RET_VALUE. */
 
 static int
-x_get_resource (XrmDatabase rdb, const char *name, const char *class_,
+x_get_resource (XrmDatabase rdb, const char *name, const char *class,
 		XrmRepresentation expected_type, XrmValue *ret_value)
 {
   XrmValue value;
@@ -560,7 +568,7 @@ x_get_resource (XrmDatabase rdb, const char *name, const char *class_,
   XrmRepresentation type;
 
   XrmStringToNameList (name, namelist);
-  XrmStringToClassList (class_, classlist);
+  XrmStringToClassList (class, classlist);
 
   if (XrmQGetResource (rdb, namelist, classlist, &type, &value) == True
       && (type == expected_type))
@@ -580,7 +588,7 @@ x_get_resource (XrmDatabase rdb, const char *name, const char *class_,
    database RDB. */
 
 char *
-x_get_string_resource (XrmDatabase rdb, const char *name, const char *class_)
+x_get_string_resource (XrmDatabase rdb, const char *name, const char *class)
 {
   XrmValue value;
 
@@ -588,7 +596,7 @@ x_get_string_resource (XrmDatabase rdb, const char *name, const char *class_)
     /* --quick was passed, so this is a no-op.  */
     return NULL;
 
-  if (x_get_resource (rdb, name, class_, x_rm_string, &value))
+  if (x_get_resource (rdb, name, class, x_rm_string, &value))
     return (char *) value.addr;
 
   return 0;
@@ -628,7 +636,7 @@ int
 main (int argc, char **argv)
 {
   Display *display;
-  char *displayname, *resource_string, *class_, *name;
+  char *displayname, *resource_string, *class, *name;
   XrmDatabase xdb;
   List arg_list, lp;
 
@@ -645,9 +653,9 @@ main (int argc, char **argv)
 
   lp = member ("-c", arg_list);
   if (! NIL (lp))
-    class_ = car (cdr (lp));
+    class = car (cdr (lp));
   else
-    class_ = "Emacs";
+    class = "Emacs";
 
   lp = member ("-n", arg_list);
   if (! NIL (lp))
@@ -660,7 +668,7 @@ main (int argc, char **argv)
   if (!(display = XOpenDisplay (displayname)))
     fatal ("Can't open display '%s'\n", XDisplayName (displayname));
 
-  xdb = x_load_resources (display, resource_string, name, class_);
+  xdb = x_load_resources (display, resource_string, name, class);
 
   /* In a real program, you'd want to also do this: */
   display->db = xdb;
