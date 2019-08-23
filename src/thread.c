@@ -689,7 +689,7 @@ invoke_thread_function (void)
   return unbind_to (count, Qnil);
 }
 
-static Lisp_Object last_thread_error;
+static Lisp_Object last_thread_error = NIL_INIT;
 
 static Lisp_Object
 record_thread_error (Lisp_Object error_form)

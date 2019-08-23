@@ -57,14 +57,14 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 
 /* Actually allocate storage for these variables.  */
 
-Lisp_Object current_global_map;	/* Current global keymap.  */
+Lisp_Object current_global_map = NIL_INIT;	/* Current global keymap.  */
 
-Lisp_Object global_map;		/* Default global key bindings.  */
+Lisp_Object global_map = NIL_INIT;		/* Default global key bindings.  */
 
-Lisp_Object meta_map;		/* The keymap used for globally bound
+Lisp_Object meta_map = NIL_INIT;		/* The keymap used for globally bound
 				   ESC-prefixed default commands.  */
 
-Lisp_Object control_x_map;	/* The keymap used for globally bound
+Lisp_Object control_x_map = NIL_INIT;	/* The keymap used for globally bound
 				   C-x-prefixed default commands.  */
 
 				/* The keymap used by the minibuf for local
@@ -76,15 +76,15 @@ Lisp_Object control_x_map;	/* The keymap used for globally bound
 				   in the minibuf.  */
 
 /* Alist of elements like (DEL . "\d").  */
-static Lisp_Object exclude_keys;
+static Lisp_Object exclude_keys = NIL_INIT;
 
 /* Pre-allocated 2-element vector for Fcommand_remapping to use.  */
-static Lisp_Object command_remapping_vector;
+static Lisp_Object command_remapping_vector = NIL_INIT;
 
 /* Hash table used to cache a reverse-map to speed up calls to where-is.  */
-static Lisp_Object where_is_cache;
+static Lisp_Object where_is_cache = NIL_INIT;
 /* Which keymaps are reverse-stored in the cache.  */
-static Lisp_Object where_is_cache_keymaps;
+static Lisp_Object where_is_cache_keymaps = NIL_INIT;
 
 static Lisp_Object store_in_keymap (Lisp_Object, Lisp_Object, Lisp_Object);
 
@@ -2388,7 +2388,7 @@ shadow_lookup (Lisp_Object shadow, Lisp_Object key, Lisp_Object flag,
   return Qnil;
 }
 
-static Lisp_Object Vmouse_events;
+static Lisp_Object Vmouse_events = NIL_INIT;
 
 struct where_is_internal_data {
   Lisp_Object definition, this, last;
@@ -3566,8 +3566,8 @@ describe_vector (Lisp_Object vector, Lisp_Object prefix, Lisp_Object args,
 }
 
 /* Apropos - finding all symbols whose names match a regexp.		*/
-static Lisp_Object apropos_predicate;
-static Lisp_Object apropos_accumulate;
+static Lisp_Object apropos_predicate = NIL_INIT;
+static Lisp_Object apropos_accumulate = NIL_INIT;
 
 static void
 apropos_accum (Lisp_Object symbol, Lisp_Object string)

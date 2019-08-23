@@ -51,7 +51,7 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 static char *current_mono_font;
 static char *current_font;
 static struct x_display_info *first_dpyinfo;
-static Lisp_Object current_tool_bar_style;
+static Lisp_Object current_tool_bar_style = NIL_INIT;
 
 /* Store a config changed event in to the event queue.  */
 

@@ -32,6 +32,8 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 #include <inttypes.h>
 #include <limits.h>
 
+#include <stdlib.h> // for abort()
+
 #include <intprops.h>
 #include <verify.h>
 
@@ -408,6 +410,12 @@ error !;
    Commentary for these macros can be found near their corresponding
    functions, below.  */
 
+#ifdef NIL_IS_ZERO
+#define CHECK_NOT_ZERO(x) x
+#else
+#define CHECK_NOT_ZERO(x) ((eassert ((x) != 0), x))
+#endif
+
 #ifdef HAVE_CHEZ_SCHEME
 
 #define SCHEME_VECTORP(x, sym)                  \
@@ -464,10 +472,10 @@ error !;
 #else /* HAVE_CHEZ_SCHEME */
 
 #if CHECK_LISP_OBJECT_TYPE
-# define lisp_h_XLI(o) ((o).i)
+# define lisp_h_XLI(o) CHECK_NOT_ZERO ((o).i)
 # define lisp_h_XIL(i) ((Lisp_Object) { i })
 #else
-# define lisp_h_XLI(o) (o)
+# define lisp_h_XLI(o) CHECK_NOT_ZERO (o)
 # define lisp_h_XIL(i) (i)
 #endif
 #define lisp_h_CHECK_NUMBER(x) CHECK_TYPE (INTEGERP (x), Qintegerp, x)
@@ -1072,6 +1080,9 @@ make_lisp_symbol (struct Lisp_Symbol *sym)
 INLINE Lisp_Object
 builtin_lisp_symbol (int index)
 {
+#ifndef NIL_IS_ZERO
+  if (index == 0) return Qnil;
+#endif
   return make_lisp_symbol (&lispsym[index]);
 }
 #endif /* not HAVE_CHEZ_SCHEME */
@@ -1488,6 +1499,7 @@ INLINE Lisp_Object
 INLINE void
 XSETCAR (Lisp_Object c, Lisp_Object n)
 {
+  (void) XLI (n);
 #ifdef HAVE_CHEZ_SCHEME
   Sset_car(c, n);
 #else /* HAVE_CHEZ_SCHEME */
@@ -1497,6 +1509,7 @@ XSETCAR (Lisp_Object c, Lisp_Object n)
 INLINE void
 XSETCDR (Lisp_Object c, Lisp_Object n)
 {
+  (void) XLI (n);
 #ifdef HAVE_CHEZ_SCHEME
   Sset_cdr(c, n);
 #else /* HAVE_CHEZ_SCHEME */
@@ -2212,6 +2225,7 @@ INLINE void
 ASET (Lisp_Object array, ptrdiff_t idx, Lisp_Object val)
 {
   eassert (0 <= idx && idx < ASIZE (array));
+  (void) XLI(val);
   XVECTOR (array).vptr->contents[idx] = val;
 }
 
@@ -2221,41 +2235,56 @@ gc_aset (Lisp_Object array, ptrdiff_t idx, Lisp_Object val)
   /* Like ASET, but also can be used in the garbage collector:
      sweep_weak_table calls set_hash_key etc. while the table is marked.  */
   eassert (0 <= idx && idx < gc_asize (array));
+  (void) XLI(val);
   XVECTOR (array).vptr->contents[idx] = val;
 }
-
-#ifndef HAVE_CHEZ_SCHEME
-/* True, since Qnil's representation is zero.  Every place in the code
-   that assumes Qnil is zero should verify (NIL_IS_ZERO), to make it easy
-   to find such assumptions later if we change Qnil to be nonzero.  */
-enum { NIL_IS_ZERO = XLI_BUILTIN_LISPSYM (iQnil) == 0 };
-#endif /* not HAVE_CHEZ_SCHEME */
 
 /* Clear the object addressed by P, with size NBYTES, so that all its
    bytes are zero and all its Lisp values are nil.  */
 INLINE void
-memclear_c (void *p, ptrdiff_t nbytes)
+memzero (void *p, ptrdiff_t nbytes)
 {
   eassert (0 <= nbytes);
-  /* Since Qnil is zero, memset suffices.  */
   memset (p, 0, nbytes);
 }
 
+#ifdef NIL_IS_ZERO
+verify (XLI_BUILTIN_LISPSYM (iQnil) == 0);
+#endif
+
 INLINE void
-memclear_lisp (Lisp_Object *p, ptrdiff_t nbytes)
+set_nil (Lisp_Object *p, ptrdiff_t n)
 {
-#ifdef HAVE_CHEZ_SCHEME
-  eassert (nbytes % sizeof (ptr) == 0);
-  scheme_ptr_fill (p, Qnil, nbytes / sizeof (ptr));
-#else /* HAVE_CHEZ_SCHEME */
-  verify (NIL_IS_ZERO);
-  memclear_c (p, nbytes);
-#endif /* HAVE_CHEZ_SCHEME */
+#ifdef NIL_IS_ZERO
+  memzero (p, n * sizeof (Lisp_Object));
+#else
+  eassert (0 <= n);
+  for (ptrdiff_t i = 0; i < n; i++)
+    p[i] = Qnil;
+#endif
 }
 
-#ifndef HAVE_CHEZ_SCHEME
-#define memclear memclear_c
-#endif /* not HAVE_CHEZ_SCHEME */
+INLINE void
+mem_nil (void *p, ptrdiff_t nbytes)
+{
+#ifdef NIL_IS_ZERO
+  memzero (p, nbytes);
+#else
+  eassert (0 <= nbytes);
+  eassert (nbytes % sizeof (Lisp_Object) == 0);
+  set_nil (p, nbytes / sizeof (Lisp_Object));
+#endif
+}
+
+#ifdef NIL_IS_ZERO
+INLINE void
+memzero_with_nil (void *p, ptrdiff_t nbytes, ...)
+{
+  memzero (p, nbytes);
+}
+#else
+void memzero_with_nil (void *p, ptrdiff_t nbytes, ...);
+#endif
 
 /* If a struct is made to look like a vector, this macro returns the length
    of the shortest vector that would hold that struct.  */
@@ -2553,6 +2582,7 @@ SYMBOL_FWD (struct Lisp_Symbol *sym)
 INLINE void
 (SET_SYMBOL_VAL) (struct Lisp_Symbol *sym, Lisp_Object v)
 {
+  (void) XLI(v);
   lisp_h_SET_SYMBOL_VAL (sym, v);
 }
 
@@ -3849,12 +3879,14 @@ vcopy (Lisp_Object v, ptrdiff_t offset, Lisp_Object *args, ptrdiff_t count)
 INLINE void
 set_hash_key_slot (struct Lisp_Hash_Table *h, ptrdiff_t idx, Lisp_Object val)
 {
+  (void) XLI(val);
   gc_aset (h->key_and_value, 2 * idx, val);
 }
 
 INLINE void
 set_hash_value_slot (struct Lisp_Hash_Table *h, ptrdiff_t idx, Lisp_Object val)
 {
+  (void) XLI(val);
   gc_aset (h->key_and_value, 2 * idx + 1, val);
 }
 
@@ -3864,12 +3896,16 @@ set_hash_value_slot (struct Lisp_Hash_Table *h, ptrdiff_t idx, Lisp_Object val)
 INLINE void
 set_symbol_function (Lisp_Object sym, Lisp_Object function)
 {
+  (void) XLI(function);
+  /* if (EQ (sym, Qpcase) && !NILP (function)) */
+  /*   abort(); */
   XSYMBOL (sym)->u.s.function = function;
 }
 
 INLINE void
 set_symbol_plist (Lisp_Object sym, Lisp_Object plist)
 {
+  (void) XLI(plist);
   XSYMBOL (sym)->u.s.plist = plist;
 }
 
@@ -3901,6 +3937,7 @@ blv_found (struct Lisp_Buffer_Local_Value *blv)
 INLINE void
 set_overlay_plist (Lisp_Object overlay, Lisp_Object plist)
 {
+  (void) XLI(plist);
   XOVERLAY (overlay)->plist = plist;
 }
 
@@ -3926,11 +3963,13 @@ set_string_intervals (Lisp_Object s, INTERVAL i)
 INLINE void
 set_char_table_defalt (Lisp_Object table, Lisp_Object val)
 {
+  (void) XLI(val);
   PV_LISP_FIELD_SET (XCHAR_TABLE (table), defalt, val);
 }
 INLINE void
 set_char_table_purpose (Lisp_Object table, Lisp_Object val)
 {
+  (void) XLI(val);
   PV_LISP_FIELD_SET (XCHAR_TABLE (table), purpose, val);
 }
 
@@ -3940,6 +3979,7 @@ INLINE void
 set_char_table_extras (Lisp_Object table, ptrdiff_t idx, Lisp_Object val)
 {
   eassert (0 <= idx && idx < CHAR_TABLE_EXTRA_SLOTS (XCHAR_TABLE (table)));
+  (void) XLI(val);
   XCHAR_TABLE (table)->extras[idx] = val;
 }
 
@@ -3947,12 +3987,14 @@ INLINE void
 set_char_table_contents (Lisp_Object table, ptrdiff_t idx, Lisp_Object val)
 {
   eassert (0 <= idx && idx < (1 << CHARTAB_SIZE_BITS_0));
+  (void) XLI(val);
   XCHAR_TABLE (table)->contents[idx] = val;
 }
 
 INLINE void
 set_sub_char_table_contents (Lisp_Object table, ptrdiff_t idx, Lisp_Object val)
 {
+  (void) XLI(val);
   XSUB_CHAR_TABLE (table)->contents[idx] = val;
 }
 
@@ -5120,6 +5162,16 @@ extern char *xstrdup (const char *) ATTRIBUTE_MALLOC;
 extern char *xlispstrdup (Lisp_Object) ATTRIBUTE_MALLOC;
 extern void dupstring (char **, char const *);
 
+#ifdef NIL_IS_ZERO
+INLINE Lisp_Object *xnalloc (size_t size)
+{
+  return xzalloc (size);
+}
+#else
+Lisp_Object *xnalloc (size_t size);
+#endif
+
+
 /* Make DEST a copy of STRING's data.  Return a pointer to DEST's terminating
    null byte.  This is like stpcpy, except the source is a Lisp string.  */
 
@@ -5427,6 +5479,10 @@ struct Lisp_Symbol *scheme_make_symbol(ptr name, enum symbol_interned interned);
 
 #endif /* HAVE_CHEZ_SCHEME */
 
+#define NIL_INIT LISPSYM_INITIALLY(Qnil)
+
 INLINE_HEADER_END
+
+void gdb_break(void);
 
 #endif /* EMACS_LISP_H */

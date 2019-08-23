@@ -46,10 +46,10 @@ static void gap_right (ptrdiff_t, ptrdiff_t);
    END-UNCHANGED is the number of chars after the changed range,
    and CHANGE-AMOUNT is the number of characters inserted by the change
    (negative for a deletion).  */
-static Lisp_Object combine_after_change_list;
+static Lisp_Object combine_after_change_list = NIL_INIT;
 
 /* Buffer which combine_after_change_list is about.  */
-static Lisp_Object combine_after_change_buffer;
+static Lisp_Object combine_after_change_buffer = NIL_INIT;
 
 static void signal_before_change (ptrdiff_t, ptrdiff_t, ptrdiff_t *);
 

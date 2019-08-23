@@ -40,7 +40,7 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 
 /* Char-table of information about which character to unify to which
    Unicode character.  Mainly used by the macro MAYBE_UNIFY_CHAR.  */
-Lisp_Object Vchar_unify_table;
+Lisp_Object Vchar_unify_table = NIL_INIT;
 
 
 

@@ -57,7 +57,7 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 
 /* Hash table that contains attributes of each charset.  Keys are
    charset symbols, and values are vectors of charset attributes.  */
-Lisp_Object Vcharset_hash_table;
+Lisp_Object Vcharset_hash_table = NIL_INIT;
 
 /* Table of struct charset.  */
 struct charset *charset_table;
@@ -82,21 +82,21 @@ int charset_ksc5601;
 int charset_unibyte;
 
 /* List of charsets ordered by the priority.  */
-Lisp_Object Vcharset_ordered_list;
+Lisp_Object Vcharset_ordered_list = NIL_INIT;
 
 /* Sub-list of Vcharset_ordered_list that contains all non-preferred
    charsets.  */
-Lisp_Object Vcharset_non_preferred_head;
+Lisp_Object Vcharset_non_preferred_head = NIL_INIT;
 
 /* Incremented every time we change the priority of charsets.
    Wraps around.  */
-EMACS_UINT charset_ordered_list_tick;
+EMACS_UINT charset_ordered_list_tick = NIL_INIT;
 
 /* List of iso-2022 charsets.  */
-Lisp_Object Viso_2022_charset_list;
+Lisp_Object Viso_2022_charset_list = NIL_INIT;
 
 /* List of emacs-mule charsets.  */
-Lisp_Object Vemacs_mule_charset_list;
+Lisp_Object Vemacs_mule_charset_list = NIL_INIT;
 
 int emacs_mule_charset[256];
 
@@ -1735,7 +1735,7 @@ decode_char (struct charset *charset, unsigned int code)
 }
 
 /* Variable used temporarily by the macro ENCODE_CHAR.  */
-Lisp_Object charset_work;
+Lisp_Object charset_work = NIL_INIT;
 
 /* Return a code-point of C in CHARSET.  If C doesn't belong to
    CHARSET, return CHARSET_INVALID_CODE (CHARSET).  If STRICT is true,

@@ -64,7 +64,7 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 #endif
 
 /* Pattern used by call-process-region to make temp files.  */
-static Lisp_Object Vtemp_file_name_pattern;
+static Lisp_Object Vtemp_file_name_pattern = NIL_INIT;
 
 /* The next two variables are used while record-unwind-protect is in place
    during call-process for a subprocess for which record_deleted_pid has
@@ -81,7 +81,7 @@ static pid_t synch_process_pid;
 
 /* If a string, the name of a temp file that has not been removed.  */
 #ifdef MSDOS
-static Lisp_Object synch_process_tempfile;
+static Lisp_Object synch_process_tempfile = NIL_INIT;
 #else
 # define synch_process_tempfile make_number (0)
 #endif

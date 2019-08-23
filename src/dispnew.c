@@ -1345,8 +1345,9 @@ realloc_glyph_pool (struct glyph_pool *pool, struct dim matrix_dim)
       ptrdiff_t old_nglyphs = pool->nglyphs;
       pool->glyphs = xpalloc (pool->glyphs, &pool->nglyphs,
 			      needed - old_nglyphs, -1, sizeof *pool->glyphs);
-      glyph_clear (pool->glyphs + old_nglyphs,
-                   pool->nglyphs - old_nglyphs);
+      // TODO(jrw): glyph_clear?
+      memzero (pool->glyphs + old_nglyphs,
+               (pool->nglyphs - old_nglyphs) * sizeof *pool->glyphs);
     }
 
   /* Remember the number of rows and columns because (a) we use them
@@ -5846,7 +5847,7 @@ immediately by pending input.  */)
    session's frames, frame names, buffers, buffer-read-only flags, and
    buffer-modified-flags.  */
 
-static Lisp_Object frame_and_buffer_state;
+static Lisp_Object frame_and_buffer_state = NIL_INIT;
 
 
 DEFUN ("frame-or-buffer-changed-p", Fframe_or_buffer_changed_p,

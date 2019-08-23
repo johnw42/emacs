@@ -36,6 +36,7 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 
 #include <config.h>
 
+#include <inttypes.h>
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -645,6 +646,7 @@ compare_globals (const void *a, const void *b)
   if (ga->type != gb->type)
     return ga->type - gb->type;
 
+#ifdef NIL_IS_ZERO
   /* Consider "nil" to be the least, so that iQnil is zero.  That
      way, Qnil's internal representation is zero, which is a bit faster.  */
   if (ga->type == SYMBOL)
@@ -654,6 +656,7 @@ compare_globals (const void *a, const void *b)
       if (a_nil | b_nil)
 	return b_nil - a_nil;
     }
+#endif
 
   return strcmp (ga->name, gb->name);
 }
@@ -775,13 +778,26 @@ write_globals (void)
   puts ("};");
   puts ("#endif");
 
+#ifdef NIL_IS_ZERO
   puts ("#define Qnil builtin_lisp_symbol (0)");
+#endif
+
   puts ("#if DEFINE_NON_NIL_Q_SYMBOL_MACROS");
   num_symbols = 0;
   for (ptrdiff_t i = 0; i < num_globals; i++)
     if (globals[i].type == SYMBOL && num_symbols++ != 0)
-      printf ("# define %s builtin_lisp_symbol (%td)\n",
-	      globals[i].name, num_symbols - 1);
+      {
+        bool is_nil = false;
+#ifndef NIL_IS_ZERO
+        is_nil = strcmp (globals[i].name, "Qnil") == 0;
+#endif
+        if (is_nil)
+          puts ("#endif");
+        printf ("# define %s builtin_lisp_symbol (%td)\n",
+                globals[i].name, num_symbols - 1);
+        if (is_nil)
+          puts ("#if DEFINE_NON_NIL_Q_SYMBOL_MACROS");
+      }
   puts ("#endif");
 }
 

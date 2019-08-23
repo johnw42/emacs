@@ -37,7 +37,7 @@ EMACS_INT executing_kbd_macro_iterations;
    so after an error, it describes the innermost interrupted macro.
    We use it only as a kind of flag, so no need to protect it.  */
 
-Lisp_Object executing_kbd_macro;
+Lisp_Object executing_kbd_macro = NIL_INIT;
 
 DEFUN ("start-kbd-macro", Fstart_kbd_macro, Sstart_kbd_macro, 1, 2, "P",
        doc: /* Record subsequent keyboard input, defining a keyboard macro.

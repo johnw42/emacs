@@ -176,7 +176,7 @@ static int x_noop_count;
 
 #ifdef USE_GTK
 /* The name of the Emacs icon file.  */
-static Lisp_Object xg_default_icon_file;
+static Lisp_Object xg_default_icon_file = NIL_INIT;
 #endif
 
 /* Some functions take this as char *, not const char *.  */
@@ -5313,7 +5313,7 @@ static void x_send_scroll_bar_event (Lisp_Object, enum scroll_bar_part,
 /* Lisp window being scrolled.  Set when starting to interact with
    a toolkit scroll bar, reset to nil when ending the interaction.  */
 
-static Lisp_Object window_being_scrolled;
+static Lisp_Object window_being_scrolled = NIL_INIT;
 
 /* Whether this is an Xaw with arrow-scrollbars.  This should imply
    that movements of 1/20 of the screen size are mapped to up/down.  */

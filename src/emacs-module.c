@@ -913,7 +913,7 @@ module_out_of_memory (emacs_env *env)
    just containers holding a Lisp_Object that does not fit as an emacs_value,
    either because it is an integer out of range, or is not properly aligned.
    Used only if !plain_values.  */
-static Lisp_Object ltv_mark;
+static Lisp_Object ltv_mark = NIL_INIT;
 
 /* Convert V to the corresponding internal object O, such that
    V == lisp_to_value_bits (O).  Never fails.  */

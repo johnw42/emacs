@@ -294,13 +294,13 @@ char unspecified_fg[] = "unspecified-fg", unspecified_bg[] = "unspecified-bg";
    (FAMILY FAMILY1 FAMILY2 ...).  If fonts of FAMILY can't be loaded,
    try FAMILY1, then FAMILY2, ...  */
 
-Lisp_Object Vface_alternative_font_family_alist;
+Lisp_Object Vface_alternative_font_family_alist = NIL_INIT;
 
 /* Alist of alternative font registries.  Each element is of the form
    (REGISTRY REGISTRY1 REGISTRY2...).  If fonts of REGISTRY can't be
    loaded, try REGISTRY1, then REGISTRY2, ...  */
 
-Lisp_Object Vface_alternative_font_registry_alist;
+Lisp_Object Vface_alternative_font_registry_alist = NIL_INIT;
 
 /* The next ID to assign to Lisp faces.  */
 
@@ -338,7 +338,7 @@ static bool tty_suppress_bold_inverse_default_colors_p;
 /* A list of the form `((x . y))' used to avoid consing in
    Finternal_set_lisp_face_attribute.  */
 
-static Lisp_Object Vparam_value_alist;
+static Lisp_Object Vparam_value_alist = NIL_INIT;
 
 /* The total number of colors currently allocated.  */
 

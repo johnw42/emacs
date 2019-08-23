@@ -58,11 +58,11 @@ have_boxes (void)
   return 0;
 }
 
-Lisp_Object menu_items;
+Lisp_Object menu_items = NIL_INIT;
 
 /* If non-nil, means that the global vars defined here are already in use.
    Used to detect cases where we try to re-enter this non-reentrant code.  */
-Lisp_Object menu_items_inuse;
+Lisp_Object menu_items_inuse = NIL_INIT;
 
 /* Number of slots currently allocated in menu_items.  */
 int menu_items_allocated;

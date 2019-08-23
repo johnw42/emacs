@@ -799,7 +799,7 @@ concat (ptrdiff_t nargs, Lisp_Object *args,
   return val;
 }
 
-static Lisp_Object string_char_byte_cache_string;
+static Lisp_Object string_char_byte_cache_string = NIL_INIT;
 static ptrdiff_t string_char_byte_cache_charpos;
 static ptrdiff_t string_char_byte_cache_bytepos;
 
@@ -2730,7 +2730,7 @@ particular subfeatures supported in this version of FEATURE.  */)
 
 /* List of features currently being require'd, innermost first.  */
 
-static Lisp_Object require_nesting_list;
+static Lisp_Object require_nesting_list = NIL_INIT;
 
 static void
 require_unwind (Lisp_Object old_value)
@@ -3628,15 +3628,11 @@ larger_vecalloc (Lisp_Object vec, ptrdiff_t incr_min, ptrdiff_t nitems_max)
 Lisp_Object
 larger_vector (Lisp_Object vec, ptrdiff_t incr_min, ptrdiff_t nitems_max)
 {
-#ifndef HAVE_CHEZ_SCHEME
   ptrdiff_t old_size = ASIZE (vec);
-#endif /* not HAVE_CHEZ_SCHEME */
   Lisp_Object v = larger_vecalloc (vec, incr_min, nitems_max);
-#ifndef HAVE_CHEZ_SCHEME
   ptrdiff_t new_size = ASIZE (v);
-  memclear (XVECTOR (v).vptr->contents + old_size,
-	    (new_size - old_size) * word_size);
-#endif /* not HAVE_CHEZ_SCHEME */
+  mem_nil (XVECTOR (v)->contents + old_size,
+           (new_size - old_size) * word_size);
   return v;
 }
 

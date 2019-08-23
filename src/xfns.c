@@ -6071,18 +6071,18 @@ static void compute_tip_xy (struct frame *, Lisp_Object, Lisp_Object,
 
 /* The frame of a currently visible tooltip.  */
 
-Lisp_Object tip_frame;
+Lisp_Object tip_frame = NIL_INIT;
 
 /* If non-nil, a timer started that hides the last tooltip when it
    fires.  */
 
-static Lisp_Object tip_timer;
+static Lisp_Object tip_timer = NIL_INIT;
 Window tip_window;
 
 /* If non-nil, a vector of 3 elements containing the last args
    with which x-show-tip was called.  See there.  */
 
-static Lisp_Object last_show_tip_args;
+static Lisp_Object last_show_tip_args = NIL_INIT;
 
 
 static void

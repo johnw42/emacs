@@ -209,7 +209,7 @@ static enum profiler_cpu_running
   profiler_cpu_running;
 
 /* Hash-table log of CPU profiler.  */
-static Lisp_Object cpu_log;
+static Lisp_Object cpu_log = NIL_INIT;
 
 /* Separate counter for the time spent in the GC.  */
 static EMACS_INT cpu_gc_count;
@@ -435,7 +435,7 @@ Before returning, a new log is allocated for future samples.  */)
 /* True if memory profiler is running.  */
 bool profiler_memory_running;
 
-static Lisp_Object memory_log;
+static Lisp_Object memory_log = NIL_INIT;
 
 DEFUN ("profiler-memory-start", Fprofiler_memory_start, Sprofiler_memory_start,
        0, 0, 0,

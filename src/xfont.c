@@ -240,10 +240,10 @@ xfont_chars_supported (Lisp_Object chars, XFontStruct *xfont,
    We assume that fonts that have the same value in the above
    properties supports the same set of characters on all displays.  */
 
-static Lisp_Object xfont_scripts_cache;
+static Lisp_Object xfont_scripts_cache = NIL_INIT;
 
 /* Re-usable vector to store characteristic font properties.   */
-static Lisp_Object xfont_scratch_props;
+static Lisp_Object xfont_scratch_props = NIL_INIT;
 
 /* Return a list of scripts supported by the font of FONTNAME whose
    characteristic properties are in PROPS and whose encoding charset

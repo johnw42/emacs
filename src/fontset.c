@@ -156,7 +156,7 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 /********** VARIABLES and FUNCTION PROTOTYPES **********/
 
 /* Vector containing all fontsets.  */
-static Lisp_Object Vfontset_table;
+static Lisp_Object Vfontset_table = NIL_INIT;
 
 /* Next possibly free fontset ID.  Usually this keeps the minimum
    fontset ID not yet used.  */
@@ -164,7 +164,7 @@ static int next_fontset_id;
 
 /* The default fontset.  This gives default FAMILY and REGISTRY of
    font for each character.  */
-static Lisp_Object Vdefault_fontset;
+static Lisp_Object Vdefault_fontset = NIL_INIT;
 
 /* Prototype declarations for static functions.  */
 static Lisp_Object make_fontset (Lisp_Object, Lisp_Object, Lisp_Object);
@@ -1090,7 +1090,7 @@ make_fontset_for_ascii_face (struct frame *f, int base_fontset_id, struct face *
 /* Cache data used by fontset_pattern_regexp.  The car part is a
    pattern string containing at least one wild card, the cdr part is
    the corresponding regular expression.  */
-static Lisp_Object Vcached_fontset_data;
+static Lisp_Object Vcached_fontset_data = NIL_INIT;
 
 #define CACHED_FONTSET_NAME SSDATA (XCAR (Vcached_fontset_data))
 #define CACHED_FONTSET_REGEX (XCDR (Vcached_fontset_data))
@@ -1739,7 +1739,7 @@ FONT-SPEC is a vector, a cons, or a string.  See the documentation of
 
 /* Alist of automatically created fontsets.  Each element is a cons
    (FONT-SPEC . FONTSET-ID).  */
-static Lisp_Object auto_fontset_alist;
+static Lisp_Object auto_fontset_alist = NIL_INIT;
 
 /* Number of automatically created fontsets.  */
 static ptrdiff_t num_auto_fontsets;

@@ -632,7 +632,7 @@ is used instead.  */)
 }
 
 /* A buffer which is used to hold output being built by prin1-to-string.  */
-Lisp_Object Vprin1_to_string_buffer;
+Lisp_Object Vprin1_to_string_buffer = NIL_INIT;
 
 DEFUN ("prin1-to-string", Fprin1_to_string, Sprin1_to_string, 1, 2, 0,
        doc: /* Return a string containing the printed representation of OBJECT.
@@ -1321,7 +1321,7 @@ print_check_string_charset_prop (INTERVAL interval, Lisp_Object string)
 }
 
 /* The value is (charset . nil).  */
-static Lisp_Object print_prune_charset_plist;
+static Lisp_Object print_prune_charset_plist = NIL_INIT;
 
 static Lisp_Object
 print_prune_string_charset (Lisp_Object string)
@@ -2298,6 +2298,10 @@ print_interval (INTERVAL interval, Lisp_Object printcharfun)
 void
 init_print_once (void)
 {
+#ifndef NIL_IS_ZERO
+  mem_nil (being_printed, sizeof (being_printed));
+#endif
+  
   /* The subroutine object for external-debugging-output is kept here
      for the convenience of the debugger.  */
   DEFSYM (Qexternal_debugging_output, "external-debugging-output");

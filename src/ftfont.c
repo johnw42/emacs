@@ -44,10 +44,10 @@ static bool fc_initialized;
 static FT_Library ft_library;
 
 /* Cache for FreeType fonts.  */
-static Lisp_Object freetype_font_cache;
+static Lisp_Object freetype_font_cache = NIL_INIT;
 
 /* Cache for FT_Face and FcCharSet. */
-static Lisp_Object ft_face_cache;
+static Lisp_Object ft_face_cache = NIL_INIT;
 
 /* The actual structure for FreeType font that can be cast to struct
    font.  */
@@ -288,7 +288,7 @@ ftfont_pattern_entity (FcPattern *p, Lisp_Object extra)
 }
 
 
-static Lisp_Object ftfont_generic_family_list;
+static Lisp_Object ftfont_generic_family_list = NIL_INIT;
 
 static Lisp_Object
 ftfont_resolve_generic_family (Lisp_Object family, FcPattern *pattern)

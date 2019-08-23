@@ -75,22 +75,22 @@ static void apply_window_adjustment (struct window *);
 
    This value is always the same as
    FRAME_SELECTED_WINDOW (selected_frame).  */
-Lisp_Object selected_window;
+Lisp_Object selected_window = NIL_INIT;
 
 /* A list of all windows for use by next_window and Fwindow_list.
    Functions creating or deleting windows should invalidate this cache
    by setting it to nil.  */
-Lisp_Object Vwindow_list;
+Lisp_Object Vwindow_list = NIL_INIT;
 
 /* The mini-buffer window of the selected frame.
    Note that you cannot test for mini-bufferness of an arbitrary window
    by comparing against this; but you can test for mini-bufferness of
    the selected window.  */
-Lisp_Object minibuf_window;
+Lisp_Object minibuf_window = NIL_INIT;
 
 /* Non-nil means it is the window whose mode line should be
    shown as the selected window when the minibuffer is selected.  */
-Lisp_Object minibuf_selected_window;
+Lisp_Object minibuf_selected_window = NIL_INIT;
 
 /* Incremented for each window created.  */
 static EMACS_INT sequence_number;

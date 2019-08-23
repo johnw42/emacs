@@ -46,7 +46,7 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 #define DEFAULT_ENCODING Qiso8859_1
 
 /* Vector of Vfont_weight_table, Vfont_slant_table, and Vfont_width_table. */
-static Lisp_Object font_style_table;
+static Lisp_Object font_style_table = NIL_INIT;
 
 /* Structure used for tables mapping weight, slant, and width numeric
    values and their names.  */
@@ -120,7 +120,7 @@ static const struct table_entry width_table[] =
 
    The latter form means that the information for REGISTRY couldn't be
    retrieved.  */
-static Lisp_Object font_charset_alist;
+static Lisp_Object font_charset_alist = NIL_INIT;
 
 /* List of all font drivers.  Each font-backend (XXXfont.c) calls
    register_font_driver in syms_of_XXXfont to register its font-driver
@@ -1893,7 +1893,7 @@ check_otf_features (Lisp_Object otf_features)
 #ifdef HAVE_LIBOTF
 #include <otf.h>
 
-Lisp_Object otf_list;
+Lisp_Object otf_list = NIL_INIT;
 
 static Lisp_Object
 otf_tag_symbol (OTF_Tag tag)
@@ -2668,7 +2668,7 @@ font_clear_cache (struct frame *f, Lisp_Object cache,
 }
 
 
-static Lisp_Object scratch_font_spec, scratch_font_prefer;
+static Lisp_Object scratch_font_spec = NIL_INIT, scratch_font_prefer = NIL_INIT;
 
 /* Check each font-entity in VEC, and return a list of font-entities
    that satisfy these conditions:
@@ -5217,7 +5217,7 @@ build_style_table (const struct table_entry *entry, int nelement)
 /* The deferred font-log data of the form [ACTION ARG RESULT].
    If ACTION is not nil, that is added to the log when font_add_log is
    called next time.  At that time, ACTION is set back to nil.  */
-static Lisp_Object Vfont_log_deferred;
+static Lisp_Object Vfont_log_deferred = NIL_INIT;
 
 /* Prepend the font-related logging data in Vfont_log if it is not
    t.  ACTION describes a kind of font-related action (e.g. listing,

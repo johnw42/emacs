@@ -202,7 +202,14 @@ syntax_prefix_flag_p (int c)
   return SYNTAX_FLAGS_PREFIX (SYNTAX_WITH_FLAGS (c));
 }
 
-struct gl_state_s gl_state;		/* Global state of syntax parser.  */
+/* Global state of syntax parser.  */
+struct gl_state_s gl_state =
+  {
+   .object = NIL_INIT,
+   .global_code = NIL_INIT,
+   .current_syntax_table = NIL_INIT,
+   .old_prop = NIL_INIT,
+  };
 
 enum { INTERVALS_AT_ONCE = 10 };	/* 1 + max-number of intervals
 					   to scan to property-change.  */
@@ -1079,7 +1086,7 @@ char const syntax_code_spec[16] =
    shared among syntax tables, we generate them in advance.  By
    sharing objects, the function `describe-syntax' can give a more
    compact listing.  */
-static Lisp_Object Vsyntax_code_object;
+static Lisp_Object Vsyntax_code_object = NIL_INIT;
 
 
 DEFUN ("char-syntax", Fchar_syntax, Schar_syntax, 1, 1, 0,

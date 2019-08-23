@@ -28,7 +28,7 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 
 
 /* This is a list, elements are quadruples (DESCRIPTOR FILE FLAGS CALLBACK)  */
-static Lisp_Object watch_list;
+static Lisp_Object watch_list = NIL_INIT;
 
 /* This is the callback function for arriving signals from
    g_file_monitor.  It shall create a Lisp event, and put it into

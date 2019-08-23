@@ -88,7 +88,7 @@ static timezone_t const utc_tz = 0;
 
 /* The cached value of Vsystem_name.  This is used only to compare it
    to Vsystem_name, so it need not be visible to the GC.  */
-static Lisp_Object cached_system_name;
+static Lisp_Object cached_system_name = NIL_INIT;
 
 static void
 init_and_cache_system_name (void)
@@ -3222,8 +3222,8 @@ differences between the two buffers.  */)
     /* FIXME: Find a good number for .too_expensive.  */
     .too_expensive = 1000000,
   };
-  memset (ctx.deletions, 0, del_bytes);
-  memset (ctx.insertions, 0, ins_bytes);
+  memzero (ctx.deletions, del_bytes);
+  memzero (ctx.insertions, ins_bytes);
   /* compareseq requires indices to be zero-based.  We add BEGV back
      later.  */
   bool early_abort = compareseq (0, size_a, 0, size_b, false, &ctx);

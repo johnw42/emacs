@@ -44,7 +44,7 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 /* Alist of D-Bus buses we are polling for messages.
    The key is the symbol or string of the bus, and the value is the
    connection address.  */
-static Lisp_Object xd_registered_buses;
+static Lisp_Object xd_registered_buses = NIL_INIT;
 
 /* Whether we are reading a D-Bus event.  */
 static bool xd_in_read_queued_messages = 0;

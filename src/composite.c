@@ -147,7 +147,7 @@ ptrdiff_t n_compositions;
 /* Hash table for compositions.  The key is COMPONENTS-VEC of
    `composition' property.  The value is the corresponding
    COMPOSITION-ID.  */
-Lisp_Object composition_hash_table;
+Lisp_Object composition_hash_table = NIL_INIT;
 
 /* Maximum number of characters to look back for
    auto-compositions.  */
@@ -638,7 +638,7 @@ compose_text (ptrdiff_t start, ptrdiff_t end, Lisp_Object components,
    lgstring (Lispy glyph-string), and the value is a body of a
    lgstring.  */
 
-static Lisp_Object gstring_hash_table;
+static Lisp_Object gstring_hash_table = NIL_INIT;
 
 static Lisp_Object gstring_lookup_cache (Lisp_Object);
 
@@ -788,8 +788,8 @@ composition_gstring_width (Lisp_Object gstring, ptrdiff_t from, ptrdiff_t to,
 }
 
 
-static Lisp_Object gstring_work;
-static Lisp_Object gstring_work_headers;
+static Lisp_Object gstring_work = NIL_INIT;
+static Lisp_Object gstring_work_headers = NIL_INIT;
 
 static Lisp_Object
 fill_gstring_header (Lisp_Object header, ptrdiff_t from, ptrdiff_t from_byte,

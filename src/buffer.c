@@ -119,15 +119,25 @@ static void reset_buffer_local_variables (struct buffer *, bool);
 /* Alist of all buffer names vs the buffers.  This used to be
    a Lisp-visible variable, but is no longer, to prevent lossage
    due to user rplac'ing this alist or its elements.  */
-Lisp_Object Vbuffer_alist;
+Lisp_Object Vbuffer_alist = NIL_INIT;
 
-static Lisp_Object QSFundamental;	/* A string "Fundamental".  */
+static Lisp_Object QSFundamental = NIL_INIT;	/* A string "Fundamental".  */
 
 static void alloc_buffer_text (struct buffer *, ptrdiff_t);
 static void free_buffer_text (struct buffer *b);
 static struct Lisp_Overlay * copy_overlays (struct buffer *, struct Lisp_Overlay *);
 static void modify_overlay (struct buffer *, ptrdiff_t, ptrdiff_t);
 static Lisp_Object buffer_lisp_local_variables (struct buffer *, bool);
+
+static void
+nil_buffer (struct buffer *b)
+{
+  //#ifndef NIL_IS_ZERO
+  set_nil (((struct Lisp_Vector *)b)->contents,
+           PSEUDOVECSIZE (struct buffer, own_text));
+  eassert (NILP (BVAR (b, name)));
+  //#endif
+}
 
 static void
 CHECK_OVERLAY (Lisp_Object x)
@@ -526,6 +536,7 @@ even if it is dead.  The return value is never nil.  */)
     error ("Empty string for buffer name is not allowed");
 
   b = allocate_buffer ();
+  nil_buffer (b);
 
   /* An ordinary buffer uses its own struct buffer_text.  */
   b->text = &b->own_text;
@@ -4405,7 +4416,7 @@ VALUE will be returned.*/)
    as we call overlay hook functions.
    After the buffer change, we get the functions to call from this vector.
    This way we always call the same functions before and after the change.  */
-static Lisp_Object last_overlay_modification_hooks;
+static Lisp_Object last_overlay_modification_hooks = NIL_INIT;
 
 /* Number of elements actually used in last_overlay_modification_hooks.  */
 static ptrdiff_t last_overlay_modification_hooks_used;
@@ -5079,14 +5090,23 @@ init_buffer_once (void)
 {
   int idx;
 
+  // TODO(jrw): Why is this necessary?
+  Lisp_Object syntax_table = buffer_defaults.syntax_table_;
+  Lisp_Object category_table = buffer_defaults.category_table_;
+
+  nil_buffer (&buffer_defaults);
+  nil_buffer (&buffer_local_symbols);
+
+  buffer_defaults.syntax_table_ = syntax_table;
+  buffer_defaults.category_table_ = category_table;
+
   /* Items flagged permanent get an explicit permanent-local property
      added in bindings.el, for clarity.  */
   memset (buffer_permanent_local_flags, 0, sizeof buffer_permanent_local_flags);
 
   /* 0 means not a lisp var, -1 means always local, else mask.  */
-#ifndef HAVE_CHEZ_SCHEME
   memset (&buffer_local_flags, 0, sizeof buffer_local_flags);
-#endif /* not HAVE_CHEZ_SCHEME */
+  nil_buffer (&buffer_local_flags);
   bset_filename (&buffer_local_flags, make_number (-1));
   bset_directory (&buffer_local_flags, make_number (-1));
   bset_backed_up (&buffer_local_flags, make_number (-1));

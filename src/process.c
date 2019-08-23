@@ -281,7 +281,7 @@ static Lisp_Object chan_process[FD_SETSIZE];
 static void wait_for_socket_fds (Lisp_Object, char const *);
 
 /* Alist of elements (NAME . PROCESS).  */
-static Lisp_Object Vprocess_alist;
+static Lisp_Object Vprocess_alist = NIL_INIT;
 
 /* Buffered-ahead input char from process, indexed by channel.
    -1 means empty (no char is buffered).
@@ -1008,7 +1008,7 @@ get_process (register Lisp_Object name)
    Members of this list are (process-ID . filename) pairs.  The
    process-ID is a number; the filename, if a string, is a file that
    needs to be removed after the process exits.  */
-static Lisp_Object deleted_pid_list;
+static Lisp_Object deleted_pid_list = NIL_INIT;
 
 void
 record_deleted_pid (pid_t pid, Lisp_Object filename)
@@ -8035,6 +8035,10 @@ restore_nofile_limit (void)
 void
 init_process_emacs (int sockfd)
 {
+#ifndef NIL_IS_ZERO
+  mem_nil (chan_process, sizeof (chan_process));
+#endif
+  
 #ifdef subprocesses
   int i;
 

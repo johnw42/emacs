@@ -41,7 +41,7 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
    CCL_PROG is already resolved to index numbers or not, UPDATEDP (t
    or nil) is the flat to tell if the CCL program is updated after it
    was once used.  */
-static Lisp_Object Vccl_program_table;
+static Lisp_Object Vccl_program_table = NIL_INIT;
 
 /* Return a hash table of id number ID.  */
 #define GET_HASH_TABLE(id) \

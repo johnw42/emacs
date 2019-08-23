@@ -39,11 +39,11 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
    invocation, etc.  The list is extended at the end as deeper
    minibuffer recursions are encountered.  */
 
-Lisp_Object Vminibuffer_list;
+Lisp_Object Vminibuffer_list = NIL_INIT;
 
 /* Data to remember during recursive minibuffer invocations.  */
 
-static Lisp_Object minibuf_save_list;
+static Lisp_Object minibuf_save_list = NIL_INIT;
 
 /* Depth in minibuffer invocations.  */
 
@@ -51,11 +51,11 @@ EMACS_INT minibuf_level;
 
 /* Fread_minibuffer leaves the input here as a string.  */
 
-Lisp_Object last_minibuf_string;
+Lisp_Object last_minibuf_string = NIL_INIT;
 
 /* Prompt to display in front of the mini-buffer contents.  */
 
-static Lisp_Object minibuf_prompt;
+static Lisp_Object minibuf_prompt = NIL_INIT;
 
 /* Width of current mini-buffer prompt.  Only set after display_line
    of the line that contains the prompt.  */

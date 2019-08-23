@@ -2370,7 +2370,7 @@ dos_get_modifiers (int *keymask)
 #define NUM_RECENT_DOSKEYS (100)
 int recent_doskeys_index;	/* Index for storing next element into recent_doskeys */
 int total_doskeys;		/* Total number of elements stored into recent_doskeys */
-Lisp_Object recent_doskeys;	/* A vector, holding the last 100 keystrokes */
+Lisp_Object recent_doskeys = NIL_INIT;	/* A vector, holding the last 100 keystrokes */
 
 DEFUN ("recent-doskeys", Frecent_doskeys, Srecent_doskeys, 0, 0, 0,
        doc: /* Return vector of last 100 keyboard input values seen in dos_rawgetc.
