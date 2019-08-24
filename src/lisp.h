@@ -966,7 +966,7 @@ verify (alignof (struct Lisp_Symbol) % GCALIGNMENT == 0);
 #define LISPSYM_INITIALLY_(name) Sfixnum(i##name)
 void fixup_lispsym_init(ptr *p);
 #else
-#define LISPSYM_INITIALLY(name) LISP_INITIALLY (XLI_BUILTIN_LISPSYM (i##name))
+#define LISPSYM_INITIALLY_(name) LISP_INITIALLY (XLI_BUILTIN_LISPSYM (i##name))
 INLINE void fixup_lispsym_init(const Lisp_Object *p) {}
 #endif
 
@@ -980,7 +980,7 @@ INLINE void fixup_lispsym_init(const Lisp_Object *p) {}
 #else
 #define DEFINE_LISP_SYMBOL(name) \
   DEFINE_GDB_SYMBOL_BEGIN (Lisp_Object, name) \
-  DEFINE_GDB_SYMBOL_END (LISPSYM_INITIALLY (name))
+  DEFINE_GDB_SYMBOL_END (LISPSYM_INITIALLY_ (name))
 #endif
 
 /* The index of the C-defined Lisp symbol SYM.
@@ -1306,6 +1306,12 @@ INLINE bool
 {
   return lisp_h_INTEGERP (x);
 }
+
+#ifdef HAVE_CHEZ_SCHEME
+#define make_lisp_vectorlike_ptr(v) ((v)->header.s.scheme_obj)
+#else /* HAVE_CHEZ_SCHEME */
+#define make_lisp_vectorlike_ptr(ptr) (make_lisp_ptr (ptr, Lisp_Vectorlike))
+#endif /* HAVE_CHEZ_SCHEME */
 
 #ifdef HAVE_CHEZ_SCHEME
 
@@ -4691,9 +4697,6 @@ extern void report_overlay_modification (Lisp_Object, Lisp_Object, bool,
 extern bool overlay_touches_p (ptrdiff_t);
 extern Lisp_Object other_buffer_safely (Lisp_Object);
 extern Lisp_Object get_truename_buffer (Lisp_Object);
-#ifdef HAVE_CHEZ_SCHEME
-extern void scheme_init_buffer_once (void);
-#endif
 extern void init_buffer_once (void);
 extern void init_buffer (int);
 extern void syms_of_buffer (void);
@@ -5461,13 +5464,6 @@ maybe_gc (void)
 }
 
 #ifdef HAVE_CHEZ_SCHEME
-#define make_lisp_vectorlike_ptr(v) ((v)->header.s.scheme_obj)
-#else /* HAVE_CHEZ_SCHEME */
-#define make_lisp_vectorlike_ptr(ptr) (make_lisp_ptr (ptr, Lisp_Vectorlike))
-#endif /* HAVE_CHEZ_SCHEME */
-
-
-#ifdef HAVE_CHEZ_SCHEME
 
 INLINE void
 scheme_ptr_copy (ptr *dest, ptr *src, iptr num_words)
@@ -5479,7 +5475,7 @@ struct Lisp_Symbol *scheme_make_symbol(ptr name, enum symbol_interned interned);
 
 #endif /* HAVE_CHEZ_SCHEME */
 
-#define NIL_INIT LISPSYM_INITIALLY(Qnil)
+#define NIL_INIT LISPSYM_INITIALLY_(Qnil)
 
 INLINE_HEADER_END
 

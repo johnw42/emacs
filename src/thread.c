@@ -270,6 +270,9 @@ informational only.  */)
     CHECK_STRING (name);
 
   mutex = ALLOCATE_PSEUDOVECTOR (struct Lisp_Mutex, mutex, PVEC_MUTEX);
+  memset ((char *) mutex + offsetof (struct Lisp_Mutex, mutex),
+         0, sizeof (struct Lisp_Mutex) - offsetof (struct Lisp_Mutex,
+                                                   mutex));
   mutex->name = name;
   lisp_mutex_init (&mutex->mutex);
 
@@ -386,6 +389,9 @@ informational only.  */)
     CHECK_STRING (name);
 
   condvar = ALLOCATE_PSEUDOVECTOR (struct Lisp_CondVar, cond, PVEC_CONDVAR);
+  memset ((char *) condvar + offsetof (struct Lisp_CondVar, cond),
+	  0, sizeof (struct Lisp_CondVar) - offsetof (struct Lisp_CondVar,
+						      cond));
   condvar->mutex = mutex;
   condvar->name = name;
   sys_cond_init (&condvar->cond);
@@ -787,12 +793,10 @@ If NAME is given, it must be a string; it names the new thread.  */)
 
   new_thread = ALLOCATE_PSEUDOVECTOR (struct thread_state, m_stack_bottom,
 				      PVEC_THREAD);
+  memset ((char *) new_thread + offset, 0,
+          sizeof (struct thread_state) - offset);  
 #ifdef HAVE_CHEZ_SCHEME
   new_thread->m_re_match_object = Qnil;
-#else /* HAVE_CHEZ_SCHEME */
-  memset ((char *) condvar + offsetof (struct Lisp_CondVar, cond),
-	  0, sizeof (struct Lisp_CondVar) - offsetof (struct Lisp_CondVar,
-						      cond));
 #endif /* HAVE_CHEZ_SCHEME */
 
   new_thread->function = function;

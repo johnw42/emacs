@@ -1217,7 +1217,9 @@ Using an Emacs configured with --with-x-toolkit=lucid does not have this problem
       scheme_init();
 #endif /* HAVE_CHEZ_SCHEME */
       init_alloc_once ();
+#ifdef HAVE_CHEZ_SCHEME
       scheme_init_buffer_once ();
+#endif
       init_threads_once ();
       init_obarray ();
       init_eval_once ();

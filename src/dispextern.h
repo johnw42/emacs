@@ -2681,37 +2681,19 @@ struct it
 
 INLINE void it_clear(struct it *it)
 {
-#ifdef HAVE_CHEZ_SCHEME
-  memset (it, 0, sizeof (struct it));
-  it->dpvec = XVC_NULL;
-  it->dpend = XVC_NULL;
-  scheme_ptr_fill (it->ctl_chars, Qnil,
-                   sizeof (it->ctl_chars) / sizeof (Lisp_Object));
-  scheme_ptr_fill (it->overlay_strings, Qnil,
-                   OVERLAY_STRING_CHUNK_SIZE);
-  scheme_ptr_fill (it->string_overlays, Qnil,
-                   OVERLAY_STRING_CHUNK_SIZE);
+  memzero (it, sizeof *it);
+#ifndef NIL_IS_ZERO
+  mem_nil (it->ctl_chars, sizeof (it->ctl_chars));
+  mem_nil (it->overlay_strings, sizeof (it->overlay_strings));
+  mem_nil (it->string_overlays, sizeof (it->string_overlays));
   it->string = Qnil;
   it->from_overlay = Qnil;
-  for (iptr i = 0; i < IT_STACK_SIZE; i++)
-    {
-      struct iterator_stack_entry *e = &it->stack[i];
-      e->string = Qnil;
-      e->object = Qnil;
-      it_slice_clear (&e->slice);
-      e->from_overlay = Qnil;
-      e->space_width = Qnil;
-      e->font_height = Qnil;
-    }
   it_slice_clear (&it->slice);
   it->space_width = Qnil;
   it->font_height = Qnil;
   it->object = Qnil;
-#else /* HAVE_CHEZ_SCHEME */
-  memclear (it, sizeof (struct it));
-#endif /* HAVE_CHEZ_SCHEME */
+#endif
 }
-
 
 /* Access to positions of iterator IT.  */
 

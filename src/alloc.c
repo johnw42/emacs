@@ -190,6 +190,8 @@ malloc_initialize_hook (void)
 voidfuncptr __MALLOC_HOOK_VOLATILE __malloc_initialize_hook EXTERNALLY_VISIBLE
   = malloc_initialize_hook;
 
+#endif
+
 #if defined DOUG_LEA_MALLOC || !defined CANNOT_DUMP
 
 /* Allocator-related actions to do just before and after unexec.  */
@@ -233,8 +235,6 @@ alloc_unexec_post (void)
 /* Default value of gc_cons_threshold (see below).  */
 
 #define GC_DEFAULT_THRESHOLD (100000 * word_size)
-
-#endif
 
 /* Global variables.  */
 struct emacs_globals globals;
@@ -3572,7 +3572,7 @@ allocate_buffer (void)
 #else /* HAVE_CHEZ_SCHEME */
   struct buffer *b = lisp_malloc (sizeof *b, MEM_TYPE_BUFFER);  
 
-  BUFFER_PVEC_INIT (AS_XV (b));
+  BUFFER_PVEC_INIT (b);
 #endif /* HAVE_CHEZ_SCHEME */
 
   /* Put B on the chain of all buffers including killed ones.  */

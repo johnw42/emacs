@@ -401,3 +401,7 @@ extern int emacs_setenv_TZ (char const *);
 #endif
 
 #define NIL_IS_ZERO 1
+
+#ifdef HAVE_CHEZ_SCHEME
+#undef NIL_IS_ZERO
+#endif
