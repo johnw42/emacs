@@ -58,8 +58,11 @@ ptr scheme_obarray_table (ptr obarray);
 void scheme_ptr_fill (ptr *p, ptr init, iptr num_words);
 ptr scheme_make_lisp_string(ptr str);
 
-extern void (*scheme_save_ptr)(void *, const char *);
-extern void (*scheme_check_ptr)(void *, const char *);
+#define scheme_save_ptr(ptr, type) eassert(scheme_save_ptr_fun(ptr, type))
+#define scheme_check_ptr(ptr, type) eassert(scheme_check_ptr_fun(ptr, type))
+
+extern bool (*scheme_save_ptr_fun)(void *, const char *);
+extern bool (*scheme_check_ptr_fun)(void *, const char *);
 
 extern ptr scheme_vectorlike_symbol;
 extern ptr scheme_misc_symbol;

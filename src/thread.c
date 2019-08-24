@@ -1018,8 +1018,9 @@ static void
 init_main_thread (void)
 {
 #ifdef HAVE_CHEZ_SCHEME
-  main_thread_ptr = ALLOCATE_PSEUDOVECTOR
+  main_thread_ptr = ALLOCATE_ZEROED_PSEUDOVECTOR
     (struct thread_state, m_stack_bottom, PVEC_THREAD);
+  scheme_save_ptr(main_thread_ptr, "thread");
   main_thread_ptr->m_re_match_object = Qnil;
   current_thread = main_thread_ptr;
   all_threads = main_thread_ptr;
@@ -1052,7 +1053,9 @@ init_threads_once (void)
 void
 init_threads (void)
 {
+#ifndef HAVE_CHEZ_SCHEME
   init_main_thread ();
+#endif
   sys_cond_init (&main_thread.thread_condvar);
   sys_mutex_init (&global_lock);
   sys_mutex_lock (&global_lock);

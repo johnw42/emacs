@@ -1,15 +1,29 @@
 #! /bin/bash
 
-#if make -C src -j temacs 2>/dev/null || make -C src -k temacs; then
-if make -C src -j temacs; then
-  true
-#   EMACS_CMD="src/emacs --batch"
-  EMACS_CMD="src/temacs --batch --load loadup"
-  GDB=
+export EMACSLOADPATH=
+cd src
+if make -j temacs; then
+  # EMACS_CMD="src/emacs --batch"
+  #EMACS_CMD="src/temacs --batch --load loadup"
+
+  cd ../lisp
+  EMACS_CMD=(../src/temacs --batch --load loadup)
+  
+  GDB=false
   if [[ $TERM != dumb ]]; then
     GDB="gdb -ex r --args"
   fi
-  $GDB $EMACS_CMD
+
+  echo "${EMACS_CMD[*]}"
+  #"${EMACS_CMD[@]}" ||
+    $GDB "${EMACS_CMD[@]}"
+
+  # cd lisp
+  # for lisp_file in autoload.el; do
+  #   EMACS_CMD=('./bootstrap-emacs' --batch --no-site-file --no-site-lisp --eval '(setq load-prefer-newer t)'  -f batch-byte-compile ../lisp/emacs-lisp/$lisp_file)
+  #   echo "${EMACS_CMD[*]}"
+  #   "${EMACS_CMD[@]}" || $GDB "${EMACS_CMD[@]}"
+  # done
   
 #   $GDB $EMACS_CMD --eval \
 #     "

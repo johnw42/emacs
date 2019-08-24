@@ -1363,8 +1363,8 @@ if hasattr(gdb, 'printing'):
     pp.add_printer ('Lisp_Object', '^Lisp_Object$', Lisp_Object_Printer)
     return pp
 
-  gdb.printing.register_pretty_printer (gdb.current_objfile (),
-                                        build_pretty_printer (), True)
+  # gdb.printing.register_pretty_printer (gdb.current_objfile (),
+  #                                       build_pretty_printer (), True)
 end
 
 # GDB mishandles indentation with leading tabs when feeding it to Python.

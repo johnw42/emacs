@@ -15,8 +15,8 @@ static ptr c_data_table;
 ptr scheme_vectorlike_symbol = Sfalse;
 ptr scheme_misc_symbol = Sfalse;
 ptr scheme_string_symbol = Sfalse;
-void (*scheme_save_ptr)(void *, const char *);
-void (*scheme_check_ptr)(void *, const char *);
+bool (*scheme_save_ptr_fun)(void *, const char *);
+bool (*scheme_check_ptr_fun)(void *, const char *);
 
 static ptr lisp_to_scheme(Lisp_Object lisp_obj) {
   return lisp_obj;
@@ -27,7 +27,8 @@ static Lisp_Object scheme_to_lisp(ptr scheme_obj) {
 }
 
 DEFUN ("scheme-funcall", Fscheme_funcall, Sscheme_funcall, 1, MANY, 0,
-       doc: /* TODO */)
+       doc: /* TODO
+usage: (scheme-funcall TODO) */)
   (ptrdiff_t nargs, Lisp_Object *args)
 {
   ptr *scheme_args = alloca(nargs * sizeof(ptr));
@@ -253,8 +254,8 @@ void scheme_init(void) {
   Sscheme_script("/usr/local/google/home/jrw/git/schemacs/scheme/main.ss", 0, argv);
   scheme_call0("emacs-init");
   
-  scheme_save_ptr  = get_scheme_func ("save-pointer");
-  scheme_check_ptr  = get_scheme_func ("check-pointer");
+  scheme_save_ptr_fun = get_scheme_func ("save-pointer");
+  scheme_check_ptr_fun = get_scheme_func ("check-pointer");
   
   c_data_table = scheme_call0("make-eq-hashtable");
   Slock_object(c_data_table);

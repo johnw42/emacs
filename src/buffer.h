@@ -992,111 +992,133 @@ XBUFFER (Lisp_Object a)
 INLINE void
 bset_bidi_paragraph_direction (struct buffer *b, Lisp_Object val)
 {
+  scheme_check_ptr (b, "buffer");
   PV_LISP_FIELD_SET(b, bidi_paragraph_direction_, val);
 }
 INLINE void
 bset_cache_long_scans (struct buffer *b, Lisp_Object val)
 {
+  scheme_check_ptr (b, "buffer");
   PV_LISP_FIELD_SET(b, cache_long_scans_, val);
 }
 INLINE void
 bset_case_canon_table (struct buffer *b, Lisp_Object val)
 {
+  scheme_check_ptr (b, "buffer");
   PV_LISP_FIELD_SET(b, case_canon_table_, val);
 }
 INLINE void
 bset_case_eqv_table (struct buffer *b, Lisp_Object val)
 {
+  scheme_check_ptr (b, "buffer");
   PV_LISP_FIELD_SET(b, case_eqv_table_, val);
 }
 INLINE void
 bset_directory (struct buffer *b, Lisp_Object val)
 {
+  scheme_check_ptr (b, "buffer");
   PV_LISP_FIELD_SET(b, directory_, val);
 }
 INLINE void
 bset_display_count (struct buffer *b, Lisp_Object val)
 {
+  scheme_check_ptr (b, "buffer");
   PV_LISP_FIELD_SET(b, display_count_, val);
 }
 INLINE void
 bset_left_margin_cols (struct buffer *b, Lisp_Object val)
 {
+  scheme_check_ptr (b, "buffer");
   PV_LISP_FIELD_SET(b, left_margin_cols_, val);
 }
 INLINE void
 bset_right_margin_cols (struct buffer *b, Lisp_Object val)
 {
+  scheme_check_ptr (b, "buffer");
   PV_LISP_FIELD_SET(b, right_margin_cols_, val);
 }
 INLINE void
 bset_display_time (struct buffer *b, Lisp_Object val)
 {
+  scheme_check_ptr (b, "buffer");
   PV_LISP_FIELD_SET(b, display_time_, val);
 }
 INLINE void
 bset_downcase_table (struct buffer *b, Lisp_Object val)
 {
+  scheme_check_ptr (b, "buffer");
   PV_LISP_FIELD_SET(b, downcase_table_, val);
 }
 INLINE void
 bset_enable_multibyte_characters (struct buffer *b, Lisp_Object val)
 {
+  scheme_check_ptr (b, "buffer");
   PV_LISP_FIELD_SET(b, enable_multibyte_characters_, val);
 }
 INLINE void
 bset_filename (struct buffer *b, Lisp_Object val)
 {
+  scheme_check_ptr (b, "buffer");
   PV_LISP_FIELD_SET(b, filename_, val);
 }
 INLINE void
 bset_keymap (struct buffer *b, Lisp_Object val)
 {
+  scheme_check_ptr (b, "buffer");
   PV_LISP_FIELD_SET(b, keymap_, val);
 }
 INLINE void
 bset_last_selected_window (struct buffer *b, Lisp_Object val)
 {
+  scheme_check_ptr (b, "buffer");
   PV_LISP_FIELD_SET(b, last_selected_window_, val);
 }
 INLINE void
 bset_local_var_alist (struct buffer *b, Lisp_Object val)
 {
+  scheme_check_ptr (b, "buffer");
   PV_LISP_FIELD_SET(b, local_var_alist_, val);
 }
 INLINE void
 bset_mark_active (struct buffer *b, Lisp_Object val)
 {
+  scheme_check_ptr (b, "buffer");
   PV_LISP_FIELD_SET(b, mark_active_, val);
 }
 INLINE void
 bset_point_before_scroll (struct buffer *b, Lisp_Object val)
 {
+  scheme_check_ptr (b, "buffer");
   PV_LISP_FIELD_SET(b, point_before_scroll_, val);
 }
 INLINE void
 bset_read_only (struct buffer *b, Lisp_Object val)
 {
+  scheme_check_ptr (b, "buffer");
   PV_LISP_FIELD_SET(b, read_only_, val);
 }
 INLINE void
 bset_truncate_lines (struct buffer *b, Lisp_Object val)
 {
+  scheme_check_ptr (b, "buffer");
   PV_LISP_FIELD_SET(b, truncate_lines_, val);
 }
 INLINE void
 bset_undo_list (struct buffer *b, Lisp_Object val)
 {
+  scheme_check_ptr (b, "buffer");
   b->undo_list_ = val;
 }
 INLINE void
 bset_upcase_table (struct buffer *b, Lisp_Object val)
 {
+  scheme_check_ptr (b, "buffer");
   PV_LISP_FIELD_SET(b, upcase_table_, val);
 }
 INLINE void
 bset_width_table (struct buffer *b, Lisp_Object val)
 {
+  scheme_check_ptr (b, "buffer");
   PV_LISP_FIELD_SET(b, width_table_, val);
 }
 
@@ -1240,6 +1262,7 @@ decode_buffer (Lisp_Object b)
 INLINE void
 set_buffer_internal (struct buffer *b)
 {
+  scheme_check_ptr (b, "buffer");
   if (current_buffer != b)
     set_buffer_internal_1 (b);
 }
@@ -1285,6 +1308,7 @@ extern Lisp_Object Vbuffer_alist;
 INLINE INTERVAL
 buffer_intervals (struct buffer *b)
 {
+  scheme_check_ptr (b, "buffer");
   eassert (b->text != NULL);
   return b->text->intervals;
 }
@@ -1294,6 +1318,7 @@ buffer_intervals (struct buffer *b)
 INLINE void
 set_buffer_intervals (struct buffer *b, INTERVAL i)
 {
+  scheme_check_ptr (b, "buffer");
   eassert (b->text != NULL);
   b->text->intervals = i;
 }
@@ -1335,8 +1360,10 @@ BUF_FETCH_MULTIBYTE_CHAR (struct buffer *buf, ptrdiff_t pos)
 INLINE int
 buffer_window_count (struct buffer *b)
 {
+  scheme_check_ptr (b, "buffer");
   if (b->base_buffer)
     b = b->base_buffer;
+  scheme_check_ptr (b, "buffer");
   eassert (b->window_count >= 0);
   return b->window_count;
 }
@@ -1457,12 +1484,14 @@ set_per_buffer_default (int offset, Lisp_Object value)
 INLINE Lisp_Object
 per_buffer_value (struct buffer *b, int offset)
 {
+  scheme_check_ptr (b, "buffer");
   return *(Lisp_Object *)(offset + (char *) b);
 }
 
 INLINE void
 set_per_buffer_value (struct buffer *b, int offset, Lisp_Object value)
 {
+  scheme_check_ptr (b, "buffer");
   *(Lisp_Object *)(offset + (char *) b) = value;
 }
 

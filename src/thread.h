@@ -208,7 +208,13 @@ INLINE struct thread_state *
 XTHREAD (Lisp_Object a)
 {
   eassert (THREADP (a));
+#ifdef HAVE_CHEZ_SCHEME
+  struct thread_state *p = XUNTAG_VECTORLIKE (a);;
+  scheme_check_ptr(p, "thread");
+  return p;
+#else
   return XUNTAG_VECTORLIKE (a);
+#endif
 }
 
 /* A mutex in lisp is represented by a system condition variable.

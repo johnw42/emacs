@@ -54,33 +54,34 @@
      (lambda (ptr)
        (bitwise-and
         #xffffff
-        (* (/ ptr 8) 538333)))
+        (* (div ptr 8) 538333)))
      =))
 
   (define-for-c (save-pointer
                  (ptr type-str)
-                 (void* utf-8) void)
-    (printf "in save-pointer ~a ~a\n" ptr type-str)
-    ;; (let ([old-type (hashtable-ref pointer-table ptr #f)])
-    ;;   (when old-type
-    ;;     (printf "duplicate registration of ~x: ~a => ~a\n"
-    ;;             ptr old-type type-str)
-    ;;     (abort)))
-    ;; (hashtable-set! pointer-table ptr type-str)
-    (printf "save-pointer done\n")
-    (void))
+                 (void* utf-8) boolean)
+    #;(printf "in save-pointer ~a ~a\n" ptr type-str)
+    (let ([old-type (hashtable-ref pointer-table ptr #f)])
+      (if old-type
+          (begin
+            (printf "duplicate registration of ~x: ~a => ~a\n"
+                    ptr old-type type-str)
+            #f)
+          (begin
+            (hashtable-set! pointer-table ptr type-str)
+            #t))))
 
   (define-for-c (check-pointer
                  (ptr type-str)
-                 (void* utf-8) void)
-    (printf "in check-pointer ~a ~a\n" ptr type-str)
-    ;; (let ([old-type (hashtable-ref pointer-table ptr #f)])
-    ;;   (unless (equal? old-type type-str)
-    ;;     (printf "wrong registration of ~x; expected ~a, got ~a\n"
-    ;;             ptr type-str old-type)
-    ;;     (abort)))
-    (printf "check-pointer done\n")
-    (void))
+                 (void* utf-8) boolean)
+    #;(printf "in check-pointer ~a ~a\n" ptr type-str)
+    (let ([old-type (hashtable-ref pointer-table ptr #f)])
+      (if (equal? old-type type-str)
+          #t
+          (begin
+            (printf "wrong registration of ~x; expected ~a, got ~a\n"
+                    ptr type-str old-type)
+            #f))))
   
   (define elisp-funcall
     (case-lambda

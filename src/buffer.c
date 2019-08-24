@@ -2091,6 +2091,7 @@ set_buffer_internal_1 (register struct buffer *b)
     enlarge_buffer_text (b, 0);
 #endif /* USE_MMAP_FOR_BUFFERS */
 
+  scheme_check_ptr (b, "buffer");
   if (current_buffer == b)
     return;
 
@@ -2105,6 +2106,7 @@ void set_buffer_internal_2 (register struct buffer *b)
   register struct buffer *old_buf;
   register Lisp_Object tail;
 
+  scheme_check_ptr (b, "buffer");
   BUFFER_CHECK_INDIRECTION (b);
 
   old_buf = current_buffer;
@@ -2113,6 +2115,7 @@ void set_buffer_internal_2 (register struct buffer *b)
 
   if (old_buf)
     {
+      scheme_check_ptr (old_buf, "buffer");
       /* Put the undo list back in the base buffer, so that it appears
 	 that an indirect buffer shares the undo list of its base.  */
       if (old_buf->base_buffer)
@@ -5342,6 +5345,7 @@ init_buffer (int initialized)
 	 in the dumped Emacs), and by the first call to coding.c routines.  */
       FOR_EACH_BUFFER (b)
         {
+          scheme_check_ptr(b, "buffer");
 	  b->text->beg = NULL;
 	  enlarge_buffer_text (b, 0);
 	}
@@ -5354,6 +5358,7 @@ init_buffer (int initialized)
 	 this point in temacs.  */
       FOR_EACH_BUFFER (b)
         {
+          scheme_check_ptr(b, "buffer");
 	  eassert (b->text->beg != NULL);
 	}
     }
