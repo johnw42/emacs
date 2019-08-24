@@ -58,6 +58,9 @@ ptr scheme_obarray_table (ptr obarray);
 void scheme_ptr_fill (ptr *p, ptr init, iptr num_words);
 ptr scheme_make_lisp_string(ptr str);
 
+extern void (*scheme_save_ptr)(void *, const char *);
+extern void (*scheme_check_ptr)(void *, const char *);
+
 extern ptr scheme_vectorlike_symbol;
 extern ptr scheme_misc_symbol;
 extern ptr scheme_string_symbol;
@@ -410,7 +413,7 @@ error !;
    Commentary for these macros can be found near their corresponding
    functions, below.  */
 
-#ifdef NIL_IS_ZERO
+#if defined(NIL_IS_ZERO) || defined(HAVE_CHEZ_SCHEME)
 #define CHECK_NOT_ZERO(x) x
 #else
 #define CHECK_NOT_ZERO(x) ((eassert ((x) != 0), x))
@@ -419,12 +422,12 @@ error !;
 #ifdef HAVE_CHEZ_SCHEME
 
 #define SCHEME_VECTORP(x, sym)                  \
-  (Svectorp(x) &&                               \
+  (Svectorp(CHECK_NOT_ZERO(x)) &&               \
    Svector_length(x) == 2 &&                    \
    Svector_ref(x, 0) == sym)
 
-#define lisp_h_XLI(o) ((EMACS_INT)(o))
-#define lisp_h_XIL(i) ((Lisp_Object)(i))
+#define lisp_h_XLI(o) ((EMACS_INT) (o))
+#define lisp_h_XIL(i) ((Lisp_Object) (i))
 #define lisp_h_CHECK_NUMBER(x) CHECK_TYPE (INTEGERP (x), Qintegerp, x)
 #define lisp_h_CHECK_SYMBOL(x) CHECK_TYPE (SYMBOLP (x), Qsymbolp, x)
 #define lisp_h_CHECK_TYPE(ok, predicate, x) \
@@ -1049,14 +1052,12 @@ INLINE bool
   return lisp_h_SYMBOLP (x);
 }
 
+#ifdef HAVE_CHEZ_SCHEME
+struct Lisp_Symbol * (XSYMBOL) (Lisp_Object a);
+#else
 INLINE struct Lisp_Symbol *
 (XSYMBOL) (Lisp_Object a)
 {
-#ifdef HAVE_CHEZ_SCHEME
-  struct Lisp_Symbol *p = scheme_find_c_data (a);
-  eassert (p != NULL);
-  return p;
-#else /* HAVE_CHEZ_SCHEME */
 #if USE_LSB_TAG
   return lisp_h_XSYMBOL (a);
 #else
@@ -1065,8 +1066,8 @@ INLINE struct Lisp_Symbol *
   void *p = (char *) lispsym + i;
   return p;
 #endif
-#endif /* HAVE_CHEZ_SCHEME */
 }
+#endif
 
 #ifndef HAVE_CHEZ_SCHEME
 INLINE Lisp_Object
@@ -2265,8 +2266,9 @@ set_nil (Lisp_Object *p, ptrdiff_t n)
   memzero (p, n * sizeof (Lisp_Object));
 #else
   eassert (0 <= n);
+  Lisp_Object nil = Qnil;
   for (ptrdiff_t i = 0; i < n; i++)
-    p[i] = Qnil;
+    p[i] = nil;
 #endif
 }
 
@@ -4509,8 +4511,8 @@ extern void init_lread (void);
 extern void syms_of_lread (void);
 
 #ifdef HAVE_CHEZ_SCHEME
-INLINE Lisp_Object intern (const char *str) { Fintern(make_string(str, strlen(str)), Qnil); }
-INLINE Lisp_Object intern_c_string (const char *str)  { Fintern(make_unibyte_string(str, strlen(str)), Qnil); }
+INLINE Lisp_Object intern (const char *str) { return Fintern(make_string(str, strlen(str)), Qnil); }
+INLINE Lisp_Object intern_c_string (const char *str)  { return Fintern(make_unibyte_string(str, strlen(str)), Qnil); }
 #else /* HAVE_CHEZ_SCHEME */
 INLINE Lisp_Object
 intern (const char *str)
@@ -4697,6 +4699,9 @@ extern void report_overlay_modification (Lisp_Object, Lisp_Object, bool,
 extern bool overlay_touches_p (ptrdiff_t);
 extern Lisp_Object other_buffer_safely (Lisp_Object);
 extern Lisp_Object get_truename_buffer (Lisp_Object);
+#ifdef HAVE_CHEZ_SCHEME
+extern void scheme_init_buffer_once (void);
+#endif
 extern void init_buffer_once (void);
 extern void init_buffer (int);
 extern void syms_of_buffer (void);

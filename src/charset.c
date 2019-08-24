@@ -90,7 +90,7 @@ Lisp_Object Vcharset_non_preferred_head = NIL_INIT;
 
 /* Incremented every time we change the priority of charsets.
    Wraps around.  */
-EMACS_UINT charset_ordered_list_tick = NIL_INIT;
+EMACS_UINT charset_ordered_list_tick = 0;
 
 /* List of iso-2022 charsets.  */
 Lisp_Object Viso_2022_charset_list = NIL_INIT;

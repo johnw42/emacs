@@ -4046,6 +4046,7 @@ scheme_obarray_table (ptr obarray)
       table = scheme_call2("make-hashtable",
                            Stop_level_value(Sstring_to_symbol("string-hash")),
                            Stop_level_value(Sstring_to_symbol("string=?")));
+      Slock_object(table);
       ASET(obarray, 0, table);
     }
   eassert(scheme_call1("hashtable?", table) != Sfalse);

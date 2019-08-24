@@ -780,9 +780,7 @@ If NAME is given, it must be a string; it names the new thread.  */)
   struct thread_state *new_thread;
   Lisp_Object result;
   const char *c_name = NULL;
-#ifndef HAVE_CHEZ_SCHEME
   size_t offset = offsetof (struct thread_state, m_stack_bottom);
-#endif /* not HAVE_CHEZ_SCHEME */
 
   /* Can't start a thread in temacs.  */
   if (!initialized)

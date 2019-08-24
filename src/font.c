@@ -284,7 +284,7 @@ font_intern_prop (const char *str, ptrdiff_t len, bool force_symbol)
   parse_str_as_multibyte ((unsigned char *) str, len, &nchars, &nbytes);
   name = make_specified_string (str, nchars, len,
 				len != nchars && len == nbytes);
-  return Fintern (name, obarray);
+  return Fintern (name, Vobarray);
 #else /* HAVE_CHEZ_SCHEME */
   /* This code is similar to intern function from lread.c.  */
   obarray = check_obarray (Vobarray);

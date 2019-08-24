@@ -404,4 +404,7 @@ extern int emacs_setenv_TZ (char const *);
 
 #ifdef HAVE_CHEZ_SCHEME
 #undef NIL_IS_ZERO
+#pragma GCC diagnostic ignored "-Wunused-macros"
+#pragma GCC diagnostic ignored "-Wunused-function"
+#pragma GCC diagnostic ignored "-Wunused-variable"
 #endif

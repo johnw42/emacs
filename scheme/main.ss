@@ -10,7 +10,11 @@
          scheme-object-for-id
          forget-scheme-object
          after-idle
-         identity)
+         identity
+
+         save-pointer
+         check-pointer
+         )
 
   (define elisp-boundp
     (foreign-procedure "scheme_elisp_boundp" (scheme-object) boolean)) 
@@ -33,6 +37,51 @@
                        (scheme-object scheme-object)
                        scheme-object))
 
+  (define-syntax define-for-c
+    (syntax-rules ()
+      [(_ (name (arg ...) (arg-type ...) result-type) form ...)
+       (define name
+         (let ([x (foreign-callable
+                   (lambda (arg ...)
+                     form ...)
+                   (arg-type ...)
+                   result-type)])
+           (lock-object x)
+           x))]))
+
+  (define pointer-table
+    (make-hashtable
+     (lambda (ptr)
+       (bitwise-and
+        #xffffff
+        (* (/ ptr 8) 538333)))
+     =))
+
+  (define-for-c (save-pointer
+                 (ptr type-str)
+                 (void* utf-8) void)
+    (printf "in save-pointer ~a ~a\n" ptr type-str)
+    ;; (let ([old-type (hashtable-ref pointer-table ptr #f)])
+    ;;   (when old-type
+    ;;     (printf "duplicate registration of ~x: ~a => ~a\n"
+    ;;             ptr old-type type-str)
+    ;;     (abort)))
+    ;; (hashtable-set! pointer-table ptr type-str)
+    (printf "save-pointer done\n")
+    (void))
+
+  (define-for-c (check-pointer
+                 (ptr type-str)
+                 (void* utf-8) void)
+    (printf "in check-pointer ~a ~a\n" ptr type-str)
+    ;; (let ([old-type (hashtable-ref pointer-table ptr #f)])
+    ;;   (unless (equal? old-type type-str)
+    ;;     (printf "wrong registration of ~x; expected ~a, got ~a\n"
+    ;;             ptr type-str old-type)
+    ;;     (abort)))
+    (printf "check-pointer done\n")
+    (void))
+  
   (define elisp-funcall
     (case-lambda
      [(fun)
@@ -119,9 +168,11 @@
     (gc)
     'nil)
 
+  (define abort (foreign-procedure "abort" () void))
+
   (define (emacs-init)
     (printf "called scheme emacs-init\n")
-    (let ([abort (foreign-procedure "abort" () void)]
+    (let (
           #;[stderr (transcoded-port (standard-error-port)
                                    (native-transcoder))])
       (base-exception-handler

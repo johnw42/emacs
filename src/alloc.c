@@ -32,8 +32,6 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 
 #ifdef HAVE_CHEZ_SCHEME
 #define DEFINE_SYMBOLS
-#pragma GCC diagnostic ignored "-Wunused-macros"
-#pragma GCC diagnostic ignored "-Wunused-function"
 #endif /* HAVE_CHEZ_SCHEME */
 
 #include "lisp.h"
@@ -3549,16 +3547,11 @@ allocate_pseudovector (int memlen, int lisplen,
   eassert (memlen - lisplen <= (1 << PSEUDOVECTOR_REST_BITS) - 1);
   eassert (lisplen <= PSEUDOVECTOR_SIZE_MASK);
 
-#ifdef HAVE_CHEZ_SCHEME
-  memclear_lisp (v->contents, lisplen * word_size);
-  memclear_c (v->contents + lisplen, (zerolen - lisplen) * word_size);
-#else /* HAVE_CHEZ_SCHEME */
   /* Only the first LISPLEN slots will be traced normally by the GC.  */
   memzero (v->contents, zerolen * word_size);
 #ifndef NIL_IS_ZERO
   set_nil (v->contents, lisplen);
 #endif
-#endif /* HAVE_CHEZ_SCHEME */
   XSETPVECTYPESIZE (as_xv (v), tag, lisplen, memlen - lisplen);
   return v;
 }
@@ -3568,6 +3561,9 @@ allocate_buffer (void)
 {
 #ifdef HAVE_CHEZ_SCHEME
   struct buffer *b = ALLOCATE_PSEUDOVECTOR (struct buffer, own_text, PVEC_BUFFER);
+  scheme_save_ptr(b, "buffer");
+  if (all_buffers)
+    scheme_check_ptr(all_buffers, "buffer");
   b->undo_list_ = Qnil;
 #else /* HAVE_CHEZ_SCHEME */
   struct buffer *b = lisp_malloc (sizeof *b, MEM_TYPE_BUFFER);  
@@ -7810,19 +7806,24 @@ verify_alloca (void)
 void
 init_alloc_once (void)
 {
-#ifndef NIL_IS_ZERO
-  mem_nil (&globals, offsetof (struct emacs_globals, f_auto_save_interval));
-  mem_nil (last_marked, sizeof last_marked);
-#endif
-  
 #ifdef HAVE_CHEZ_SCHEME
   for (iptr i = 0; i < ARRAYELTS (lispsym); i++)
     {
       lispsym[i] = Sstring_to_symbol (defsym_name[i]);
+      Slock_object(lispsym[i]);
     }
-  eassert (Ssymbolp (Qnil));
+#else
+  lispsym[iQnil] = Sstring_to_symbol ("nil");
 #endif /* HAVE_CHEZ_SCHEME */
+  eassert (Ssymbolp (Qnil));
 
+#ifndef NIL_IS_ZERO
+  mem_nil (&globals, offsetof (struct emacs_globals, f_auto_save_interval));
+#ifndef HAVE_CHEZ_SCHEME
+  mem_nil (last_marked, sizeof last_marked);
+#endif
+#endif
+  
 #ifndef HAVE_CHEZ_SCHEME
   /* Even though Qt's contents are not set up, its address is known.  */
   Vpurify_flag = Qt;

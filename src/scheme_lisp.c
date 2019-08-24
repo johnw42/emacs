@@ -15,6 +15,8 @@ static ptr c_data_table;
 ptr scheme_vectorlike_symbol = Sfalse;
 ptr scheme_misc_symbol = Sfalse;
 ptr scheme_string_symbol = Sfalse;
+void (*scheme_save_ptr)(void *, const char *);
+void (*scheme_check_ptr)(void *, const char *);
 
 static ptr lisp_to_scheme(Lisp_Object lisp_obj) {
   return lisp_obj;
@@ -224,6 +226,13 @@ void alloc_test(void)
   printf("&x = %p\n", (void *)&x);
 }
 
+static void *
+get_scheme_func(const char *name)
+{
+  return Sforeign_callable_entry_point
+    (Stop_level_value (Sstring_to_symbol (name)));
+}
+
 void scheme_init(void) {
   const char *char_ptr = NULL;
   const char **argv = &char_ptr;
@@ -243,6 +252,9 @@ void scheme_init(void) {
   Sforeign_symbol("alloc_test", alloc_test);
   Sscheme_script("/usr/local/google/home/jrw/git/schemacs/scheme/main.ss", 0, argv);
   scheme_call0("emacs-init");
+  
+  scheme_save_ptr  = get_scheme_func ("save-pointer");
+  scheme_check_ptr  = get_scheme_func ("check-pointer");
   
   c_data_table = scheme_call0("make-eq-hashtable");
   Slock_object(c_data_table);
@@ -272,7 +284,8 @@ scheme_make_lisp_string(ptr str)
 {
   if (STRINGP (str))
     return str;
-
+  if (Ssymbolp (str))
+    str = scheme_call1 ("symbol->string", str);
   eassert (Sstringp (str));
   iptr n = Sstring_length(str);
   Lisp_Object lstr = Fmake_string (Sfixnum (n), Sfixnum (0));
@@ -312,16 +325,42 @@ scheme_make_symbol(ptr name, enum symbol_interned interned)
   eassert (Sstringp (scheme_str));
   eassert (Ssymbolp (scheme_symbol));
 
-  struct Lisp_Symbol *data = scheme_find_c_data (scheme_symbol);
-  if (data == NULL)
-    data = SCHEME_ALLOC_C_DATA(scheme_symbol, struct Lisp_Symbol);
-  data->u.s.interned = interned;
-  data->u.s.redirect = SYMBOL_PLAINVAL;
-  data->u.s.trapped_write = SYMBOL_UNTRAPPED_WRITE;
-  data->u.s.plist = Qnil;
-  data->u.s.scheme_obj = scheme_symbol;
-  data->u.s.name = lisp_str;
-  return data;
+  return XSYMBOL(scheme_symbol);
+  /* struct Lisp_Symbol *data = scheme_find_c_data (scheme_symbol); */
+  /* if (data == NULL) */
+  /*   data = SCHEME_ALLOC_C_DATA(scheme_symbol, struct Lisp_Symbol); */
+  /* data->u.s.interned = interned; */
+  /* data->u.s.redirect = SYMBOL_PLAINVAL; */
+  /* data->u.s.trapped_write = SYMBOL_UNTRAPPED_WRITE; */
+  /* data->u.s.plist = Qnil; */
+  /* data->u.s.scheme_obj = scheme_symbol; */
+  /* data->u.s.name = lisp_str; */
+  /* return data; */
+}
+
+struct Lisp_Symbol *
+XSYMBOL (Lisp_Object a)
+{
+  eassert (Ssymbolp (a));
+  struct Lisp_Symbol *p = scheme_find_c_data (a);
+  if (p)
+    {
+      eassert (p->u.s.scheme_obj == a);
+      return p;
+    }
+  p = scheme_alloc_c_data(a, sizeof (struct Lisp_Symbol *));
+  p->u.s.scheme_obj = a;
+  p->u.s.name = scheme_make_lisp_string (a);
+  p->u.s.plist = Qnil;
+  p->u.s.redirect = SYMBOL_PLAINVAL;
+  SET_SYMBOL_VAL (p, Qunbound);
+  p->u.s.function = Qnil;
+  p->u.s.gcmarkbit = false;
+  p->u.s.interned = SYMBOL_UNINTERNED;
+  p->u.s.trapped_write = SYMBOL_UNTRAPPED_WRITE;
+  p->u.s.declared_special = false;
+  p->u.s.pinned = false;
+  return p;
 }
 
 ptr
@@ -333,9 +372,10 @@ scheme_obarray_ensure(ptr obarray, ptr sym)
                        ? SYMBOL_INTERNED_IN_INITIAL_OBARRAY
                        : SYMBOL_INTERNED);
   ptr table = scheme_obarray_table(obarray);
+  eassert (scheme_call1 ("hashtable?", table) == Strue);
   ptr scheme_symbol = data->u.s.scheme_obj;
-  ptr scheme_str = scheme_call1("symbol->string", scheme_symbol);
   eassert (Ssymbolp (scheme_symbol));
+  ptr scheme_str = scheme_call1("symbol->string", scheme_symbol);
   eassert (Sstringp (scheme_str));
   scheme_call3("hashtable-set!", table, scheme_str, scheme_symbol);
   return scheme_symbol;
