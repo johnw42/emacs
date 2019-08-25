@@ -4432,16 +4432,12 @@ init_obarray (void)
   DEFSYM (Qunbound, "unbound");
 
   DEFSYM (Qnil, "nil");
-#ifndef HAVE_CHEZ_SCHEME
   SET_SYMBOL_VAL (XSYMBOL (Qnil), Qnil);
-#endif
   make_symbol_constant (Qnil);
   XSYMBOL (Qnil)->u.s.declared_special = true;
 
   DEFSYM (Qt, "t");
-#ifndef HAVE_CHEZ_SCHEME
   SET_SYMBOL_VAL (XSYMBOL (Qt), Qt);
-#endif
   make_symbol_constant (Qt);
   XSYMBOL (Qt)->u.s.declared_special = true;
 
@@ -4454,16 +4450,23 @@ init_obarray (void)
 void
 defsubr (struct Lisp_Subr *sname)
 {
-#ifdef HAVE_CHEZ_SCHEME
-  ptr sym = intern_c_string (sname->init_symbol_name);
-  struct Lisp_Subr *tem =
-    ALLOCATE_PSEUDOVECTOR (struct Lisp_Subr, function, PVEC_SUBR);
-  ptr scheme_obj = tem->header.s.scheme_obj;
-  memcpy(tem, sname, sizeof (struct Lisp_Subr));
-  tem->header.s.scheme_obj = scheme_obj;
-  tem->symbol = sym;
-#else
   Lisp_Object sym, tem;
+#ifdef HAVE_CHEZ_SCHEME
+  if (strcmp(sname->init_symbol_name, "load") == 0)
+    gdb_break();
+  sym = intern_c_string (sname->init_symbol_name);
+  struct Lisp_Subr *subr =
+    ALLOCATE_PSEUDOVECTOR (struct Lisp_Subr, function, PVEC_SUBR);
+  tem = subr->header.s.scheme_obj;
+  subr->function = sname->function;
+  subr->min_args = sname->min_args;
+  subr->max_args = sname->max_args;
+  subr->init_symbol_name = sname->init_symbol_name;
+  subr->header.s.scheme_obj = tem;
+  subr->symbol = sym;
+  subr->intspec = sname->intspec;
+  subr->doc = sname->doc;
+#else
   sym = intern_c_string (sname->symbol_name);
   XSETPVECTYPE (AS_XV (sname), PVEC_SUBR);
   XSETSUBR (tem, sname);

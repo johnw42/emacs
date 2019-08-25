@@ -14,6 +14,7 @@
 
          save-pointer
          check-pointer
+         print-to-bytevector
          )
 
   (define elisp-boundp
@@ -49,13 +50,30 @@
            (lock-object x)
            x))]))
 
+  ;; A hash function for foreign pointers.
+  (define pointer-hash
+    (begin
+      (for-each (lambda (i)
+                  (assert (fxlogbit? i (greatest-fixnum))))
+                (iota (- (fixnum-width) 1)))
+      (lambda (ptr)
+        ;; If ptr is not already a fixnum, chop off enough high-order
+        ;; bits to make it a fixnum.
+        (unless (fixnum? ptr)
+          (set! ptr (bitwise-and ptr (least-fixnum))))
+        ;; Due to alignment requirements, the low-order bits of most
+        ;; pointers tend to be zero.  This makes for a terrible hash
+        ;; function, especially given that Chez Scheme's hashtable
+        ;; type uses power-of-two table sizes, which effectively
+        ;; ignores the high-order bits of the hash code.  In practice
+        ;; this means each pointer will probably have 3 or 4 junk bits
+        ;; per pointer, but we try to accomodate up to 8 junk bits.
+        (fxlogxor ptr
+                  (fxsrl ptr 4)
+                  (fxsrl ptr 8)))))
+
   (define pointer-table
-    (make-hashtable
-     (lambda (ptr)
-       (bitwise-and
-        #xffffff
-        (* (div ptr 8) 538333)))
-     =))
+    (make-hashtable pointer-hash =))
 
   (define-for-c (save-pointer
                  (ptr type-str)
@@ -82,6 +100,15 @@
             (printf "wrong registration of ~x; expected ~a, got ~a\n"
                     ptr type-str old-type)
             #f))))
+
+  (define-for-c (print-to-bytevector
+                 (obj)
+                 (scheme-object) scheme-object)
+    (string->utf8
+     (call-with-string-output-port
+      (lambda (port)
+        (put-datum port obj)
+        (put-char port #\x00)))))
   
   (define elisp-funcall
     (case-lambda
@@ -173,9 +200,12 @@
 
   (define (emacs-init)
     (printf "called scheme emacs-init\n")
+    (collect-request-handler
+     (lambda ()
+       (printf "skipping scheme garbage collection\n")))
     (let (
           #;[stderr (transcoded-port (standard-error-port)
-                                   (native-transcoder))])
+          (native-transcoder))])
       (base-exception-handler
        (lambda (x)
          (base-exception-handler default-exception-handler)
@@ -185,10 +215,10 @@
          )))
 
     #;(when #t
-      (printf "running alloc_test\n")
-      (collect-notify #t)
-      ((foreign-procedure __collect_safe "alloc_test" () void))
-      (exit 1))
+    (printf "running alloc_test\n")     ; ; ; ; ; ; ; ; ; ; ; ;
+    (collect-notify #t)                 ; ; ; ; ; ; ; ; ; ; ; ;
+    ((foreign-procedure __collect_safe "alloc_test" () void)) ; ; ; ; ; ; ; ; ; ; ; ;
+    (exit 1))
 
     ;; (elisp-funcall 'load "scheme-internal")
     #;(when (elisp-fboundp 'message)

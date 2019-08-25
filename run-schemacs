@@ -1,8 +1,12 @@
 #! /bin/bash
 
+cd $(dirname "$0")
+
+find lisp -depth -name \*.elc -delete
+
 export EMACSLOADPATH=
-cd src
-if make -j temacs; then
+if make -j -C src AM_DEFAULT_VERBOSITY=1 temacs; then
+  cd src
   # EMACS_CMD="src/emacs --batch"
   #EMACS_CMD="src/temacs --batch --load loadup"
 

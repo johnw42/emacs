@@ -1157,7 +1157,11 @@ unwind_to_catch (struct handler *catch, Lisp_Object value)
 
   lisp_eval_depth = catch->f_lisp_eval_depth;
 
+#ifdef HAVE_CHEZ_SCHEME
+  abort();
+#else
   sys_longjmp (catch->jmp, 1);
+#endif
 }
 
 DEFUN ("throw", Fthrow, Sthrow, 2, 2, 0,
@@ -2122,6 +2126,9 @@ eval_sub (Lisp_Object form)
   Lisp_Object fun, val, original_fun, original_args;
   Lisp_Object funcar;
   ptrdiff_t count;
+#ifdef HAVE_CHEZ_SCHEME
+  fun = val = original_fun = original_args = funcar = Sfalse;
+#endif
 
   /* Declare here, as this array may be accessed by call_debugger near
      the end of this function.  See Bug#21245.  */

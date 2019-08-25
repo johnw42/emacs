@@ -272,15 +272,6 @@ void scheme_init(void) {
 }
 
 ptr
-scheme_malloc(ptrdiff_t size)
-{
-  eassert(size > 0);
-  ptr bvec = Smake_bytevector(size, 0);
-  Slock_object(bvec);
-  return bvec;
-}
-
-ptr
 scheme_make_lisp_string(ptr str)
 {
   if (STRINGP (str))
@@ -382,24 +373,12 @@ scheme_obarray_ensure(ptr obarray, ptr sym)
   return scheme_symbol;
 }
 
-/* ptr */
-/* scheme_intern(const char *str, iptr len, ptr obarray) */
-/* { */
-/*   if (len < 0) */
-/*     len = strlen(str); */
-/*   ptr name = make_string(str, len); */
-/*   Slock_object(name); */
-/*   ptr sym = Fintern(name, obarray); */
-/*   Sunlock_object(name); */
-/*   return sym; */
-/* } */
-
 void *
 scheme_alloc_c_data (ptr key, iptr size)
 {
-  ptr data_obj = scheme_malloc(size);
-  scheme_call3("hashtable-set!", c_data_table, key, data_obj);
-  return scheme_malloc_ptr(data_obj);
+  ptr bytes = scheme_malloc(size);
+  scheme_call3("hashtable-set!", c_data_table, key, bytes);
+  return scheme_malloc_ptr (bytes);
 }
 
 void *
@@ -408,63 +387,8 @@ scheme_find_c_data (ptr key)
   ptr found = scheme_call3("hashtable-ref", c_data_table, key, Sfalse);
   if (found == Sfalse)
     return NULL;
-  eassert (Sbytevectorp (found));
-  return Sbytevector_data (found);
+  return scheme_malloc_ptr (found);
 }
-
-/* void * */
-/* scheme_find_or_alloc_c_data (ptr key, iptr size, void (*init)(void *)) */
-/* { */
-/*   void *data = scheme_find_c_data (key); */
-/*   if (data == NULL) */
-/*     { */
-/*       data = scheme_alloc_c_data (ptr, size); */
-/*       if (init) */
-/*         (*init)(data); */
-/*     } */
-/*   return data; */
-/* } */
-
-/* ptr * */
-/* scheme_copy_vector_contents(ptr vec, ptr *output) */
-/* { */
-/*   iptr len = Svector_length(vec); */
-/*   for (iptr i = 0; i < len; i++) */
-/*     { */
-/*       output[i] = Svector_ref(vec, i); */
-/*     } */
-/*   return output; */
-/* } */
-
-/* union void * */
-/* scheme_allocate_pseudovector(int memlen, */
-/*                              int lisplen, */
-/*                              enum pvec_type tag) */
-/* { */
-/*   eassert(num_lisp_fields >= 0); */
-/*   iptr min_bytes = sizeof (struct Lisp_Pseudovector) + */
-/*     (num_lisp_fields - 1) * sizeof (ptr); */
-/*   if (bytes_count < 0) */
-/*     bytes_count = min_bytes */
-/*   else */
-/*     eassert (bytes_count >= min_bytes); */
-
-/*   ptr bytes = Smake_bytevector(bytes_count, bytes_fill); */
-/*   Slock_object(bytes); */
-/*   union vectorlike_header *header = (void *)Sbytevector_data(bytes); */
-/*   ptr vec = Smake_vector(NUM_PVEC_FIELDS, Qnil); */
-/*   Slock_object(vec); */
-/*   struct Lisp_Pseudovector *data = (void *)header; */
-/*   data->header.s.scheme_obj = vec; */
-/*   for (iptr i = 0; i < num_lisp_fields; i++) { */
-/*     (&data->first_lisp_field)[i] = Qnil; */
-/*   } */
-/*   PVEC_FIELD_SET(vec, BYTES, bytes); */
-/*   PVEC_FIELD_SET(vec, SYMBOL, scheme_pseudovector_symbol); */
-/*   PVEC_FIELD_SET(vec, PVEC_TYPE, Sfixnum(tag)); */
-/*   PVEC_FIELD_SET(vec, NUM_LISP_FIELDS, Sfixnum(num_lisp_fields)); */
-/*   return header; */
-/* } */
 
 void
 scheme_ptr_fill (ptr *p, ptr init, iptr num_words)
@@ -604,5 +528,51 @@ static bool scheme_inputportp(ptr x) { return Sinputportp(x); }
 static bool scheme_outputportp(ptr x) { return Soutputportp(x); }
 static bool scheme_recordp(ptr x) { return Srecordp(x); }
 
+static const char *
+gdb_print_scheme(Lisp_Object obj)
+{
+  static char buffer[4096];
+
+  static ptr (*print_fun)(ptr);
+
+  if (!print_fun)
+    print_fun = get_scheme_func ("print-to-bytevector");
+  ptr bvec = print_fun(obj);
+  Slock_object (bvec);
+  eassert (Sbytevectorp (bvec));
+  return Sbytevector_data(bvec);
+}
+
+static const char *
+gdb_print(Lisp_Object obj)
+{  
+  static char buffer[4096];
+
+  memset(buffer, 0, sizeof(buffer));
+  
+  if (XTYPE (obj) == Lisp_Chez_Internal)
+    return gdb_print_scheme(obj);
+
+  Lisp_Object str = Fprin1_to_string (obj, Qnil);
+  iptr n = SCHARS(str);
+  if (n > sizeof(buffer) - 5)
+    n = sizeof(buffer) - 5;
+  for (iptr i = 0; i < n; i++) {
+    EMACS_INT c = XINT (Faref(str, make_number(i)));
+    buffer[i] = 0 < c && c < 255 ? c : 255;
+  }
+  
+  return buffer;
+}
+
+extern ptr
+scheme_function_for_name(const char *name) {
+  ptr sym = Sstring_to_symbol(name);
+  eassert(Ssymbolp(sym));
+  ptr fun = Stop_level_value(sym);
+  Slock_object (fun);
+  //eassert(Sprocedurep(fun));
+  return fun;
+}
 
 #endif /* HAVE_CHEZ_SCHEME */

@@ -1645,9 +1645,6 @@ print_vectorlike (Lisp_Object obj, Lisp_Object printcharfun, bool escapeflag,
     case PVEC_CHAR_TABLE:
     case PVEC_NORMAL_VECTOR:
       {
-#ifdef HAVE_CHEZ_SCHEME
-        eassert (!HAVE_CHEZ_SCHEME);  // TODO(jrw)
-#else /* HAVE_CHEZ_SCHEME */
 	ptrdiff_t size = ASIZE (obj);
 	if (COMPILEDP (obj))
 	  {
@@ -1702,7 +1699,6 @@ print_vectorlike (Lisp_Object obj, Lisp_Object printcharfun, bool escapeflag,
 	if (size < real_size)
 	  print_c_string (" ...", printcharfun);
 	printchar (']', printcharfun);
-#endif /* HAVE_CHEZ_SCHEME */
       }
       break;
 

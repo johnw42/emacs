@@ -46,7 +46,6 @@ void scheme_track_for_elisp(ptr *);
 void scheme_untrack_for_elisp(ptr *);
 void scheme_gc(void);
 
-ptr scheme_malloc(iptr size);
 ptr scheme_obarray_ensure(ptr obarray, ptr sym);
 /* ptr scheme_intern(const char *str, iptr len, ptr obarray); */
 /* void scheme_intern_sym(ptr sym, ptr obarray); */
@@ -88,9 +87,27 @@ scheme_cons (ptr car, ptr cdr)
 }
 
 INLINE ptr
+scheme_car (ptr pair)
+{
+  return Spairp(pair) ? Scar(pair) : Sfalse;
+}
+
+INLINE ptr
+scheme_cdr (ptr pair)
+{
+  return Spairp(pair) ? Scdr(pair) : Sfalse;
+}
+
+INLINE ptr
 scheme_make_vector (iptr size, ptr fill)
 {
   return Smake_vector (size, fill);
+}
+
+INLINE ptr
+scheme_string (const char *s)
+{
+  return Sstring(s);
 }
 
 #undef USE_LSB_TAG
@@ -300,20 +317,21 @@ extern bool suppress_checking EXTERNALLY_VISIBLE;
 
 #ifdef HAVE_CHEZ_SCHEME
 
+#define SCHEME_MALLOC_PADDING \
+  ((uptr) Sbytevector_data (NULL) % sizeof (ptr) == 0 \
+    ? 0 \
+    : sizeof (ptr) - (uptr) Sbytevector_data (NULL) % sizeof(ptr))
+
+extern ptr scheme_malloc(iptr size);
+
 INLINE void *
 scheme_malloc_ptr(ptr data) {
   eassert(Sbytevectorp(data));
-  return Sbytevector_data(data);
+  return (char *) Sbytevector_data(data) + SCHEME_MALLOC_PADDING;
 }
 
-INLINE ptr
-scheme_function_for_name(const char *name) {
-  ptr sym = Sstring_to_symbol(name);
-  eassert(Ssymbolp(sym));
-  ptr fun = Stop_level_value(sym);
-  /* eassert(Sprocedurep(sym)); */
-  return fun;
-}
+
+extern ptr scheme_function_for_name(const char *name);
 
 #define scheme_call0(f) (Scall0(scheme_function_for_name(f)))
 #define scheme_call1(f, a) (Scall1(scheme_function_for_name(f), a))
@@ -452,8 +470,8 @@ error !;
    (eassert ((sym)->u.s.redirect == SYMBOL_PLAINVAL), (sym)->u.s.val.value)
 #define lisp_h_SYMBOLP(x) (Ssymbolp(x))
 #define lisp_h_VECTORLIKEP(x) SCHEME_VECTORP(x, scheme_vectorlike_symbol)
-#define lisp_h_XCAR(c) (eassert (CONSP (c)), Scar(c))
-#define lisp_h_XCDR(c) (eassert (CONSP (c)), Scdr(c))
+#define lisp_h_XCAR(c) (eassert (CONSP (c)), scheme_car(c))
+#define lisp_h_XCDR(c) (eassert (CONSP (c)), scheme_cdr(c))
 #define lisp_h_make_number(n) Sfixnum(n)
 # define lisp_h_XFASTINT(a) XINT (a)
 # define lisp_h_XINT(a) (Sfixnum_value(a))
@@ -1331,7 +1349,7 @@ INLINE bool
 /* #define XSETPSEUDOVECTOR(a, b, code) ((a) = (b)->header.s.scheme_obj) */
 /* #define XSETTYPED_PSEUDOVECTOR(a, b, size, code) XSETPSEUDOVECTOR(a, b, code) */
 
-#define XUNTAG_VECTORLIKE(a) ((void *) Sbytevector_data (Svector_ref (a, 1)))
+#define XUNTAG_VECTORLIKE(a) (scheme_malloc_ptr (Svector_ref (a, 1)))
 #define XUNTAG_MISC(a) XUNTAG_VECTORLIKE (a)
 
 #else /* HAVE_CHEZ_SCHEME */
@@ -1606,9 +1624,7 @@ XSTRING (Lisp_Object a)
 {
   eassert (STRINGP (a));
 #ifdef HAVE_CHEZ_SCHEME
-  ptr bytes = Svector_ref (a, 1);
-  eassert (Sbytevectorp (bytes));
-  return (void *) Sbytevector_data(bytes);
+  return scheme_malloc_ptr (Svector_ref (a, 1));
   /* ptr vec = Smake_vector (2, ); */
   /* struct Lisp_String *p = scheme_find_c_data (a); */
   /* if (p == NULL) */

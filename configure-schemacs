@@ -1,20 +1,9 @@
 #! /bin/bash
 
-flags=
-case "$1" in
-  true)
-    flags=--with-chez-scheme
-    ;;
-  false)
-    flags=--without-chez-scheme
-    ;;
-  *)
-    echo missing arg
-    exit 1
-esac
+with=${1-with}
 shift
 
-if [[ -f Makefile ]]; then
-  make configure
-fi
-./configure --enable-checking=yes $flags CFLAGS=-g "$@"
+CFLAGS='-O0 -g -Werror=implicit-function-declaration -Werror=nested-externs'
+
+autoreconf
+./configure --enable-checking=yes --$with-chez-scheme CFLAGS="$CFLAGS" "$@"

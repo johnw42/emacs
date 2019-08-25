@@ -1959,18 +1959,25 @@ check_string_free_list (void)
 
 
 #ifdef HAVE_CHEZ_SCHEME
+
+ptr scheme_malloc(iptr size)
+{
+  ptr bytes = Smake_bytevector(size + SCHEME_MALLOC_PADDING, 0);
+  Slock_object(bytes);
+  return bytes;
+}
+
 static void *
 scheme_allocate (ptrdiff_t nbytes, ptr sym, ptr *vec_ptr)
 {
-  ptr bytes = Smake_bytevector(nbytes, 0);
-  Slock_object(bytes);
+  ptr bytes = scheme_malloc(nbytes);
 
   ptr vec = scheme_make_vector(2, sym);
   Slock_object(vec);
   Svector_set(vec, 1, bytes);
-
   *vec_ptr = vec;
-  return Sbytevector_data (bytes);
+
+  return scheme_malloc_ptr (bytes);
 }
 #endif /* HAVE_CHEZ_SCHEME */
 
@@ -2857,6 +2864,7 @@ DEFUN ("cons", Fcons, Scons, 2, 2, 0,
 #ifdef HAVE_CHEZ_SCHEME
   ptr val = scheme_cons (car, cdr);
   Slock_object(val);
+  eassert (CONSP(val));
   return val;
 #else /* HAVE_CHEZ_SCHEME */
   register Lisp_Object val;
