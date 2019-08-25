@@ -5497,6 +5497,8 @@ scheme_ptr_copy (ptr *dest, ptr *src, iptr num_words)
 
 struct Lisp_Symbol *scheme_make_symbol(ptr name, enum symbol_interned interned);
 
+extern void visit_lisp_refs(Lisp_Object obj, void (*fun)(void *, Lisp_Object *, ptrdiff_t), void *data);
+
 #endif /* HAVE_CHEZ_SCHEME */
 
 #define NIL_INIT LISPSYM_INITIALLY_(Qnil)

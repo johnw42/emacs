@@ -3,6 +3,8 @@
 #ifdef HAVE_CHEZ_SCHEME
 
 #include "lisp.h"
+#include "buffer.h"
+#include "window.h"
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -540,7 +542,7 @@ gdb_print_scheme(Lisp_Object obj)
   ptr bvec = print_fun(obj);
   Slock_object (bvec);
   eassert (Sbytevectorp (bvec));
-  return Sbytevector_data(bvec);
+  return (void *)Sbytevector_data(bvec);
 }
 
 static const char *
@@ -573,6 +575,142 @@ scheme_function_for_name(const char *name) {
   Slock_object (fun);
   //eassert(Sprocedurep(fun));
   return fun;
+}
+
+// NOT TESTED!
+/* Finds all Lisp_Object references in OBJ not managed by the scheme
+   garbage collector.  Calls FUN zero or more times, passing DATA
+   and a pair of pointers indicating the stard and end of a block of
+   Lisp_Object values. */
+void
+visit_lisp_refs(Lisp_Object obj,
+                void (*fun)(void *, Lisp_Object *, ptrdiff_t),
+                void *data)
+{
+  switch (XTYPE(obj))
+    {
+    case Lisp_Symbol:
+      {
+        struct Lisp_Symbol *s = XSYMBOL(obj);
+        fun(data, &s->u.s.name, 1);
+        if (s->u.s.redirect == 0)
+          fun(data, &s->u.s.val.value, 1);
+        fun(data, &s->u.s.function, 1);
+        fun(data, &s->u.s.plist, 1);
+        // TODO(jrw): Follow val.blv and val.fwd?
+        break;
+      }
+    case Lisp_Misc:
+      {
+        union Lisp_Misc *m = XMISC(obj);
+        switch (XMISCTYPE(obj))
+          {
+          case Lisp_Misc_Free:
+          case Lisp_Misc_Marker:
+#ifdef HAVE_MODULES
+          case Lisp_Misc_User_Ptr:
+#endif
+          case Lisp_Misc_Limit:
+            break;
+          case Lisp_Misc_Overlay:
+            fun(data, &m->u_overlay.start, 1);
+            fun(data, &m->u_overlay.end, 1);
+            fun(data, &m->u_overlay.plist, 1);
+            break;
+          case Lisp_Misc_Save_Value:
+            switch (m->u_save_value.save_type)
+              {
+              case SAVE_TYPE_MEMORY:
+                // This case can't be implemented without valid_lisp_object_p.
+                eassert(false);
+                break;
+              default:
+                for (int index = 0; index < SAVE_VALUE_SLOTS; index++)
+                  switch (save_type (&m->u_save_value, index))
+                    {
+                    case SAVE_OBJECT:
+                      fun(data, &m->u_save_value.data[index].object, 1);
+                      break;
+                    default:
+                      break;
+                    }
+              }
+            break;
+          case Lisp_Misc_Finalizer:
+            fun(data, &m->u_finalizer.function, 1);
+            break;
+          }
+        break;
+      }
+    case Lisp_Vectorlike:
+      if (VECTORP(obj))
+        {
+          EMACS_INT n = ASIZE(obj);
+          if (n > 0)
+            fun(data, aref_addr(obj, 0), n);
+        }
+      else
+        {
+          EMACS_INT n = PVSIZE(obj);
+          if (n > 0)
+            fun(data, aref_addr(obj, 0), n);
+          switch (PSEUDOVECTOR_TYPE(XVECTOR(obj)))
+            {
+            case PVEC_NORMAL_VECTOR:
+            case PVEC_PROCESS:
+            case PVEC_FRAME:
+            case PVEC_BOOL_VECTOR:
+            case PVEC_TERMINAL:
+            case PVEC_WINDOW_CONFIGURATION:
+            case PVEC_SUBR:
+            case PVEC_OTHER:
+            case PVEC_XWIDGET:
+            case PVEC_XWIDGET_VIEW:
+            case PVEC_MUTEX:
+            case PVEC_CONDVAR:
+            case PVEC_MODULE_FUNCTION:
+            case PVEC_COMPILED:
+            case PVEC_RECORD:
+            case PVEC_FONT:
+            case PVEC_FREE:
+              break;
+            case PVEC_WINDOW:
+              {
+                struct window *w = XWINDOW(obj);
+                fun(data, &w->prev_buffers, 1);
+                fun(data, &w->next_buffers, 1);
+                break;
+              }
+            case PVEC_BUFFER:
+              {
+                struct buffer *b = XBUFFER(obj);
+                fun(data, &b->undo_list_, 1);
+                break;
+              }
+            case PVEC_HASH_TABLE:
+              {
+                struct Lisp_Hash_Table *t = XHASH_TABLE(obj);
+                fun(data, &t->key_and_value, 1);
+                fun(data, &t->test.name, 1);
+                fun(data, &t->test.user_hash_function, 1);
+                fun(data, &t->test.user_cmp_function, 1);
+                break;
+              }
+            case PVEC_CHAR_TABLE:
+            case PVEC_SUB_CHAR_TABLE:
+              // TODO(jrw);
+              break;
+            case PVEC_THREAD:
+              {
+                struct thread_state *t = XTHREAD(obj);
+                fun(data, &t->m_re_match_object, 1);
+                break;
+              }
+            }
+        }
+    default:
+      return;
+    }
 }
 
 #endif /* HAVE_CHEZ_SCHEME */
