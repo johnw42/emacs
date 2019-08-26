@@ -1837,6 +1837,7 @@ static char const string_overrun_cookie[GC_STRING_OVERRUN_COOKIE_SIZE] =
 
 #define GC_STRING_EXTRA (GC_STRING_OVERRUN_COOKIE_SIZE)
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Exact bound on the number of bytes in a string, not counting the
    terminating null.  A string cannot contain more bytes than
    STRING_BYTES_BOUND, nor can it be so long that the size_t
@@ -1849,6 +1850,7 @@ static ptrdiff_t const STRING_BYTES_MAX =
 	 - offsetof (struct sblock, data)
 	 - SDATA_DATA_OFFSET)
 	& ~(sizeof (EMACS_INT) - 1)));
+#endif
 
 /* Initialize string allocation.  Called from init_alloc_once.  */
 
@@ -3782,7 +3784,9 @@ Its value is void, and its function definition and property list are nil.  */)
 {
 #ifdef HAVE_CHEZ_SCHEME
   CHECK_STRING (name);
-  ptr p = scheme_call1("gensym", name);
+  ptr sstr = lisp_string_to_scheme_string (name);
+  eassert (Sstringp(sstr));
+  ptr p = scheme_call1("gensym", sstr);
   Slock_object(p);
   return p;
 #else /* HAVE_CHEZ_SCHEME */
@@ -8036,7 +8040,9 @@ union
   enum CHECK_LISP_OBJECT_TYPE CHECK_LISP_OBJECT_TYPE;
 #endif /* not HAVE_CHEZ_SCHEME */
   enum DEFAULT_HASH_SIZE DEFAULT_HASH_SIZE;
+#ifndef HAVE_CHEZ_SCHEME
   enum Lisp_Bits Lisp_Bits;
+#endif
   enum Lisp_Compiled Lisp_Compiled;
   enum maxargs maxargs;
   enum MAX_ALLOCA MAX_ALLOCA;

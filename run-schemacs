@@ -1,17 +1,18 @@
 #! /bin/bash
 
 cd $(dirname "$0")
+top=$PWD
 
 find lisp -depth -name \*.elc -delete
 
-export EMACSLOADPATH=
+export EMACSLOADPATH=$top/lisp
 if make -j -C src AM_DEFAULT_VERBOSITY=1 temacs; then
   cd src
   # EMACS_CMD="src/emacs --batch"
   #EMACS_CMD="src/temacs --batch --load loadup"
 
   cd ../lisp
-  EMACS_CMD=(../src/temacs --batch --load loadup)
+  EMACS_CMD=($top/src/temacs --batch --load loadup)
   
   GDB=false
   if [[ $TERM != dumb ]]; then

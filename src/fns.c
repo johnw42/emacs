@@ -3596,9 +3596,7 @@ get_key_arg (Lisp_Object key, ptrdiff_t nargs, Lisp_Object *args, char *used)
 static Lisp_Object
 larger_vecalloc (Lisp_Object vec, ptrdiff_t incr_min, ptrdiff_t nitems_max)
 {
-#ifndef HAVE_CHEZ_SCHEME
   struct Lisp_Vector *v;
-#endif /* not HAVE_CHEZ_SCHEME */
   ptrdiff_t incr, incr_max, old_size, new_size;
   ptrdiff_t C_language_max = min (PTRDIFF_MAX, SIZE_MAX) / sizeof (Lisp_Object);
   ptrdiff_t n_max = (0 <= nitems_max && nitems_max < C_language_max
@@ -3611,15 +3609,9 @@ larger_vecalloc (Lisp_Object vec, ptrdiff_t incr_min, ptrdiff_t nitems_max)
   if (incr_max < incr)
     memory_full (SIZE_MAX);
   new_size = old_size + incr;
-#ifdef HAVE_CHEZ_SCHEME
-  ptr new_vec = scheme_make_vector (new_size, Qnil);
-  vector_copy (new_vec, vec, old_size);
-  vec = new_vec;
-#else /* HAVE_CHEZ_SCHEME */
   v = allocate_vector (new_size);
   xvector_copy(as_xv (v), XVECTOR (vec), old_size);
   XSETVECTOR (vec, v);
-#endif /* HAVE_CHEZ_SCHEME */
   return vec;
 }
 
@@ -3957,8 +3949,19 @@ maybe_resize_hash_table (struct Lisp_Hash_Table *h)
 	    ptrdiff_t start_of_bucket = hash_code % ASIZE (h->index);
 	    set_hash_next_slot (h, i, HASH_INDEX (h, start_of_bucket));
 	    set_hash_index_slot (h, start_of_bucket, i);
+            /* ptrdiff_t found = hash_lookup(h, HASH_KEY (h, i), NULL); */
+            /* eassert (found == i); */
 	  }
     }
+
+#ifdef HAVE_CHEZ_SCHEME
+  for (ptrdiff_t i = 0; i < HASH_TABLE_SIZE (h); ++i)
+    if (!NILP (HASH_HASH (h, i)))
+      {
+        ptrdiff_t found = hash_lookup(h, HASH_KEY (h, i), NULL);
+        eassert (found == i);
+      }
+#endif
 }
 
 

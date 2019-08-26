@@ -56,6 +56,7 @@ void * scheme_find_c_data (ptr key);
 ptr scheme_obarray_table (ptr obarray);
 void scheme_ptr_fill (ptr *p, ptr init, iptr num_words);
 ptr scheme_make_lisp_string(ptr str);
+ptr lisp_string_to_scheme_string(ptr lstr);
 
 #define scheme_save_ptr(ptr, type) eassert(scheme_save_ptr_fun(ptr, type))
 #define scheme_check_ptr(ptr, type) eassert(scheme_check_ptr_fun(ptr, type))
@@ -66,6 +67,9 @@ extern bool (*scheme_check_ptr_fun)(void *, const char *);
 extern ptr scheme_vectorlike_symbol;
 extern ptr scheme_misc_symbol;
 extern ptr scheme_string_symbol;
+extern iptr scheme_greatest_fixnum;
+extern iptr scheme_least_fixnum;
+extern iptr scheme_fixnum_width;
 
 #define SCHEME_ALLOC_C_DATA(key, type) \
   ((type *)scheme_alloc_c_data((key), sizeof(type)))
@@ -360,6 +364,10 @@ extern ptr scheme_function_for_name(const char *name);
    on the few static Lisp_Objects used, all of which are aligned via
    'char alignas (GCALIGNMENT) gcaligned;' inside a union.  */
 
+#ifdef HAVE_CHEZ_SCHEME
+#define GCALIGNMENT 8
+#define FIXNUM_BITS scheme_fixnum_width
+#else
 enum Lisp_Bits
   {
     /* 2**GCTYPEBITS.  This must be a macro that expands to a literal
@@ -385,6 +393,7 @@ enum Lisp_Bits
    This can be used in #if, e.g., '#if USE_LSB_TAG' below expands to an
    expression involving VAL_MAX.  */
 #define VAL_MAX (EMACS_INT_MAX >> (GCTYPEBITS - 1))
+#endif
 
 /* Whether the least-significant bits of an EMACS_INT contain the tag.
    On hosts where pointers-as-ints do not exceed VAL_MAX / 2, USE_LSB_TAG is:
@@ -392,9 +401,14 @@ enum Lisp_Bits
     b. slower, because it typically requires extra masking.
    So, USE_LSB_TAG is true only on hosts where it might be useful.  */
 DEFINE_GDB_SYMBOL_BEGIN (bool, USE_LSB_TAG)
+#ifdef HAVE_CHEZ_SCHEME
+#define USE_LSB_TAG 1
+#else
 #define USE_LSB_TAG (VAL_MAX / 2 < INTPTR_MAX)
+#endif
 DEFINE_GDB_SYMBOL_END (USE_LSB_TAG)
 
+#ifndef HAVE_CHEZ_SCHEME
 /* Mask for the value (as opposed to the type bits) of a Lisp object.  */
 DEFINE_GDB_SYMBOL_BEGIN (EMACS_INT, VALMASK)
 # define VALMASK (USE_LSB_TAG ? - (1 << GCTYPEBITS) : VAL_MAX)
@@ -404,6 +418,7 @@ DEFINE_GDB_SYMBOL_END (VALMASK)
 # error "USE_LSB_TAG not supported on this platform; please report this." \
 	"Try 'configure --with-wide-int' to work around the problem."
 error !;
+#endif
 #endif
 
 /* Some operations are so commonly executed that they are implemented
@@ -472,7 +487,7 @@ error !;
 #define lisp_h_VECTORLIKEP(x) SCHEME_VECTORP(x, scheme_vectorlike_symbol)
 #define lisp_h_XCAR(c) (eassert (CONSP (c)), scheme_car(c))
 #define lisp_h_XCDR(c) (eassert (CONSP (c)), scheme_cdr(c))
-#define lisp_h_make_number(n) Sfixnum(n)
+#define lisp_h_make_number(n) (eassert (Sfixnump(Sinteger(n))), Sfixnum(n))
 # define lisp_h_XFASTINT(a) XINT (a)
 # define lisp_h_XINT(a) (Sfixnum_value(a))
 #define lisp_h_XHASH(a) XUINT (a)
@@ -607,7 +622,11 @@ error !;
 
 /* Lisp integers use 2 tags, to give them one extra bit, thus
    extending their range from, e.g., -2^28..2^28-1 to -2^29..2^29-1.  */
+#ifdef HAVE_CHEZ_SCHEME
+#define INTMASK (scheme_greatest_fixnum)
+#else
 #define INTMASK (EMACS_INT_MAX >> (INTTYPEBITS - 1))
+#endif
 #define case_Lisp_Int case Lisp_Int0: case Lisp_Int1
 
 /* Idea stolen from GDB.  Pedantic GCC complains about enum bitfields,
@@ -1187,8 +1206,13 @@ enum More_Lisp_Bits
 
 /* Largest and smallest representable fixnum values.  These are the C
    values.  They are macros for use in static initializers.  */
+#ifdef HAVE_CHEZ_SCHEME
+#define MOST_POSITIVE_FIXNUM scheme_greatest_fixnum
+#define MOST_NEGATIVE_FIXNUM scheme_least_fixnum
+#else
 #define MOST_POSITIVE_FIXNUM (EMACS_INT_MAX >> INTTYPEBITS)
 #define MOST_NEGATIVE_FIXNUM (-1 - MOST_POSITIVE_FIXNUM)
+#endif
 
 #if USE_LSB_TAG
 
@@ -1269,8 +1293,12 @@ XFASTINT (Lisp_Object a)
 INLINE EMACS_UINT
 XUINT (Lisp_Object a)
 {
+#ifdef HAVE_CHEZ_SCHEME
+  return (EMACS_UINT) XINT(a);
+#else
   EMACS_UINT i = XLI (a);
   return USE_LSB_TAG ? i >> INTTYPEBITS : i & INTMASK;
+#endif
 }
 
 /* Return A's (Lisp-integer sized) hash.  Happens to be like XUINT
@@ -1287,9 +1315,13 @@ INLINE EMACS_INT
 INLINE Lisp_Object
 make_natnum (EMACS_INT n)
 {
+#ifdef HAVE_CHEZ_SCHEME
+  return make_number (n);
+#else
   eassert (0 <= n && n <= MOST_POSITIVE_FIXNUM);
   EMACS_INT int0 = Lisp_Int0;
   return USE_LSB_TAG ? make_number (n) : XIL (n + (int0 << VALBITS));
+#endif
 }
 
 /* Return true if X and Y are the same object.  */
@@ -5498,6 +5530,7 @@ scheme_ptr_copy (ptr *dest, ptr *src, iptr num_words)
 struct Lisp_Symbol *scheme_make_symbol(ptr name, enum symbol_interned interned);
 
 extern void visit_lisp_refs(Lisp_Object obj, void (*fun)(void *, Lisp_Object *, ptrdiff_t), void *data);
+extern bool symbol_is(ptr sym, const char *name);
 
 #endif /* HAVE_CHEZ_SCHEME */
 

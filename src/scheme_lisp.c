@@ -17,6 +17,10 @@ static ptr c_data_table;
 ptr scheme_vectorlike_symbol = Sfalse;
 ptr scheme_misc_symbol = Sfalse;
 ptr scheme_string_symbol = Sfalse;
+iptr scheme_greatest_fixnum;
+iptr scheme_least_fixnum;
+iptr scheme_fixnum_width;
+
 bool (*scheme_save_ptr_fun)(void *, const char *);
 bool (*scheme_check_ptr_fun)(void *, const char *);
 
@@ -246,6 +250,10 @@ void scheme_init(void) {
   Sregister_boot_file("/usr/local/google/home/jrw/.local/lib/csv9.5.2/a6le/scheme.boot");
   Sbuild_heap(NULL, NULL);
 
+  scheme_greatest_fixnum = Sfixnum_value(scheme_call0("greatest-fixnum"));
+  scheme_least_fixnum = Sfixnum_value(scheme_call0("least-fixnum"));
+  scheme_fixnum_width = Sfixnum_value(scheme_call0("fixnum-width"));
+
   Sforeign_symbol("abort", abort);
   Sforeign_symbol("scheme_elisp_boundp", scheme_elisp_boundp);
   Sforeign_symbol("scheme_elisp_fboundp", scheme_elisp_fboundp);
@@ -255,10 +263,10 @@ void scheme_init(void) {
   Sforeign_symbol("alloc_test", alloc_test);
   Sscheme_script("/usr/local/google/home/jrw/git/schemacs/scheme/main.ss", 0, argv);
   scheme_call0("emacs-init");
-  
+
   scheme_save_ptr_fun = get_scheme_func ("save-pointer");
   scheme_check_ptr_fun = get_scheme_func ("check-pointer");
-  
+
   c_data_table = scheme_call0("make-eq-hashtable");
   Slock_object(c_data_table);
 
@@ -288,12 +296,23 @@ scheme_make_lisp_string(ptr str)
   return lstr;
 }
 
+ptr
+lisp_string_to_scheme_string(ptr lstr)
+{
+  eassert (STRINGP (lstr));
+  iptr n = XINT (Flength (lstr));
+  ptr sstr = Smake_uninitialized_string(n);
+  Slock_object(sstr);
+  for (iptr i = 0; i < n; i++)
+    Sstring_set (sstr, i, XINT (Faref (lstr, make_number(i))));
+  return sstr;
+}
+
 struct Lisp_Symbol *
 scheme_make_symbol(ptr name, enum symbol_interned interned)
 {
   ptr scheme_str;
   ptr scheme_symbol = Sfalse;
-  Lisp_Object lisp_str = Sfalse;
   if (Ssymbolp(name))
     {
       scheme_str = scheme_call1("symbol->string", name);
@@ -305,31 +324,18 @@ scheme_make_symbol(ptr name, enum symbol_interned interned)
     }
   else
     {
-      scheme_str = Sstring_of_length(SSDATA(name), SBYTES(name));
-      lisp_str = name;
+      scheme_str = lisp_string_to_scheme_string (name);
     }
     
   if (scheme_symbol == Sfalse)
       scheme_symbol = scheme_call1
         (interned == SYMBOL_UNINTERNED ? "gensym" : "string->symbol",
          scheme_str);
-  if (lisp_str == Sfalse)
-    lisp_str = scheme_make_lisp_string (scheme_str);
     
   eassert (Sstringp (scheme_str));
   eassert (Ssymbolp (scheme_symbol));
 
   return XSYMBOL(scheme_symbol);
-  /* struct Lisp_Symbol *data = scheme_find_c_data (scheme_symbol); */
-  /* if (data == NULL) */
-  /*   data = SCHEME_ALLOC_C_DATA(scheme_symbol, struct Lisp_Symbol); */
-  /* data->u.s.interned = interned; */
-  /* data->u.s.redirect = SYMBOL_PLAINVAL; */
-  /* data->u.s.trapped_write = SYMBOL_UNTRAPPED_WRITE; */
-  /* data->u.s.plist = Qnil; */
-  /* data->u.s.scheme_obj = scheme_symbol; */
-  /* data->u.s.name = lisp_str; */
-  /* return data; */
 }
 
 struct Lisp_Symbol *
@@ -355,24 +361,6 @@ XSYMBOL (Lisp_Object a)
   p->u.s.declared_special = false;
   p->u.s.pinned = false;
   return p;
-}
-
-ptr
-scheme_obarray_ensure(ptr obarray, ptr sym)
-{
-  struct Lisp_Symbol *data =
-    scheme_make_symbol(sym,
-                       (NILP(obarray) || obarray == Vobarray)
-                       ? SYMBOL_INTERNED_IN_INITIAL_OBARRAY
-                       : SYMBOL_INTERNED);
-  ptr table = scheme_obarray_table(obarray);
-  eassert (scheme_call1 ("hashtable?", table) == Strue);
-  ptr scheme_symbol = data->u.s.scheme_obj;
-  eassert (Ssymbolp (scheme_symbol));
-  ptr scheme_str = scheme_call1("symbol->string", scheme_symbol);
-  eassert (Sstringp (scheme_str));
-  scheme_call3("hashtable-set!", table, scheme_str, scheme_symbol);
-  return scheme_symbol;
 }
 
 void *
@@ -711,6 +699,21 @@ visit_lisp_refs(Lisp_Object obj,
     default:
       return;
     }
+}
+
+bool
+symbol_is(ptr sym, const char *name)
+{
+  if (!SYMBOLP(sym))
+    return false;
+  static const char *last_name;
+  static ptr other_sym;
+  if (name != last_name)
+    {
+      other_sym = Sstring_to_symbol(name);
+      Slock_object(other_sym);
+    }
+  return XSYMBOL(sym)->u.s.scheme_obj == other_sym;
 }
 
 #endif /* HAVE_CHEZ_SCHEME */

@@ -4593,8 +4593,12 @@ styled_format (ptrdiff_t nargs, Lisp_Object *args, bool message)
 		   because they may be so large that there is a rounding
 		   error when converting them to double, and long doubles
 		   are wider than doubles.  */
+#ifdef HAVE_CHEZ_SCHEME
+		INT_AS_LDBL = 1,
+#else
 		INT_AS_LDBL = (DIG_BITS_LBOUND * DBL_MANT_DIG < FIXNUM_BITS - 1
 			       && DBL_MANT_DIG < LDBL_MANT_DIG),
+#endif
 
 		/* Maximum precision for a %f conversion such that the
 		   trailing output digit might be nonzero.  Any precision

@@ -3520,7 +3520,9 @@ read1 (Lisp_Object readcharfun, int *pch, bool first_in_list)
 	  else
 	    {
 #ifdef HAVE_CHEZ_SCHEME
-              result = Fintern(make_string(read_buffer, nbytes), Qnil);
+              Lisp_Object name = make_specified_string
+                (read_buffer, nchars, nbytes, multibyte);
+              result = Fintern(name, Vobarray);
 #else /* HAVE_CHEZ_SCHEME */
 	      /* Don't create the string object for the name unless
 		 we're going to retain it in a new symbol.
@@ -4052,6 +4054,35 @@ scheme_obarray_table (ptr obarray)
   eassert(scheme_call1("hashtable?", table) != Sfalse);
   return table;
 }
+
+ptr
+scheme_obarray_ensure(ptr obarray, ptr name)
+{
+  if (NILP (obarray))
+    obarray = Vobarray;
+  struct Lisp_Symbol *data =
+    scheme_make_symbol(name,
+                       EQ(obarray, initial_obarray)
+                       ? SYMBOL_INTERNED_IN_INITIAL_OBARRAY
+                       : SYMBOL_INTERNED);
+  ptr table = scheme_obarray_table(obarray);
+  eassert (scheme_call1 ("hashtable?", table) == Strue);
+  ptr scheme_symbol = data->u.s.scheme_obj;
+  eassert (Ssymbolp (scheme_symbol));
+  ptr scheme_str = scheme_call1("symbol->string", scheme_symbol);
+  eassert (Sstringp (scheme_str));
+  scheme_call3("hashtable-set!", table, scheme_str, scheme_symbol);
+  if (EQ (obarray, initial_obarray)
+      && Sstring_length(scheme_str) > 0
+      && Sstring_ref(scheme_str, 0) == ':')
+    {
+      make_symbol_constant (scheme_symbol);
+      struct Lisp_Symbol *xs = XSYMBOL(scheme_symbol);
+      xs->u.s.redirect = SYMBOL_PLAINVAL;
+      SET_SYMBOL_VAL (xs, scheme_symbol);
+    }
+  return scheme_symbol;
+}
 #endif /* HAVE_CHEZ_SCHEME */
 
 #ifndef HAVE_CHEZ_SCHEME
@@ -4177,7 +4208,8 @@ it defaults to the value of `obarray'.  */)
 {
 #ifdef HAVE_CHEZ_SCHEME
   CHECK_STRING (string);
-  return scheme_obarray_ensure (obarray, string);
+  Lisp_Object sym = scheme_obarray_ensure (obarray, string);
+  return sym;
 #else /* HAVE_CHEZ_SCHEME */
   Lisp_Object tem;
 
@@ -4452,8 +4484,6 @@ defsubr (struct Lisp_Subr *sname)
 {
   Lisp_Object sym, tem;
 #ifdef HAVE_CHEZ_SCHEME
-  if (strcmp(sname->init_symbol_name, "load") == 0)
-    gdb_break();
   sym = intern_c_string (sname->init_symbol_name);
   struct Lisp_Subr *subr =
     ALLOCATE_PSEUDOVECTOR (struct Lisp_Subr, function, PVEC_SUBR);
