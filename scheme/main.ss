@@ -19,10 +19,10 @@
          )
 
   (define elisp-boundp
-    (foreign-procedure "scheme_elisp_boundp" (scheme-object) boolean)) 
+    (foreign-procedure "scheme_elisp_boundp" (scheme-object) boolean))
 
   (define elisp-fboundp
-    (foreign-procedure "scheme_elisp_fboundp" (scheme-object) boolean)) 
+    (foreign-procedure "scheme_elisp_fboundp" (scheme-object) boolean))
 
   (define elisp-call0
     (foreign-procedure "scheme_elisp_call0"
@@ -38,56 +38,6 @@
     (foreign-procedure "scheme_elisp_apply"
                        (scheme-object scheme-object)
                        scheme-object))
-
-  (define-syntax locked-foreign-callable
-    (syntax-rules ()
-      [(_ func (arg-type ...) result-type)
-       (let ([x (foreign-callable func (arg-type ...) result-type)])
-         (lock-object x)
-         x)]))
-
-  (define decode-char*
-    (let ([memo-ptr #f]
-          [memo-result #f])
-      (lambda (ptr)
-        (unless (eqv? ptr memo-ptr)
-          (let* ([count (do ([i 0 (+ 1 i)])
-                            ((fxzero? (foreign-ref 'integer-8 ptr i))
-                             i))]
-                 [str (make-string count)])
-            (set! memo-result
-                  (do ([i 0 (+ 1 i)])
-                      ((>= i count) str)
-                    (string-set!
-                     str i (integer->char
-                            (foreign-ref 'integer-8 ptr i)))))))
-        memo-result)))
-
-  (define-syntax define-for-c
-    (syntax-rules ()
-      [(_ (name min-count
-                ((arg-type arg) ...)
-                result-type)
-          form ...)
-       (define name
-         (let ([counter 0])
-           (locked-foreign-callable
-            (lambda (file line arg ...)
-              (when min-count
-                (set! counter (fx+ 1 counter))
-                (when (fx>= counter min-count)
-                  (printf "~a ~a ~a:~a\n" 'name counter (decode-char* file) line)))
-              (let ([result (begin form ...)])
-                (when (and min-count (fx>= counter min-count))
-                  (printf "returning from ~a\n" 'name))
-                result))
-            (void* int arg-type ...)
-            result-type)))]))
-
-  (define-for-c (c-hashtablep #f
-                              ((scheme-object x))
-                              boolean)
-    (hashtable? x))
 
   ;; A hash function for foreign pointers.
   (define pointer-hash
@@ -114,16 +64,78 @@
   (define pointer-table
     (make-hashtable pointer-hash =))
 
+  (define (strlen ptr)
+    (do ([i 0 (+ 1 i)])
+        ((fxzero? (foreign-ref 'integer-8 ptr i))
+         i)))
+
+  (define (strcmp? ptr1 ptr2)
+    (or (eqv? ptr1 ptr2)
+        (let loop ([i 0])
+          (let ([c1 (foreign-ref 'integer-8 ptr1 i)]
+                [c2 (foreign-ref 'integer-8 ptr2 i)])
+            (and (eqv? c1 c2)
+                 (or (zero? c1)
+                     (loop (+ i 1))))))))
+
+  (define decode-char*
+    (let ([memo-ptr #f]
+          [memo-result #f])
+      (lambda (ptr)
+        (unless (eqv? ptr memo-ptr)
+          (do ([i 0 (+ 1 i)]
+               [str (make-string (strlen ptr))])
+              ((>= i count) str)
+            (string-set!
+             str i (integer->char
+                    (foreign-ref 'integer-8 ptr i))))))))
+
+
+  (define-syntax locked-foreign-callable
+    (syntax-rules ()
+      [(_ func (arg-type ...) result-type)
+       (let ([x (foreign-callable func (arg-type ...) result-type)])
+         (lock-object x)
+         x)]))
+
+  (define-syntax define-for-c
+    (syntax-rules ()
+      [(_ (name min-count
+                ((arg-type arg) ...)
+                result-type)
+          form ...)
+       (define name
+         (locked-foreign-callable
+          (let ([counter 0])
+            (lambda (file line arg ...)
+              (when min-count
+                (set! counter (fx+ 1 counter))
+                (when (fx>= counter min-count)
+                  (printf "~a ~a ~a:~a\n" 'name counter (decode-char* file) line)))
+              (let ([result (begin form ...)])
+                (when (and min-count (fx>= counter min-count))
+                  (printf "returning from ~a\n" 'name))
+                result)))
+          (void* int arg-type ...)
+          result-type))]))
+  (define-for-c (c-hashtablep #f
+                              ((scheme-object x))
+                              boolean)
+    (hashtable? x))
+
   (define-for-c (c-save_pointer #f
                                 ((void* ptr)
                                  (void* type-str))
                                 boolean)
-    #;(printf "in save-pointer ~a ~a\n" ptr type-str)
     (let ([old-type (hashtable-ref pointer-table ptr #f)])
       (if old-type
           (begin
-            (printf "duplicate registration of ~x: ~a => ~a\n"
-                    ptr (decode-char* old-type) type-str)
+            ;; Separate printfs in case the second one dies before
+            ;; completing.
+            (printf "duplicate registration of ~x" ptr)
+            (printf ": ~a => ~a\n"
+                    (decode-char* old-type)
+                    (decode-char* type-str))
             #f)
           (begin
             (hashtable-set! pointer-table ptr type-str)
@@ -133,13 +145,15 @@
                                  ((void* ptr)
                                   (void* type-str))
                                  boolean)
-    ;;(printf "in check-pointer ~a ~a\n" ptr type-str)
     (let ([old-type (hashtable-ref pointer-table ptr #f)])
-      (if (equal? old-type type-str)
-          #t
+      (or (strcmp? old-type type-str)
           (begin
-            (printf "wrong registration of ~x; expected ~a, got ~a\n"
-                    ptr type-str old-type)
+            ;; Separate printfs in case the second one dies before
+            ;; completing.
+            (printf "wrong registration of ~x" ptr)
+            (printf "; expected ~a, got ~a\n"
+                    (decode-char* type-str)
+                    (decode-char* old-type))
             #f))))
 
   (define-for-c (print-to-bytevector #f
@@ -150,7 +164,7 @@
       (lambda (port)
         (put-datum port obj)
         (put-char port #\x00)))))
-  
+
   (define elisp-funcall
     (case-lambda
      [(fun)
@@ -229,7 +243,7 @@
     (collect-notify #t)
 
     (elisp-funcall 'set 'dummy-var (cons #f #f))
-    
+
     (gc)
     (set! from-lisp #f)
     (elisp-funcall 'set 'dummy-var 'nil)
@@ -256,10 +270,10 @@
          )))
 
     #;(when #t
-    (printf "running alloc_test\n")     ; ; ; ; ; ; ; ; ; ; ; ; ; ;
-    (collect-notify #t)                 ; ; ; ; ; ; ; ; ; ; ; ; ; ;
-    ((foreign-procedure __collect_safe "alloc_test" () void)) ; ; ; ; ; ; ; ; ; ; ; ; ; ;
-    (exit 1))
+      (printf "running alloc_test\n")
+      (collect-notify #t)
+      ((foreign-procedure __collect_safe "alloc_test" () void))
+      (exit 1))
 
     ;; (elisp-funcall 'load "scheme-internal")
     #;(when (elisp-fboundp 'message)
