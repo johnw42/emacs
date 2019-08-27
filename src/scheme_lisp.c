@@ -21,8 +21,9 @@ iptr scheme_greatest_fixnum;
 iptr scheme_least_fixnum;
 iptr scheme_fixnum_width;
 
-bool (*scheme_save_ptr_fun)(void *, const char *);
-bool (*scheme_check_ptr_fun)(void *, const char *);
+SCHEME_FPTR_DEF(save_pointer, int, void *, const char *);
+SCHEME_FPTR_DEF(check_pointer, int, void *, const char *);
+SCHEME_FPTR_DEF(hashtablep, int, ptr);
 
 static ptr lisp_to_scheme(Lisp_Object lisp_obj) {
   return lisp_obj;
@@ -236,8 +237,10 @@ void alloc_test(void)
 static void *
 get_scheme_func(const char *name)
 {
-  return Sforeign_callable_entry_point
-    (Stop_level_value (Sstring_to_symbol (name)));
+  ptr sym = Sstring_to_symbol (name);
+  eassert (Ssymbolp (sym));
+  ptr code = Stop_level_value (sym);
+  return Sforeign_callable_entry_point (code);
 }
 
 void scheme_init(void) {
@@ -264,8 +267,9 @@ void scheme_init(void) {
   Sscheme_script("/usr/local/google/home/jrw/git/schemacs/scheme/main.ss", 0, argv);
   scheme_call0("emacs-init");
 
-  scheme_save_ptr_fun = get_scheme_func ("save-pointer");
-  scheme_check_ptr_fun = get_scheme_func ("check-pointer");
+  SCHEME_FPTR_INIT(save_pointer);
+  SCHEME_FPTR_INIT(check_pointer);
+  SCHEME_FPTR_INIT(hashtablep);
 
   c_data_table = scheme_call0("make-eq-hashtable");
   Slock_object(c_data_table);
@@ -327,12 +331,12 @@ scheme_make_symbol(ptr name, enum symbol_interned interned)
       scheme_str = lisp_string_to_scheme_string (name);
     }
     
+  eassert (Sstringp (scheme_str));
   if (scheme_symbol == Sfalse)
       scheme_symbol = scheme_call1
         (interned == SYMBOL_UNINTERNED ? "gensym" : "string->symbol",
          scheme_str);
     
-  eassert (Sstringp (scheme_str));
   eassert (Ssymbolp (scheme_symbol));
 
   return XSYMBOL(scheme_symbol);
@@ -555,8 +559,11 @@ gdb_print(Lisp_Object obj)
   return buffer;
 }
 
+const char *last_func_name = NULL;
+
 extern ptr
 scheme_function_for_name(const char *name) {
+  last_func_name = name;
   ptr sym = Sstring_to_symbol(name);
   eassert(Ssymbolp(sym));
   ptr fun = Stop_level_value(sym);

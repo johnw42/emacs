@@ -58,11 +58,21 @@ void scheme_ptr_fill (ptr *p, ptr init, iptr num_words);
 ptr scheme_make_lisp_string(ptr str);
 ptr lisp_string_to_scheme_string(ptr lstr);
 
-#define scheme_save_ptr(ptr, type) eassert(scheme_save_ptr_fun(ptr, type))
-#define scheme_check_ptr(ptr, type) eassert(scheme_check_ptr_fun(ptr, type))
+#define SCHEME_FPTR_DECL(name, rtype, ...) \
+  extern rtype (*scheme_fptr_##name)(const char *, int, __VA_ARGS__)
+#define SCHEME_FPTR_DEF(name, rtype, ...) \
+  rtype (*scheme_fptr_##name)(const char *, int, __VA_ARGS__) = 0
+#define SCHEME_FPTR_INIT(name) \
+  (scheme_fptr_##name = get_scheme_func ("c-" #name))
+#define SCHEME_FPTR_CALL(name, ...) \
+  (*scheme_fptr_##name)(__FILE__, __LINE__, __VA_ARGS__)
 
-extern bool (*scheme_save_ptr_fun)(void *, const char *);
-extern bool (*scheme_check_ptr_fun)(void *, const char *);
+SCHEME_FPTR_DECL(save_pointer, int, void *, const char *);
+SCHEME_FPTR_DECL(check_pointer, int, void *, const char *);
+SCHEME_FPTR_DECL(hashtablep, int, ptr);
+
+#define scheme_save_ptr(ptr, type) eassert(SCHEME_FPTR_CALL(save_pointer, ptr, type))
+#define scheme_check_ptr(ptr, type) eassert(SCHEME_FPTR_CALL(check_pointer, ptr, type))
 
 extern ptr scheme_vectorlike_symbol;
 extern ptr scheme_misc_symbol;
@@ -70,6 +80,7 @@ extern ptr scheme_string_symbol;
 extern iptr scheme_greatest_fixnum;
 extern iptr scheme_least_fixnum;
 extern iptr scheme_fixnum_width;
+extern const char *last_func_name;
 
 #define SCHEME_ALLOC_C_DATA(key, type) \
   ((type *)scheme_alloc_c_data((key), sizeof(type)))
@@ -328,12 +339,13 @@ extern bool suppress_checking EXTERNALLY_VISIBLE;
 
 extern ptr scheme_malloc(iptr size);
 
+/* #define scheme_malloc_ptr(data) ((void *) ((char *) Sbytevector_data(data) + SCHEME_MALLOC_PADDING)) */
+
 INLINE void *
 scheme_malloc_ptr(ptr data) {
   eassert(Sbytevectorp(data));
   return (char *) Sbytevector_data(data) + SCHEME_MALLOC_PADDING;
 }
-
 
 extern ptr scheme_function_for_name(const char *name);
 

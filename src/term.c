@@ -4395,11 +4395,11 @@ vfatal (const char *str, va_list ap)
   if (!(strlen (str) > 0 && str[strlen (str) - 1] == '\n'))
     fprintf (stderr, "\n");
   fflush (stderr);
-#ifdef HAVE_CHEZ_SCHEME
-  abort();
-#else
+/* #ifdef HAVE_CHEZ_SCHEME */
+/*   abort(); */
+/* #else */
   exit (1);
-#endif
+/* #endif */
 }
 
 

@@ -12,6 +12,7 @@ if make -j -C src AM_DEFAULT_VERBOSITY=1 temacs; then
   #EMACS_CMD="src/temacs --batch --load loadup"
 
   cd ../lisp
+  # exec ddd $top/src/temacs
   EMACS_CMD=($top/src/temacs --batch --load loadup)
   
   GDB=false

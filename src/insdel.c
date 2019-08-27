@@ -886,6 +886,7 @@ insert_1_both (const char *string,
        because the before-change hooks might move the gap
        or make it smaller.  */
     prepare_to_modify_buffer (PT, PT, NULL);
+  scheme_check_ptr (current_buffer, "buffer");
 
   if (PT != GPT)
     move_gap_both (PT, PT_BYTE);
@@ -906,6 +907,7 @@ insert_1_both (const char *string,
   CHARS_MODIFF = MODIFF;
 
   memcpy (GPT_ADDR, string, nbytes);
+  scheme_check_ptr (current_buffer, "buffer");
 
   GAP_SIZE -= nbytes;
   GPT += nchars;
@@ -923,19 +925,27 @@ insert_1_both (const char *string,
     END_UNCHANGED = Z - GPT;
 
   adjust_overlays_for_insert (PT, nchars);
+  scheme_check_ptr (current_buffer, "buffer");
   adjust_markers_for_insert (PT, PT_BYTE,
 			     PT + nchars, PT_BYTE + nbytes,
 			     before_markers);
+  scheme_check_ptr (current_buffer, "buffer");
+  scheme_check_ptr (current_buffer, "buffer");
+  scheme_check_ptr (current_buffer, "buffer");
+  scheme_check_ptr (current_buffer, "buffer");
 
   offset_intervals (current_buffer, PT, nchars);
+  scheme_check_ptr (current_buffer, "buffer");
 
   if (!inherit && buffer_intervals (current_buffer))
     set_text_properties (make_number (PT), make_number (PT + nchars),
 			 Qnil, Qnil, Qnil);
 
   adjust_point (nchars, nbytes);
+  scheme_check_ptr (current_buffer, "buffer");
 
   check_markers ();
+  scheme_check_ptr (current_buffer, "buffer");
 }
 
 /* Insert the part of the text of STRING, a Lisp object assumed to be

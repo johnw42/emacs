@@ -1984,7 +1984,7 @@ x_draw_glyphless_glyph_string_foreground (struct glyph_string *s)
 
   for (i = 0; i < s->nchars; i++, glyph++)
     {
-      char buf[7], *str = NULL;
+      char buf[8], *str = NULL;
       int len = glyph->u.glyphless.len;
 
       if (glyph->u.glyphless.method == GLYPHLESS_DISPLAY_ACRONYM)

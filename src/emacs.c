@@ -2033,10 +2033,10 @@ all of which are called before Emacs is actually killed.  */
 {
   int exit_code;
 
-#ifdef HAVE_CHEZ_SCHEME
-  if (XINT(arg) != 0)
-    abort();
-#endif
+/* #ifdef HAVE_CHEZ_SCHEME */
+/*   if (XINT(arg) != 0) */
+/*     abort(); */
+/* #endif */
 
   /* Fsignal calls emacs_abort () if it sees that waiting_for_input is
      set.  */

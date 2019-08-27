@@ -1333,6 +1333,7 @@ adjust_intervals_for_deletion (struct buffer *buffer,
 void
 offset_intervals (struct buffer *buffer, ptrdiff_t start, ptrdiff_t length)
 {
+  scheme_check_ptr (buffer, "buffer");
   if (!buffer_intervals (buffer) || length == 0)
     return;
 

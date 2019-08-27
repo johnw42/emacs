@@ -4043,7 +4043,7 @@ scheme_obarray_table (ptr obarray)
       wrong_type_argument (Qvectorp, obarray);
     }
   ptr table = AREF(obarray, 0);
-  if (scheme_call1("hashtable?", table) == Sfalse)
+  if (!SCHEME_FPTR_CALL(hashtablep, table))
     {
       table = scheme_call2("make-hashtable",
                            Stop_level_value(Sstring_to_symbol("string-hash")),
@@ -4051,7 +4051,7 @@ scheme_obarray_table (ptr obarray)
       Slock_object(table);
       ASET(obarray, 0, table);
     }
-  eassert(scheme_call1("hashtable?", table) != Sfalse);
+  eassert(SCHEME_FPTR_CALL(hashtablep, table));
   return table;
 }
 
@@ -4066,7 +4066,7 @@ scheme_obarray_ensure(ptr obarray, ptr name)
                        ? SYMBOL_INTERNED_IN_INITIAL_OBARRAY
                        : SYMBOL_INTERNED);
   ptr table = scheme_obarray_table(obarray);
-  eassert (scheme_call1 ("hashtable?", table) == Strue);
+  eassert (SCHEME_FPTR_CALL(hashtablep, table));
   ptr scheme_symbol = data->u.s.scheme_obj;
   eassert (Ssymbolp (scheme_symbol));
   ptr scheme_str = scheme_call1("symbol->string", scheme_symbol);
@@ -4238,6 +4238,8 @@ it defaults to the value of `obarray'.  */)
     {
       name = scheme_call1("symbol->string", name);
     }
+  eassert (SCHEME_FPTR_CALL(hashtablep, table));
+  eassert (Sstringp(name));
   ptr found = scheme_call3("hashtable-ref", table, name, Sfalse);
   return found == Sfalse ? Qnil : found;
 #else /* HAVE_CHEZ_SCHEME */
