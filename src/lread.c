@@ -1890,6 +1890,7 @@ readevalloop (Lisp_Object readcharfun,
   /* True on the first time around.  */
   bool first_sexp = 1;
   Lisp_Object macroexpand = intern ("internal-macroexpand-for-load");
+  eassert (SYMBOLP (macroexpand));
 
   if (NILP (Ffboundp (macroexpand))
       /* Don't macroexpand in .elc files, since it should have been done
@@ -2900,7 +2901,6 @@ read1 (Lisp_Object readcharfun, int *pch, bool first_in_list)
 	    }
 	  invalid_syntax ("#&...");
 	}
-#ifndef HAVE_CHEZ_SCHEME
       if (c == '[')
 	{
 	  /* Accept compiled functions at read-time so that we don't have to
@@ -2912,7 +2912,6 @@ read1 (Lisp_Object readcharfun, int *pch, bool first_in_list)
 	  make_byte_code (xv_unwrap (vec));
 	  return tmp;
 	}
-#endif /* not HAVE_CHEZ_SCHEME */
       if (c == '(')
 	{
 	  Lisp_Object tmp;
@@ -4060,19 +4059,30 @@ scheme_obarray_ensure(ptr obarray, ptr name)
 {
   if (NILP (obarray))
     obarray = Vobarray;
+  eassert (!NILP (obarray));
+  eassert (!NILP (initial_obarray));
+
+  ptr scheme_str = to_scheme_string(name);
+  eassert (Sstringp (scheme_str));
+
+  ptr table = scheme_obarray_table(obarray);
+  ptr found = scheme_call3("hashtable-ref", table, scheme_str, Sfalse);
+  if (found != Sfalse)
+    {
+      eassert (Ssymbolp (found));
+      return found;
+    }
+
+  bool in_initial_obarray = EQ(obarray, initial_obarray);
   struct Lisp_Symbol *data =
     scheme_make_symbol(name,
-                       EQ(obarray, initial_obarray)
+                       in_initial_obarray
                        ? SYMBOL_INTERNED_IN_INITIAL_OBARRAY
                        : SYMBOL_INTERNED);
-  ptr table = scheme_obarray_table(obarray);
-  eassert (SCHEME_FPTR_CALL(hashtablep, table));
   ptr scheme_symbol = data->u.s.scheme_obj;
   eassert (Ssymbolp (scheme_symbol));
-  ptr scheme_str = scheme_call1("symbol->string", scheme_symbol);
-  eassert (Sstringp (scheme_str));
   scheme_call3("hashtable-set!", table, scheme_str, scheme_symbol);
-  if (EQ (obarray, initial_obarray)
+  if (in_initial_obarray
       && Sstring_length(scheme_str) > 0
       && Sstring_ref(scheme_str, 0) == ':')
     {
@@ -4080,6 +4090,7 @@ scheme_obarray_ensure(ptr obarray, ptr name)
       struct Lisp_Symbol *xs = XSYMBOL(scheme_symbol);
       xs->u.s.redirect = SYMBOL_PLAINVAL;
       SET_SYMBOL_VAL (xs, scheme_symbol);
+      eassert (Fkeywordp (scheme_symbol));
     }
   return scheme_symbol;
 }

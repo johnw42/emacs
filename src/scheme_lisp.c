@@ -24,6 +24,7 @@ iptr scheme_fixnum_width;
 SCHEME_FPTR_DEF(save_pointer, int, void *, const char *);
 SCHEME_FPTR_DEF(check_pointer, int, void *, const char *);
 SCHEME_FPTR_DEF(hashtablep, int, ptr);
+SCHEME_FPTR_DEF(print_to_bytevector, ptr, ptr);
 
 static ptr lisp_to_scheme(Lisp_Object lisp_obj) {
   return lisp_obj;
@@ -270,6 +271,7 @@ void scheme_init(void) {
   SCHEME_FPTR_INIT(save_pointer);
   SCHEME_FPTR_INIT(check_pointer);
   SCHEME_FPTR_INIT(hashtablep);
+  SCHEME_FPTR_INIT(print_to_bytevector);
 
   c_data_table = scheme_call0("make-eq-hashtable");
   Slock_object(c_data_table);
@@ -285,30 +287,36 @@ void scheme_init(void) {
   scheme_initialized = true;
 }
 
+// Converts a symbol or Scheme string to a Lisp string.
 ptr
-scheme_make_lisp_string(ptr str)
+to_lisp_string(ptr arg)
 {
-  if (STRINGP (str))
-    return str;
-  if (Ssymbolp (str))
-    str = scheme_call1 ("symbol->string", str);
-  eassert (Sstringp (str));
-  iptr n = Sstring_length(str);
+  if (STRINGP (arg))
+    return arg;
+  if (Ssymbolp (arg))
+    arg = scheme_call1 ("symbol->string", arg);
+  eassert (Sstringp (arg));
+  iptr n = Sstring_length(arg);
   Lisp_Object lstr = Fmake_string (Sfixnum (n), Sfixnum (0));
   for (int i = 0; i < n; i++)
-    Faset (lstr, Sfixnum (i), Sfixnum (Sstring_ref (str, i)));
+    Faset (lstr, Sfixnum (i), Sfixnum (Sstring_ref (arg, i)));
   return lstr;
 }
 
+// Converts a symbol or Lisp string to a Scheme string.
 ptr
-lisp_string_to_scheme_string(ptr lstr)
+to_scheme_string(ptr arg)
 {
-  eassert (STRINGP (lstr));
-  iptr n = XINT (Flength (lstr));
+  if (Sstringp (arg))
+    return arg;
+  if (Ssymbolp (arg))
+      return scheme_call1 ("symbol->string", arg);
+  eassert (STRINGP (arg));
+  iptr n = XINT (Flength (arg));
   ptr sstr = Smake_uninitialized_string(n);
   Slock_object(sstr);
   for (iptr i = 0; i < n; i++)
-    Sstring_set (sstr, i, XINT (Faref (lstr, make_number(i))));
+    Sstring_set (sstr, i, XINT (Faref (arg, make_number(i))));
   return sstr;
 }
 
@@ -318,28 +326,20 @@ scheme_make_symbol(ptr name, enum symbol_interned interned)
   ptr scheme_str;
   ptr scheme_symbol = Sfalse;
   if (Ssymbolp(name))
-    {
-      scheme_str = scheme_call1("symbol->string", name);
       scheme_symbol = name;
-    }
-  else if (Sstringp(name))
-    {
-      scheme_str = name;
-    }
-  else
-    {
-      scheme_str = lisp_string_to_scheme_string (name);
-    }
-    
+  scheme_str = to_scheme_string (name);
+
   eassert (Sstringp (scheme_str));
   if (scheme_symbol == Sfalse)
       scheme_symbol = scheme_call1
         (interned == SYMBOL_UNINTERNED ? "gensym" : "string->symbol",
          scheme_str);
-    
+
   eassert (Ssymbolp (scheme_symbol));
 
-  return XSYMBOL(scheme_symbol);
+  struct Lisp_Symbol *xs = XSYMBOL(scheme_symbol);
+  xs->u.s.interned = interned;
+  return xs;
 }
 
 struct Lisp_Symbol *
@@ -354,7 +354,7 @@ XSYMBOL (Lisp_Object a)
     }
   p = scheme_alloc_c_data(a, sizeof (struct Lisp_Symbol *));
   p->u.s.scheme_obj = a;
-  p->u.s.name = scheme_make_lisp_string (a);
+  p->u.s.name = to_lisp_string (a);
   p->u.s.plist = Qnil;
   p->u.s.redirect = SYMBOL_PLAINVAL;
   SET_SYMBOL_VAL (p, Qunbound);
@@ -443,7 +443,7 @@ static const char *scheme_classify(ptr x)
   case Lisp_Int0: return "Lisp_Int0";
   case Lisp_Int1: return "Lisp_Int1";
   case Lisp_String: return "Lisp_String";
-  case Lisp_Vectorlike:    
+  case Lisp_Vectorlike:
     switch (PSEUDOVECTOR_TYPE(XVECTOR(x))) {
     case PVEC_NORMAL_VECTOR: return "PVEC_NORMAL_VECTOR";
     case PVEC_PROCESS: return "PVEC_PROCESS";
@@ -522,28 +522,32 @@ static bool scheme_inputportp(ptr x) { return Sinputportp(x); }
 static bool scheme_outputportp(ptr x) { return Soutputportp(x); }
 static bool scheme_recordp(ptr x) { return Srecordp(x); }
 
-static const char *
+const char * gdb_print_scheme(Lisp_Object obj);
+const char * gdb_print(Lisp_Object obj);
+
+const char *
 gdb_print_scheme(Lisp_Object obj)
 {
   static char buffer[4096];
 
   static ptr (*print_fun)(ptr);
 
-  if (!print_fun)
-    print_fun = get_scheme_func ("print-to-bytevector");
-  ptr bvec = print_fun(obj);
+  ptr bvec = SCHEME_FPTR_CALL(print_to_bytevector, obj);
   Slock_object (bvec);
   eassert (Sbytevectorp (bvec));
-  return (void *)Sbytevector_data(bvec);
+  iptr n = Sbytevector_length(bvec);
+  memcpy(buffer, Sbytevector_data(bvec), n);
+  Sunlock_object(bvec);
+  return buffer;
 }
 
-static const char *
+const char *
 gdb_print(Lisp_Object obj)
-{  
+{
   static char buffer[4096];
 
   memset(buffer, 0, sizeof(buffer));
-  
+
   if (XTYPE (obj) == Lisp_Chez_Internal)
     return gdb_print_scheme(obj);
 
@@ -555,7 +559,7 @@ gdb_print(Lisp_Object obj)
     EMACS_INT c = XINT (Faref(str, make_number(i)));
     buffer[i] = 0 < c && c < 255 ? c : 255;
   }
-  
+
   return buffer;
 }
 

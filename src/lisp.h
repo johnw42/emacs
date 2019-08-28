@@ -55,8 +55,8 @@ void * scheme_find_c_data (ptr key);
 /*   (ptr key, iptr size, void (*init)(void *)); */
 ptr scheme_obarray_table (ptr obarray);
 void scheme_ptr_fill (ptr *p, ptr init, iptr num_words);
-ptr scheme_make_lisp_string(ptr str);
-ptr lisp_string_to_scheme_string(ptr lstr);
+ptr to_lisp_string(ptr str);
+ptr to_scheme_string(ptr lstr);
 
 #define SCHEME_FPTR_DECL(name, rtype, ...) \
   extern rtype (*scheme_fptr_##name)(const char *, int, __VA_ARGS__)
@@ -130,6 +130,11 @@ scheme_string (const char *s)
 #define Smake_vector emacs_Smake_vector
 #define Smake_string emacs_Smake_string
 #endif /* HAVE_CHEZ_SCHEME */
+
+#ifndef HAVE_CHEZ_SCHEME
+#define scheme_save_ptr(ptr, type) ((void)0)
+#define scheme_check_ptr(ptr, type) ((void)0)
+#endif
 
 #ifdef HAVE_CHEZ_SCHEME
 #define CONST_UNLESS_SCHEME
@@ -657,7 +662,7 @@ enum Lisp_Type
 #ifdef HAVE_CHEZ_SCHEME
     Lisp_Chez_Internal = 8,
 #endif /* HAVE_CHEZ_SCHEME */
-   
+
     /* Symbol.  XSYMBOL (object) points to a struct Lisp_Symbol.  */
     Lisp_Symbol = 0,
 
@@ -1406,7 +1411,7 @@ INLINE bool
 #define XSETSYMBOL(a, b) ((a) = make_lisp_symbol (b))
 #define XSETFLOAT(a, b) ((a) = make_lisp_ptr (b, Lisp_Float))
 #define XSETMISC(a, b) ((a) = make_lisp_ptr (b, Lisp_Misc))
-  
+
 #define XUNTAG_VECTORLIKE(a) XUNTAG (a, Lisp_Vectorlike)
 #define XUNTAG_MISC(a) XUNTAG (a, Lisp_Misc)
 
@@ -5548,8 +5553,8 @@ extern bool symbol_is(ptr sym, const char *name);
 
 #define NIL_INIT LISPSYM_INITIALLY_(Qnil)
 
-INLINE_HEADER_END
-
 void gdb_break(void);
+
+INLINE_HEADER_END
 
 #endif /* EMACS_LISP_H */

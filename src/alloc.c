@@ -2075,7 +2075,7 @@ allocate_string_data (struct Lisp_String *s,
       old_nbytes = STRING_BYTES (s);
     }
   sdata *data = malloc(needed);
-  
+
 #else /* HAVE_CHEZ_SCHEME */
   sdata *data, *old_data;
   struct sblock *b;
@@ -3576,7 +3576,7 @@ allocate_buffer (void)
     scheme_check_ptr(all_buffers, "buffer");
   b->undo_list_ = Qnil;
 #else /* HAVE_CHEZ_SCHEME */
-  struct buffer *b = lisp_malloc (sizeof *b, MEM_TYPE_BUFFER);  
+  struct buffer *b = lisp_malloc (sizeof *b, MEM_TYPE_BUFFER);
 
   BUFFER_PVEC_INIT (b);
 #endif /* HAVE_CHEZ_SCHEME */
@@ -3784,8 +3784,7 @@ Its value is void, and its function definition and property list are nil.  */)
 {
 #ifdef HAVE_CHEZ_SCHEME
   CHECK_STRING (name);
-  ptr sstr = lisp_string_to_scheme_string (name);
-  eassert (Sstringp(sstr));
+  ptr sstr = to_scheme_string (name);
   ptr p = scheme_call1("gensym", sstr);
   Slock_object(p);
   return p;
@@ -3793,7 +3792,7 @@ Its value is void, and its function definition and property list are nil.  */)
   Lisp_Object val;
 
   CHECK_STRING (name);
-  
+
   MALLOC_BLOCK_INPUT;
 
   if (symbol_free_list)
@@ -4319,7 +4318,7 @@ memory_full (size_t nbytes)
 	  }
     }
 #endif
-  
+
   /* This used to call error, but if we've run out of memory, we could
      get infinite recursion trying to build the string.  */
   xsignal (Qnil, Vmemory_signal_data);
@@ -5904,7 +5903,7 @@ purecopy (Lisp_Object obj)
 #ifdef HAVE_CHEZ_SCHEME
   return obj;
 #else /* HAVE_CHEZ_SCHEME */
-  
+
   if (INTEGERP (obj)
       || (! SYMBOLP (obj) && PURE_P (XPNTR_OR_SYMBOL_OFFSET (obj)))
       || SUBRP (obj))
@@ -7824,10 +7823,9 @@ init_alloc_once (void)
       lispsym[i] = Sstring_to_symbol (defsym_name[i]);
       Slock_object(lispsym[i]);
     }
-#else
-  lispsym[iQnil] = Sstring_to_symbol ("nil");
-#endif /* HAVE_CHEZ_SCHEME */
   eassert (Ssymbolp (Qnil));
+  eassert (Qnil == Sstring_to_symbol ("nil"));
+#endif /* HAVE_CHEZ_SCHEME */
 
 #ifndef NIL_IS_ZERO
   mem_nil (&globals, offsetof (struct emacs_globals, f_auto_save_interval));
@@ -7835,7 +7833,7 @@ init_alloc_once (void)
   mem_nil (last_marked, sizeof last_marked);
 #endif
 #endif
-  
+
 #ifndef HAVE_CHEZ_SCHEME
   /* Even though Qt's contents are not set up, its address is known.  */
   Vpurify_flag = Qt;

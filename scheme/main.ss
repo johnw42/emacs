@@ -15,7 +15,7 @@
          c-hashtablep
          c-save_pointer
          c-check_pointer
-         print-to-bytevector
+         c-print_to_bytevector
          )
 
   (define elisp-boundp
@@ -156,9 +156,9 @@
                     (decode-char* old-type))
             #f))))
 
-  (define-for-c (print-to-bytevector #f
-                                     ((scheme-object obj))
-                                     scheme-object)
+  (define-for-c (c-print_to_bytevector #f
+                                       ((scheme-object obj))
+                                       scheme-object)
     (string->utf8
      (call-with-string-output-port
       (lambda (port)

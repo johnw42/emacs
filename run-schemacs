@@ -5,19 +5,27 @@ top=$PWD
 
 find lisp -depth -name \*.elc -delete
 
+HAVE_CHEZ_SCHEME=false
+if fgrep -q '#define HAVE_CHEZ_SCHEME' src/globals.h; then
+  HAVE_CHEZ_SCHEME=true
+fi
+
 export EMACSLOADPATH=$top/lisp
-if make -j -C src AM_DEFAULT_VERBOSITY=1 temacs; then
+make -j lib lib-src
+if make -j -C src AM_DEFAULT_VERBOSITY=0 temacs; then
+
   cd src
   # EMACS_CMD="src/emacs --batch"
   #EMACS_CMD="src/temacs --batch --load loadup"
 
   cd ../lisp
   # exec ddd $top/src/temacs
+
   EMACS_CMD=($top/src/temacs --batch --load loadup)
   
   GDB=false
   if [[ $TERM != dumb ]]; then
-    GDB="gdb -ex r --args"
+    GDB="gdb -x $top/src/.gdbinit -ex r --args"
   fi
 
   echo "${EMACS_CMD[*]}"

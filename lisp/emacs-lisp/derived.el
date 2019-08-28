@@ -226,15 +226,15 @@ No problems result if this variable is not bound.
 		 (put ',syntax 'variable-documentation
 		      (purecopy ,(format "Syntax table for `%s'." child))))))
        ,(if declare-abbrev
-	    `(progn
+            `(progn
                (defvar ,abbrev)
-	       (unless (boundp ',abbrev)
-		 (put ',abbrev 'definition-name ',child)
-		 (defvar ,abbrev
-		   (progn (define-abbrev-table ',abbrev nil) ,abbrev)))
-	       (unless (get ',abbrev 'variable-documentation)
-		 (put ',abbrev 'variable-documentation
-		      (purecopy ,(format "Abbrev table for `%s'." child))))))
+               (unless (boundp ',abbrev)
+                 (put ',abbrev 'definition-name ',child)
+                 (defvar ,abbrev
+                   (progn (define-abbrev-table ',abbrev nil) ,abbrev)))
+               (unless (get ',abbrev 'variable-documentation)
+                 (put ',abbrev 'variable-documentation
+                      (purecopy ,(format "Abbrev table for `%s'." child))))))
        (put ',child 'derived-mode-parent ',parent)
        ,(if group `(put ',child 'custom-mode-group ,group))
 
