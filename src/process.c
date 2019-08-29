@@ -407,7 +407,7 @@ pset_stderrproc (struct Lisp_Process *p, Lisp_Object val)
 static Lisp_Object
 make_lisp_proc (struct Lisp_Process *p)
 {
-  return make_lisp_vectorlike_ptr (p);
+  return vectorlike_lisp_obj (p);
 }
 
 enum fd_bits
@@ -8038,7 +8038,7 @@ init_process_emacs (int sockfd)
 #ifndef NIL_IS_ZERO
   mem_nil (chan_process, sizeof (chan_process));
 #endif
-  
+
 #ifdef subprocesses
   int i;
 

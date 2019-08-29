@@ -21,6 +21,7 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 #include <config.h>
 
 #include <sys/stat.h>
+#include <stdio.h> // XXX
 
 #include "lisp.h"
 #include "coding.h"
@@ -11999,7 +12000,7 @@ keys_of_keyboard (void)
    Called by Fgarbage_collect.  */
 void
 mark_kboards (void)
-{ 
+{
   KBOARD *kb;
   Lisp_Object *p;
   for (kb = all_kboards; kb; kb = kb->next_kboard)

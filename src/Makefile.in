@@ -758,3 +758,17 @@ else
 endif
 	@: Compile some files earlier to speed up further compilation.
 	$(MAKE) -C ../lisp compile-first EMACS="$(bootstrap_exe)"
+
+CHEZ_SCHEME_DIR = @CHEZ_SCHEME_DIR@
+
+# Make a transformed version of Chez Scheme's scheme.h where all
+# symbols starting with S are renamed to start with chez_, to avoid
+# conflicting with the Emacs convesion of Sxxx being the name of the
+# symbol xxx.  For preprocessor defintions, the name is simply
+# changed; for other definitions, a preprocessor alias is added, since
+# changing the declared name would make liking to Chez Scheme's binary
+# code impossible.
+chez_scheme.h: $(CHEZ_SCHEME_DIR)/scheme.h make_scheme_h.py
+	python3 make_scheme_h.py < $< > $@
+
+# sed 's/^#define S/#define chez_/;/^#define /s/S\([a-z0-9_]\+\)/chez_\1/g;s/^EXPORT .* S\([a-z0-9_]\+\)/#define chez_\1 S\1@\0/' < $< | tr '@' '\n' > $@

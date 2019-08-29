@@ -2124,7 +2124,7 @@ eval_sub (Lisp_Object form)
   Lisp_Object funcar;
   ptrdiff_t count;
 #ifdef HAVE_CHEZ_SCHEME
-  fun = val = original_fun = original_args = funcar = Sfalse;
+  fun = val = original_fun = original_args = funcar = chez_false;
 #endif
 
   /* Declare here, as this array may be accessed by call_debugger near
@@ -2843,11 +2843,8 @@ funcall_subr (struct Lisp_Subr *subr, ptrdiff_t numargs, Lisp_Object *args)
           eassert (subr->max_args <= ARRAYELTS (internal_argbuf));
           internal_args = internal_argbuf;
           memcpy (internal_args, args, numargs * word_size);
-#ifdef HAVE_CHEZ_SCHEME
-#else /* HAVE_CHEZ_SCHEME */
           mem_nil (internal_args + numargs,
                    (subr->max_args - numargs) * word_size);
-#endif /* HAVE_CHEZ_SCHEME */
         }
       else
         internal_args = args;

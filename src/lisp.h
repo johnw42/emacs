@@ -38,7 +38,9 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 #include <verify.h>
 
 #ifdef HAVE_CHEZ_SCHEME
-#include <scheme.h>
+
+#include "chez_scheme.h"
+
 void scheme_init(void);
 void scheme_deinit(void);
 void syms_of_scheme_lisp(void);
@@ -50,7 +52,7 @@ ptr scheme_obarray_ensure(ptr obarray, ptr sym);
 /* ptr scheme_intern(const char *str, iptr len, ptr obarray); */
 /* void scheme_intern_sym(ptr sym, ptr obarray); */
 void *scheme_alloc_c_data(ptr key, iptr size);
-void * scheme_find_c_data (ptr key);
+void *scheme_find_c_data (ptr key);
 /* void * scheme_find_or_alloc_c_data */
 /*   (ptr key, iptr size, void (*init)(void *)); */
 ptr scheme_obarray_table (ptr obarray);
@@ -74,12 +76,12 @@ SCHEME_FPTR_DECL(hashtablep, int, ptr);
 #define scheme_save_ptr(ptr, type) eassert(SCHEME_FPTR_CALL(save_pointer, ptr, type))
 #define scheme_check_ptr(ptr, type) eassert(SCHEME_FPTR_CALL(check_pointer, ptr, type))
 
-extern ptr scheme_vectorlike_symbol;
+extern ptr chez_vectorlike_symbol;
 extern ptr scheme_misc_symbol;
 extern ptr scheme_string_symbol;
 extern iptr scheme_greatest_fixnum;
 extern iptr scheme_least_fixnum;
-extern iptr scheme_fixnum_width;
+extern iptr chez_fixnum_width;
 extern const char *last_func_name;
 
 #define SCHEME_ALLOC_C_DATA(key, type) \
@@ -90,45 +92,17 @@ extern const char *last_func_name;
 
 INLINE ptr
 scheme_locked_symbol(const char *name) {
-  ptr sym = Sstring_to_symbol(name);
-  Slock_object(sym);
+  ptr sym = chez_string_to_symbol(name);
+  chez_lock_object(sym);
   return sym;
 }
 
-INLINE ptr
-scheme_cons (ptr car, ptr cdr)
-{
-  return Scons (car, cdr);
-}
+#define Smake_string emacs_Smake_string
+#define Smake_vector emacs_Smake_vector
+#define Scons emacs_Scons
 
-INLINE ptr
-scheme_car (ptr pair)
-{
-  return Spairp(pair) ? Scar(pair) : Sfalse;
-}
-
-INLINE ptr
-scheme_cdr (ptr pair)
-{
-  return Spairp(pair) ? Scdr(pair) : Sfalse;
-}
-
-INLINE ptr
-scheme_make_vector (iptr size, ptr fill)
-{
-  return Smake_vector (size, fill);
-}
-
-INLINE ptr
-scheme_string (const char *s)
-{
-  return Sstring(s);
-}
 
 #undef USE_LSB_TAG
-#define Scons emacs_Scons
-#define Smake_vector emacs_Smake_vector
-#define Smake_string emacs_Smake_string
 #endif /* HAVE_CHEZ_SCHEME */
 
 #ifndef HAVE_CHEZ_SCHEME
@@ -338,26 +312,26 @@ extern bool suppress_checking EXTERNALLY_VISIBLE;
 #ifdef HAVE_CHEZ_SCHEME
 
 #define SCHEME_MALLOC_PADDING \
-  ((uptr) Sbytevector_data (NULL) % sizeof (ptr) == 0 \
+  ((uptr) chez_bytevector_data (NULL) % sizeof (ptr) == 0      \
     ? 0 \
-    : sizeof (ptr) - (uptr) Sbytevector_data (NULL) % sizeof(ptr))
+    : sizeof (ptr) - (uptr) chez_bytevector_data (NULL) % sizeof(ptr))
 
 extern ptr scheme_malloc(iptr size);
 
-/* #define scheme_malloc_ptr(data) ((void *) ((char *) Sbytevector_data(data) + SCHEME_MALLOC_PADDING)) */
+/* #define scheme_malloc_ptr(data) ((void *) ((char *) chez_bytevector_data(data) + SCHEME_MALLOC_PADDING)) */
 
 INLINE void *
 scheme_malloc_ptr(ptr data) {
-  eassert(Sbytevectorp(data));
-  return (char *) Sbytevector_data(data) + SCHEME_MALLOC_PADDING;
+  eassert (chez_bytevectorp (data));
+  return (char *) chez_bytevector_data(data) + SCHEME_MALLOC_PADDING;
 }
 
 extern ptr scheme_function_for_name(const char *name);
 
-#define scheme_call0(f) (Scall0(scheme_function_for_name(f)))
-#define scheme_call1(f, a) (Scall1(scheme_function_for_name(f), a))
-#define scheme_call2(f, a, b) (Scall2(scheme_function_for_name(f), a, b))
-#define scheme_call3(f, a, b, c) (Scall3(scheme_function_for_name(f), a, b, c))
+#define scheme_call0(f) (chez_call0(scheme_function_for_name(f)))
+#define scheme_call1(f, a) (chez_call1(scheme_function_for_name(f), a))
+#define scheme_call2(f, a, b) (chez_call2(scheme_function_for_name(f), a, b))
+#define scheme_call3(f, a, b, c) (chez_call3(scheme_function_for_name(f), a, b, c))
 
 #endif /* HAVE_CHEZ_SCHEME */
 
@@ -383,7 +357,7 @@ extern ptr scheme_function_for_name(const char *name);
 
 #ifdef HAVE_CHEZ_SCHEME
 #define GCALIGNMENT 8
-#define FIXNUM_BITS scheme_fixnum_width
+#define FIXNUM_BITS chez_fixnum_width
 #else
 enum Lisp_Bits
   {
@@ -475,9 +449,9 @@ error !;
 #ifdef HAVE_CHEZ_SCHEME
 
 #define SCHEME_VECTORP(x, sym)                  \
-  (Svectorp(CHECK_NOT_ZERO(x)) &&               \
-   Svector_length(x) == 2 &&                    \
-   Svector_ref(x, 0) == sym)
+  (chez_vectorp(CHECK_NOT_ZERO(x)) &&               \
+   chez_vector_length(x) == 2 &&                    \
+   chez_vector_ref(x, 0) == sym)
 
 #define lisp_h_XLI(o) ((EMACS_INT) (o))
 #define lisp_h_XIL(i) ((Lisp_Object) (i))
@@ -485,10 +459,10 @@ error !;
 #define lisp_h_CHECK_SYMBOL(x) CHECK_TYPE (SYMBOLP (x), Qsymbolp, x)
 #define lisp_h_CHECK_TYPE(ok, predicate, x) \
    ((ok) ? (void) 0 : wrong_type_argument (predicate, x))
-#define lisp_h_CONSP(x) (Spairp(x))
+#define lisp_h_CONSP(x) (chez_pairp(x))
 #define lisp_h_EQ(x, y) (XLI (x) == XLI (y))
-#define lisp_h_FLOATP(x) (Sflonump(x))
-#define lisp_h_INTEGERP(x) (Sfixnump(x))
+#define lisp_h_FLOATP(x) (chez_flonump(x))
+#define lisp_h_INTEGERP(x) (chez_fixnump(x))
 #define lisp_h_MARKERP(x) (MISCP (x) && XMISCTYPE (x) == Lisp_Misc_Marker)
 #define lisp_h_MISCP(x) SCHEME_VECTORP(x, scheme_misc_symbol)
 #define lisp_h_NILP(x) EQ (x, Qnil)
@@ -500,13 +474,13 @@ error !;
 #define lisp_h_SYMBOL_TRAPPED_WRITE_P(sym) (XSYMBOL (sym)->u.s.trapped_write)
 #define lisp_h_SYMBOL_VAL(sym) \
    (eassert ((sym)->u.s.redirect == SYMBOL_PLAINVAL), (sym)->u.s.val.value)
-#define lisp_h_SYMBOLP(x) (Ssymbolp(x))
-#define lisp_h_VECTORLIKEP(x) SCHEME_VECTORP(x, scheme_vectorlike_symbol)
-#define lisp_h_XCAR(c) (eassert (CONSP (c)), scheme_car(c))
-#define lisp_h_XCDR(c) (eassert (CONSP (c)), scheme_cdr(c))
-#define lisp_h_make_number(n) (eassert (Sfixnump(Sinteger(n))), Sfixnum(n))
+#define lisp_h_SYMBOLP(x) (chez_symbolp(x))
+#define lisp_h_VECTORLIKEP(x) SCHEME_VECTORP(x, chez_vectorlike_symbol)
+#define lisp_h_XCAR(c) (eassert (CONSP (c)), chez_car(c))
+#define lisp_h_XCDR(c) (eassert (CONSP (c)), chez_cdr(c))
+#define lisp_h_make_number(n) (eassert (chez_fixnump(chez_integer(n))), chez_fixnum(n))
 # define lisp_h_XFASTINT(a) XINT (a)
-# define lisp_h_XINT(a) (Sfixnum_value(a))
+# define lisp_h_XINT(a) (chez_fixnum_value(a))
 #define lisp_h_XHASH(a) XUINT (a)
 #define lisp_h_check_cons_list() ((void) 0)
 /* #define lisp_h_XCONS(a) ((a)->scheme_obj) */
@@ -782,7 +756,8 @@ enum Lisp_Fwd_Type
 #ifdef HAVE_CHEZ_SCHEME
 
 typedef ptr Lisp_Object;
-#define LISP_INITIALLY(i) (Lisp_Object)(i)
+#undef CHECK_LISP_OBJECT_TYPE
+enum CHECK_LISP_OBJECT_TYPE { CHECK_LISP_OBJECT_TYPE = true };
 
 #else /* HAVE_CHEZ_SCHEME */
 
@@ -1023,7 +998,12 @@ verify (alignof (struct Lisp_Symbol) % GCALIGNMENT == 0);
 /* LISPSYM_INITIALLY (Qfoo) is equivalent to Qfoo except it is
    designed for use as an initializer, even for a constant initializer.  */
 #ifdef HAVE_CHEZ_SCHEME
-#define LISPSYM_INITIALLY_(name) Sfixnum(i##name)
+// Generate a bogus value with the following properies:
+// - It can be transformed back into an index into lispsym.
+// - It appears distinctive when see in a debugger.
+// - Chez Scheme will most likely interpret it as a bogus value.
+#define LISPSYM_INITIALLY_(name) \
+  ((ptr)((i##name << 8) | 0xdeadface0000000fUL))
 void fixup_lispsym_init(ptr *p);
 #else
 #define LISPSYM_INITIALLY_(name) LISP_INITIALLY (XLI_BUILTIN_LISPSYM (i##name))
@@ -1036,7 +1016,7 @@ INLINE void fixup_lispsym_init(const Lisp_Object *p) {}
 #ifdef HAVE_CHEZ_SCHEME
 #define DEFINE_LISP_SYMBOL(name) \
   DEFINE_GDB_SYMBOL_BEGIN (Lisp_Object, name) \
-  DEFINE_GDB_SYMBOL_END (Sfalse)
+  DEFINE_GDB_SYMBOL_END (LISPSYM_INITIALLY_(name))
 #else
 #define DEFINE_LISP_SYMBOL(name) \
   DEFINE_GDB_SYMBOL_BEGIN (Lisp_Object, name) \
@@ -1379,9 +1359,28 @@ INLINE bool
 }
 
 #ifdef HAVE_CHEZ_SCHEME
-#define make_lisp_vectorlike_ptr(v) ((v)->header.s.scheme_obj)
+
+INLINE Lisp_Object
+vectorlike_lisp_obj (void *vptr)
+{
+  ptr obj = ((union vectorlike_header *) vptr)->s.scheme_obj;
+  eassert (chez_vectorp (obj));
+  return obj;
+}
+
+INLINE void
+set_vectorlike_lisp_obj (void *vptr, Lisp_Object obj)
+{
+  ((union vectorlike_header *) vptr)->s.scheme_obj = obj;
+}
+
 #else /* HAVE_CHEZ_SCHEME */
-#define make_lisp_vectorlike_ptr(ptr) (make_lisp_ptr (ptr, Lisp_Vectorlike))
+
+INLINE Lisp_Object vectorlike_lisp_obj(void *vptr)
+{
+  return make_lisp_ptr (vptr, Lisp_Vectorlike);
+}
+
 #endif /* HAVE_CHEZ_SCHEME */
 
 #ifdef HAVE_CHEZ_SCHEME
@@ -1398,7 +1397,7 @@ INLINE bool
 /* #define XSETPSEUDOVECTOR(a, b, code) ((a) = (b)->header.s.scheme_obj) */
 /* #define XSETTYPED_PSEUDOVECTOR(a, b, size, code) XSETPSEUDOVECTOR(a, b, code) */
 
-#define XUNTAG_VECTORLIKE(a) (scheme_malloc_ptr (Svector_ref (a, 1)))
+#define XUNTAG_VECTORLIKE(a) (scheme_malloc_ptr (chez_vector_ref (a, 1)))
 #define XUNTAG_MISC(a) XUNTAG_VECTORLIKE (a)
 
 #else /* HAVE_CHEZ_SCHEME */
@@ -1406,7 +1405,7 @@ INLINE bool
 #define XSETINT(a, b) ((a) = make_number (b))
 #define XSETFASTINT(a, b) ((a) = make_natnum (b))
 #define XSETCONS(a, b) ((a) = make_lisp_ptr (b, Lisp_Cons))
-#define XSETVECTOR(a, b) ((a) = make_lisp_vectorlike_ptr (b))
+#define XSETVECTOR(a, b) ((a) = vectorlike_lisp_obj (b))
 #define XSETSTRING(a, b) ((a) = make_lisp_ptr (b, Lisp_String))
 #define XSETSYMBOL(a, b) ((a) = make_lisp_symbol (b))
 #define XSETFLOAT(a, b) ((a) = make_lisp_ptr (b, Lisp_Float))
@@ -1578,7 +1577,7 @@ XSETCAR (Lisp_Object c, Lisp_Object n)
 {
   (void) XLI (n);
 #ifdef HAVE_CHEZ_SCHEME
-  Sset_car(c, n);
+  chez_set_car(c, n);
 #else /* HAVE_CHEZ_SCHEME */
   *xcar_addr (c) = n;
 #endif /* HAVE_CHEZ_SCHEME */
@@ -1588,7 +1587,7 @@ XSETCDR (Lisp_Object c, Lisp_Object n)
 {
   (void) XLI (n);
 #ifdef HAVE_CHEZ_SCHEME
-  Sset_cdr(c, n);
+  chez_set_cdr(c, n);
 #else /* HAVE_CHEZ_SCHEME */
   *xcdr_addr (c) = n;
 #endif /* HAVE_CHEZ_SCHEME */
@@ -1673,16 +1672,16 @@ XSTRING (Lisp_Object a)
 {
   eassert (STRINGP (a));
 #ifdef HAVE_CHEZ_SCHEME
-  return scheme_malloc_ptr (Svector_ref (a, 1));
+  return scheme_malloc_ptr (chez_vector_ref (a, 1));
   /* ptr vec = Smake_vector (2, ); */
   /* struct Lisp_String *p = scheme_find_c_data (a); */
   /* if (p == NULL) */
   /*   { */
   /*     p = scheme_alloc_c_data (a, sizeof (struct Lisp_String)); */
   /*     p->u.s.scheme_obj = a; */
-  /*     p->u.s.size = Sstring_length (a); */
+  /*     p->u.s.size = chez_string_length (a); */
   /*     p->u.s.size_byte = */
-  /*       Sbytevector_length (scheme_call1 ("string->utf8", a)); */
+  /*       chez_bytevector_length (scheme_call1 ("string->utf8", a)); */
   /*   } */
   /* return p; */
 #else /* HAVE_CHEZ_SCHEME */
@@ -3411,7 +3410,7 @@ XFLOAT_DATA (Lisp_Object f)
 {
 #ifdef HAVE_CHEZ_SCHEME
   eassert (FLOATP (f));
-  return Sflonum_value(f);
+  return chez_flonum_value(f);
 #else /* HAVE_CHEZ_SCHEME */
   return XFLOAT (f)->u.data;
 #endif /* HAVE_CHEZ_SCHEME */
@@ -3684,9 +3683,9 @@ CHECK_NUMBER_CDR (Lisp_Object x)
 #ifdef HAVE_CHEZ_SCHEME
 #define DEFUN(lname, fnname, sname, minargs, maxargs, intspec, doc)	\
    static struct Lisp_Subr sname =                                      \
-     { { .s = { PVEC_SUBR << PSEUDOVECTOR_AREA_BITS, Sfalse } },        \
+     { { .s = { PVEC_SUBR << PSEUDOVECTOR_AREA_BITS, chez_false } },        \
        { .a ## maxargs = fnname },					\
-       minargs, maxargs, lname, Sfalse, intspec, 0};                    \
+       minargs, maxargs, lname, chez_false, intspec, 0};                    \
    Lisp_Object fnname
 #else /* HAVE_CHEZ_SCHEME */
 /* This version of DEFUN declares a function prototype with the right
@@ -4461,7 +4460,7 @@ extern struct Lisp_Vector *allocate_pseudovector (int, int, int,
 
 extern bool gc_in_progress;
 #ifdef HAVE_CHEZ_SCHEME
-#define make_float Sflonum
+#define make_float chez_flonum
 #else /* HAVE_CHEZ_SCHEME */
 extern Lisp_Object make_float (double);
 #endif /* HAVE_CHEZ_SCHEME */
@@ -5547,6 +5546,7 @@ scheme_ptr_copy (ptr *dest, ptr *src, iptr num_words)
 struct Lisp_Symbol *scheme_make_symbol(ptr name, enum symbol_interned interned);
 
 extern void visit_lisp_refs(Lisp_Object obj, void (*fun)(void *, Lisp_Object *, ptrdiff_t), void *data);
+extern void init_nil_refs(Lisp_Object obj);
 extern bool symbol_is(ptr sym, const char *name);
 
 #endif /* HAVE_CHEZ_SCHEME */

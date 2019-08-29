@@ -338,7 +338,7 @@ DEFUN ("nlistp", Fnlistp, Snlistp, 1, 1, 0,
   return Qt;
 }
 
-DEFUN ("symbolp", Fsymbolp, Ssymbolp, 1, 1, 0,
+DEFUN ("symbolp", Fsymbolp, chez_symbolp, 1, 1, 0,
        doc: /* Return t if OBJECT is a symbol.  */
        attributes: const)
   (Lisp_Object object)
@@ -361,7 +361,7 @@ interned in the initial obarray.  */)
   return Qnil;
 }
 
-DEFUN ("vectorp", Fvectorp, Svectorp, 1, 1, 0,
+DEFUN ("vectorp", Fvectorp, chez_vectorp, 1, 1, 0,
        doc: /* Return t if OBJECT is a vector.  */)
   (Lisp_Object object)
 {
@@ -379,7 +379,7 @@ DEFUN ("recordp", Frecordp, Srecordp, 1, 1, 0,
   return Qnil;
 }
 
-DEFUN ("stringp", Fstringp, Sstringp, 1, 1, 0,
+DEFUN ("stringp", Fstringp, chez_stringp, 1, 1, 0,
        doc: /* Return t if OBJECT is a string.  */
        attributes: const)
   (Lisp_Object object)
@@ -410,7 +410,7 @@ DEFUN ("char-table-p", Fchar_table_p, Schar_table_p, 1, 1, 0,
 }
 
 DEFUN ("vector-or-char-table-p", Fvector_or_char_table_p,
-       Svector_or_char_table_p, 1, 1, 0,
+       chez_vector_or_char_table_p, 1, 1, 0,
        doc: /* Return t if OBJECT is a char-table or vector.  */)
   (Lisp_Object object)
 {
@@ -643,7 +643,7 @@ DEFUN ("setcar", Fsetcar, Ssetcar, 2, 2, 0,
   (register Lisp_Object cell, Lisp_Object newcar)
 {
 #ifdef HAVE_CHEZ_SCHEME
-  Sset_car(cell, newcar);
+  chez_set_car(cell, newcar);
 #else /* HAVE_CHEZ_SCHEME */
   CHECK_CONS (cell);
   CHECK_IMPURE (cell, XCONS (cell));
@@ -657,7 +657,7 @@ DEFUN ("setcdr", Fsetcdr, Ssetcdr, 2, 2, 0,
   (register Lisp_Object cell, Lisp_Object newcdr)
 {
 #ifdef HAVE_CHEZ_SCHEME
-  Sset_cdr(cell, newcdr);
+  chez_set_cdr(cell, newcdr);
 #else /* HAVE_CHEZ_SCHEME */
   CHECK_CONS (cell);
   CHECK_IMPURE (cell, XCONS (cell));
@@ -3806,14 +3806,14 @@ syms_of_data (void)
   defsubr (&Snumber_or_marker_p);
   defsubr (&Sfloatp);
   defsubr (&Snatnump);
-  defsubr (&Ssymbolp);
+  defsubr (&chez_symbolp);
   defsubr (&Skeywordp);
-  defsubr (&Sstringp);
+  defsubr (&chez_stringp);
   defsubr (&Smultibyte_string_p);
-  defsubr (&Svectorp);
+  defsubr (&chez_vectorp);
   defsubr (&Srecordp);
   defsubr (&Schar_table_p);
-  defsubr (&Svector_or_char_table_p);
+  defsubr (&chez_vector_or_char_table_p);
   defsubr (&Sbool_vector_p);
   defsubr (&Sarrayp);
   defsubr (&Ssequencep);

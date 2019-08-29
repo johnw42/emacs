@@ -71,6 +71,7 @@ lib/unistd.h
 src/buildobj.h
 src/globals.h
 src/lisp.mk
+src/chez_scheme.h
 
 # Lisp-level sources built by 'make'.
 *cus-load.el

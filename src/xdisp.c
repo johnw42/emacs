@@ -602,7 +602,7 @@ void
 wset_redisplay (struct window *w)
 {
   /* Beware: selected_window can be nil during early stages.  */
-  if (!EQ (make_lisp_vectorlike_ptr (w), selected_window))
+  if (!EQ (vectorlike_lisp_obj (w), selected_window))
     redisplay_other_windows ();
   w->redisplay = true;
 }
@@ -8745,8 +8745,8 @@ move_it_in_display_line_to (struct it *it,
        || (it->method == GET_FROM_DISPLAY_VECTOR		\
            && it->current.dpvec_index + 1 >= xvc_diff (it->dpend, it->dpvec))))
 
-  
-  
+
+
   if (it->hpos == 0)
     {
       /* If line numbers are being displayed, produce a line number.

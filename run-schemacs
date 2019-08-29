@@ -12,7 +12,7 @@ fi
 
 export EMACSLOADPATH=$top/lisp
 make -j lib lib-src
-if make -j -C src AM_DEFAULT_VERBOSITY=0 temacs; then
+if make -j -C src temacs; then
 
   cd src
   # EMACS_CMD="src/emacs --batch"

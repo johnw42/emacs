@@ -132,10 +132,10 @@ recompute_width_table (struct buffer *buf, struct Lisp_Char_Table *disptab)
   if (!VECTORP (BVAR (buf, width_table)))
     bset_width_table (buf, make_uninit_vector (256));
   ptr widthtab = BVAR (buf, width_table);
-  eassert (Svector_length(widthtab) == 256);
+  eassert (chez_vector_length(widthtab) == 256);
 
   for (iptr i = 0; i < 256; i++)
-    Svector_set(widthtab, i, Sfixnum (character_width (i, disptab)));
+    chez_vector_set(widthtab, i, chez_fixnum (character_width (i, disptab)));
 #else /* HAVE_CHEZ_SCHEME */
   int i;
 

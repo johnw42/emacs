@@ -3,7 +3,7 @@
 with=${1-with}
 shift
 
-CFLAGS='-O1 -g -Werror=implicit-function-declaration -Werror=nested-externs'
+CFLAGS='-O0 -finline-functions -g -Werror=implicit-function-declaration -Werror=nested-externs'
 
 autoreconf
-./configure --enable-checking=yes --$with-chez-scheme CANNOT_DUMP=yes CFLAGS="$CFLAGS" "$@"
+./configure --enable-checking=yes --$with-chez-scheme AM_DEFAULT_VERBOSITY=0 CANNOT_DUMP=yes CFLAGS="$CFLAGS" "$@"

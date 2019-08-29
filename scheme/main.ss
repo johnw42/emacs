@@ -83,12 +83,15 @@
           [memo-result #f])
       (lambda (ptr)
         (unless (eqv? ptr memo-ptr)
-          (do ([i 0 (+ 1 i)]
-               [str (make-string (strlen ptr))])
-              ((>= i count) str)
-            (string-set!
-             str i (integer->char
-                    (foreign-ref 'integer-8 ptr i))))))))
+          (set! memo-result
+                (let* ([count (strlen ptr)]
+                       [str (make-string count)])
+                  (do ([i 0 (+ 1 i)])
+                      ((>= i count) str)
+                    (string-set!
+                     str i (integer->char
+                            (foreign-ref 'integer-8 ptr i)))))))
+        memo-result)))
 
 
   (define-syntax locked-foreign-callable
@@ -132,7 +135,8 @@
           (begin
             ;; Separate printfs in case the second one dies before
             ;; completing.
-            (printf "duplicate registration of ~x" ptr)
+            (printf "duplicate registration of ~x\n" ptr)
+            (flush-output-port (current-output-port))
             (printf ": ~a => ~a\n"
                     (decode-char* old-type)
                     (decode-char* type-str))
@@ -150,10 +154,12 @@
           (begin
             ;; Separate printfs in case the second one dies before
             ;; completing.
-            (printf "wrong registration of ~x" ptr)
+            (printf "wrong registration of ~x\n" ptr)
+            (flush-output-port (current-output-port))
             (printf "; expected ~a, got ~a\n"
                     (decode-char* type-str)
-                    (decode-char* old-type))
+                    (and old-type
+                         (decode-char* old-type)))
             #f))))
 
   (define-for-c (c-print_to_bytevector #f
@@ -270,10 +276,10 @@
          )))
 
     #;(when #t
-      (printf "running alloc_test\n")
-      (collect-notify #t)
-      ((foreign-procedure __collect_safe "alloc_test" () void))
-      (exit 1))
+    (printf "running alloc_test\n")     ;
+    (collect-notify #t)                 ;
+    ((foreign-procedure __collect_safe "alloc_test" () void)) ;
+    (exit 1))
 
     ;; (elisp-funcall 'load "scheme-internal")
     #;(when (elisp-fboundp 'message)

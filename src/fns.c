@@ -1551,10 +1551,10 @@ changing the value of a sequence `foo'.  */)
       if (n != ASIZE (seq))
 	{
 #ifdef HAVE_CHEZ_SCHEME
-          ptr new_seq = scheme_make_vector (n, Qnil);
+          ptr new_seq = chez_make_vector (n, Qnil);
 	  for (i = n = 0; i < ASIZE (seq); ++i)
 	    if (NILP (Fequal (AREF (seq, i), elt)))
-              Svector_set (new_seq, i, AREF (seq, i));
+              chez_vector_set (new_seq, i, AREF (seq, i));
           seq = new_seq;
 #else /* HAVE_CHEZ_SCHEME */
 	  struct Lisp_Vector *p = allocate_vector (n);

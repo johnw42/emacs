@@ -4044,10 +4044,11 @@ scheme_obarray_table (ptr obarray)
   ptr table = AREF(obarray, 0);
   if (!SCHEME_FPTR_CALL(hashtablep, table))
     {
-      table = scheme_call2("make-hashtable",
-                           Stop_level_value(Sstring_to_symbol("string-hash")),
-                           Stop_level_value(Sstring_to_symbol("string=?")));
-      Slock_object(table);
+      table = scheme_call2
+        ("make-hashtable",
+         chez_top_level_value (chez_string_to_symbol ("string-hash")),
+         chez_top_level_value (chez_string_to_symbol ("string=?")));
+      chez_lock_object(table);
       ASET(obarray, 0, table);
     }
   eassert(SCHEME_FPTR_CALL(hashtablep, table));
@@ -4063,13 +4064,13 @@ scheme_obarray_ensure(ptr obarray, ptr name)
   eassert (!NILP (initial_obarray));
 
   ptr scheme_str = to_scheme_string(name);
-  eassert (Sstringp (scheme_str));
+  eassert (chez_stringp (scheme_str));
 
   ptr table = scheme_obarray_table(obarray);
-  ptr found = scheme_call3("hashtable-ref", table, scheme_str, Sfalse);
-  if (found != Sfalse)
+  ptr found = scheme_call3("hashtable-ref", table, scheme_str, chez_false);
+  if (found != chez_false)
     {
-      eassert (Ssymbolp (found));
+      eassert (chez_symbolp (found));
       return found;
     }
 
@@ -4080,11 +4081,11 @@ scheme_obarray_ensure(ptr obarray, ptr name)
                        ? SYMBOL_INTERNED_IN_INITIAL_OBARRAY
                        : SYMBOL_INTERNED);
   ptr scheme_symbol = data->u.s.scheme_obj;
-  eassert (Ssymbolp (scheme_symbol));
+  eassert (chez_symbolp (scheme_symbol));
   scheme_call3("hashtable-set!", table, scheme_str, scheme_symbol);
   if (in_initial_obarray
-      && Sstring_length(scheme_str) > 0
-      && Sstring_ref(scheme_str, 0) == ':')
+      && chez_string_length(scheme_str) > 0
+      && chez_string_ref(scheme_str, 0) == ':')
     {
       make_symbol_constant (scheme_symbol);
       struct Lisp_Symbol *xs = XSYMBOL(scheme_symbol);
@@ -4245,14 +4246,14 @@ it defaults to the value of `obarray'.  */)
 {
 #ifdef HAVE_CHEZ_SCHEME
   ptr table = scheme_obarray_table (obarray);
-  if (!Sstringp(name))
+  if (!chez_stringp(name))
     {
       name = scheme_call1("symbol->string", name);
     }
   eassert (SCHEME_FPTR_CALL(hashtablep, table));
-  eassert (Sstringp(name));
-  ptr found = scheme_call3("hashtable-ref", table, name, Sfalse);
-  return found == Sfalse ? Qnil : found;
+  eassert (chez_stringp(name));
+  ptr found = scheme_call3("hashtable-ref", table, name, chez_false);
+  return found == chez_false ? Qnil : found;
 #else /* HAVE_CHEZ_SCHEME */
   register Lisp_Object tem, string;
 
@@ -4287,17 +4288,17 @@ usage: (unintern NAME OBARRAY)  */)
 #ifdef HAVE_CHEZ_SCHEME
   ptr table = scheme_obarray_table (obarray);
   ptr key = name;
-  if (!Sstringp(name))
+  if (!chez_stringp(name))
     key = scheme_call1("symbol->string", name);
-  Slock_object(key);
+  chez_lock_object(key);
   ptr result = Qnil;
-  ptr sym = scheme_call3("hashtable-ref", table, key, Sfalse);
-  if (sym == name || (Sstringp(name) && sym != Sfalse))
+  ptr sym = scheme_call3("hashtable-ref", table, key, chez_false);
+  if (sym == name || (chez_stringp(name) && sym != chez_false))
     {
       result = Qt;
       scheme_call2("hashtable-delete!", table, key);
     }
-  Sunlock_object(key);
+  chez_unlock_object(key);
   return result;
 #else /* HAVE_CHEZ_SCHEME */
   register Lisp_Object string, tem;
@@ -4412,11 +4413,11 @@ map_obarray (Lisp_Object obarray, void (*fn) (Lisp_Object, Lisp_Object), Lisp_Ob
 #ifdef HAVE_CHEZ_SCHEME
   ptr table = scheme_obarray_table(obarray);
   for (ptr tail = scheme_call1("hashtable-keys", table);
-       tail != Snil; tail = Fcdr(tail))
+       tail != chez_nil; tail = chez_cdr(tail))
     {
-      Slock_object(tail);
-      (*fn) (Scar(tail), arg);
-      Sunlock_object(tail);
+      chez_lock_object (tail);
+      (*fn) (chez_car (tail), arg);
+      chez_unlock_object (tail);
     }
 #else /* HAVE_CHEZ_SCHEME */
   ptrdiff_t i;
@@ -4468,7 +4469,10 @@ init_obarray (void)
 
 #ifdef HAVE_CHEZ_SCHEME
   for (int i = 0; i < ARRAYELTS (lispsym); i++)
-    scheme_obarray_ensure (initial_obarray, lispsym[i]);
+    {
+      eassert (chez_symbolp (lispsym[i]));
+      scheme_obarray_ensure (initial_obarray, lispsym[i]);
+    }
 #else /* HAVE_CHEZ_SCHEME */
   for (int i = 0; i < ARRAYELTS (lispsym); i++)
     define_symbol (builtin_lisp_symbol (i), defsym_name[i]);

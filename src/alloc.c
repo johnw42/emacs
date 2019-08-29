@@ -1964,8 +1964,8 @@ check_string_free_list (void)
 
 ptr scheme_malloc(iptr size)
 {
-  ptr bytes = Smake_bytevector(size + SCHEME_MALLOC_PADDING, 0);
-  Slock_object(bytes);
+  ptr bytes = chez_make_bytevector(size + SCHEME_MALLOC_PADDING, 0);
+  chez_lock_object(bytes);
   return bytes;
 }
 
@@ -1974,9 +1974,9 @@ scheme_allocate (ptrdiff_t nbytes, ptr sym, ptr *vec_ptr)
 {
   ptr bytes = scheme_malloc(nbytes);
 
-  ptr vec = scheme_make_vector(2, sym);
-  Slock_object(vec);
-  Svector_set(vec, 1, bytes);
+  ptr vec = chez_make_vector(2, sym);
+  chez_lock_object(vec);
+  chez_vector_set(vec, 1, bytes);
   *vec_ptr = vec;
 
   return scheme_malloc_ptr (bytes);
@@ -2864,8 +2864,8 @@ DEFUN ("cons", Fcons, Scons, 2, 2, 0,
   (Lisp_Object car, Lisp_Object cdr)
 {
 #ifdef HAVE_CHEZ_SCHEME
-  ptr val = scheme_cons (car, cdr);
-  Slock_object(val);
+  ptr val = chez_cons (car, cdr);
+  chez_lock_object(val);
   eassert (CONSP(val));
   return val;
 #else /* HAVE_CHEZ_SCHEME */
@@ -3220,7 +3220,7 @@ static void
 init_vectors (void)
 {
 #ifdef HAVE_CHEZ_SCHEME
-  zero_vector = scheme_make_vector (0, Qnil);
+  zero_vector = chez_make_vector (0, Qnil);
 #else /* HAVE_CHEZ_SCHEME */
   zero_vector = make_pure_vector (0);
 #endif /* HAVE_CHEZ_SCHEME */
@@ -3468,10 +3468,10 @@ allocate_vectorlike (ptrdiff_t len)
 #ifdef HAVE_CHEZ_SCHEME
   ptr vec;
   struct Lisp_Vector *data = scheme_allocate
-    (header_size + len * word_size, scheme_vectorlike_symbol, &vec);
+    (header_size + len * word_size, chez_vectorlike_symbol, &vec);
   data->header.s.size = len;
-  data->header.s.scheme_obj = vec;
-  scheme_ptr_fill (data->contents, Qnil, len);
+  set_vectorlike_lisp_obj(data, vec);
+  scheme_ptr_fill (data->contents, Qnil, len); // XXX
   return data;
 #else /* HAVE_CHEZ_SCHEME */
   struct Lisp_Vector *p;
@@ -3535,6 +3535,7 @@ allocate_vector (EMACS_INT len)
 #ifdef HAVE_CHEZ_SCHEME
   eassert (v->header.s.size == len);
   eassert (v->header.size == len);
+  init_nil_refs (vectorlike_lisp_obj (v));
 #else /* HAVE_CHEZ_SCHEME */
   if (len)
     v->header.size = len;
@@ -3559,10 +3560,13 @@ allocate_pseudovector (int memlen, int lisplen,
 
   /* Only the first LISPLEN slots will be traced normally by the GC.  */
   memzero (v->contents, zerolen * word_size);
-#ifndef NIL_IS_ZERO
+#if !defined(NIL_IS_ZERO) // && !defined(HAVE_CHEZ_SCHEME)
   set_nil (v->contents, lisplen);
 #endif
   XSETPVECTYPESIZE (as_xv (v), tag, lisplen, memlen - lisplen);
+#ifdef HAVE_CHEZ_SCHEME
+  init_nil_refs (vectorlike_lisp_obj (v));
+#endif
   return v;
 }
 
@@ -3622,7 +3626,7 @@ each initialized to INIT.  */)
   p->contents[0] = type;
   for (ptrdiff_t i = 1; i < size; i++)
     p->contents[i] = init;
-  return make_lisp_vectorlike_ptr (p);
+  return vectorlike_lisp_obj (p);
 }
 
 
@@ -3636,7 +3640,7 @@ usage: (record TYPE &rest SLOTS) */)
 {
   struct Lisp_Vector *p = allocate_record (nargs);
   memcpy (p->contents, args, nargs * sizeof *args);
-  return make_lisp_vectorlike_ptr (p);
+  return vectorlike_lisp_obj (p);
 }
 
 
@@ -3649,10 +3653,10 @@ See also the function `vector'.  */)
   struct Lisp_Vector *p = allocate_vector (XFASTINT (length));
   for (ptrdiff_t i = 0; i < XFASTINT (length); i++)
     p->contents[i] = init;
-  return make_lisp_vectorlike_ptr (p);
+  return vectorlike_lisp_obj (p);
 }
 
-DEFUN ("vector", Fvector, Svector, 0, MANY, 0,
+DEFUN ("vector", Fvector, chez_vector, 0, MANY, 0,
        doc: /* Return a newly created vector with specified arguments as elements.
 Allows any number of arguments, including zero.
 usage: (vector &rest OBJECTS)  */)
@@ -3786,7 +3790,7 @@ Its value is void, and its function definition and property list are nil.  */)
   CHECK_STRING (name);
   ptr sstr = to_scheme_string (name);
   ptr p = scheme_call1("gensym", sstr);
-  Slock_object(p);
+  chez_lock_object(p);
   return p;
 #else /* HAVE_CHEZ_SCHEME */
   Lisp_Object val;
@@ -3867,12 +3871,14 @@ static Lisp_Object
 allocate_misc (enum Lisp_Misc_Type type)
 {
 #ifdef HAVE_CHEZ_SCHEME
-  ptr vec;
+  ptr val;
   struct Lisp_Misc_Any *data = scheme_allocate
-    (sizeof (union Lisp_Misc), scheme_misc_symbol, &vec);
+    (sizeof (union Lisp_Misc), scheme_misc_symbol, &val);
   data->type = type;
   data->gcmarkbit = 0;
-  return vec;
+  init_nil_refs (val);
+  set_vectorlike_lisp_obj (data, val);
+  return val;
 #else /* HAVE_CHEZ_SCHEME */
   Lisp_Object val;
 
@@ -4971,7 +4977,7 @@ live_vector_holding (struct mem_node *m, void *p)
 	{
 	  struct Lisp_Vector *next = ADVANCE (vector, vector_nbytes (vector));
 	  if (vp < next && !PSEUDOVECTOR_TYPEP (&vector->header, PVEC_FREE))
-	    return make_lisp_vectorlike_ptr (vector);
+	    return vectorlike_lisp_obj (vector);
 	  vector = next;
 	}
     }
@@ -4981,7 +4987,7 @@ live_vector_holding (struct mem_node *m, void *p)
       struct Lisp_Vector *vector = large_vector_vec (m->start);
       struct Lisp_Vector *next = ADVANCE (vector, vector_nbytes (vector));
       if (vector <= vp && vp < next)
-	return make_lisp_vectorlike_ptr (vector);
+	return vectorlike_lisp_obj (vector);
     }
 #endif /* not HAVE_CHEZ_SCHEME */
   return Qnil;
@@ -5824,7 +5830,7 @@ static Lisp_Object
 make_pure_vector (ptrdiff_t len)
 {
 #ifdef HAVE_CHEZ_SCHEME
-  return Fmake_vector(Sfixnum(len), Qnil);
+  return Fmake_vector(chez_fixnum(len), Qnil);
 #else
   Lisp_Object new;
   size_t size = header_size + len * word_size;
@@ -7820,11 +7826,11 @@ init_alloc_once (void)
 #ifdef HAVE_CHEZ_SCHEME
   for (iptr i = 0; i < ARRAYELTS (lispsym); i++)
     {
-      lispsym[i] = Sstring_to_symbol (defsym_name[i]);
-      Slock_object(lispsym[i]);
+      lispsym[i] = chez_string_to_symbol (defsym_name[i]);
+      chez_lock_object(lispsym[i]);
     }
-  eassert (Ssymbolp (Qnil));
-  eassert (Qnil == Sstring_to_symbol ("nil"));
+  eassert (chez_symbolp (Qnil));
+  eassert (Qnil == chez_string_to_symbol ("nil"));
 #endif /* HAVE_CHEZ_SCHEME */
 
 #ifndef NIL_IS_ZERO
@@ -7986,7 +7992,7 @@ The time is in seconds as a floating point value.  */);
 
   defsubr (&Scons);
   defsubr (&Slist);
-  defsubr (&Svector);
+  defsubr (&chez_vector);
   defsubr (&Srecord);
   defsubr (&Sbool_vector);
   defsubr (&Smake_byte_code);
@@ -8034,9 +8040,7 @@ union
   enum CHARTAB_SIZE_BITS CHARTAB_SIZE_BITS;
   enum char_table_specials char_table_specials;
   enum char_bits char_bits;
-#ifndef HAVE_CHEZ_SCHEME
   enum CHECK_LISP_OBJECT_TYPE CHECK_LISP_OBJECT_TYPE;
-#endif /* not HAVE_CHEZ_SCHEME */
   enum DEFAULT_HASH_SIZE DEFAULT_HASH_SIZE;
 #ifndef HAVE_CHEZ_SCHEME
   enum Lisp_Bits Lisp_Bits;
