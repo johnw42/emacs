@@ -4412,12 +4412,17 @@ map_obarray (Lisp_Object obarray, void (*fn) (Lisp_Object, Lisp_Object), Lisp_Ob
 {
 #ifdef HAVE_CHEZ_SCHEME
   ptr table = scheme_obarray_table(obarray);
-  for (ptr tail = scheme_call1("hashtable-keys", table);
-       tail != chez_nil; tail = chez_cdr(tail))
+  ptr values_vec = SCHEME_FPTR_CALL (hashtable_values, table);
+  // Copy vector so we don't have to lock it.
+  iptr n = chez_vector_length (values_vec);
+  ptr *values = alloca (n * sizeof (ptr));
+  for (iptr i = 0; i < n; i++)
+    values[i] = chez_vector_ref (values_vec, i);
+  for (iptr i = 0; i < n; i++)
     {
-      chez_lock_object (tail);
-      (*fn) (chez_car (tail), arg);
-      chez_unlock_object (tail);
+      ptr sym = values[i];
+      eassert (SYMBOLP (sym));
+      (*fn) (sym, arg);
     }
 #else /* HAVE_CHEZ_SCHEME */
   ptrdiff_t i;

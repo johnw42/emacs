@@ -1550,13 +1550,19 @@ changing the value of a sequence `foo'.  */)
 
       if (n != ASIZE (seq))
 	{
-#ifdef HAVE_CHEZ_SCHEME
-          ptr new_seq = chez_make_vector (n, Qnil);
-	  for (i = n = 0; i < ASIZE (seq); ++i)
-	    if (NILP (Fequal (AREF (seq, i), elt)))
-              chez_vector_set (new_seq, i, AREF (seq, i));
-          seq = new_seq;
-#else /* HAVE_CHEZ_SCHEME */
+/* #ifdef HAVE_CHEZ_SCHEME */
+/*           Lisp_Object new_seq = Fmake_vector (make_number (n), Qnil); */
+/* 	  for (i = n = 0; i < ASIZE (seq); ++i) */
+/*             { */
+/*               Lisp_Object old_elt = AREF (seq, i); */
+/*               if (NILP (Fequal (old_elt, elt))) */
+/*                 { */
+/*                   ASET (new_seq, n, old_elt); */
+/*                   n++; */
+/*                 } */
+/*             } */
+/*           seq = new_seq; */
+/* #else /\* HAVE_CHEZ_SCHEME *\/ */
 	  struct Lisp_Vector *p = allocate_vector (n);
 
 	  for (i = n = 0; i < ASIZE (seq); ++i)
@@ -1564,7 +1570,7 @@ changing the value of a sequence `foo'.  */)
 	      p->contents[n++] = AREF (seq, i);
 
 	  XSETVECTOR (seq, p);
-#endif /* HAVE_CHEZ_SCHEME */
+/* #endif /\* HAVE_CHEZ_SCHEME *\/ */
 	}
     }
   else if (STRINGP (seq))
@@ -3698,7 +3704,11 @@ cmpfn_user_defined (struct hash_table_test *ht,
 static EMACS_UINT
 hashfn_eq (struct hash_table_test *ht, Lisp_Object key)
 {
+#ifdef HAVE_CHEZ_SCHEME
+  return SCHEME_FPTR_CALL(eq_hash, key);
+#else
   return XHASH (key) ^ XTYPE (key);
+#endif
 }
 
 /* Value is a hash code for KEY for use in hash table H which uses
@@ -3708,7 +3718,17 @@ hashfn_eq (struct hash_table_test *ht, Lisp_Object key)
 static EMACS_UINT
 hashfn_equal (struct hash_table_test *ht, Lisp_Object key)
 {
-  return sxhash (key, 0);
+  /* bool flag = false; */
+  /* if (CONSP(key) && VECTORLIKEP(XCAR(key)) && */
+  /*     datum_starts_with(XCAR(key), "#s(cl--generic cl-generic-generalizers ((0 #s(cl--generic-generalizer cl--generic-t-generalizer 0 (closure (cl-struct-cl--generic-generalizer-tags t) (_name &rest _) nil) (closure (cl-struct-cl--generic-generalizer-tags t) (_tag &rest _) (quote (t)))))) (#s(cl--generic-method (t) (:extra \"head\") t (closure (cl-struct-cl--generic-tags cl-struct-cl--generic-method-tags cl-struct-cl--generic-generalizer-tags t) (cl--cnm specializer) \"Support for (head VAL) specializers.")) */
+  /*   { */
+  /*     flag = true; */
+  /*     gdb_set_flag(0); */
+  /*   } */
+  EMACS_UINT final_hash = sxhash (key, 0);
+  /* if (flag) */
+  /*   printf("final hash = %p\n", (void*)final_hash); */
+  return final_hash;
 }
 
 /* Value is a hash code for KEY for use in hash table H which uses
@@ -3870,6 +3890,36 @@ copy_hash_table (struct Lisp_Hash_Table *h1)
   return table;
 }
 
+static EMACS_UINT
+hash_for_key (struct Lisp_Hash_Table *h, Lisp_Object key)
+{
+  return h->test.hashfn (&h->test, key);
+}
+
+static void
+check_hash_codes(struct Lisp_Hash_Table *h)
+{
+  /* for (ptrdiff_t i = 0; i < HASH_TABLE_SIZE (h); ++i) */
+  /*   if (!NILP (HASH_HASH (h, i))) */
+  /*     { */
+  /*       Lisp_Object key = HASH_KEY (h, i); */
+  /*       EMACS_UINT hash_code = hash_for_key (h, key); */
+  /*       EMACS_UINT expected_code = XUINT (HASH_HASH (h, i)); */
+  /*       eassert (hash_code == expected_code); */
+  /*     } */
+}
+
+static void
+check_hash_codes2(struct Lisp_Hash_Table *h)
+{
+  /* for (ptrdiff_t i = 0; i < HASH_TABLE_SIZE (h); ++i) */
+  /*   if (!NILP (HASH_HASH (h, i))) */
+  /*     { */
+  /*       ptrdiff_t found = hash_lookup(h, HASH_KEY (h, i), NULL); */
+  /*       eassert (found == i); */
+  /*     } */
+}
+
 
 /* Resize hash table H if it's too full.  If H cannot be resized
    because it's already too large, throw an error.  */
@@ -3879,6 +3929,20 @@ maybe_resize_hash_table (struct Lisp_Hash_Table *h)
 {
   if (h->next_free < 0)
     {
+      /* if (gdb_pop_flag(1)) */
+      /*   { */
+      /*     for (ptrdiff_t i = 0; i < HASH_TABLE_SIZE (h); ++i) */
+      /*       { */
+      /*         if (!NILP (HASH_KEY (h, i))) */
+      /*           { */
+      /*             printf ("%d: %p => %p\n", (int)i, (void*) HASH_KEY (h, i), (void*) HASH_HASH (h, i)); */
+      /*           } */
+      /*       } */
+      /*   } */
+
+      check_hash_codes(h);
+
+
       ptrdiff_t old_size = HASH_TABLE_SIZE (h);
       EMACS_INT new_size, index_size, nsize;
       ptrdiff_t i;
@@ -3952,18 +4016,11 @@ maybe_resize_hash_table (struct Lisp_Hash_Table *h)
             /* ptrdiff_t found = hash_lookup(h, HASH_KEY (h, i), NULL); */
             /* eassert (found == i); */
 	  }
+
+      check_hash_codes(h);
+      check_hash_codes2(h);
     }
-
-#ifdef HAVE_CHEZ_SCHEME
-  for (ptrdiff_t i = 0; i < HASH_TABLE_SIZE (h); ++i)
-    if (!NILP (HASH_HASH (h, i)))
-      {
-        ptrdiff_t found = hash_lookup(h, HASH_KEY (h, i), NULL);
-        eassert (found == i);
-      }
-#endif
 }
-
 
 /* Lookup KEY in hash table H.  If HASH is non-null, return in *HASH
    the hash code of KEY.  Value is the index of the entry in H
@@ -3972,6 +4029,8 @@ maybe_resize_hash_table (struct Lisp_Hash_Table *h)
 ptrdiff_t
 hash_lookup (struct Lisp_Hash_Table *h, Lisp_Object key, EMACS_UINT *hash)
 {
+  check_hash_codes(h);
+
   EMACS_UINT hash_code;
   ptrdiff_t start_of_bucket, i;
 
@@ -4001,9 +4060,16 @@ ptrdiff_t
 hash_put (struct Lisp_Hash_Table *h, Lisp_Object key, Lisp_Object value,
 	  EMACS_UINT hash)
 {
+  check_hash_codes(h);
+
   ptrdiff_t start_of_bucket, i;
 
   eassert ((hash & ~INTMASK) == 0);
+
+  /* if (symbol_is (value, ":cl--generic--under-construction")) */
+  /*   { */
+  /*     gdb_set_flag(1); */
+  /*   } */
 
   /* Increment count after resizing because resizing may fail.  */
   maybe_resize_hash_table (h);
@@ -4016,7 +4082,9 @@ hash_put (struct Lisp_Hash_Table *h, Lisp_Object key, Lisp_Object value,
   set_hash_value_slot (h, i, value);
 
   /* Remember its hash code.  */
+  eassert (hash == hash_for_key (h, key));
   set_hash_hash_slot (h, i, make_number (hash));
+  check_hash_codes(h);
 
   /* Add new entry to its collision chain.  */
   start_of_bucket = hash % ASIZE (h->index);
@@ -4031,6 +4099,8 @@ hash_put (struct Lisp_Hash_Table *h, Lisp_Object key, Lisp_Object value,
 void
 hash_remove_from_table (struct Lisp_Hash_Table *h, Lisp_Object key)
 {
+  check_hash_codes(h);
+
   EMACS_UINT hash_code = h->test.hashfn (&h->test, key);
   eassert ((hash_code & ~INTMASK) == 0);
   ptrdiff_t start_of_bucket = hash_code % ASIZE (h->index);
@@ -4073,6 +4143,8 @@ hash_remove_from_table (struct Lisp_Hash_Table *h, Lisp_Object key)
 static void
 hash_clear (struct Lisp_Hash_Table *h)
 {
+  check_hash_codes(h);
+
   if (h->count > 0)
     {
       ptrdiff_t i, size = HASH_TABLE_SIZE (h);
@@ -4311,12 +4383,20 @@ sxhash_list (Lisp_Object list, int depth)
   EMACS_UINT hash = 0;
   int i;
 
+  bool flag = false; /// gdb_pop_flag(0);
   if (depth < SXHASH_MAX_DEPTH)
     for (i = 0;
 	 CONSP (list) && i < SXHASH_MAX_LEN;
 	 list = XCDR (list), ++i)
       {
 	EMACS_UINT hash2 = sxhash (XCAR (list), depth + 1);
+        if (flag)
+          {
+            flag = false;
+            printf("hash2(%p %s) = %p\n", (void*)XCAR(list), gdb_print(XCAR(list)), (void*)hash2);
+            gdb_break();
+            sxhash (XCAR (list), depth + 1);
+          }
 	hash = sxhash_combine (hash, hash2);
       }
 

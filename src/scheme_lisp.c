@@ -20,11 +20,20 @@ ptr scheme_string_symbol = chez_false;
 iptr scheme_greatest_fixnum;
 iptr scheme_least_fixnum;
 iptr chez_fixnum_width;
+const char *last_scheme_function;
+const char *last_scheme_call_file;
+int last_scheme_call_line;
+
+unsigned gdb_flags = 0;
 
 SCHEME_FPTR_DEF(save_pointer, int, void *, const char *);
 SCHEME_FPTR_DEF(check_pointer, int, void *, const char *);
 SCHEME_FPTR_DEF(hashtablep, int, ptr);
 SCHEME_FPTR_DEF(print_to_bytevector, ptr, ptr);
+SCHEME_FPTR_DEF(save_origin, void, ptr);
+SCHEME_FPTR_DEF(print_origin, void, ptr);
+SCHEME_FPTR_DEF(eq_hash, uint32_t, ptr);
+SCHEME_FPTR_DEF(hashtable_values, ptr, ptr);
 
 static ptr lisp_to_scheme(Lisp_Object lisp_obj) {
   return lisp_obj;
@@ -243,6 +252,8 @@ get_scheme_func(const char *name)
   ptr sym = chez_string_to_symbol (name);
   eassert (chez_symbolp (sym));
   ptr code = chez_top_level_value (sym);
+  eassert ((uptr) code >= 0x1000);
+  chez_lock_object (code);
   return chez_foreign_callable_entry_point (code);
 }
 
@@ -274,6 +285,10 @@ void scheme_init(void) {
   SCHEME_FPTR_INIT(check_pointer);
   SCHEME_FPTR_INIT(hashtablep);
   SCHEME_FPTR_INIT(print_to_bytevector);
+  SCHEME_FPTR_INIT(save_origin);
+  SCHEME_FPTR_INIT(print_origin);
+  SCHEME_FPTR_INIT(eq_hash);
+  SCHEME_FPTR_INIT(hashtable_values);
 
   c_data_table = scheme_call0("make-eq-hashtable");
   chez_lock_object(c_data_table);
@@ -287,6 +302,12 @@ void scheme_init(void) {
 
   //atexit(scheme_deinit);
   scheme_initialized = true;
+}
+
+static void
+print_origin(ptr obj)
+{
+  SCHEME_FPTR_CALL(print_origin, obj);
 }
 
 // Converts a symbol or Scheme string to a Lisp string.
@@ -529,9 +550,6 @@ static const char *scheme_classify(ptr x)
 /* static bool scheme_outputportp(ptr x) { return Soutputportp(x); } */
 /* static bool scheme_recordp(ptr x) { return Srecordp(x); } */
 
-const char * gdb_print_scheme(Lisp_Object obj);
-const char * gdb_print(Lisp_Object obj);
-
 const char *
 gdb_print_scheme(Lisp_Object obj)
 {
@@ -752,5 +770,20 @@ symbol_is(ptr sym, const char *name)
     }
   return XSYMBOL(sym)->u.s.scheme_obj == other_sym;
 }
+
+bool
+datum_starts_with(ptr obj, const char *str)
+{
+  /* static const char *prev_str = NULL; */
+  /* static size_t prev_length = 0; */
+
+  /* if (str != prev_str) */
+  /*   { */
+  /*     prev_str = str; */
+  /*     prev_length = strlen(str); */
+  /*   } */
+  return strncmp(gdb_print(obj), str, strlen(str)) == 0;
+}
+
 
 #endif /* HAVE_CHEZ_SCHEME */

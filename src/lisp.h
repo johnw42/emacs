@@ -32,6 +32,7 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 #include <inttypes.h>
 #include <limits.h>
 
+#include <stdio.h> // for printf; TODO(jrw): Remove.
 #include <stdlib.h> // for abort()
 
 #include <intprops.h>
@@ -67,11 +68,18 @@ ptr to_scheme_string(ptr lstr);
 #define SCHEME_FPTR_INIT(name) \
   (scheme_fptr_##name = get_scheme_func ("c-" #name))
 #define SCHEME_FPTR_CALL(name, ...) \
-  (*scheme_fptr_##name)(__FILE__, __LINE__, __VA_ARGS__)
+  (last_scheme_function = #name, \
+    last_scheme_call_file = __FILE__, \
+    last_scheme_call_line = __LINE__, \
+   (*scheme_fptr_##name)(__FILE__, __LINE__, __VA_ARGS__))
 
 SCHEME_FPTR_DECL(save_pointer, int, void *, const char *);
 SCHEME_FPTR_DECL(check_pointer, int, void *, const char *);
 SCHEME_FPTR_DECL(hashtablep, int, ptr);
+SCHEME_FPTR_DECL(save_origin, void, ptr);
+SCHEME_FPTR_DECL(print_origin, void, ptr);
+SCHEME_FPTR_DECL(eq_hash, uint32_t, ptr);
+SCHEME_FPTR_DECL(hashtable_values, ptr, ptr);
 
 #define scheme_save_ptr(ptr, type) eassert(SCHEME_FPTR_CALL(save_pointer, ptr, type))
 #define scheme_check_ptr(ptr, type) eassert(SCHEME_FPTR_CALL(check_pointer, ptr, type))
@@ -82,7 +90,9 @@ extern ptr scheme_string_symbol;
 extern iptr scheme_greatest_fixnum;
 extern iptr scheme_least_fixnum;
 extern iptr chez_fixnum_width;
-extern const char *last_func_name;
+extern const char *last_scheme_function;
+extern const char *last_scheme_call_file;
+extern int last_scheme_call_line;
 
 #define SCHEME_ALLOC_C_DATA(key, type) \
   ((type *)scheme_alloc_c_data((key), sizeof(type)))
@@ -481,7 +491,7 @@ error !;
 #define lisp_h_make_number(n) (eassert (chez_fixnump(chez_integer(n))), chez_fixnum(n))
 # define lisp_h_XFASTINT(a) XINT (a)
 # define lisp_h_XINT(a) (chez_fixnum_value(a))
-#define lisp_h_XHASH(a) XUINT (a)
+#define lisp_h_XHASH(a) (SCHEME_FPTR_CALL(eq_hash, (a)))
 #define lisp_h_check_cons_list() ((void) 0)
 /* #define lisp_h_XCONS(a) ((a)->scheme_obj) */
 /* #ifndef GC_CHECK_CONS_LIST */
@@ -5548,12 +5558,40 @@ struct Lisp_Symbol *scheme_make_symbol(ptr name, enum symbol_interned interned);
 extern void visit_lisp_refs(Lisp_Object obj, void (*fun)(void *, Lisp_Object *, ptrdiff_t), void *data);
 extern void init_nil_refs(Lisp_Object obj);
 extern bool symbol_is(ptr sym, const char *name);
+extern bool datum_starts_with(ptr, const char *);
+
+void gdb_break(void);
+const char *gdb_print_scheme(Lisp_Object obj);
+const char *gdb_print(Lisp_Object obj);
+extern unsigned gdb_flags;
+
+INLINE void
+gdb_set_flag (int i)
+{
+  gdb_flags |= 1U << i;
+}
+
+INLINE void
+gdb_unset_flag (int i)
+{
+  gdb_flags &= ~(1U << i);
+}
+
+INLINE bool
+gdb_pop_flag (int i)
+{
+  if (gdb_flags & (1U << i))
+    {
+      gdb_unset_flag (i);
+      return true;
+    }
+  return false;
+}
+
 
 #endif /* HAVE_CHEZ_SCHEME */
 
 #define NIL_INIT LISPSYM_INITIALLY_(Qnil)
-
-void gdb_break(void);
 
 INLINE_HEADER_END
 

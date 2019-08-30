@@ -1966,6 +1966,7 @@ ptr scheme_malloc(iptr size)
 {
   ptr bytes = chez_make_bytevector(size + SCHEME_MALLOC_PADDING, 0);
   chez_lock_object(bytes);
+  SCHEME_FPTR_CALL(save_origin, bytes);
   return bytes;
 }
 
@@ -1976,6 +1977,7 @@ scheme_allocate (ptrdiff_t nbytes, ptr sym, ptr *vec_ptr)
 
   ptr vec = chez_make_vector(2, sym);
   chez_lock_object(vec);
+  SCHEME_FPTR_CALL(save_origin, vec);
   chez_vector_set(vec, 1, bytes);
   *vec_ptr = vec;
 
@@ -3220,7 +3222,8 @@ static void
 init_vectors (void)
 {
 #ifdef HAVE_CHEZ_SCHEME
-  zero_vector = chez_make_vector (0, Qnil);
+  zero_vector = chez_false;
+  zero_vector = Fmake_vector (make_number(0), Qnil);
 #else /* HAVE_CHEZ_SCHEME */
   zero_vector = make_pure_vector (0);
 #endif /* HAVE_CHEZ_SCHEME */
@@ -3478,7 +3481,7 @@ allocate_vectorlike (ptrdiff_t len)
 
   MALLOC_BLOCK_INPUT;
 
-  if (len == 0)
+  if (len == 0 && zero_vector != chez_false)
     p = xv_unwrap (XVECTOR (zero_vector));
   else
     {

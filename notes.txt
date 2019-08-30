@@ -1,0 +1,5 @@
+car(key) = #s(cl--generic cl-generic-generalizers ((0 #s(cl--generic-generalizer cl--generic-t-generalizer 0 (closure (cl-struct-cl--generic-generalizer-tags t) (_name &rest _) nil) (closure (cl-struct-cl--generic-generalizer-tags t) (_tag &rest _) (quote (t)))))) (#s(cl--generic-method (t) nil nil (closure (cl-struct-cl--generic-tags cl-struct-cl--generic-method-tags cl-struct-cl--generic-generalizer-tags t) (specializer) "Support for the catch-all t specializer which always matches." (progn (if (eq specializer t) (list cl--generic-t-generalizer) (error "Unknown specializer %S" specializer)))))) nil)
+
+hash(car(key)) = 6031890540156476
+
+hash(car(key)) = 6031890540156476
