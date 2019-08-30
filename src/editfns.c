@@ -4595,10 +4595,10 @@ styled_format (ptrdiff_t nargs, Lisp_Object *args, bool message)
 		   are wider than doubles.  */
 #ifdef HAVE_CHEZ_SCHEME
 		INT_AS_LDBL = 1,
-#else
+#else /* not HAVE_CHEZ_SCHEME */
 		INT_AS_LDBL = (DIG_BITS_LBOUND * DBL_MANT_DIG < FIXNUM_BITS - 1
 			       && DBL_MANT_DIG < LDBL_MANT_DIG),
-#endif
+#endif /* not HAVE_CHEZ_SCHEME */
 
 		/* Maximum precision for a %f conversion such that the
 		   trailing output digit might be nonzero.  Any precision

@@ -3522,7 +3522,7 @@ read1 (Lisp_Object readcharfun, int *pch, bool first_in_list)
               Lisp_Object name = make_specified_string
                 (read_buffer, nchars, nbytes, multibyte);
               result = Fintern(name, Vobarray);
-#else /* HAVE_CHEZ_SCHEME */
+#else /* not HAVE_CHEZ_SCHEME */
 	      /* Don't create the string object for the name unless
 		 we're going to retain it in a new symbol.
 
@@ -3540,7 +3540,7 @@ read1 (Lisp_Object readcharfun, int *pch, bool first_in_list)
 					     multibyte);
 		  result = intern_driver (name, obarray, tem);
 		}
-#endif /* HAVE_CHEZ_SCHEME */
+#endif /* not HAVE_CHEZ_SCHEME */
 	    }
 
 	  if (EQ (Vread_with_symbol_positions, Qt)
@@ -4222,7 +4222,7 @@ it defaults to the value of `obarray'.  */)
   CHECK_STRING (string);
   Lisp_Object sym = scheme_obarray_ensure (obarray, string);
   return sym;
-#else /* HAVE_CHEZ_SCHEME */
+#else /* not HAVE_CHEZ_SCHEME */
   Lisp_Object tem;
 
   obarray = check_obarray (NILP (obarray) ? Vobarray : obarray);
@@ -4233,7 +4233,7 @@ it defaults to the value of `obarray'.  */)
     tem = intern_driver (NILP (Vpurify_flag) ? string : Fpurecopy (string),
 			 obarray, tem);
   return tem;
-#endif /* HAVE_CHEZ_SCHEME */
+#endif /* not HAVE_CHEZ_SCHEME */
 }
 
 DEFUN ("intern-soft", Fintern_soft, Sintern_soft, 1, 2, 0,
@@ -4254,7 +4254,7 @@ it defaults to the value of `obarray'.  */)
   eassert (chez_stringp(name));
   ptr found = scheme_call3("hashtable-ref", table, name, chez_false);
   return found == chez_false ? Qnil : found;
-#else /* HAVE_CHEZ_SCHEME */
+#else /* not HAVE_CHEZ_SCHEME */
   register Lisp_Object tem, string;
 
   if (NILP (obarray)) obarray = Vobarray;
@@ -4273,7 +4273,7 @@ it defaults to the value of `obarray'.  */)
     return Qnil;
   else
     return tem;
-#endif /* HAVE_CHEZ_SCHEME */
+#endif /* not HAVE_CHEZ_SCHEME */
 }
 
 DEFUN ("unintern", Funintern, Sunintern, 1, 2, 0,
@@ -4300,7 +4300,7 @@ usage: (unintern NAME OBARRAY)  */)
     }
   chez_unlock_object(key);
   return result;
-#else /* HAVE_CHEZ_SCHEME */
+#else /* not HAVE_CHEZ_SCHEME */
   register Lisp_Object string, tem;
   size_t hash;
 
@@ -4363,7 +4363,7 @@ usage: (unintern NAME OBARRAY)  */)
 	}
     }
   return Qt;
-#endif /* HAVE_CHEZ_SCHEME */
+#endif /* not HAVE_CHEZ_SCHEME */
 }
 
 #ifndef HAVE_CHEZ_SCHEME
@@ -4424,7 +4424,7 @@ map_obarray (Lisp_Object obarray, void (*fn) (Lisp_Object, Lisp_Object), Lisp_Ob
       eassert (SYMBOLP (sym));
       (*fn) (sym, arg);
     }
-#else /* HAVE_CHEZ_SCHEME */
+#else /* not HAVE_CHEZ_SCHEME */
   ptrdiff_t i;
   register Lisp_Object tail;
   CHECK_VECTOR (obarray);
@@ -4440,7 +4440,7 @@ map_obarray (Lisp_Object obarray, void (*fn) (Lisp_Object, Lisp_Object), Lisp_Ob
 	    XSETSYMBOL (tail, XSYMBOL (tail)->u.s.next);
 	  }
     }
-#endif /* HAVE_CHEZ_SCHEME */
+#endif /* not HAVE_CHEZ_SCHEME */
 }
 
 static void
@@ -4478,10 +4478,10 @@ init_obarray (void)
       eassert (chez_symbolp (lispsym[i]));
       scheme_obarray_ensure (initial_obarray, lispsym[i]);
     }
-#else /* HAVE_CHEZ_SCHEME */
+#else /* not HAVE_CHEZ_SCHEME */
   for (int i = 0; i < ARRAYELTS (lispsym); i++)
     define_symbol (builtin_lisp_symbol (i), defsym_name[i]);
-#endif /* HAVE_CHEZ_SCHEME */
+#endif /* not HAVE_CHEZ_SCHEME */
 
   DEFSYM (Qunbound, "unbound");
 
@@ -4518,11 +4518,11 @@ defsubr (struct Lisp_Subr *sname)
   subr->symbol = sym;
   subr->intspec = sname->intspec;
   subr->doc = sname->doc;
-#else
+#else /* not HAVE_CHEZ_SCHEME */
   sym = intern_c_string (sname->symbol_name);
   XSETPVECTYPE (AS_XV (sname), PVEC_SUBR);
   XSETSUBR (tem, sname);
-#endif
+#endif /* not HAVE_CHEZ_SCHEME */
   set_symbol_function (sym, tem);
 }
 

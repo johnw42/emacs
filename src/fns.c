@@ -1906,9 +1906,9 @@ sort_vector (Lisp_Object vector, Lisp_Object predicate)
     tmp[i] = make_number (0);
 #ifdef HAVE_CHEZ_SCHEME
   eassert(!HAVE_CHEZ_SCHEME);
-#else /* HAVE_CHEZ_SCHEME */
+#else /* not HAVE_CHEZ_SCHEME */
   sort_vector_inplace (predicate, len, XVECTOR (vector).vptr->contents, tmp);
-#endif /* HAVE_CHEZ_SCHEME */
+#endif /* not HAVE_CHEZ_SCHEME */
   SAFE_FREE ();
 }
 
@@ -3706,9 +3706,9 @@ hashfn_eq (struct hash_table_test *ht, Lisp_Object key)
 {
 #ifdef HAVE_CHEZ_SCHEME
   return SCHEME_FPTR_CALL(eq_hash, key);
-#else
+#else /* not HAVE_CHEZ_SCHEME */
   return XHASH (key) ^ XTYPE (key);
-#endif
+#endif /* not HAVE_CHEZ_SCHEME */
 }
 
 /* Value is a hash code for KEY for use in hash table H which uses

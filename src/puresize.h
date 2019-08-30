@@ -28,7 +28,7 @@ INLINE_HEADER_BEGIN
 #define PURE_P(obj) false
 #define CHECK_IMPURE(obj, ptr) ((void)0)
 
-#endif
+#endif /* HAVE_CHEZ_SCHEME */
 
 /* Define PURESIZE, the number of bytes of pure Lisp code to leave space for.
 
@@ -118,7 +118,7 @@ CHECK_IMPURE (Lisp_Object obj, void *ptr)
 # define CHECK_IMPURE(obj, ptr) puresize_h_CHECK_IMPURE (obj, ptr)
 #endif
 
-#endif /* HAVE_CHEZ_SCHEME */
+#endif /* not HAVE_CHEZ_SCHEME */
 
 INLINE_HEADER_END
 

@@ -1412,9 +1412,9 @@ print_vectorlike (Lisp_Object obj, Lisp_Object printcharfun, bool escapeflag,
       print_c_string ("#<subr ", printcharfun);
 #ifdef HAVE_CHEZ_SCHEME
       print_object (XSUBR (obj)->symbol, printcharfun, false);
-#else
+#else /* not HAVE_CHEZ_SCHEME */
       print_c_string (XSUBR (obj)->symbol_name, printcharfun);
-#endif
+#endif /* not HAVE_CHEZ_SCHEME */
       printchar ('>', printcharfun);
       break;
 

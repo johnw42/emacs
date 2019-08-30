@@ -34,13 +34,13 @@ static struct thread_state *main_thread_ptr;
 struct thread_state *current_thread = NULL;
 
 static struct thread_state *all_threads = NULL;
-#else /* HAVE_CHEZ_SCHEME */
+#else /* not HAVE_CHEZ_SCHEME */
 static struct thread_state main_thread;
 
 struct thread_state *current_thread = &main_thread;
 
 static struct thread_state *all_threads = &main_thread;
-#endif /* HAVE_CHEZ_SCHEME */
+#endif /* not HAVE_CHEZ_SCHEME */
 
 static sys_mutex_t global_lock;
 
@@ -1024,11 +1024,11 @@ init_main_thread (void)
   main_thread_ptr->m_re_match_object = Qnil;
   current_thread = main_thread_ptr;
   all_threads = main_thread_ptr;
-#else /* HAVE_CHEZ_SCHEME */
+#else /* not HAVE_CHEZ_SCHEME */
   main_thread.header.size
     = PSEUDOVECSIZE (struct thread_state, m_stack_bottom);
   XSETPVECTYPE (AS_XV (&main_thread), PVEC_THREAD);
-#endif /* HAVE_CHEZ_SCHEME */
+#endif /* not HAVE_CHEZ_SCHEME */
   main_thread.m_last_thing_searched = Qnil;
   main_thread.m_saved_last_thing_searched = Qnil;
   main_thread.name = Qnil;
@@ -1055,7 +1055,7 @@ init_threads (void)
 {
 #ifndef HAVE_CHEZ_SCHEME
   init_main_thread ();
-#endif
+#endif /* not HAVE_CHEZ_SCHEME */
   sys_cond_init (&main_thread.thread_condvar);
   sys_mutex_init (&global_lock);
   sys_mutex_lock (&global_lock);

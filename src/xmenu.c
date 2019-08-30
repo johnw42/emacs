@@ -2419,9 +2419,9 @@ syms_of_xmenu (void)
 #ifdef HAVE_CHEZ_SCHEME
   Ffset (intern_c_string ("accelerate-menu"),
 	 intern_c_string (Sx_menu_bar_open_internal.init_symbol_name));
-#else
+#else /* not HAVE_CHEZ_SCHEME */
   Ffset (intern_c_string ("accelerate-menu"),
 	 intern_c_string (Sx_menu_bar_open_internal.symbol_name));
-#endif
+#endif /* not HAVE_CHEZ_SCHEME */
 #endif
 }

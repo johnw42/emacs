@@ -58,7 +58,7 @@ struct buffer *all_buffers;
 struct buffer *buffer_defaults_ptr = NULL;
 struct buffer *buffer_local_flags_ptr = NULL;
 struct buffer *buffer_local_symbols_ptr = NULL;
-#else /* HAVE_CHEZ_SCHEME */
+#else /* not HAVE_CHEZ_SCHEME */
 /* This structure holds the default values of the buffer-local variables
    defined with DEFVAR_PER_BUFFER, that have special slots in each buffer.
    The default value occupies the same slot in this structure
@@ -90,7 +90,7 @@ struct buffer buffer_local_flags;
    buffer-local.  It is indexed and accessed in the same way as the above.  */
 
 struct buffer buffer_local_symbols;
-#endif /* HAVE_CHEZ_SCHEME */
+#endif /* not HAVE_CHEZ_SCHEME */
 
 /* Return the symbol of the per-buffer variable at offset OFFSET in
    the buffer structure.  */

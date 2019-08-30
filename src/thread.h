@@ -212,9 +212,9 @@ XTHREAD (Lisp_Object a)
   struct thread_state *p = XUNTAG_VECTORLIKE (a);
   //scheme_check_ptr(p, "thread");
   return p;
-#else
+#else /* not HAVE_CHEZ_SCHEME */
   return XUNTAG_VECTORLIKE (a);
-#endif
+#endif /* not HAVE_CHEZ_SCHEME */
 }
 
 /* A mutex in lisp is represented by a system condition variable.

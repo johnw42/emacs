@@ -1189,7 +1189,7 @@ extern struct buffer *buffer_local_symbols_ptr;
 #define buffer_defaults (*buffer_defaults_ptr)
 #define buffer_local_flags (*buffer_local_flags_ptr)
 #define buffer_local_symbols (*buffer_local_symbols_ptr)
-#else /* HAVE_CHEZ_SCHEME */
+#else /* not HAVE_CHEZ_SCHEME */
 /* This structure holds the default values of the buffer-local variables
    that have special slots in each buffer.
    The default value occupies the same slot in this structure
@@ -1220,7 +1220,7 @@ extern struct buffer buffer_local_flags;
    that don't have such names.  */
 
 extern struct buffer buffer_local_symbols;
-#endif /* HAVE_CHEZ_SCHEME */
+#endif /* not HAVE_CHEZ_SCHEME */
 
 extern void delete_all_overlays (struct buffer *);
 extern void reset_buffer (struct buffer *);

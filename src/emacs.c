@@ -1220,7 +1220,7 @@ Using an Emacs configured with --with-x-toolkit=lucid does not have this problem
       init_threads_once ();
 #ifdef HAVE_CHEZ_SCHEME
       scheme_init_buffer_once ();
-#endif
+#endif /* HAVE_CHEZ_SCHEME */
       init_obarray ();
       init_eval_once ();
       init_charset_once ();

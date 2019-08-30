@@ -630,12 +630,12 @@ the same file name is found in the `doc-directory'.  */)
 
 #ifdef HAVE_CHEZ_SCHEME
           sym = Fintern(make_string(p + 2, end - p - 2), Qnil);
-#else /* HAVE_CHEZ_SCHEME */
+#else /* not HAVE_CHEZ_SCHEME */
 	  sym = oblookup (Vobarray, p + 2,
 			  multibyte_chars_in_text ((unsigned char *) p + 2,
 						   end - p - 2),
 			  end - p - 2);
-#endif /* HAVE_CHEZ_SCHEME */
+#endif /* not HAVE_CHEZ_SCHEME */
 	  /* Check skip_file so that when a function is defined several
 	     times in different files (typically, once in xterm, once in
 	     w32term, ...), we only pay attention to the one that

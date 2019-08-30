@@ -118,15 +118,15 @@ scheme_locked_symbol(const char *name) {
 #ifndef HAVE_CHEZ_SCHEME
 #define scheme_save_ptr(ptr, type) ((void)0)
 #define scheme_check_ptr(ptr, type) ((void)0)
-#endif
+#endif /* not HAVE_CHEZ_SCHEME */
 
 #ifdef HAVE_CHEZ_SCHEME
 #define CONST_UNLESS_SCHEME
 #define SCHEME_UNUSED(var) ((void)var)
-#else
+#else /* not HAVE_CHEZ_SCHEME */
 #define CONST_UNLESS_SCHEME const
 #define SCHEME_UNUSED(var)
-#endif
+#endif /* not HAVE_CHEZ_SCHEME */
 
 #define PV_LISP_FIELD(name) Lisp_Object name
 //#define PV_LISP_FIELD(name) Lisp_Object name##_
@@ -368,7 +368,7 @@ extern ptr scheme_function_for_name(const char *name);
 #ifdef HAVE_CHEZ_SCHEME
 #define GCALIGNMENT 8
 #define FIXNUM_BITS chez_fixnum_width
-#else
+#else /* not HAVE_CHEZ_SCHEME */
 enum Lisp_Bits
   {
     /* 2**GCTYPEBITS.  This must be a macro that expands to a literal
@@ -394,7 +394,7 @@ enum Lisp_Bits
    This can be used in #if, e.g., '#if USE_LSB_TAG' below expands to an
    expression involving VAL_MAX.  */
 #define VAL_MAX (EMACS_INT_MAX >> (GCTYPEBITS - 1))
-#endif
+#endif /* not HAVE_CHEZ_SCHEME */
 
 /* Whether the least-significant bits of an EMACS_INT contain the tag.
    On hosts where pointers-as-ints do not exceed VAL_MAX / 2, USE_LSB_TAG is:
@@ -404,9 +404,9 @@ enum Lisp_Bits
 DEFINE_GDB_SYMBOL_BEGIN (bool, USE_LSB_TAG)
 #ifdef HAVE_CHEZ_SCHEME
 #define USE_LSB_TAG 1
-#else
+#else /* not HAVE_CHEZ_SCHEME */
 #define USE_LSB_TAG (VAL_MAX / 2 < INTPTR_MAX)
-#endif
+#endif /* not HAVE_CHEZ_SCHEME */
 DEFINE_GDB_SYMBOL_END (USE_LSB_TAG)
 
 #ifndef HAVE_CHEZ_SCHEME
@@ -420,7 +420,7 @@ DEFINE_GDB_SYMBOL_END (VALMASK)
 	"Try 'configure --with-wide-int' to work around the problem."
 error !;
 #endif
-#endif
+#endif /* not HAVE_CHEZ_SCHEME */
 
 /* Some operations are so commonly executed that they are implemented
    as macros, not functions, because otherwise runtime performance would
@@ -509,7 +509,7 @@ error !;
 /* 			      GCALIGNMENT) */
 /* #endif */
 
-#else /* HAVE_CHEZ_SCHEME */
+#else /* not HAVE_CHEZ_SCHEME */
 
 #if CHECK_LISP_OBJECT_TYPE
 # define lisp_h_XLI(o) CHECK_NOT_ZERO ((o).i)
@@ -562,7 +562,7 @@ error !;
 			      GCALIGNMENT)
 #endif
 
-#endif /* HAVE_CHEZ_SCHEME */
+#endif /* not HAVE_CHEZ_SCHEME */
 
 /* When compiling via gcc -O0, define the key operations as macros, as
    Emacs is too slow otherwise.  To disable this optimization, compile
@@ -625,9 +625,9 @@ error !;
    extending their range from, e.g., -2^28..2^28-1 to -2^29..2^29-1.  */
 #ifdef HAVE_CHEZ_SCHEME
 #define INTMASK (scheme_greatest_fixnum)
-#else
+#else /* not HAVE_CHEZ_SCHEME */
 #define INTMASK (EMACS_INT_MAX >> (INTTYPEBITS - 1))
-#endif
+#endif /* not HAVE_CHEZ_SCHEME */
 #define case_Lisp_Int case Lisp_Int0: case Lisp_Int1
 
 /* Idea stolen from GDB.  Pedantic GCC complains about enum bitfields,
@@ -769,7 +769,7 @@ typedef ptr Lisp_Object;
 #undef CHECK_LISP_OBJECT_TYPE
 enum CHECK_LISP_OBJECT_TYPE { CHECK_LISP_OBJECT_TYPE = true };
 
-#else /* HAVE_CHEZ_SCHEME */
+#else /* not HAVE_CHEZ_SCHEME */
 
 #ifdef CHECK_LISP_OBJECT_TYPE
 
@@ -787,7 +787,7 @@ typedef EMACS_INT Lisp_Object;
 #define LISP_INITIALLY(i) (i)
 enum CHECK_LISP_OBJECT_TYPE { CHECK_LISP_OBJECT_TYPE = false };
 #endif /* CHECK_LISP_OBJECT_TYPE */
-#endif /* HAVE_CHEZ_SCHEME */
+#endif /* not HAVE_CHEZ_SCHEME */
 
 /* Forward declarations.  */
 
@@ -839,7 +839,7 @@ INLINE Lisp_Object
 
 #ifdef HAVE_CHEZ_SCHEME
 enum Lisp_Type XTYPE (Lisp_Object a);
-#else /* HAVE_CHEZ_SCHEME */
+#else /* not HAVE_CHEZ_SCHEME */
 INLINE enum Lisp_Type
 (XTYPE) (Lisp_Object a)
 {
@@ -850,7 +850,7 @@ INLINE enum Lisp_Type
   return USE_LSB_TAG ? i & ~VALMASK : i >> VALBITS;
 #endif
 }
-#endif /* HAVE_CHEZ_SCHEME */
+#endif /* not HAVE_CHEZ_SCHEME */
 
 INLINE void
 (CHECK_TYPE) (int ok, Lisp_Object predicate, Lisp_Object x)
@@ -931,7 +931,7 @@ struct Lisp_Symbol
 
 #ifdef HAVE_CHEZ_SCHEME
       ptr scheme_obj;
-#endif
+#endif /* HAVE_CHEZ_SCHEME */
 
       /* The symbol's name, as a Lisp string.  */
       Lisp_Object name;
@@ -1015,10 +1015,10 @@ verify (alignof (struct Lisp_Symbol) % GCALIGNMENT == 0);
 #define LISPSYM_INITIALLY_(name) \
   ((ptr)((i##name << 8) | 0xdeadface0000000fUL))
 void fixup_lispsym_init(ptr *p);
-#else
+#else /* not HAVE_CHEZ_SCHEME */
 #define LISPSYM_INITIALLY_(name) LISP_INITIALLY (XLI_BUILTIN_LISPSYM (i##name))
 INLINE void fixup_lispsym_init(const Lisp_Object *p) {}
-#endif
+#endif /* not HAVE_CHEZ_SCHEME */
 
 /* Declare extern constants for Lisp symbols.  These can be helpful
    when using a debugger like GDB, on older platforms where the debug
@@ -1027,11 +1027,11 @@ INLINE void fixup_lispsym_init(const Lisp_Object *p) {}
 #define DEFINE_LISP_SYMBOL(name) \
   DEFINE_GDB_SYMBOL_BEGIN (Lisp_Object, name) \
   DEFINE_GDB_SYMBOL_END (LISPSYM_INITIALLY_(name))
-#else
+#else /* not HAVE_CHEZ_SCHEME */
 #define DEFINE_LISP_SYMBOL(name) \
   DEFINE_GDB_SYMBOL_BEGIN (Lisp_Object, name) \
   DEFINE_GDB_SYMBOL_END (LISPSYM_INITIALLY_ (name))
-#endif
+#endif /* not HAVE_CHEZ_SCHEME */
 
 /* The index of the C-defined Lisp symbol SYM.
    This can be used in a static initializer.  */
@@ -1085,9 +1085,9 @@ union vectorlike_header
       ptrdiff_t size;
       ptr scheme_obj;
     } s;
-#else /* HAVE_CHEZ_SCHEME */
+#else /* not HAVE_CHEZ_SCHEME */
     char alignas (GCALIGNMENT) gcaligned;
-#endif /* HAVE_CHEZ_SCHEME */
+#endif /* not HAVE_CHEZ_SCHEME */
   };
 #ifndef HAVE_CHEZ_SCHEME
 verify (alignof (union vectorlike_header) % GCALIGNMENT == 0);
@@ -1101,7 +1101,7 @@ INLINE bool
 
 #ifdef HAVE_CHEZ_SCHEME
 struct Lisp_Symbol * (XSYMBOL) (Lisp_Object a);
-#else
+#else /* not HAVE_CHEZ_SCHEME */
 INLINE struct Lisp_Symbol *
 (XSYMBOL) (Lisp_Object a)
 {
@@ -1114,7 +1114,7 @@ INLINE struct Lisp_Symbol *
   return p;
 #endif
 }
-#endif
+#endif /* not HAVE_CHEZ_SCHEME */
 
 #ifndef HAVE_CHEZ_SCHEME
 INLINE Lisp_Object
@@ -1216,10 +1216,10 @@ enum More_Lisp_Bits
 #ifdef HAVE_CHEZ_SCHEME
 #define MOST_POSITIVE_FIXNUM scheme_greatest_fixnum
 #define MOST_NEGATIVE_FIXNUM scheme_least_fixnum
-#else
+#else /* not HAVE_CHEZ_SCHEME */
 #define MOST_POSITIVE_FIXNUM (EMACS_INT_MAX >> INTTYPEBITS)
 #define MOST_NEGATIVE_FIXNUM (-1 - MOST_POSITIVE_FIXNUM)
-#endif
+#endif /* not HAVE_CHEZ_SCHEME */
 
 #if USE_LSB_TAG
 
@@ -1302,10 +1302,10 @@ XUINT (Lisp_Object a)
 {
 #ifdef HAVE_CHEZ_SCHEME
   return (EMACS_UINT) XINT(a);
-#else
+#else /* not HAVE_CHEZ_SCHEME */
   EMACS_UINT i = XLI (a);
   return USE_LSB_TAG ? i >> INTTYPEBITS : i & INTMASK;
-#endif
+#endif /* not HAVE_CHEZ_SCHEME */
 }
 
 /* Return A's (Lisp-integer sized) hash.  Happens to be like XUINT
@@ -1324,11 +1324,11 @@ make_natnum (EMACS_INT n)
 {
 #ifdef HAVE_CHEZ_SCHEME
   return make_number (n);
-#else
+#else /* not HAVE_CHEZ_SCHEME */
   eassert (0 <= n && n <= MOST_POSITIVE_FIXNUM);
   EMACS_INT int0 = Lisp_Int0;
   return USE_LSB_TAG ? make_number (n) : XIL (n + (int0 << VALBITS));
-#endif
+#endif /* not HAVE_CHEZ_SCHEME */
 }
 
 /* Return true if X and Y are the same object.  */
@@ -1384,14 +1384,14 @@ set_vectorlike_lisp_obj (void *vptr, Lisp_Object obj)
   ((union vectorlike_header *) vptr)->s.scheme_obj = obj;
 }
 
-#else /* HAVE_CHEZ_SCHEME */
+#else /* not HAVE_CHEZ_SCHEME */
 
 INLINE Lisp_Object vectorlike_lisp_obj(void *vptr)
 {
   return make_lisp_ptr (vptr, Lisp_Vectorlike);
 }
 
-#endif /* HAVE_CHEZ_SCHEME */
+#endif /* not HAVE_CHEZ_SCHEME */
 
 #ifdef HAVE_CHEZ_SCHEME
 
@@ -1410,7 +1410,7 @@ INLINE Lisp_Object vectorlike_lisp_obj(void *vptr)
 #define XUNTAG_VECTORLIKE(a) (scheme_malloc_ptr (chez_vector_ref (a, 1)))
 #define XUNTAG_MISC(a) XUNTAG_VECTORLIKE (a)
 
-#else /* HAVE_CHEZ_SCHEME */
+#else /* not HAVE_CHEZ_SCHEME */
 
 #define XSETINT(a, b) ((a) = make_number (b))
 #define XSETFASTINT(a, b) ((a) = make_natnum (b))
@@ -1424,7 +1424,7 @@ INLINE Lisp_Object vectorlike_lisp_obj(void *vptr)
 #define XUNTAG_VECTORLIKE(a) XUNTAG (a, Lisp_Vectorlike)
 #define XUNTAG_MISC(a) XUNTAG (a, Lisp_Misc)
 
-#endif /* HAVE_CHEZ_SCHEME */
+#endif /* not HAVE_CHEZ_SCHEME */
 
 /* Pseudovector types.  */
 
@@ -1588,9 +1588,9 @@ XSETCAR (Lisp_Object c, Lisp_Object n)
   (void) XLI (n);
 #ifdef HAVE_CHEZ_SCHEME
   chez_set_car(c, n);
-#else /* HAVE_CHEZ_SCHEME */
+#else /* not HAVE_CHEZ_SCHEME */
   *xcar_addr (c) = n;
-#endif /* HAVE_CHEZ_SCHEME */
+#endif /* not HAVE_CHEZ_SCHEME */
 }
 INLINE void
 XSETCDR (Lisp_Object c, Lisp_Object n)
@@ -1598,9 +1598,9 @@ XSETCDR (Lisp_Object c, Lisp_Object n)
   (void) XLI (n);
 #ifdef HAVE_CHEZ_SCHEME
   chez_set_cdr(c, n);
-#else /* HAVE_CHEZ_SCHEME */
+#else /* not HAVE_CHEZ_SCHEME */
   *xcdr_addr (c) = n;
-#endif /* HAVE_CHEZ_SCHEME */
+#endif /* not HAVE_CHEZ_SCHEME */
 }
 
 /* Take the car or cdr of something whose type is not known.  */
@@ -1666,9 +1666,9 @@ STRINGP (Lisp_Object x)
 {
 #ifdef HAVE_CHEZ_SCHEME
   return SCHEME_VECTORP (x, scheme_string_symbol);
-#else /* HAVE_CHEZ_SCHEME */
+#else /* not HAVE_CHEZ_SCHEME */
   return XTYPE (x) == Lisp_String;
-#endif /* HAVE_CHEZ_SCHEME */
+#endif /* not HAVE_CHEZ_SCHEME */
 }
 
 INLINE void
@@ -1694,9 +1694,9 @@ XSTRING (Lisp_Object a)
   /*       chez_bytevector_length (scheme_call1 ("string->utf8", a)); */
   /*   } */
   /* return p; */
-#else /* HAVE_CHEZ_SCHEME */
+#else /* not HAVE_CHEZ_SCHEME */
   return XUNTAG (a, Lisp_String);
-#endif /* HAVE_CHEZ_SCHEME */
+#endif /* not HAVE_CHEZ_SCHEME */
 }
 
 /* True if STR is a multibyte string.  */
@@ -2565,9 +2565,9 @@ struct Lisp_Subr
 #ifdef HAVE_CHEZ_SCHEME
     const char *init_symbol_name;
     ptr symbol;
-#else
+#else /* not HAVE_CHEZ_SCHEME */
     const char *symbol_name;
-#endif
+#endif /* not HAVE_CHEZ_SCHEME */
     const char *intspec;
     EMACS_INT doc;
   };
@@ -2909,12 +2909,12 @@ SXHASH_REDUCE (EMACS_UINT x)
   ENUM_BF (Lisp_Misc_Type) type : 16;           \
   bool_bf gcmarkbit : 1;                        \
   unsigned spacer : 15 - (extra_bits)
-#else /* HAVE_CHEZ_SCHEME */
+#else /* not HAVE_CHEZ_SCHEME */
 #define MISC_HEADER_FIELDS(extra_bits)          \
   ENUM_BF (Lisp_Misc_Type) type : 16;           \
   bool_bf gcmarkbit : 1;                        \
   unsigned spacer : 15 - (extra_bits)
-#endif /* HAVE_CHEZ_SCHEME */
+#endif /* not HAVE_CHEZ_SCHEME */
 
 struct Lisp_Misc_Any		/* Supertype of all Misc types.  */
 {
@@ -3421,9 +3421,9 @@ XFLOAT_DATA (Lisp_Object f)
 #ifdef HAVE_CHEZ_SCHEME
   eassert (FLOATP (f));
   return chez_flonum_value(f);
-#else /* HAVE_CHEZ_SCHEME */
+#else /* not HAVE_CHEZ_SCHEME */
   return XFLOAT (f)->u.data;
-#endif /* HAVE_CHEZ_SCHEME */
+#endif /* not HAVE_CHEZ_SCHEME */
 }
 
 /* Most hosts nowadays use IEEE floating point, so they use IEC 60559
@@ -3697,7 +3697,7 @@ CHECK_NUMBER_CDR (Lisp_Object x)
        { .a ## maxargs = fnname },					\
        minargs, maxargs, lname, chez_false, intspec, 0};                    \
    Lisp_Object fnname
-#else /* HAVE_CHEZ_SCHEME */
+#else /* not HAVE_CHEZ_SCHEME */
 /* This version of DEFUN declares a function prototype with the right
    arguments, so we can catch errors with maxargs at compile-time.  */
 #ifdef _MSC_VER
@@ -3717,7 +3717,7 @@ CHECK_NUMBER_CDR (Lisp_Object x)
        minargs, maxargs, lname, intspec, 0};				\
    Lisp_Object fnname
 #endif
-#endif /* HAVE_CHEZ_SCHEME */
+#endif /* not HAVE_CHEZ_SCHEME */
 
 
 /* defsubr (Sname);
@@ -4471,9 +4471,9 @@ extern struct Lisp_Vector *allocate_pseudovector (int, int, int,
 extern bool gc_in_progress;
 #ifdef HAVE_CHEZ_SCHEME
 #define make_float chez_flonum
-#else /* HAVE_CHEZ_SCHEME */
+#else /* not HAVE_CHEZ_SCHEME */
 extern Lisp_Object make_float (double);
-#endif /* HAVE_CHEZ_SCHEME */
+#endif /* not HAVE_CHEZ_SCHEME */
 extern void display_malloc_warning (void);
 extern ptrdiff_t inhibit_garbage_collection (void);
 extern Lisp_Object make_save_int_int_int (ptrdiff_t, ptrdiff_t, ptrdiff_t);
@@ -4489,9 +4489,9 @@ extern void free_save_value (Lisp_Object);
 extern Lisp_Object build_overlay (Lisp_Object, Lisp_Object, Lisp_Object);
 #ifdef HAVE_CHEZ_SCHEME
 #define free_cons(a) ((void)0)
-#else /* HAVE_CHEZ_SCHEME */
+#else /* not HAVE_CHEZ_SCHEME */
 extern void free_cons (struct Lisp_Cons *);
-#endif /* HAVE_CHEZ_SCHEME */
+#endif /* not HAVE_CHEZ_SCHEME */
 extern void init_alloc_once (void);
 extern void init_alloc (void);
 extern void syms_of_alloc (void);
@@ -4590,7 +4590,7 @@ extern void syms_of_lread (void);
 #ifdef HAVE_CHEZ_SCHEME
 INLINE Lisp_Object intern (const char *str) { return Fintern(make_string(str, strlen(str)), Qnil); }
 INLINE Lisp_Object intern_c_string (const char *str)  { return Fintern(make_unibyte_string(str, strlen(str)), Qnil); }
-#else /* HAVE_CHEZ_SCHEME */
+#else /* not HAVE_CHEZ_SCHEME */
 INLINE Lisp_Object
 intern (const char *str)
 {
@@ -4602,7 +4602,7 @@ intern_c_string (const char *str)
 {
   return intern_c_string_1 (str, strlen (str));
 }
-#endif /* HAVE_CHEZ_SCHEME */
+#endif /* not HAVE_CHEZ_SCHEME */
 
 /* Defined in eval.c.  */
 extern Lisp_Object Vautoload_queue;
@@ -4778,7 +4778,7 @@ extern Lisp_Object other_buffer_safely (Lisp_Object);
 extern Lisp_Object get_truename_buffer (Lisp_Object);
 #ifdef HAVE_CHEZ_SCHEME
 extern void scheme_init_buffer_once (void);
-#endif
+#endif /* HAVE_CHEZ_SCHEME */
 extern void init_buffer_once (void);
 extern void init_buffer (int);
 extern void syms_of_buffer (void);
@@ -5406,7 +5406,7 @@ enum { defined_GC_CHECK_STRING_BYTES = false };
 #ifdef HAVE_CHEZ_SCHEME
 enum {USE_STACK_CONS = 0, USE_STACK_STRING = 0};
 #define STACK_CONS(a, b) ((ptr)0)
-#else /* HAVE_CHEZ_SCHEME */
+#else /* not HAVE_CHEZ_SCHEME */
 enum
   {
     USE_STACK_CONS = USE_STACK_LISP_OBJECTS,
@@ -5419,7 +5419,7 @@ enum
    variable whose lifetime will be clear to the programmer.  */
 #define STACK_CONS(a, b) \
   make_lisp_ptr (&((struct Lisp_Cons) {{{a, {b}}}}), Lisp_Cons)
-#endif /* HAVE_CHEZ_SCHEME */
+#endif /* not HAVE_CHEZ_SCHEME */
 
 #define AUTO_CONS_EXPR(a, b)                            \
   (USE_STACK_CONS ? STACK_CONS (a, b) : Fcons (a, b))
@@ -5465,7 +5465,7 @@ enum
 #ifdef HAVE_CHEZ_SCHEME
 #define AUTO_STRING_WITH_LEN(name, str, len)				\
   Lisp_Object name = make_unibyte_string (str, len)
-#else /* HAVE_CHEZ_SCHEME */
+#else /* not HAVE_CHEZ_SCHEME */
 #define AUTO_STRING_WITH_LEN(name, str, len)				\
   Lisp_Object name =							\
     (USE_STACK_STRING							\
@@ -5473,7 +5473,7 @@ enum
 	((&(struct Lisp_String) {{{len, -1, 0, (unsigned char *) (str)}}}), \
 	 Lisp_String))							\
      : make_unibyte_string (str, len))
-#endif /* HAVE_CHEZ_SCHEME */
+#endif /* not HAVE_CHEZ_SCHEME */
 
 /* Loop over conses of the list TAIL, signaling if a cycle is found,
    and possibly quitting after each loop iteration.  In the loop body,

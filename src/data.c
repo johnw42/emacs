@@ -644,11 +644,11 @@ DEFUN ("setcar", Fsetcar, Ssetcar, 2, 2, 0,
 {
 #ifdef HAVE_CHEZ_SCHEME
   chez_set_car(cell, newcar);
-#else /* HAVE_CHEZ_SCHEME */
+#else /* not HAVE_CHEZ_SCHEME */
   CHECK_CONS (cell);
   CHECK_IMPURE (cell, XCONS (cell));
   XSETCAR (cell, newcar);
-#endif /* HAVE_CHEZ_SCHEME */
+#endif /* not HAVE_CHEZ_SCHEME */
   return newcar;
 }
 
@@ -658,11 +658,11 @@ DEFUN ("setcdr", Fsetcdr, Ssetcdr, 2, 2, 0,
 {
 #ifdef HAVE_CHEZ_SCHEME
   chez_set_cdr(cell, newcdr);
-#else /* HAVE_CHEZ_SCHEME */
+#else /* not HAVE_CHEZ_SCHEME */
   CHECK_CONS (cell);
   CHECK_IMPURE (cell, XCONS (cell));
   XSETCDR (cell, newcdr);
-#endif /* HAVE_CHEZ_SCHEME */
+#endif /* not HAVE_CHEZ_SCHEME */
   return newcdr;
 }
 
@@ -882,12 +882,12 @@ SUBR must be a built-in function.  */)
 #ifdef HAVE_CHEZ_SCHEME
   CHECK_SUBR (subr);
   return Fsymbol_name (XSUBR (subr)->symbol);
-#else
+#else /* not HAVE_CHEZ_SCHEME */
   const char *name;
   CHECK_SUBR (subr);
   name = XSUBR (subr)->symbol_name;
   return build_string (name);
-#endif
+#endif /* not HAVE_CHEZ_SCHEME */
 }
 
 DEFUN ("interactive-form", Finteractive_form, Sinteractive_form, 1, 1, 0,

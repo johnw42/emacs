@@ -1256,11 +1256,11 @@ is used to further constrain the set of candidates.  */)
     {
 #ifdef HAVE_CHEZ_SCHEME
       eassert (!HAVE_CHEZ_SCHEME);
-#else /* HAVE_CHEZ_SCHEME */
+#else /* not HAVE_CHEZ_SCHEME */
       collection = check_obarray (collection);
       obsize = ASIZE (collection);
       bucket = AREF (collection, idx);
-#endif /* HAVE_CHEZ_SCHEME */
+#endif /* not HAVE_CHEZ_SCHEME */
     }
 
   while (1)
@@ -1282,7 +1282,7 @@ is used to further constrain the set of candidates.  */)
 	{
 #ifdef HAVE_CHEZ_SCHEME
           break;  // TODO(jrw)
-#else /* HAVE_CHEZ_SCHEME */
+#else /* not HAVE_CHEZ_SCHEME */
 	  if (!EQ (bucket, zero))
 	    {
 	      if (!SYMBOLP (bucket))
@@ -1301,7 +1301,7 @@ is used to further constrain the set of candidates.  */)
 	      bucket = AREF (collection, idx);
 	      continue;
 	    }
-#endif /* HAVE_CHEZ_SCHEME */
+#endif /* not HAVE_CHEZ_SCHEME */
 	}
       else /* if (type == hash_table) */
 	{
@@ -1517,11 +1517,11 @@ with a space are ignored unless STRING itself starts with a space.  */)
     {
 #ifdef HAVE_CHEZ_SCHEME
       eassert (!HAVE_CHEZ_SCHEME);
-#else /* HAVE_CHEZ_SCHEME */
+#else /* not HAVE_CHEZ_SCHEME */
       collection = check_obarray (collection);
       obsize = ASIZE (collection);
       bucket = AREF (collection, idx);
-#endif /* HAVE_CHEZ_SCHEME */
+#endif /* not HAVE_CHEZ_SCHEME */
     }
 
   while (1)
@@ -1543,7 +1543,7 @@ with a space are ignored unless STRING itself starts with a space.  */)
 	{
 #ifdef HAVE_CHEZ_SCHEME
           break;
-#else /* HAVE_CHEZ_SCHEME */
+#else /* not HAVE_CHEZ_SCHEME */
 	  if (!EQ (bucket, zero))
 	    {
 	      if (!SYMBOLP (bucket))
@@ -1562,7 +1562,7 @@ with a space are ignored unless STRING itself starts with a space.  */)
 	      bucket = AREF (collection, idx);
 	      continue;
 	    }
-#endif /* HAVE_CHEZ_SCHEME */
+#endif /* not HAVE_CHEZ_SCHEME */
 	}
       else /* if (type == 3) */
 	{
@@ -1740,7 +1740,7 @@ the values STRING, PREDICATE and `lambda'.  */)
     {
 #ifdef HAVE_CHEZ_SCHEME
       eassert (!HAVE_CHEZ_SCHEME);
-#else /* HAVE_CHEZ_SCHEME */
+#else /* not HAVE_CHEZ_SCHEME */
       /* Bypass intern-soft as that loses for nil.  */
       tem = oblookup (collection,
 		      SSDATA (string),
@@ -1784,7 +1784,7 @@ the values STRING, PREDICATE and `lambda'.  */)
 
       if (!SYMBOLP (tem))
 	return Qnil;
-#endif /* HAVE_CHEZ_SCHEME */
+#endif /* not HAVE_CHEZ_SCHEME */
     }
   else if (HASH_TABLE_P (collection))
     {

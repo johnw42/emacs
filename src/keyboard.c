@@ -1089,10 +1089,10 @@ command_loop (void)
 #ifdef HAVE_CHEZ_SCHEME
         top_level_1(Qnil);
         command_loop_2(Qnil);
-#else
+#else /* not HAVE_CHEZ_SCHEME */
 	internal_catch (Qtop_level, top_level_1, Qnil);
 	internal_catch (Qtop_level, command_loop_2, Qnil);
-#endif
+#endif /* not HAVE_CHEZ_SCHEME */
 	executing_kbd_macro = Qnil;
 
 	/* End of file in -batch run causes exit here.  */
@@ -1132,9 +1132,9 @@ top_level_1 (Lisp_Object ignore)
   if (!NILP (Vtop_level))
 #ifdef HAVE_CHEZ_SCHEME
     top_level_2();
-#else
+#else /* not HAVE_CHEZ_SCHEME */
     internal_condition_case (top_level_2, Qerror, cmd_error);
-#endif
+#endif /* not HAVE_CHEZ_SCHEME */
   else if (!NILP (Vpurify_flag))
     message1 ("Bare impure Emacs (standard Lisp code not loaded)");
   else
