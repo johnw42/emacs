@@ -14,12 +14,12 @@
 static bool scheme_initialized = false;
 static ptr c_data_table;
 
-ptr chez_vectorlike_symbol = chez_false;
+ptr scheme_vectorlike_symbol = chez_false;
 ptr scheme_misc_symbol = chez_false;
 ptr scheme_string_symbol = chez_false;
 iptr scheme_greatest_fixnum;
 iptr scheme_least_fixnum;
-iptr chez_fixnum_width;
+iptr scheme_fixnum_width;
 const char *last_scheme_function;
 const char *last_scheme_call_file;
 int last_scheme_call_line;
@@ -271,7 +271,7 @@ void scheme_init(void) {
 
   scheme_greatest_fixnum = chez_fixnum_value(scheme_call0("greatest-fixnum"));
   scheme_least_fixnum = chez_fixnum_value(scheme_call0("least-fixnum"));
-  chez_fixnum_width = chez_fixnum_value(scheme_call0("fixnum-width"));
+  scheme_fixnum_width = chez_fixnum_value(scheme_call0("fixnum-width"));
 
   chez_foreign_symbol("abort", abort);
   chez_foreign_symbol("Fequal", Fequal);
@@ -299,8 +299,8 @@ void scheme_init(void) {
   c_data_table = scheme_call0("make-eq-hashtable");
   chez_lock_object(c_data_table);
 
-  chez_vectorlike_symbol = scheme_call1("gensym", chez_string("emacs-vectorlike"));
-  chez_lock_object(chez_vectorlike_symbol);
+  scheme_vectorlike_symbol = scheme_call1("gensym", chez_string("emacs-vectorlike"));
+  chez_lock_object(scheme_vectorlike_symbol);
   scheme_misc_symbol = scheme_call1("gensym", chez_string("emacs-misc"));
   chez_lock_object(scheme_misc_symbol);
   scheme_string_symbol = scheme_call1("gensym", chez_string("emacs-string"));

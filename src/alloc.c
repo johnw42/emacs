@@ -3471,7 +3471,7 @@ allocate_vectorlike (ptrdiff_t len)
 #ifdef HAVE_CHEZ_SCHEME
   ptr vec;
   struct Lisp_Vector *data = scheme_allocate
-    (header_size + len * word_size, chez_vectorlike_symbol, &vec);
+    (header_size + len * word_size, scheme_vectorlike_symbol, &vec);
   data->header.s.size = len;
   set_vectorlike_lisp_obj(data, vec);
   scheme_ptr_fill (data->contents, Qnil, len); // XXX

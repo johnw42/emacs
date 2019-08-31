@@ -99,12 +99,12 @@ SCHEME_FPTR_DECL(hashtable_ref, ptr, ptr, ptr, ptr);
 #define scheme_save_ptr(ptr, type) eassert(SCHEME_FPTR_CALL(save_pointer, ptr, type))
 #define scheme_check_ptr(ptr, type) eassert(SCHEME_FPTR_CALL(check_pointer, ptr, type))
 
-extern ptr chez_vectorlike_symbol;
+extern ptr scheme_vectorlike_symbol;
 extern ptr scheme_misc_symbol;
 extern ptr scheme_string_symbol;
 extern iptr scheme_greatest_fixnum;
 extern iptr scheme_least_fixnum;
-extern iptr chez_fixnum_width;
+extern iptr scheme_fixnum_width;
 extern const char *last_scheme_function;
 extern const char *last_scheme_call_file;
 extern int last_scheme_call_line;
@@ -382,7 +382,7 @@ extern ptr scheme_function_for_name(const char *name);
 
 #ifdef HAVE_CHEZ_SCHEME
 #define GCALIGNMENT 8
-#define FIXNUM_BITS chez_fixnum_width
+#define FIXNUM_BITS scheme_fixnum_width
 #else /* not HAVE_CHEZ_SCHEME */
 enum Lisp_Bits
   {
@@ -500,7 +500,7 @@ error !;
 #define lisp_h_SYMBOL_VAL(sym) \
    (eassert ((sym)->u.s.redirect == SYMBOL_PLAINVAL), (sym)->u.s.val.value)
 #define lisp_h_SYMBOLP(x) (chez_symbolp(x))
-#define lisp_h_VECTORLIKEP(x) SCHEME_VECTORP(x, chez_vectorlike_symbol)
+#define lisp_h_VECTORLIKEP(x) SCHEME_VECTORP(x, scheme_vectorlike_symbol)
 #define lisp_h_XCAR(c) (eassert (CONSP (c)), chez_car(c))
 #define lisp_h_XCDR(c) (eassert (CONSP (c)), chez_cdr(c))
 #define lisp_h_make_number(n) (eassert (chez_fixnump(chez_integer(n))), chez_fixnum(n))
