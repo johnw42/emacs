@@ -3518,16 +3518,17 @@ read1 (Lisp_Object readcharfun, int *pch, bool first_in_list)
 	    }
 	  else
 	    {
-#ifdef HAVE_CHEZ_SCHEME
-              Lisp_Object name = make_specified_string
-                (read_buffer, nchars, nbytes, multibyte);
-              result = Fintern(name, Vobarray);
-#else /* not HAVE_CHEZ_SCHEME */
 	      /* Don't create the string object for the name unless
 		 we're going to retain it in a new symbol.
 
 		 Like intern_1 but supports multibyte names.  */
 	      Lisp_Object obarray = check_obarray (Vobarray);
+#ifdef HAVE_CHEZ_SCHEME
+              // No optimization possible yet :(
+              Lisp_Object name = make_specified_string
+                (read_buffer, nchars, nbytes, multibyte);
+              result = Fintern(name, obarray);
+#else /* not HAVE_CHEZ_SCHEME */
 	      Lisp_Object tem = oblookup (obarray, read_buffer,
 					  nchars, nbytes);
 
@@ -4041,51 +4042,47 @@ scheme_obarray_table (ptr obarray)
       if (EQ (Vobarray, obarray)) Vobarray = initial_obarray;
       wrong_type_argument (Qvectorp, obarray);
     }
-  ptr table = AREF(obarray, 0);
-  if (!SCHEME_FPTR_CALL(hashtablep, table))
+  ptr table = AREF (obarray, 0);
+  if (!SCHEME_FPTR_CALL (hashtablep, table))
     {
-      table = scheme_call2
-        ("make-hashtable",
-         chez_top_level_value (chez_string_to_symbol ("string-hash")),
-         chez_top_level_value (chez_string_to_symbol ("string=?")));
-      chez_lock_object(table);
-      ASET(obarray, 0, table);
+      table = scheme_call0 ("make-obarray-table");
+      chez_lock_object (table);
+      ASET (obarray, 0, table);
     }
-  eassert(SCHEME_FPTR_CALL(hashtablep, table));
+  eassert (SCHEME_FPTR_CALL (hashtablep, table));
   return table;
 }
 
 ptr
-scheme_obarray_ensure(ptr obarray, ptr name)
+scheme_oblookup(ptr obarray, ptr name, bool add_if_missing)
 {
   if (NILP (obarray))
     obarray = Vobarray;
+  obarray = check_obarray (obarray);
   eassert (!NILP (obarray));
   eassert (!NILP (initial_obarray));
 
-  ptr scheme_str = to_scheme_string(name);
-  eassert (chez_stringp (scheme_str));
+  ptr lisp_str = to_lisp_string (name);
+  ptr table = scheme_obarray_table (obarray);
+  eassert (STRINGP (lisp_str));
+  ptr found = SCHEME_FPTR_CALL (hashtable_ref, table, lisp_str, Qnil);
+  if (found != Qnil)
+    eassert (chez_symbolp (found));
+  if (found != Qnil || !add_if_missing)
+    return found;
 
-  ptr table = scheme_obarray_table(obarray);
-  ptr found = scheme_call3("hashtable-ref", table, scheme_str, chez_false);
-  if (found != chez_false)
-    {
-      eassert (chez_symbolp (found));
-      return found;
-    }
-
-  bool in_initial_obarray = EQ(obarray, initial_obarray);
+  bool in_initial_obarray = EQ (obarray, initial_obarray);
   struct Lisp_Symbol *data =
-    scheme_make_symbol(name,
-                       in_initial_obarray
-                       ? SYMBOL_INTERNED_IN_INITIAL_OBARRAY
-                       : SYMBOL_INTERNED);
+    scheme_make_symbol (lisp_str,
+                        in_initial_obarray
+                        ? SYMBOL_INTERNED_IN_INITIAL_OBARRAY
+                        : SYMBOL_INTERNED);
   ptr scheme_symbol = data->u.s.scheme_obj;
   eassert (chez_symbolp (scheme_symbol));
-  scheme_call3("hashtable-set!", table, scheme_str, scheme_symbol);
+  scheme_call3 ("hashtable-set!", table, lisp_str, scheme_symbol);
   if (in_initial_obarray
-      && chez_string_length(scheme_str) > 0
-      && chez_string_ref(scheme_str, 0) == ':')
+      && SCHARS (lisp_str) > 0
+      && SDATA (lisp_str)[0] == ':')
     {
       make_symbol_constant (scheme_symbol);
       struct Lisp_Symbol *xs = XSYMBOL(scheme_symbol);
@@ -4101,6 +4098,7 @@ scheme_obarray_ensure(ptr obarray, ptr name)
 /* `oblookup' stores the bucket number here, for the sake of Funintern.  */
 
 static size_t oblookup_last_bucket_number;
+#endif /* not HAVE_CHEZ_SCHEME */
 
 /* Get an error if OBARRAY is not an obarray.
    If it is one, return it.  */
@@ -4120,7 +4118,6 @@ check_obarray (Lisp_Object obarray)
     }
   return obarray;
 }
-#endif /* not HAVE_CHEZ_SCHEME */
 
 #ifndef HAVE_CHEZ_SCHEME
 /* Intern symbol SYM in OBARRAY using bucket INDEX.  */
@@ -4218,22 +4215,20 @@ A second optional argument specifies the obarray to use;
 it defaults to the value of `obarray'.  */)
   (Lisp_Object string, Lisp_Object obarray)
 {
-#ifdef HAVE_CHEZ_SCHEME
-  CHECK_STRING (string);
-  Lisp_Object sym = scheme_obarray_ensure (obarray, string);
-  return sym;
-#else /* not HAVE_CHEZ_SCHEME */
   Lisp_Object tem;
 
   obarray = check_obarray (NILP (obarray) ? Vobarray : obarray);
   CHECK_STRING (string);
 
+#ifdef HAVE_CHEZ_SCHEME
+  tem = scheme_oblookup (obarray, string, true);
+#else /* not HAVE_CHEZ_SCHEME */
   tem = oblookup (obarray, SSDATA (string), SCHARS (string), SBYTES (string));
   if (!SYMBOLP (tem))
     tem = intern_driver (NILP (Vpurify_flag) ? string : Fpurecopy (string),
 			 obarray, tem);
-  return tem;
 #endif /* not HAVE_CHEZ_SCHEME */
+  return tem;
 }
 
 DEFUN ("intern-soft", Fintern_soft, Sintern_soft, 1, 2, 0,
@@ -4244,16 +4239,13 @@ A second optional argument specifies the obarray to use;
 it defaults to the value of `obarray'.  */)
   (Lisp_Object name, Lisp_Object obarray)
 {
+  register Lisp_Object tem, string;
+
+  if (NILP (obarray)) obarray = Vobarray;
+  obarray = check_obarray (obarray);
+
 #ifdef HAVE_CHEZ_SCHEME
-  ptr table = scheme_obarray_table (obarray);
-  if (!chez_stringp(name))
-    {
-      name = scheme_call1("symbol->string", name);
-    }
-  eassert (SCHEME_FPTR_CALL(hashtablep, table));
-  eassert (chez_stringp(name));
-  ptr found = scheme_call3("hashtable-ref", table, name, chez_false);
-  return found == chez_false ? Qnil : found;
+  return scheme_oblookup (obarray, name, false);
 #else /* not HAVE_CHEZ_SCHEME */
   register Lisp_Object tem, string;
 
@@ -4286,20 +4278,17 @@ usage: (unintern NAME OBARRAY)  */)
   (Lisp_Object name, Lisp_Object obarray)
 {
 #ifdef HAVE_CHEZ_SCHEME
+  if (NILP (obarray)) obarray = Vobarray;
+  name = to_lisp_string (name);
+  ptr sym = scheme_oblookup (obarray, name, false);
+  if (sym == Qnil)
+    return Qnil;
+
+  obarray = check_obarray (obarray);
   ptr table = scheme_obarray_table (obarray);
-  ptr key = name;
-  if (!chez_stringp(name))
-    key = scheme_call1("symbol->string", name);
-  chez_lock_object(key);
-  ptr result = Qnil;
-  ptr sym = scheme_call3("hashtable-ref", table, key, chez_false);
-  if (sym == name || (chez_stringp(name) && sym != chez_false))
-    {
-      result = Qt;
-      scheme_call2("hashtable-delete!", table, key);
-    }
-  chez_unlock_object(key);
-  return result;
+  eassert (STRINGP (name));
+  scheme_call2 ("hashtable-delete!", table, name);
+  return Qt;
 #else /* not HAVE_CHEZ_SCHEME */
   register Lisp_Object string, tem;
   size_t hash;
@@ -4366,7 +4355,6 @@ usage: (unintern NAME OBARRAY)  */)
 #endif /* not HAVE_CHEZ_SCHEME */
 }
 
-#ifndef HAVE_CHEZ_SCHEME
 /* Return the symbol in OBARRAY whose names matches the string
    of SIZE characters (SIZE_BYTE bytes) at PTR.
    If there is no such symbol, return the integer bucket number of
@@ -4377,6 +4365,12 @@ usage: (unintern NAME OBARRAY)  */)
 Lisp_Object
 oblookup (Lisp_Object obarray, register const char *ptr, ptrdiff_t size, ptrdiff_t size_byte)
 {
+#ifdef HAVE_CHEZ_SCHEME
+  return scheme_oblookup
+    (obarray, make_specified_string
+     (ptr, size, size_byte, size != size_byte),
+     false);
+#else /* not HAVE_CHEZ_SCHEME */
   size_t hash;
   size_t obsize;
   register Lisp_Object tail;
@@ -4404,8 +4398,8 @@ oblookup (Lisp_Object obarray, register const char *ptr, ptrdiff_t size, ptrdiff
       }
   XSETINT (tem, hash);
   return tem;
-}
 #endif /* not HAVE_CHEZ_SCHEME */
+}
 
 void
 map_obarray (Lisp_Object obarray, void (*fn) (Lisp_Object, Lisp_Object), Lisp_Object arg)
@@ -4454,10 +4448,8 @@ DEFUN ("mapatoms", Fmapatoms, Smapatoms, 1, 2, 0,
 OBARRAY defaults to the value of `obarray'.  */)
   (Lisp_Object function, Lisp_Object obarray)
 {
-#ifndef HAVE_CHEZ_SCHEME
   if (NILP (obarray)) obarray = Vobarray;
   obarray = check_obarray (obarray);
-#endif /* not HAVE_CHEZ_SCHEME */
 
   map_obarray (obarray, mapatoms_1, function);
   return Qnil;
@@ -4476,7 +4468,7 @@ init_obarray (void)
   for (int i = 0; i < ARRAYELTS (lispsym); i++)
     {
       eassert (chez_symbolp (lispsym[i]));
-      scheme_obarray_ensure (initial_obarray, lispsym[i]);
+      scheme_oblookup (initial_obarray, lispsym[i], true);
     }
 #else /* not HAVE_CHEZ_SCHEME */
   for (int i = 0; i < ARRAYELTS (lispsym); i++)

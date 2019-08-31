@@ -1254,9 +1254,7 @@ is used to further constrain the set of candidates.  */)
   tail = collection;
   if (type == obarray_table)
     {
-#ifdef HAVE_CHEZ_SCHEME
-      eassert (!HAVE_CHEZ_SCHEME);
-#else /* not HAVE_CHEZ_SCHEME */
+#ifndef HAVE_CHEZ_SCHEME
       collection = check_obarray (collection);
       obsize = ASIZE (collection);
       bucket = AREF (collection, idx);
@@ -1504,6 +1502,10 @@ with a space are ignored unless STRING itself starts with a space.  */)
   ptrdiff_t idx = 0, obsize = 0;
   ptrdiff_t bindcount = -1;
   Lisp_Object bucket, tem, zero;
+#ifdef HAVE_CHEZ_SCHEME
+  ptr *values = NULL;
+  iptr num_values = 0;
+#endif /* HAVE_CHEZ_SCHEME */
 
   CHECK_STRING (string);
   if (type == 0)
@@ -1515,10 +1517,16 @@ with a space are ignored unless STRING itself starts with a space.  */)
   tail = collection;
   if (type == 2)
     {
-#ifdef HAVE_CHEZ_SCHEME
-      eassert (!HAVE_CHEZ_SCHEME);
-#else /* not HAVE_CHEZ_SCHEME */
       collection = check_obarray (collection);
+#ifdef HAVE_CHEZ_SCHEME
+      ptr table = scheme_obarray_table(collection);
+      ptr values_vec = SCHEME_FPTR_CALL (hashtable_values, table);
+      // Copy vector so we don't have to lock it.
+      iptr num_values = chez_vector_length (values_vec);
+      ptr *values = alloca (num_values * sizeof (ptr));
+      for (iptr i = 0; i < num_values; i++)
+        values[i] = chez_vector_ref (values_vec, i);
+#else /* not HAVE_CHEZ_SCHEME */
       obsize = ASIZE (collection);
       bucket = AREF (collection, idx);
 #endif /* not HAVE_CHEZ_SCHEME */
@@ -1542,7 +1550,10 @@ with a space are ignored unless STRING itself starts with a space.  */)
       else if (type == 2)
 	{
 #ifdef HAVE_CHEZ_SCHEME
-          break;
+          if (idx >= num_values)
+            break;
+          else
+            elt = eltstring = values[idx++];
 #else /* not HAVE_CHEZ_SCHEME */
 	  if (!EQ (bucket, zero))
 	    {
@@ -1738,9 +1749,8 @@ the values STRING, PREDICATE and `lambda'.  */)
     }
   else if (VECTORP (collection))
     {
-#ifdef HAVE_CHEZ_SCHEME
-      eassert (!HAVE_CHEZ_SCHEME);
-#else /* not HAVE_CHEZ_SCHEME */
+      // TODO(jrw)
+#ifndef HAVE_CHEZ_SCHEME
       /* Bypass intern-soft as that loses for nil.  */
       tem = oblookup (collection,
 		      SSDATA (string),
@@ -1781,10 +1791,10 @@ the values STRING, PREDICATE and `lambda'.  */)
 		  }
 	    }
 	}
+#endif
 
       if (!SYMBOLP (tem))
 	return Qnil;
-#endif /* not HAVE_CHEZ_SCHEME */
     }
   else if (HASH_TABLE_P (collection))
     {

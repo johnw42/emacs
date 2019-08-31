@@ -34,6 +34,8 @@ SCHEME_FPTR_DEF(save_origin, void, ptr);
 SCHEME_FPTR_DEF(print_origin, void, ptr);
 SCHEME_FPTR_DEF(eq_hash, uint32_t, ptr);
 SCHEME_FPTR_DEF(hashtable_values, ptr, ptr);
+SCHEME_FPTR_DEF(hashtable_ref, ptr, ptr, ptr, ptr);
+SCHEME_FPTR_DEF(symbol_is, int, ptr, const char *);
 
 static ptr lisp_to_scheme(Lisp_Object lisp_obj) {
   return lisp_obj;
@@ -272,6 +274,8 @@ void scheme_init(void) {
   chez_fixnum_width = chez_fixnum_value(scheme_call0("fixnum-width"));
 
   chez_foreign_symbol("abort", abort);
+  chez_foreign_symbol("Fequal", Fequal);
+  chez_foreign_symbol("Fsxhash_equal", Fsxhash_equal);
   chez_foreign_symbol("scheme_elisp_boundp", scheme_elisp_boundp);
   chez_foreign_symbol("scheme_elisp_fboundp", scheme_elisp_fboundp);
   chez_foreign_symbol("scheme_elisp_call0", scheme_elisp_call0);
@@ -289,6 +293,8 @@ void scheme_init(void) {
   SCHEME_FPTR_INIT(print_origin);
   SCHEME_FPTR_INIT(eq_hash);
   SCHEME_FPTR_INIT(hashtable_values);
+  SCHEME_FPTR_INIT(hashtable_ref);
+  SCHEME_FPTR_INIT(symbol_is);
 
   c_data_table = scheme_call0("make-eq-hashtable");
   chez_lock_object(c_data_table);
@@ -320,10 +326,23 @@ to_lisp_string(ptr arg)
     arg = scheme_call1 ("symbol->string", arg);
   eassert (chez_stringp (arg));
   iptr n = chez_string_length(arg);
-  Lisp_Object lstr = Fmake_string (chez_fixnum (n), chez_fixnum (0));
-  for (int i = 0; i < n; i++)
-    Faset (lstr, chez_fixnum (i), chez_fixnum (chez_string_ref (arg, i)));
-  return lstr;
+  for (iptr j = 0; j < n; j++)
+    if (chez_string_ref (arg, j) >= 0x80)
+      {
+        // Slow path.
+        Lisp_Object lstr = Fmake_string (chez_fixnum (n), chez_fixnum (0));
+        for (int i = 0; i < n; i++)
+          Faset (lstr, chez_fixnum (i), chez_fixnum (chez_string_ref (arg, i)));
+        return lstr;
+      }
+
+  // Fast path.
+  char *buf = alloca(n);
+  for (iptr i = 0; i < n; i++)
+    {
+      buf[i] = chez_string_ref (arg, i);
+    }
+  return make_unibyte_string (buf, n);
 }
 
 // Converts a symbol or Lisp string to a Scheme string.
@@ -343,43 +362,37 @@ to_scheme_string(ptr arg)
   return sstr;
 }
 
-struct Lisp_Symbol *
-scheme_make_symbol(ptr name, enum symbol_interned interned)
+chez_ptr
+make_scheme_string (const char *data, iptr nchars, iptr nbytes, bool multibyte)
 {
-  ptr scheme_str;
-  ptr scheme_symbol = chez_false;
-  if (chez_symbolp(name))
-      scheme_symbol = name;
-  scheme_str = to_scheme_string (name);
-
-  eassert (chez_stringp (scheme_str));
-  if (scheme_symbol == chez_false)
-      scheme_symbol = scheme_call1
-        (interned == SYMBOL_UNINTERNED ? "gensym" : "string->symbol",
-         scheme_str);
-
-  eassert (chez_symbolp (scheme_symbol));
-
-  struct Lisp_Symbol *xs = XSYMBOL(scheme_symbol);
-  xs->u.s.interned = interned;
-  return xs;
+  if (nchars == nbytes && !multibyte)
+    return chez_string_of_length (data, nchars);
+  else
+    return to_scheme_string
+      (make_specified_string (data, nchars, nbytes, multibyte));
 }
 
-struct Lisp_Symbol *
-XSYMBOL (Lisp_Object a)
+static struct Lisp_Symbol *
+ensure_symbol_c_data (Lisp_Object symbol, Lisp_Object name)
 {
-  eassert (chez_symbolp (a));
-  struct Lisp_Symbol *p = scheme_find_c_data (a);
+  eassert (chez_symbolp (symbol));
+
+  struct Lisp_Symbol *p = scheme_find_c_data (symbol);
   if (p)
     {
-      eassert (p->u.s.scheme_obj == a);
+      eassert (p->u.s.scheme_obj == symbol);
       return p;
     }
-  p = scheme_alloc_c_data(a, sizeof (struct Lisp_Symbol *));
+
+  if (name == chez_false)
+    name = to_lisp_string (symbol);
+  eassert (STRINGP (name));
+
+  p = scheme_alloc_c_data(symbol, sizeof (struct Lisp_Symbol *));
   // Can't use init_nil_refs here because of how builtin symbols are
   // initialized.
-  p->u.s.scheme_obj = a;
-  p->u.s.name = to_lisp_string (a);
+  p->u.s.scheme_obj = symbol;
+  p->u.s.name = name;
   p->u.s.plist = Qnil;
   p->u.s.redirect = SYMBOL_PLAINVAL;
   SET_SYMBOL_VAL (p, Qunbound);
@@ -390,6 +403,35 @@ XSYMBOL (Lisp_Object a)
   p->u.s.declared_special = false;
   p->u.s.pinned = false;
   return p;
+}
+
+struct Lisp_Symbol *
+scheme_make_symbol(ptr name, enum symbol_interned interned)
+{
+  ptr scheme_symbol = chez_false;
+  if (chez_symbolp (name))
+      scheme_symbol = name;
+  else
+    {
+      chez_ptr scheme_str = to_scheme_string (name);
+      scheme_symbol = scheme_call1
+        (interned == SYMBOL_UNINTERNED ? "gensym" : "string->symbol",
+         scheme_str);
+      chez_lock_object (scheme_symbol);
+    }
+
+  eassert (chez_symbolp (scheme_symbol));
+
+  Lisp_Object lisp_str = to_lisp_string (name);
+  struct Lisp_Symbol *xs = ensure_symbol_c_data (scheme_symbol, lisp_str);
+  xs->u.s.interned = interned;
+  return xs;
+}
+
+struct Lisp_Symbol *
+XSYMBOL (Lisp_Object a)
+{
+  return ensure_symbol_c_data (a, chez_false);
 }
 
 void *
@@ -403,7 +445,7 @@ scheme_alloc_c_data (ptr key, iptr size)
 void *
 scheme_find_c_data (ptr key)
 {
-  ptr found = scheme_call3("hashtable-ref", c_data_table, key, chez_false);
+  ptr found = SCHEME_FPTR_CALL(hashtable_ref, c_data_table, key, chez_false);
   if (found == chez_false)
     return NULL;
   return scheme_malloc_ptr (found);
@@ -588,7 +630,7 @@ gdb_print(Lisp_Object obj)
   return buffer;
 }
 
-const char *last_func_name = NULL;
+static const char *last_func_name = NULL;
 
 extern ptr
 scheme_function_for_name(const char *name) {
@@ -759,16 +801,9 @@ init_nil_refs (Lisp_Object obj)
 bool
 symbol_is(ptr sym, const char *name)
 {
-  if (!SYMBOLP(sym))
+  if (!chez_symbolp (sym))
     return false;
-  static const char *last_name;
-  static ptr other_sym;
-  if (name != last_name)
-    {
-      other_sym = chez_string_to_symbol(name);
-      chez_lock_object(other_sym);
-    }
-  return XSYMBOL(sym)->u.s.scheme_obj == other_sym;
+  return SCHEME_FPTR_CALL(symbol_is, sym, name);
 }
 
 bool

@@ -4267,7 +4267,6 @@ network_interface_list (void)
 
 #if defined (SIOCGIFADDR) || defined (SIOCGIFHWADDR) || defined (SIOCGIFFLAGS)
 
-#ifndef HAVE_CHEZ_SCHEME
 struct ifflag_def {
   int flag_bit;
   const char *flag_sym;
@@ -4344,15 +4343,10 @@ static const struct ifflag_def ifflag_table[] = {
 #endif
   { 0, 0 }
 };
-#endif /* not HAVE_CHEZ_SCHEME */
 
 static Lisp_Object
 network_interface_info (Lisp_Object ifname)
 {
-#ifdef HAVE_CHEZ_SCHEME
-  eassert (!HAVE_CHEZ_SCHEME);
-  return Qnil;
-#else /* not HAVE_CHEZ_SCHEME */
   struct ifreq rq;
   Lisp_Object res = Qnil;
   Lisp_Object elt;
@@ -4494,7 +4488,6 @@ network_interface_info (Lisp_Object ifname)
   res = Fcons (elt, res);
 
   return unbind_to (count, any ? res : Qnil);
-#endif /* not HAVE_CHEZ_SCHEME */
 }
 #endif	/* !SIOCGIFADDR && !SIOCGIFHWADDR && !SIOCGIFFLAGS */
 #endif	/* defined (HAVE_NET_IF_H) */

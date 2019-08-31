@@ -42,6 +42,11 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 
 #include "chez_scheme.h"
 
+// TODO(jrw): Remove.
+typedef chez_ptr ptr;
+typedef chez_iptr iptr;
+typedef chez_uptr uptr;
+
 void scheme_init(void);
 void scheme_deinit(void);
 void syms_of_scheme_lisp(void);
@@ -49,17 +54,16 @@ void scheme_track_for_elisp(ptr *);
 void scheme_untrack_for_elisp(ptr *);
 void scheme_gc(void);
 
-ptr scheme_obarray_ensure(ptr obarray, ptr sym);
+ptr scheme_oblookup(ptr obarray, ptr name, bool add_if_missing);
 /* ptr scheme_intern(const char *str, iptr len, ptr obarray); */
 /* void scheme_intern_sym(ptr sym, ptr obarray); */
 void *scheme_alloc_c_data(ptr key, iptr size);
 void *scheme_find_c_data (ptr key);
-/* void * scheme_find_or_alloc_c_data */
-/*   (ptr key, iptr size, void (*init)(void *)); */
 ptr scheme_obarray_table (ptr obarray);
 void scheme_ptr_fill (ptr *p, ptr init, iptr num_words);
-ptr to_lisp_string(ptr str);
-ptr to_scheme_string(ptr lstr);
+ptr to_lisp_string (ptr str);
+ptr to_scheme_string (ptr lstr);
+chez_ptr make_scheme_string (const char *data, iptr nchars, iptr nbytes, bool multibyte);
 
 #define SCHEME_FPTR_DECL(name, rtype, ...) \
   extern rtype (*scheme_fptr_##name)(const char *, int, __VA_ARGS__)
@@ -67,10 +71,10 @@ ptr to_scheme_string(ptr lstr);
   rtype (*scheme_fptr_##name)(const char *, int, __VA_ARGS__) = 0
 #define SCHEME_FPTR_INIT(name) \
   (scheme_fptr_##name = get_scheme_func ("c-" #name))
-#define SCHEME_FPTR_CALL(name, ...) \
-  (last_scheme_function = #name, \
-    last_scheme_call_file = __FILE__, \
-    last_scheme_call_line = __LINE__, \
+#define SCHEME_FPTR_CALL(name, ...)                             \
+  (last_scheme_function = #name,                                \
+   last_scheme_call_file = __FILE__,                            \
+   last_scheme_call_line = __LINE__,                            \
    (*scheme_fptr_##name)(__FILE__, __LINE__, __VA_ARGS__))
 
 SCHEME_FPTR_DECL(save_pointer, int, void *, const char *);
@@ -80,6 +84,7 @@ SCHEME_FPTR_DECL(save_origin, void, ptr);
 SCHEME_FPTR_DECL(print_origin, void, ptr);
 SCHEME_FPTR_DECL(eq_hash, uint32_t, ptr);
 SCHEME_FPTR_DECL(hashtable_values, ptr, ptr);
+SCHEME_FPTR_DECL(hashtable_ref, ptr, ptr, ptr, ptr);
 
 #define scheme_save_ptr(ptr, type) eassert(SCHEME_FPTR_CALL(save_pointer, ptr, type))
 #define scheme_check_ptr(ptr, type) eassert(SCHEME_FPTR_CALL(check_pointer, ptr, type))
@@ -4562,15 +4567,16 @@ extern ptrdiff_t evxprintf (char **, ptrdiff_t *, char const *, ptrdiff_t,
 			    char const *, va_list)
   ATTRIBUTE_FORMAT_PRINTF (5, 0);
 
-#ifndef HAVE_CHEZ_SCHEME
 /* Defined in lread.c.  */
 extern Lisp_Object check_obarray (Lisp_Object);
+#ifndef HAVE_CHEZ_SCHEME
 extern Lisp_Object intern_1 (const char *, ptrdiff_t);
 extern Lisp_Object intern_c_string_1 (const char *, ptrdiff_t);
 extern Lisp_Object intern_driver (Lisp_Object, Lisp_Object, Lisp_Object);
 extern void init_symbol (Lisp_Object, Lisp_Object);
-extern Lisp_Object oblookup (Lisp_Object, const char *, ptrdiff_t, ptrdiff_t);
 #endif /* not HAVE_CHEZ_SCHEME */
+extern Lisp_Object oblookup (Lisp_Object, const char *, ptrdiff_t, ptrdiff_t);
+
 INLINE void
 LOADHIST_ATTACH (Lisp_Object x)
 {

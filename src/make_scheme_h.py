@@ -29,7 +29,7 @@ def MakeArgDecl(atype, name):
 def Main():
     extra_lines = []
     for line in sys.stdin:
-        line = line.rstrip("\n")
+        line = re.sub(r"\b([iu]?ptr)\b", r"chez_\1", line.rstrip("\n"))
         m = re.match(r"#define S(.*)", line)
         if m:
             line = "#define chez_" + re.sub(r"\bS", "chez_", m[1])

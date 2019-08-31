@@ -11,6 +11,7 @@
          forget-scheme-object
          after-idle
          identity
+         make-obarray-table
 
          c-hashtablep
          c-save_pointer
@@ -20,7 +21,15 @@
          c-print_origin
          c-eq_hash
          c-hashtable_values
+         c-hashtable_ref
+         c-symbol_is
          )
+
+  (define elisp-equal
+    (foreign-procedure "Fequal" (scheme-object scheme-object) scheme-object))
+
+  (define elisp-sxhash-equal
+    (foreign-procedure "Fsxhash_equal" (scheme-object) scheme-object))
 
   (define elisp-boundp
     (foreign-procedure "scheme_elisp_boundp" (scheme-object) boolean))
@@ -42,6 +51,11 @@
     (foreign-procedure "scheme_elisp_apply"
                        (scheme-object scheme-object)
                        scheme-object))
+
+  (define (make-obarray-table)
+    (make-hashtable elisp-sxhash-equal
+                    (lambda (a b)
+                      (not (eq? 'nil (elisp-equal a b))))))
 
   ;; A hash function for foreign pointers.
   (define pointer-hash
@@ -72,7 +86,7 @@
     (if (fxzero? ptr)
         0
         (do ([i 0 (+ 1 i)])
-            ((fxzero? (foreign-ref 'integer-8 ptr i))
+            ((fxzero? (foreign-ref 'unsigned-8 ptr i))
              i))))
 
   (define (strcmp? ptr1 ptr2)
@@ -80,8 +94,8 @@
         (and (not (fxzero? ptr1))
              (not (fxzero? ptr2))
              (let loop ([i 0])
-               (let ([c1 (foreign-ref 'integer-8 ptr1 i)]
-                     [c2 (foreign-ref 'integer-8 ptr2 i)])
+               (let ([c1 (foreign-ref 'unsigned-8 ptr1 i)]
+                     [c2 (foreign-ref 'unsigned-8 ptr2 i)])
                  (and (eqv? c1 c2)
                       (or (zero? c1)
                           (loop (+ i 1)))))))))
@@ -100,7 +114,7 @@
                           ((>= i count) str)
                         (string-set!
                          str i (integer->char
-                                (foreign-ref 'integer-8 ptr i))))))))
+                                (foreign-ref 'unsigned-8 ptr i))))))))
         memo-result)))
 
 
@@ -135,6 +149,21 @@
                 (void* int arg-type ...)
                 result-type)))])))
 
+  (define-for-c (c-symbol_is #f
+                             ((scheme-object sym)
+                              (void* name-ptr))
+                             boolean)
+    (let* ([name-str (symbol->string sym)]
+           [n (string-length name-str)])
+      (let loop ([i 0])
+        (let ([c1 (foreign-ref 'unsigned-8 name-ptr i)])
+          (or (and (fx= i n)
+                   (zero? c1))
+              (and (fx< i n)
+                   (let ([c2 (char->integer (string-ref name-str i))])
+                     (and (fx= c1 c2)
+                          (loop (fx+ i 1))))))))))
+
   (define eq-hash-table (make-weak-eq-hashtable))
 
   (define-for-c (c-eq_hash #f
@@ -149,6 +178,13 @@
                               ((scheme-object x))
                               boolean)
     (hashtable? x))
+
+  (define-for-c (c-hashtable_ref #f
+                                 ((scheme-object table)
+                                  (scheme-object key)
+                                  (scheme-object default))
+                                 scheme-object)
+    (hashtable-ref table key default))
 
   (define-record-type def-info
     (fields (immutable type-str)
@@ -332,9 +368,9 @@
          )))
 
     #;(when #t
-    (printf "running alloc_test\n")     ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ;
-    (collect-notify #t)                 ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ;
-    ((foreign-procedure __collect_safe "alloc_test" () void)) ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ;
+    (printf "running alloc_test\n")     ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ;
+    (collect-notify #t)                 ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ;
+    ((foreign-procedure __collect_safe "alloc_test" () void)) ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ;
     (exit 1))
 
     ;; (elisp-funcall 'load "scheme-internal")
