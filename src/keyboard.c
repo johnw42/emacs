@@ -448,33 +448,33 @@ echo_add_key (Lisp_Object c)
   char initbuf[KEY_DESCRIPTION_SIZE + 100];
   ptrdiff_t size = sizeof initbuf;
   char *buffer = initbuf;
-  char *ptr0 = buffer;
+  char *ptr = buffer;
   Lisp_Object echo_string = KVAR (current_kboard, echo_string);
   USE_SAFE_ALLOCA;
 
   if (STRINGP (echo_string) && SCHARS (echo_string) > 0)
     /* Add a space at the end as a separator between keys.  */
-    ptr0++[0] = ' ';
+    ptr++[0] = ' ';
 
   /* If someone has passed us a composite event, use its head symbol.  */
   c = EVENT_HEAD (c);
 
   if (INTEGERP (c))
-    ptr0 = push_key_description (XINT (c), ptr0);
+    ptr = push_key_description (XINT (c), ptr);
   else if (SYMBOLP (c))
     {
       Lisp_Object name = SYMBOL_NAME (c);
       ptrdiff_t nbytes = SBYTES (name);
 
-      if (size - (ptr0 - buffer) < nbytes)
+      if (size - (ptr - buffer) < nbytes)
 	{
-	  ptrdiff_t offset = ptr0 - buffer;
+	  ptrdiff_t offset = ptr - buffer;
 	  size = max (2 * size, size + nbytes);
 	  buffer = SAFE_ALLOCA (size);
-	  ptr0 = buffer + offset;
+	  ptr = buffer + offset;
 	}
 
-      ptr0 += copy_text (SDATA (name), (unsigned char *) ptr0, nbytes,
+      ptr += copy_text (SDATA (name), (unsigned char *) ptr, nbytes,
 			STRING_MULTIBYTE (name), 1);
     }
 
@@ -484,21 +484,21 @@ echo_add_key (Lisp_Object c)
       static const char text[] = " (Type ? for further options)";
       int len = sizeof text - 1;
 
-      if (size - (ptr0 - buffer) < len)
+      if (size - (ptr - buffer) < len)
 	{
-	  ptrdiff_t offset = ptr0 - buffer;
+	  ptrdiff_t offset = ptr - buffer;
 	  size += len;
 	  buffer = SAFE_ALLOCA (size);
-	  ptr0 = buffer + offset;
+	  ptr = buffer + offset;
 	}
 
-      memcpy (ptr0, text, len);
-      ptr0 += len;
+      memcpy (ptr, text, len);
+      ptr += len;
     }
 
   kset_echo_string
     (current_kboard,
-     concat2 (echo_string, make_string (buffer, ptr0 - buffer)));
+     concat2 (echo_string, make_string (buffer, ptr - buffer)));
   SAFE_FREE ();
 }
 

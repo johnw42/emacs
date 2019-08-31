@@ -3806,7 +3806,7 @@ read_vector (Lisp_Object readcharfun, bool bytecodeflag)
   vector = Fmake_vector (len, Qnil);
 
   size = ASIZE (vector);
-  XVECTOR_CACHE (ptr0, vector);
+  XVECTOR_CACHE (ptr, vector);
   for (i = 0; i < size; i++)
     {
       item = Fcar (tem);
@@ -3829,7 +3829,7 @@ read_vector (Lisp_Object readcharfun, bool bytecodeflag)
 	    }
 	  else if (i == COMPILED_CONSTANTS)
 	    {
-	      Lisp_Object bytestr = xv_ref (ptr0, COMPILED_CONSTANTS);
+	      Lisp_Object bytestr = xv_ref (ptr, COMPILED_CONSTANTS);
 
 	      if (NILP (item))
 		{

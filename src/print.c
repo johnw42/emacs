@@ -1533,7 +1533,7 @@ print_vectorlike (Lisp_Object obj, Lisp_Object printcharfun, bool escapeflag,
 
     case PVEC_FRAME:
       {
-	void *ptr0 = XFRAME (obj);
+	void *ptr = XFRAME (obj);
 	Lisp_Object frame_name = XFRAME (obj)->name;
 
 	print_c_string ((FRAME_LIVE_P (XFRAME (obj))
@@ -1550,7 +1550,7 @@ print_vectorlike (Lisp_Object obj, Lisp_Object printcharfun, bool escapeflag,
 	      frame_name = build_string ("*INVALID*FRAME*NAME*");
 	  }
 	print_string (frame_name, printcharfun);
-	int len = sprintf (buf, " %p>", ptr0);
+	int len = sprintf (buf, " %p>", ptr);
 	strout (buf, len, len, printcharfun);
       }
       break;
