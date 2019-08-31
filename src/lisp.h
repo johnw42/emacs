@@ -64,6 +64,16 @@ void scheme_ptr_fill (ptr *p, ptr init, iptr num_words);
 ptr to_lisp_string (ptr str);
 ptr to_scheme_string (ptr lstr);
 chez_ptr make_scheme_string (const char *data, iptr nchars, iptr nbytes, bool multibyte);
+extern void visit_lisp_refs(ptr obj, void (*fun)(void *, ptr *, ptrdiff_t), void *data);
+extern void init_nil_refs(ptr obj);
+extern bool symbol_is(ptr sym, const char *name);
+extern bool datum_starts_with(ptr, const char *);
+
+void gdb_break(void);
+const char *gdb_print_scheme(ptr obj);
+const char *gdb_print(ptr obj);
+extern unsigned gdb_flags;
+extern int gdb_hit_count;
 
 #define SCHEME_FPTR_DECL(name, rtype, ...) \
   extern rtype (*scheme_fptr_##name)(const char *, int, __VA_ARGS__)
@@ -3986,6 +3996,7 @@ set_hash_value_slot (struct Lisp_Hash_Table *h, ptrdiff_t idx, Lisp_Object val)
 INLINE void
 set_symbol_function (Lisp_Object sym, Lisp_Object function)
 {
+  if (symbol_is(sym, "if")) gdb_break();
   (void) XLI(function);
   /* if (EQ (sym, Qpcase) && !NILP (function)) */
   /*   abort(); */
@@ -5560,16 +5571,6 @@ scheme_ptr_copy (ptr *dest, ptr *src, iptr num_words)
 }
 
 struct Lisp_Symbol *scheme_make_symbol(ptr name, enum symbol_interned interned);
-
-extern void visit_lisp_refs(Lisp_Object obj, void (*fun)(void *, Lisp_Object *, ptrdiff_t), void *data);
-extern void init_nil_refs(Lisp_Object obj);
-extern bool symbol_is(ptr sym, const char *name);
-extern bool datum_starts_with(ptr, const char *);
-
-void gdb_break(void);
-const char *gdb_print_scheme(Lisp_Object obj);
-const char *gdb_print(Lisp_Object obj);
-extern unsigned gdb_flags;
 
 INLINE void
 gdb_set_flag (int i)

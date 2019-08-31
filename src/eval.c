@@ -2114,6 +2114,7 @@ record_in_backtrace (Lisp_Object function, Lisp_Object *args, ptrdiff_t nargs)
 }
 
 void gdb_break(void) {}
+int gdb_hit_count = 0;
 
 /* Eval a sub-expression of the current expression (i.e. in the same
    lexical scope).  */
@@ -2174,6 +2175,7 @@ eval_sub (Lisp_Object form)
   /* At this point, only original_fun and original_args
      have values that will be used below.  */
  retry:
+  /* if (symbol_is(original_fun, "if") && ++gdb_hit_count >= 38019) gdb_break(); */
 
   /* Optimize for no indirection.  */
   fun = original_fun;
@@ -2291,8 +2293,10 @@ eval_sub (Lisp_Object form)
     return apply_lambda (fun, original_args, count);
   else
     {
-      if (NILP (fun))
+      if (NILP (fun)) {
+        gdb_break();
 	xsignal1 (Qvoid_function, original_fun);
+      }
       if (!CONSP (fun))
 	xsignal1 (Qinvalid_function, original_fun);
       funcar = XCAR (fun);

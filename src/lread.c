@@ -4215,6 +4215,7 @@ A second optional argument specifies the obarray to use;
 it defaults to the value of `obarray'.  */)
   (Lisp_Object string, Lisp_Object obarray)
 {
+  if (symbol_is(string, "if") && ++gdb_hit_count >= 226348) gdb_break();
   Lisp_Object tem;
 
   obarray = check_obarray (NILP (obarray) ? Vobarray : obarray);

@@ -3,48 +3,194 @@
 cd $(dirname "$0")
 top=$PWD
 
-find lisp -depth -name \*.elc -delete
-
 HAVE_CHEZ_SCHEME=false
 if fgrep -q '#define HAVE_CHEZ_SCHEME' src/globals.h; then
   HAVE_CHEZ_SCHEME=true
 fi
 
-export EMACSLOADPATH=$top/lisp
-make -j lib lib-src
-if make -j -C src temacs; then
+export EMACSLOADPATH=
 
-  cd src
-  # EMACS_CMD="src/emacs --batch"
-  #EMACS_CMD="src/temacs --batch --load loadup"
+#RUN_DIR=$top/lisp
+#MAKE_CMD=(do_make -j -C src emacs)
+#EMACS_CMD=($top/src/temacs --batch --load loadup)
 
-  cd ../lisp
-  # exec ddd $top/src/temacs
+RUN_DIR=$top/lisp
+MAKE_CMD=(do_make -j -C src temacs)
+#MAKE_CMD=true
+EMACS_CMD=($top/src/temacs --batch --no-site-file --no-site-lisp --eval '(setq load-prefer-newer t)' -f batch-byte-compile htmlfontify.el)
 
-  EMACS_CMD=($top/src/temacs --batch --load loadup)
-  
-  GDB=false
-  if [[ $TERM != dumb ]]; then
-    GDB="gdb -x $top/src/.gdbinit -ex r --args"
+do_make() {
+  make -j1 "$@"
+}
+
+main() {
+  export EMACSLOADPATH=$top/lisp
+  do_make -j lib lib-src
+
+  #find lisp -depth -name \*.elc -delete
+  do_byte_compile
+
+  if "${MAKE_CMD[@]}"; then
+
+    cd "$RUN_DIR"
+    # exec ddd $top/src/temacs
+    
+    echo "${EMACS_CMD[*]}"
+    if [[ $TERM == dumb ]]; then
+      #"${EMACS_CMD[@]}"
+      echo "not running in dumb terminal"
+    else
+      gdb -x "$top/src/.gdbinit" -ex r --args "${EMACS_CMD[@]}"
+    fi
+
+    # cd lisp
+    # for lisp_file in autoload.el; do
+    #   EMACS_CMD=('./bootstrap-emacs' --batch --no-site-file --no-site-lisp --eval '(setq load-prefer-newer t)'  -f batch-byte-compile ../lisp/emacs-lisp/$lisp_file)
+    #   echo "${EMACS_CMD[*]}"
+    #   "${EMACS_CMD[@]}" || $GDB "${EMACS_CMD[@]}"
+    # done
+    
+    #   $GDB $EMACS_CMD --eval \
+      #     "
+    # (progn
+    #  (setq garbage-collection-messages t)
+    #  (message \"after-idle: %S\"
+    #    (prog1 (scheme-funcall 'after-idle (cons nil nil))
+    #    (garbage-collect))))"
+    #src/emacs -Q --batch --eval "(message \"after-idle: %S\" (scheme-funcall 'after-idle))"
   fi
+}
 
-  echo "${EMACS_CMD[*]}"
-  #"${EMACS_CMD[@]}" ||
-    $GDB "${EMACS_CMD[@]}"
+byte_compile_all() {
+  while [[ $# != 0 ]]; do
+    local TARGETS=()
+    for i in $(seq 8); do
+      if [[ $# != 0 ]]; then
+        TARGETS+=("$1")
+        shift
+      fi
+    done
+    echo "${TARGETS[@]}"
+    do_make V=1 -j8 -C lisp "${TARGETS[@]}" #&> /dev/null
+  done
+}
 
-  # cd lisp
-  # for lisp_file in autoload.el; do
-  #   EMACS_CMD=('./bootstrap-emacs' --batch --no-site-file --no-site-lisp --eval '(setq load-prefer-newer t)'  -f batch-byte-compile ../lisp/emacs-lisp/$lisp_file)
-  #   echo "${EMACS_CMD[*]}"
-  #   "${EMACS_CMD[@]}" || $GDB "${EMACS_CMD[@]}"
-  # done
-  
-#   $GDB $EMACS_CMD --eval \
-#     "
-# (progn
-#  (setq garbage-collection-messages t)
-#  (message \"after-idle: %S\"
-#    (prog1 (scheme-funcall 'after-idle (cons nil nil))
-#    (garbage-collect))))"
-  #src/emacs -Q --batch --eval "(message \"after-idle: %S\" (scheme-funcall 'after-idle))"
-fi
+do_byte_compile() {
+  do_make V=1 -j8 -C lisp \
+    emacs-lisp/byte-run.elc \
+    emacs-lisp/backquote.elc \
+    subr.elc \
+    version.elc \
+    widget.elc \
+    custom.elc \
+    emacs-lisp/map-ynp.elc \
+    international/mule.elc \
+    international/mule-conf.elc \
+    env.elc \
+    format.elc \
+    bindings.elc \
+    window.elc \
+    files.elc \
+    emacs-lisp/pcase.elc \
+    emacs-lisp/macroexp.elc \
+    cus-face.elc \
+    faces.elc \
+    button.elc \
+    emacs-lisp/nadvice.elc \
+    emacs-lisp/cl-preloaded.elc \
+    minibuffer.elc \
+    obarray.elc \
+    abbrev.elc \
+    simple.elc \
+    help.elc \
+    jka-cmpr-hook.elc \
+    epa-hook.elc \
+    international/mule-cmds.elc \
+    case-table.elc \
+    international/characters.elc \
+    composite.elc \
+    language/chinese.elc \
+    language/cyrillic.elc \
+    language/indian.elc \
+    language/sinhala.elc \
+    language/english.elc \
+    language/ethiopic.elc \
+    language/european.elc \
+    language/czech.elc \
+    language/slovak.elc \
+    language/romanian.elc \
+    language/greek.elc \
+    language/hebrew.elc \
+    international/cp51932.elc \
+    international/eucjp-ms.elc \
+    language/japanese.elc \
+    language/korean.elc \
+    language/lao.elc \
+    language/tai-viet.elc \
+    language/thai.elc \
+    language/tibetan.elc \
+    language/vietnamese.elc \
+    language/misc-lang.elc \
+    language/utf-8-lang.elc \
+    language/georgian.elc \
+    language/khmer.elc \
+    language/burmese.elc \
+    language/cham.elc \
+    indent.elc \
+    emacs-lisp/cl-generic.elc \
+    frame.elc \
+    term/tty-colors.elc \
+    font-core.elc \
+    facemenu.elc \
+    emacs-lisp/syntax.elc \
+    font-lock.elc \
+    jit-lock.elc \
+    mouse.elc \
+    scroll-bar.elc \
+    select.elc \
+    emacs-lisp/timer.elc \
+    isearch.elc \
+    rfn-eshadow.elc \
+    menu-bar.elc \
+    emacs-lisp/lisp.elc \
+    textmodes/page.elc \
+    register.elc \
+    textmodes/paragraphs.elc \
+    progmodes/prog-mode.elc \
+    emacs-lisp/lisp-mode.elc \
+    progmodes/elisp-mode.elc \
+    textmodes/text-mode.elc \
+    textmodes/fill.elc \
+    newcomment.elc \
+    replace.elc \
+    emacs-lisp/tabulated-list.elc \
+    buff-menu.elc \
+    emacs-lisp/scheme-internal.elc \
+    fringe.elc \
+    emacs-lisp/regexp-opt.elc \
+    image.elc \
+    international/fontset.elc \
+    dnd.elc \
+    tool-bar.elc \
+    dynamic-setting.elc \
+    x-dnd.elc \
+    term/common-win.elc \
+    term/x-win.elc \
+    mwheel.elc \
+    emacs-lisp/float-sup.elc \
+    vc/vc-hooks.elc \
+    vc/ediff-hook.elc \
+    uniquify.elc \
+    electric.elc \
+    emacs-lisp/eldoc.elc \
+    cus-start.elc \
+    tooltip.elc
+
+  # loaddefs.elc
+  # leim/leim-list.elc
+  # international/charprop.elc
+  # startup.elc
+}
+
+#do_byte_compile
+main "$@"

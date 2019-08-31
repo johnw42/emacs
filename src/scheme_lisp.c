@@ -415,7 +415,8 @@ scheme_make_symbol(ptr name, enum symbol_interned interned)
     {
       chez_ptr scheme_str = to_scheme_string (name);
       scheme_symbol = scheme_call1
-        (interned == SYMBOL_UNINTERNED ? "gensym" : "string->symbol",
+        (interned == SYMBOL_INTERNED_IN_INITIAL_OBARRAY ?
+         "string->symbol" : "gensym",
          scheme_str);
       chez_lock_object (scheme_symbol);
     }
@@ -801,9 +802,11 @@ init_nil_refs (Lisp_Object obj)
 bool
 symbol_is(ptr sym, const char *name)
 {
-  if (!chez_symbolp (sym))
-    return false;
-  return SCHEME_FPTR_CALL(symbol_is, sym, name);
+  if (chez_symbolp (sym))
+    return SCHEME_FPTR_CALL(symbol_is, sym, name);
+  if (STRINGP (sym))
+    return strncmp(SSDATA(sym), name, SCHARS(sym)) == 0;
+  return false;
 }
 
 bool
