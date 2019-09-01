@@ -64,10 +64,15 @@ void scheme_ptr_fill (ptr *p, ptr init, iptr num_words);
 ptr to_lisp_string (ptr str);
 ptr to_scheme_string (ptr lstr);
 chez_ptr make_scheme_string (const char *data, iptr nchars, iptr nbytes, bool multibyte);
-extern void visit_lisp_refs(ptr obj, void (*fun)(void *, ptr *, ptrdiff_t), void *data);
-extern void init_nil_refs(ptr obj);
-extern bool symbol_is(ptr sym, const char *name);
-extern bool datum_starts_with(ptr, const char *);
+typedef void (*lisp_ref_visitor_fun)(void *, chez_ptr *, ptrdiff_t);
+void visit_lisp_refs(ptr obj, lisp_ref_visitor_fun, void *data);
+void init_nil_refs(ptr obj);
+bool symbol_is(ptr sym, const char *name);
+bool datum_starts_with(ptr, const char *);
+void before_scheme_gc (void);
+void after_scheme_gc (void);
+chez_ptr scheme_track (chez_ptr);
+chez_ptr scheme_untrack (chez_ptr);
 
 void gdb_break(void);
 const char *gdb_print_scheme(ptr obj);
@@ -501,8 +506,8 @@ error !;
    (eassert ((sym)->u.s.redirect == SYMBOL_PLAINVAL), (sym)->u.s.val.value)
 #define lisp_h_SYMBOLP(x) (chez_symbolp(x))
 #define lisp_h_VECTORLIKEP(x) SCHEME_VECTORP(x, scheme_vectorlike_symbol)
-#define lisp_h_XCAR(c) (eassert (CONSP (c)), chez_car(c))
-#define lisp_h_XCDR(c) (eassert (CONSP (c)), chez_cdr(c))
+#define lisp_h_XCAR(c) (eassert (chez_pairp (c)), chez_car (c))
+#define lisp_h_XCDR(c) (eassert (chez_pairp (c)), chez_cdr(c))
 #define lisp_h_make_number(n) (eassert (chez_fixnump(chez_integer(n))), chez_fixnum(n))
 # define lisp_h_XFASTINT(a) XINT (a)
 # define lisp_h_XINT(a) (chez_fixnum_value(a))
@@ -1099,6 +1104,7 @@ union vectorlike_header
     struct {
       ptrdiff_t size;
       ptr scheme_obj;
+      bool marked;
     } s;
 #else /* not HAVE_CHEZ_SCHEME */
     char alignas (GCALIGNMENT) gcaligned;
@@ -1450,9 +1456,9 @@ INLINE Lisp_Object vectorlike_lisp_obj(void *vptr)
   XSETPVECTYPESIZE(XVECTOR(v), cocde, lispsize, restsize)
 
 #define XSETPVECTYPE(v, code)						\
-  ((v).vptr->header.size |= PSEUDOVECTOR_FLAG | ((code) << PSEUDOVECTOR_AREA_BITS))
+  (xv_unwrap (v)->header.size |= PSEUDOVECTOR_FLAG | ((code) << PSEUDOVECTOR_AREA_BITS))
 #define XSETPVECTYPESIZE(v, code, lispsize, restsize)		\
-  ((v).vptr->header.size = (PSEUDOVECTOR_FLAG			\
+  (xv_unwrap (v)->header.size = (PSEUDOVECTOR_FLAG			\
                   | ((code) << PSEUDOVECTOR_AREA_BITS)          \
                   | ((restsize) << PSEUDOVECTOR_SIZE_BITS)      \
                   | (lispsize)))
@@ -1660,6 +1666,7 @@ struct Lisp_String
     {
 #ifdef HAVE_CHEZ_SCHEME
       ptr scheme_obj;
+      bool marked;
 #endif /* HAVE_CHEZ_SCHEME */
       ptrdiff_t size;
       ptrdiff_t size_byte;
@@ -1834,11 +1841,18 @@ INLINE bool
   return lisp_h_VECTORLIKEP (x);
 }
 
+#undef HAVE_XVC
+
+#ifdef HAVE_XVC
 typedef struct { Lisp_Object *cptr; } xvector_contents_t;
+#else
+typedef Lisp_Object *xvector_contents_t;
+#endif
 
 #define XVC_NULL as_xvc(NULL);
 #define XVC_LOCAL(name, size) Lisp_Object name##_array[size]; xvector_contents_t name = as_xvc (name##_array)
 
+#ifdef HAVE_XVC
 INLINE xvector_contents_t
 as_xvc (Lisp_Object *ptr)
 {
@@ -1851,36 +1865,40 @@ xvc_unwrap (xvector_contents_t c)
 {
   return c.cptr;
 }
+#else
+#define as_xvc(x) (x)
+#define xvc_unwrap(x) (x)
+#endif
 
 INLINE Lisp_Object
 xvc_ref (xvector_contents_t v, size_t i)
 {
-  return v.cptr[i];
+  return xvc_unwrap (v)[i];
 }
 
 INLINE Lisp_Object
 xvc_set (xvector_contents_t v, size_t i, Lisp_Object val)
 {
-  return v.cptr[i] = val;
+  return xvc_unwrap (v)[i] = val;
 }
 
 INLINE bool
 xvc_nullp (xvector_contents_t c)
 {
-  return c.cptr == NULL;
+  return xvc_unwrap(c) == NULL;
 }
 
 INLINE xvector_contents_t
 xvc_add (xvector_contents_t c, ptrdiff_t delta)
 {
   eassert (!xvc_nullp (c));
-  return as_xvc (c.cptr + delta);
+  return as_xvc (xvc_unwrap(c) + delta);
 }
 
 INLINE ptrdiff_t
 xvc_diff (xvector_contents_t c1, xvector_contents_t c2)
 {
-  return c1.cptr - c2.cptr;
+  return xvc_unwrap(c1) - xvc_unwrap(c2);
 }
 
 INLINE void
@@ -1895,18 +1913,16 @@ xvc_copy (xvector_contents_t v1,
           xvector_contents_t v2,
           size_t count)
 {
-  memcpy (v1.cptr,
-          v2.cptr,
+  memcpy (xvc_unwrap (v1),
+          xvc_unwrap (v2),
           count * sizeof (Lisp_Object));
 }
 
+#ifdef HAVE_XVC
 typedef struct { struct Lisp_Vector *vptr; } xvector_t;
 
 #define XVECTOR_CACHE_INIT {0}
 #define XVECTOR_CACHE_SET_NULL(var) (var.vptr = 0)
-#define XPVEC(pvec_type, pvec) \
-  ((pvec_type *) XVECTOR (pvec).vptr)
-#define XV_NULL as_xv(NULL);
 #define AS_XV(ptr) as_xv ((struct Lisp_Vector *) &(ptr)->header.size)
 
 INLINE xvector_t
@@ -1921,42 +1937,54 @@ xv_unwrap (xvector_t v)
 {
   return v.vptr;
 }
+#else
+typedef struct Lisp_Vector *xvector_t;
+#define XVECTOR_CACHE_INIT NULL
+#define XVECTOR_CACHE_SET_NULL(var) (var = NULL)
+#define as_xv(x) (x)
+#define xv_unwrap(x) (x)
+#endif
+
+#define XPVEC(pvec_type, pvec) \
+  ((pvec_type *) xv_unwrap (XVECTOR (pvec)))
+#define AS_XV(ptr) as_xv ((struct Lisp_Vector *) &(ptr)->header.size)
+#define XV_NULL as_xv(NULL);
 
 
 INLINE xvector_contents_t
 xv_contents (xvector_t v)
 {
-  return as_xvc (v.vptr->contents);
+  return as_xvc (xv_unwrap (v)->contents);
 }
 
 INLINE Lisp_Object *
 xv_ref_addr (xvector_t v, size_t i)
 {
-  return &v.vptr->contents[i];
+  return &xv_unwrap (v)->contents[i];
 }
 
 INLINE Lisp_Object
 xv_ref (xvector_t v, size_t i)
 {
-  return v.vptr->contents[i];
+  return xv_unwrap (v)->contents[i];
 }
 
 INLINE Lisp_Object
 xv_set (xvector_t v, size_t i, Lisp_Object val)
 {
-  return v.vptr->contents[i] = val;
+  return xv_unwrap (v)->contents[i] = val;
 }
 
 INLINE ptrdiff_t
 xv_size (xvector_t v)
 {
-  return v.vptr->header.size;
+  return xv_unwrap (v)->header.size;
 }
 
 INLINE ptrdiff_t
 xv_nullp (xvector_t v)
 {
-  return v.vptr == NULL;
+  return xv_unwrap (v) == NULL;
 }
 
 INLINE xvector_t
@@ -2317,7 +2345,7 @@ INLINE ptrdiff_t
 gc_asize (Lisp_Object array)
 {
   /* Like ASIZE, but also can be used in the garbage collector.  */
-  return XVECTOR (array).vptr->header.size & ~ARRAY_MARK_FLAG;
+  return xv_unwrap (XVECTOR (array))->header.size & ~ARRAY_MARK_FLAG;
 }
 
 INLINE void
@@ -2325,7 +2353,7 @@ ASET (Lisp_Object array, ptrdiff_t idx, Lisp_Object val)
 {
   eassert (0 <= idx && idx < ASIZE (array));
   (void) XLI(val);
-  XVECTOR (array).vptr->contents[idx] = val;
+  xv_unwrap (XVECTOR (array))->contents[idx] = val;
 }
 
 INLINE void
@@ -2335,7 +2363,7 @@ gc_aset (Lisp_Object array, ptrdiff_t idx, Lisp_Object val)
      sweep_weak_table calls set_hash_key etc. while the table is marked.  */
   eassert (0 <= idx && idx < gc_asize (array));
   (void) XLI(val);
-  XVECTOR (array).vptr->contents[idx] = val;
+  xv_unwrap (XVECTOR (array))->contents[idx] = val;
 }
 
 /* Clear the object addressed by P, with size NBYTES, so that all its
@@ -3971,7 +3999,7 @@ INLINE void
 vcopy (Lisp_Object v, ptrdiff_t offset, Lisp_Object *args, ptrdiff_t count)
 {
   eassert (0 <= offset && 0 <= count && offset + count <= ASIZE (v));
-  memcpy (XVECTOR (v).vptr->contents + offset, args, count * sizeof *args);
+  memcpy (xv_unwrap (XVECTOR (v))->contents + offset, args, count * sizeof *args);
 }
 
 /* Functions to modify hash tables.  */
@@ -3996,7 +4024,6 @@ set_hash_value_slot (struct Lisp_Hash_Table *h, ptrdiff_t idx, Lisp_Object val)
 INLINE void
 set_symbol_function (Lisp_Object sym, Lisp_Object function)
 {
-  if (symbol_is(sym, "if")) gdb_break();
   (void) XLI(function);
   /* if (EQ (sym, Qpcase) && !NILP (function)) */
   /*   abort(); */
@@ -4486,7 +4513,7 @@ extern struct Lisp_Vector *allocate_pseudovector (int, int, int,
 
 extern bool gc_in_progress;
 #ifdef HAVE_CHEZ_SCHEME
-#define make_float chez_flonum
+#define make_float(x) scheme_track (chez_flonum (x))
 #else /* not HAVE_CHEZ_SCHEME */
 extern Lisp_Object make_float (double);
 #endif /* not HAVE_CHEZ_SCHEME */
@@ -5595,6 +5622,8 @@ gdb_pop_flag (int i)
   return false;
 }
 
+void visit_pseudovector_lisp_refs (struct Lisp_Vector *v, lisp_ref_visitor_fun fun, void *data);
+void visit_buffer_lisp_refs (struct buffer *b, lisp_ref_visitor_fun fun, void *data);
 
 #endif /* HAVE_CHEZ_SCHEME */
 

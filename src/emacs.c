@@ -699,7 +699,6 @@ main (int argc, char **argv)
   stack_bottom = (char *) &stack_bottom_variable;
 #endif /* not HAVE_CHEZ_SCHEME */
 
-
 #ifndef CANNOT_DUMP
   dumping = !initialized && (strcmp (argv[argc - 1], "dump") == 0
 			     || strcmp (argv[argc - 1], "bootstrap") == 0);
@@ -1219,6 +1218,8 @@ Using an Emacs configured with --with-x-toolkit=lucid does not have this problem
       init_alloc_once ();
       init_threads_once ();
 #ifdef HAVE_CHEZ_SCHEME
+      /* Record (approximately) where the stack begins.  */
+      stack_bottom = (char *) &stack_bottom_variable;
       scheme_init_buffer_once ();
 #endif /* HAVE_CHEZ_SCHEME */
       init_obarray ();

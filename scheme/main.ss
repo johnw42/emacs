@@ -25,6 +25,12 @@
          c-symbol_is
          )
 
+  (define elisp-before-scheme-gc
+    (foreign-procedure "before_scheme_gc" () void))
+
+  (define elisp-after-scheme-gc
+    (foreign-procedure "after_scheme_gc" () void))
+
   (define elisp-equal
     (foreign-procedure "Fequal" (scheme-object scheme-object) scheme-object))
 
@@ -352,10 +358,14 @@
   (define abort (foreign-procedure "abort" () void))
 
   (define (emacs-init)
-    (printf "called scheme emacs-init\n")
     (collect-request-handler
      (lambda ()
-       (printf "skipping scheme garbage collection\n")))
+       (critical-section
+        (printf "starting gc\n")
+        (elisp-before-scheme-gc)
+        (collect)
+        (elisp-after-scheme-gc)
+        (printf "gc done\n"))))
     (let (
           #;[stderr (transcoded-port (standard-error-port)
           (native-transcoder))])

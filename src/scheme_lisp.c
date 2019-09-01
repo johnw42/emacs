@@ -5,6 +5,8 @@
 #include "lisp.h"
 #include "buffer.h"
 #include "window.h"
+#include "intervals.h"
+#include "frame.h"
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -273,6 +275,8 @@ void scheme_init(void) {
   scheme_least_fixnum = chez_fixnum_value(scheme_call0("least-fixnum"));
   scheme_fixnum_width = chez_fixnum_value(scheme_call0("fixnum-width"));
 
+  chez_foreign_symbol("before_scheme_gc", before_scheme_gc);
+  chez_foreign_symbol("after_scheme_gc", after_scheme_gc);
   chez_foreign_symbol("abort", abort);
   chez_foreign_symbol("Fequal", Fequal);
   chez_foreign_symbol("Fsxhash_equal", Fsxhash_equal);
@@ -297,14 +301,14 @@ void scheme_init(void) {
   SCHEME_FPTR_INIT(symbol_is);
 
   c_data_table = scheme_call0("make-eq-hashtable");
-  chez_lock_object(c_data_table);
+  scheme_track (c_data_table);
 
   scheme_vectorlike_symbol = scheme_call1("gensym", chez_string("emacs-vectorlike"));
-  chez_lock_object(scheme_vectorlike_symbol);
+  scheme_track (scheme_vectorlike_symbol);
   scheme_misc_symbol = scheme_call1("gensym", chez_string("emacs-misc"));
-  chez_lock_object(scheme_misc_symbol);
+  scheme_track (scheme_misc_symbol);
   scheme_string_symbol = scheme_call1("gensym", chez_string("emacs-string"));
-  chez_lock_object(scheme_string_symbol);
+  scheme_track (scheme_string_symbol);
 
   //atexit(scheme_deinit);
   scheme_initialized = true;
@@ -356,7 +360,7 @@ to_scheme_string(ptr arg)
   eassert (STRINGP (arg));
   iptr n = XINT (Flength (arg));
   ptr sstr = chez_make_uninitialized_string(n);
-  chez_lock_object(sstr);
+  scheme_track (sstr);
   for (iptr i = 0; i < n; i++)
     chez_string_set (sstr, i, XINT (Faref (arg, make_number(i))));
   return sstr;
@@ -418,7 +422,7 @@ scheme_make_symbol(ptr name, enum symbol_interned interned)
         (interned == SYMBOL_INTERNED_IN_INITIAL_OBARRAY ?
          "string->symbol" : "gensym",
          scheme_str);
-      chez_lock_object (scheme_symbol);
+      scheme_track (scheme_symbol);
     }
 
   eassert (chez_symbolp (scheme_symbol));
@@ -639,34 +643,152 @@ scheme_function_for_name(const char *name) {
   ptr sym = chez_string_to_symbol(name);
   eassert(chez_symbolp(sym));
   ptr fun = chez_top_level_value(sym);
-  chez_lock_object (fun);
+  scheme_track (fun);
   //eassert(chez_procedurep(fun));
   return fun;
 }
 
-// NOT TESTED!
+void
+visit_pseudovector_lisp_refs (struct Lisp_Vector *v, lisp_ref_visitor_fun fun, void *data)
+
+{
+  fun (data, &v->header.s.scheme_obj, 1);
+  EMACS_INT n = pvsize_from_header (&v->header);
+  if (n > 0)
+    fun(data, v->contents, n);
+}
+
+struct visit_iterval_data {
+  lisp_ref_visitor_fun fun;
+  void *data;
+};
+
+static void
+visit_interval_lisp_refs_fun (INTERVAL i, void *data)
+{
+  struct visit_iterval_data *vid = data;
+  vid->fun(data, &i->plist, 1);
+}
+
+static void
+visit_interval_tree_lisp_refs (INTERVAL i, lisp_ref_visitor_fun fun, void *data)
+{
+  if (i)
+    {
+      struct visit_iterval_data vid = {fun, data};
+      traverse_intervals_noorder (i, visit_interval_lisp_refs_fun, &vid);
+    }
+}
+
+static void
+visit_overlay_lisp_refs (struct Lisp_Overlay *ptr, lisp_ref_visitor_fun fun, void *data)
+{
+  while (ptr)
+    {
+      fun(data, &ptr->start, 1);
+      fun(data, &ptr->end, 1);
+      fun(data, &ptr->plist, 1);
+      ptr = ptr->next;
+    }
+}
+
+void
+visit_buffer_lisp_refs(struct buffer *b, lisp_ref_visitor_fun fun, void *data)
+{
+  fun (data, &b->undo_list_, 1);
+
+  /* if (b->text) */
+  /*   visit_interval_tree_lisp_refs (b->text->intervals, fun, data); */
+
+  visit_overlay_lisp_refs (b->overlays_before, fun, data);
+  visit_overlay_lisp_refs (b->overlays_after, fun, data);
+}
+
+static void
+visit_face_cache_lisp_refs (struct face_cache *c, lisp_ref_visitor_fun fun, void *data)
+{
+  if (c)
+    for (int i = 0; i < c->used; ++i)
+      {
+        struct face *face = FACE_FROM_ID_OR_NULL (c->f, i);
+        if (face)
+          {
+            if (face->font)
+              visit_pseudovector_lisp_refs
+                ((struct Lisp_Vector *) face->font, fun, data);
+            fun (data, face->lface, LFACE_VECTOR_SIZE);
+          }
+      }
+}
+
+static void
+visit_glyph_matrix_lisp_refs (struct glyph_matrix *matrix, lisp_ref_visitor_fun fun, void *data)
+{
+  struct glyph_row *row = matrix->rows;
+  struct glyph_row *end = row + matrix->nrows;
+
+  for (; row < end; ++row)
+    if (row->enabled_p)
+      for (int area = LEFT_MARGIN_AREA; area < LAST_AREA; ++area)
+        {
+          struct glyph *glyph = row->glyphs[area];
+          struct glyph *end_glyph = glyph + row->used[area];
+
+          for (; glyph < end_glyph; ++glyph)
+            fun (data, &glyph->object, 1);
+        }
+}
+
+static void
+visit_symbol_lisp_refs(Lisp_Object obj, lisp_ref_visitor_fun fun, void *data)
+{
+  struct Lisp_Symbol *s = XSYMBOL (obj);
+  fun (data, &s->u.s.scheme_obj, 1);
+  fun (data, &s->u.s.name, 1);
+  switch (s->u.s.redirect)
+    {
+    case SYMBOL_PLAINVAL:
+      fun (data, &s->u.s.val.value, 1);
+      break;
+    case SYMBOL_VARALIAS:
+      break;
+    case SYMBOL_LOCALIZED:
+      {
+        struct Lisp_Buffer_Local_Value *blv = SYMBOL_BLV (s);
+        fun (data, &blv->where, 1);
+        fun (data, &blv->valcell, 1);
+        fun (data, &blv->defcell, 1);
+      }
+      break;
+    case SYMBOL_FORWARDED:
+      break;
+    default:
+      emacs_abort ();
+    }
+  fun(data, &s->u.s.function, 1);
+  fun(data, &s->u.s.plist, 1);
+  fun(data, &s->u.s.name, 1);
+}
+
 /* Finds all Lisp_Object references in OBJ not managed by the scheme
    garbage collector.  Calls FUN zero or more times, passing DATA
    and a pair of pointers indicating the stard and end of a block of
    Lisp_Object values. */
 void
-visit_lisp_refs(Lisp_Object obj,
-                void (*fun)(void *, Lisp_Object *, ptrdiff_t),
-                void *data)
+visit_lisp_refs(Lisp_Object obj, lisp_ref_visitor_fun fun, void *data)
 {
   switch (XTYPE(obj))
     {
     case Lisp_Symbol:
+      visit_symbol_lisp_refs(obj, fun, data);
+      break;
+    case Lisp_String:
       {
-        struct Lisp_Symbol *s = XSYMBOL(obj);
-        fun(data, &s->u.s.name, 1);
-        if (s->u.s.redirect == 0)
-          fun(data, &s->u.s.val.value, 1);
-        fun(data, &s->u.s.function, 1);
-        fun(data, &s->u.s.plist, 1);
-        // TODO(jrw): Follow val.blv and val.fwd?
-        break;
+        struct Lisp_String *s = XSTRING (obj);
+        fun (data, &s->u.s.scheme_obj, 1);
+        visit_interval_tree_lisp_refs (s->u.s.intervals, fun, data);
       }
+      break;
     case Lisp_Misc:
       {
         union Lisp_Misc *m = XMISC(obj);
@@ -689,7 +811,6 @@ visit_lisp_refs(Lisp_Object obj,
               {
               case SAVE_TYPE_MEMORY:
                 // This case can't be implemented without valid_lisp_object_p.
-                eassert(false);
                 break;
               default:
                 for (int index = 0; index < SAVE_VALUE_SLOTS; index++)
@@ -718,14 +839,10 @@ visit_lisp_refs(Lisp_Object obj,
         }
       else
         {
-          EMACS_INT n = PVSIZE(obj);
-          if (n > 0)
-            fun(data, aref_addr(obj, 0), n);
           switch (PSEUDOVECTOR_TYPE(XVECTOR(obj)))
             {
             case PVEC_NORMAL_VECTOR:
             case PVEC_PROCESS:
-            case PVEC_FRAME:
             case PVEC_BOOL_VECTOR:
             case PVEC_TERMINAL:
             case PVEC_WINDOW_CONFIGURATION:
@@ -736,26 +853,48 @@ visit_lisp_refs(Lisp_Object obj,
             case PVEC_MUTEX:
             case PVEC_CONDVAR:
             case PVEC_MODULE_FUNCTION:
-            case PVEC_COMPILED:
             case PVEC_RECORD:
             case PVEC_FONT:
             case PVEC_FREE:
+            case PVEC_COMPILED:
+            case PVEC_CHAR_TABLE:
+            case PVEC_SUB_CHAR_TABLE:
+              visit_pseudovector_lisp_refs (XVECTOR(obj), fun, data);
               break;
+            case PVEC_FRAME:
+              {
+                visit_pseudovector_lisp_refs (XVECTOR(obj), fun, data);
+                struct frame *f = (struct frame *) XVECTOR(obj);
+                visit_face_cache_lisp_refs (f->face_cache, fun, data);
+/* #ifdef HAVE_WINDOW_SYSTEM */
+/*                 if (FRAME_WINDOW_P (f) && FRAME_X_OUTPUT (f)) */
+/*                   { */
+/*                     struct font *font = FRAME_FONT (f); */
+/*                     if (font) */
+/*                       visit_pseudovector_lisp_refs ((struct Lisp_Vector *) font, fun, data); */
+/*                   } */
+/* #endif */
+                break;
+              }
             case PVEC_WINDOW:
               {
+                visit_pseudovector_lisp_refs (XVECTOR(obj), fun, data);
                 struct window *w = XWINDOW(obj);
+                if (w->current_matrix)
+                  {
+                    visit_glyph_matrix_lisp_refs (w->current_matrix, fun, data);
+                    visit_glyph_matrix_lisp_refs (w->desired_matrix, fun, data);
+                  }
                 fun(data, &w->prev_buffers, 1);
                 fun(data, &w->next_buffers, 1);
                 break;
               }
             case PVEC_BUFFER:
-              {
-                struct buffer *b = XBUFFER(obj);
-                fun(data, &b->undo_list_, 1);
-                break;
-              }
+              visit_buffer_lisp_refs (XBUFFER (obj), fun, data);
+              break;
             case PVEC_HASH_TABLE:
               {
+                visit_pseudovector_lisp_refs (XVECTOR(obj), fun, data);
                 struct Lisp_Hash_Table *t = XHASH_TABLE(obj);
                 fun(data, &t->key_and_value, 1);
                 fun(data, &t->test.name, 1);
@@ -763,12 +902,9 @@ visit_lisp_refs(Lisp_Object obj,
                 fun(data, &t->test.user_cmp_function, 1);
                 break;
               }
-            case PVEC_CHAR_TABLE:
-            case PVEC_SUB_CHAR_TABLE:
-              // TODO(jrw);
-              break;
             case PVEC_THREAD:
               {
+                visit_pseudovector_lisp_refs (XVECTOR(obj), fun, data);
                 struct thread_state *t = XTHREAD(obj);
                 fun(data, &t->m_re_match_object, 1);
                 break;
@@ -785,9 +921,11 @@ init_nil_ref_block (void *data, Lisp_Object *ptrs, ptrdiff_t n)
 {
   for (ptrdiff_t i = 0; i < n; i++)
     {
-      /* eassert (ptrs[i] == Qnil); */
-      eassert (ptrs[i] == Qnil || (uptr) ptrs[i] == 0);
-      ptrs[i] = Qnil;
+      if (ptrs[i] != data)
+        {
+          eassert (ptrs[i] == Qnil || (uptr) ptrs[i] == 0);
+          ptrs[i] = Qnil;
+        }
     }
 }
 
@@ -795,7 +933,7 @@ void
 init_nil_refs (Lisp_Object obj)
 {
   eassert (chez_symbolp (Qnil));
-  visit_lisp_refs(obj, init_nil_ref_block, NULL);
+  visit_lisp_refs(obj, init_nil_ref_block, obj);
 }
 
 

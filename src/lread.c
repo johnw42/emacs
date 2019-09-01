@@ -1148,6 +1148,8 @@ Return t if the file exists and loads successfully.  */)
 
   CHECK_STRING (file);
 
+  Fgarbage_collect (); // XXX
+
   /* If file name is magic, call the handler.  */
   /* This shouldn't be necessary any more now that `openp' handles it right.
     handler = Ffind_file_name_handler (file, Qload);
@@ -4046,7 +4048,7 @@ scheme_obarray_table (ptr obarray)
   if (!SCHEME_FPTR_CALL (hashtablep, table))
     {
       table = scheme_call0 ("make-obarray-table");
-      chez_lock_object (table);
+      scheme_track (table);
       ASET (obarray, 0, table);
     }
   eassert (SCHEME_FPTR_CALL (hashtablep, table));

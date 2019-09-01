@@ -10,13 +10,13 @@ fi
 
 export EMACSLOADPATH=
 
-RUN_DIR=$top/lisp
-MAKE_CMD=(do_make -j -C src emacs)
-EMACS_CMD=($top/src/temacs --batch --load loadup)
-
 # RUN_DIR=$top/lisp
 # MAKE_CMD=(do_make -j -C src temacs)
-# EMACS_CMD=($top/src/temacs --batch --no-site-file --no-site-lisp --eval '(setq load-prefer-newer t)' -f batch-byte-compile htmlfontify.el)
+# EMACS_CMD=($top/src/temacs --batch --load loadup)
+
+RUN_DIR=$top/lisp
+MAKE_CMD=(do_make -j -C src temacs)
+EMACS_CMD=($top/src/temacs --batch --no-site-file --no-site-lisp --eval '(setq load-prefer-newer t)' -f batch-byte-compile htmlfontify.el)
 
 do_make() {
   make -j1 "$@"
@@ -26,8 +26,8 @@ main() {
   export EMACSLOADPATH=$top/lisp
   do_make -j lib lib-src
 
-  #find lisp -depth -name \*.elc -delete
-  do_byte_compile
+  find lisp -depth -name \*.elc -delete
+  #do_byte_compile
 
   if "${MAKE_CMD[@]}"; then
 

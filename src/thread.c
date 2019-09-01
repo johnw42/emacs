@@ -792,7 +792,7 @@ If NAME is given, it must be a string; it names the new thread.  */)
   new_thread = ALLOCATE_PSEUDOVECTOR (struct thread_state, m_stack_bottom,
 				      PVEC_THREAD);
   memset ((char *) new_thread + offset, 0,
-          sizeof (struct thread_state) - offset);  
+          sizeof (struct thread_state) - offset);
 #ifdef HAVE_CHEZ_SCHEME
   new_thread->m_re_match_object = Qnil;
 #endif /* HAVE_CHEZ_SCHEME */

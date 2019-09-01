@@ -104,12 +104,16 @@ static Lisp_Object funcall_lambda (Lisp_Object, ptrdiff_t, Lisp_Object *);
 static Lisp_Object apply_lambda (Lisp_Object, Lisp_Object, ptrdiff_t);
 static Lisp_Object lambda_arity (Lisp_Object);
 
+#ifdef HAVE_CHEZ_SCHEME
+#define specpdl_symbol(pdl) ((pdl)->let.symbol)
+#else
 static Lisp_Object
 specpdl_symbol (union specbinding *pdl)
 {
   eassert (pdl->kind >= SPECPDL_LET);
   return pdl->let.symbol;
 }
+#endif
 
 static enum specbind_tag
 specpdl_kind (union specbinding *pdl)
@@ -118,12 +122,16 @@ specpdl_kind (union specbinding *pdl)
   return pdl->let.kind;
 }
 
+#ifdef HAVE_CHEZ_SCHEME
+#define specpdl_old_value(pdl) ((pdl)->let.old_value)
+#else
 static Lisp_Object
 specpdl_old_value (union specbinding *pdl)
 {
   eassert (pdl->kind >= SPECPDL_LET);
   return pdl->let.old_value;
 }
+#endif
 
 static void
 set_specpdl_old_value (union specbinding *pdl, Lisp_Object val)
@@ -132,33 +140,49 @@ set_specpdl_old_value (union specbinding *pdl, Lisp_Object val)
   pdl->let.old_value = val;
 }
 
+#ifdef HAVE_CHEZ_SCHEME
+#define specpdl_where(pdl) ((pdl)->let.where)
+#else
 static Lisp_Object
 specpdl_where (union specbinding *pdl)
 {
   eassert (pdl->kind > SPECPDL_LET);
   return pdl->let.where;
 }
+#endif
 
+#ifdef HAVE_CHEZ_SCHEME
+#define specpdl_saved_value(pdl) ((pdl)->let.saved_value)
+#else
 static Lisp_Object
 specpdl_saved_value (union specbinding *pdl)
 {
   eassert (pdl->kind >= SPECPDL_LET);
   return pdl->let.saved_value;
 }
+#endif
 
+#ifdef HAVE_CHEZ_SCHEME
+#define specpdl_arg(pdl) ((pdl)->unwind.arg)
+#else
 static Lisp_Object
 specpdl_arg (union specbinding *pdl)
 {
   eassert (pdl->kind == SPECPDL_UNWIND);
   return pdl->unwind.arg;
 }
+#endif
 
+#ifdef HAVE_CHEZ_SCHEME
+#define backtrace_function(pdl) ((pdl)->bt.function)
+#else
 Lisp_Object
 backtrace_function (union specbinding *pdl)
 {
   eassert (pdl->kind == SPECPDL_BACKTRACE);
   return pdl->bt.function;
 }
+#endif
 
 static ptrdiff_t
 backtrace_nargs (union specbinding *pdl)
@@ -3881,7 +3905,8 @@ mark_specpdl (union specbinding *first, union specbinding *ptr)
 	    if (nargs == UNEVALLED)
 	      nargs = 1;
 	    while (nargs--)
-	      mark_object (backtrace_args (pdl)[nargs]);
+              mark_object (backtrace_args (pdl)[nargs]);
+              }
 	  }
 	  break;
 
