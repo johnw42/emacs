@@ -676,6 +676,10 @@ close_output_streams (void)
 int
 main (int argc, char **argv)
 {
+#ifdef HAVE_CHEZ_SCHEME
+  alloc_preinit ();
+#endif
+
   /* Variable near the bottom of the stack, and aligned appropriately
      for pointers.  */
   void *stack_bottom_variable;
@@ -1213,7 +1217,7 @@ Using an Emacs configured with --with-x-toolkit=lucid does not have this problem
   if (!initialized)
     {
 #ifdef HAVE_CHEZ_SCHEME
-      scheme_init();
+      scheme_init ();
 #endif /* HAVE_CHEZ_SCHEME */
       init_alloc_once ();
       init_threads_once ();

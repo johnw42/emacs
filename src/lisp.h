@@ -5626,6 +5626,8 @@ gdb_pop_flag (int i)
 void visit_pseudovector_lisp_refs (struct Lisp_Vector *v, lisp_ref_visitor_fun fun, void *data);
 void visit_buffer_lisp_refs (struct buffer *b, lisp_ref_visitor_fun fun, void *data);
 
+void alloc_preinit (void);
+
 struct container {
   void *data;
   size_t size;
@@ -5732,6 +5734,51 @@ container_append (struct container *c, void *item)
         c->is_sorted = false;
     }
   c->size++;
+}
+
+INLINE void
+container_delete_if (struct container *c, bool (*pred)(const void *))
+{
+  size_t j = 0;
+  FOR_CONTAINER (i, c)
+    {
+      eassert (j <= i);
+      if (pred (container_ref (c, i)))
+        {
+          if (i != j)
+            {
+              memcpy (container_ref (c, j),
+                      container_ref (c, i),
+                      c->elem_size);
+            }
+          j++;
+        }
+    }
+  c->size = j;
+}
+
+INLINE void
+container_uniq (struct container *c)
+{
+  container_sort (c);
+
+  size_t j = 0;
+  FOR_CONTAINER (i, c)
+    if (i > 0)
+      {
+        eassert (j <= i);
+        if (c->compare (container_ref (c, j),
+                        container_ref (c, i)) != 0)
+          {
+            j++;
+            if (i != j)
+              {
+                memcpy (container_ref (c, j),
+                        container_ref (c, i),
+                        c->elem_size);
+              }
+          }
+      }
 }
 
 #define NAMED_CONTAINER_DECL(name, type)                                \

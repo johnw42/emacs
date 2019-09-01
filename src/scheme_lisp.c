@@ -603,8 +603,8 @@ gdb_print_scheme(Lisp_Object obj)
 {
   static char buffer[4096];
 
-  static ptr (*print_fun)(ptr);
-
+  if (STRINGP (obj))
+      obj = to_scheme_string (obj);
   ptr bvec = SCHEME_FPTR_CALL(print_to_bytevector, obj);
   chez_lock_object (bvec);
   eassert (chez_bytevectorp (bvec));

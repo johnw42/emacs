@@ -324,10 +324,54 @@ struct movable_lisp_ref {
   chez_ptr val;
 };
 
+struct malloc_block {
+  void *start;
+  size_t size;
+};
+
+static int
+pointer_cmp (const void *p, const void *q)
+{
+  if (p < q)
+    return -1;
+  else if (p > q)
+    return 1;
+  else
+    return 0;
+}
+
+static int
+malloc_block_cmp (const void *p, const void *q)
+{
+  return pointer_cmp
+    (((struct malloc_block *)p)->start,
+     ((struct malloc_block *)q)->start);
+}
+
+static bool
+malloc_block_empty (const void *p)
+{
+  return ((struct malloc_block *)p)->size == 0;
+}
+
 STATIC_NAMED_CONTAINER (tracked_refs, chez_ptr);
+STATIC_NAMED_CONTAINER (tracked_pseudorefs, chez_ptr);
+STATIC_NAMED_CONTAINER (stack_refs, chez_ptr);
 STATIC_NAMED_CONTAINER (movable_refs, struct movable_lisp_ref);
 STATIC_NAMED_CONTAINER (mark_queue, chez_ptr);
+STATIC_NAMED_CONTAINER (malloc_blocks, struct malloc_block);
 static chez_ptr gc_vector = chez_false;
+
+void
+alloc_preinit (void)
+{
+  NAMED_CONTAINER_CONFIG (malloc_blocks, malloc_block_cmp);
+  NAMED_CONTAINER_CONFIG (tracked_refs, pointer_cmp);
+  NAMED_CONTAINER_CONFIG (tracked_pseudorefs, pointer_cmp);
+  NAMED_CONTAINER_CONFIG (mark_queue, NULL);
+  NAMED_CONTAINER_CONFIG (movable_refs, NULL);
+  NAMED_CONTAINER_CONFIG (stack_refs, pointer_cmp);
+}
 
 static void mark_lisp_refs (void);
 
@@ -417,17 +461,6 @@ mark_lisp_refs (void)
   FOR_CONTAINER (i, &mark_queue)
     visit_lisp_refs (*CONTAINER_REF (chez_ptr, &mark_queue, i),
                      mark_lisp_refs_fun, NULL);
-}
-
-static int
-tracked_ref_cmp (const void *p, const void *q)
-{
-  if (p < q)
-    return -1;
-  else if (p > q)
-    return 1;
-  else
-    return 0;
 }
 
 #else
@@ -1023,6 +1056,9 @@ xmalloc (size_t size)
   if (!val && size)
     memory_full (size);
   MALLOC_PROBE (size);
+
+  struct malloc_block b = {val, size};
+  NAMED_CONTAINER_APPEND (malloc_blocks, &b);
   return val;
 }
 
@@ -1075,6 +1111,25 @@ xrealloc (void *block, size_t size)
   if (!val && size)
     memory_full (size);
   MALLOC_PROBE (size);
+
+  if (val != block)
+    {
+      struct malloc_block b = {val, size};
+      struct malloc_block *found = NULL;
+      if (block != NULL)
+        {
+          struct malloc_block key = {block};
+          container_sort (&malloc_blocks);
+          found = container_search (&malloc_blocks, &key);
+        }
+      if (found)
+        {
+          *found = b;
+          malloc_blocks.is_sorted = false;
+        }
+      else
+        NAMED_CONTAINER_APPEND (malloc_blocks, &b);
+    }
   return val;
 }
 
@@ -1091,6 +1146,11 @@ xfree (void *block)
   MALLOC_UNBLOCK_INPUT;
   /* We don't call refill_memory_reserve here
      because in practice the call in r_alloc_free seems to suffice.  */
+
+  struct malloc_block key = {block, 0};
+  struct malloc_block *found = container_search (&malloc_blocks, &key);
+  eassert (found);
+  *found = key;
 }
 
 
@@ -1312,8 +1372,10 @@ lisp_free (void *block)
 {
   MALLOC_BLOCK_INPUT;
   free (block);
+#ifndef HAVE_CHEZ_SCHEME
 #ifndef GC_MALLOC_CHECK
   mem_delete (mem_find (block));
+#endif
 #endif
   MALLOC_UNBLOCK_INPUT;
 }
@@ -1546,8 +1608,10 @@ lisp_align_free (void *block)
   struct ablocks *abase = ABLOCK_ABASE (ablock);
 
   MALLOC_BLOCK_INPUT;
+#ifndef HAVE_CHEZ_SCHEME
 #ifndef GC_MALLOC_CHECK
   mem_delete (mem_find (block));
+#endif
 #endif
   /* Put on free list.  */
   ablock->x.next_free = free_ablock;
@@ -4549,14 +4613,10 @@ mem_init (void)
 /* Value is a pointer to the mem_node containing START.  Value is
    MEM_NIL if there is no node in the tree containing START.  */
 
+#ifndef HAVE_CHEZ_SCHEME
 static struct mem_node *
 mem_find (void *start)
 {
-#ifdef HAVE_CHEZ_SCHEME
-#define MEM_NOT_NIL NULL
-  void *found = container_search (&tracked_refs, start);
-  return found ? MEM_NOT_NIL : MEM_NIL;
-#else /* not HAVE_CHEZ_SCHEME */
   struct mem_node *p;
 
   if (start < min_heap_address || start > max_heap_address)
@@ -4570,8 +4630,8 @@ mem_find (void *start)
   while (start < p->start || start >= p->end)
     p = start < p->start ? p->left : p->right;
   return p;
-#endif /* not HAVE_CHEZ_SCHEME */
 }
+#endif /* not HAVE_CHEZ_SCHEME */
 
 
 #ifndef HAVE_CHEZ_SCHEME
@@ -5186,6 +5246,20 @@ live_buffer_p (struct mem_node *m, void *p)
 static void
 mark_maybe_object (Lisp_Object obj)
 {
+#ifdef HAVE_CHEZ_SCHEME
+  void *found = container_search (&tracked_refs, &obj);
+  if (found)
+    {
+      NAMED_CONTAINER_APPEND (stack_refs, &obj);
+      mark_object (obj);
+    }
+  else
+    {
+      found = container_search (&tracked_pseudorefs, &obj);
+      if (found)
+        NAMED_CONTAINER_APPEND (stack_refs, &obj);
+    }
+#else
 #if USE_VALGRIND
   if (valgrind_p)
     VALGRIND_MAKE_MEM_DEFINED (&obj, sizeof (obj));
@@ -5201,9 +5275,6 @@ mark_maybe_object (Lisp_Object obj)
     {
       bool mark_p = false;
 
-#ifdef HAVE_CHEZ_SCHEME
-      mark_p = true;
-#else
       switch (XTYPE (obj))
 	{
 	case Lisp_String:
@@ -5234,11 +5305,11 @@ mark_maybe_object (Lisp_Object obj)
 	default:
 	  break;
 	}
-#endif
 
       if (mark_p)
-	mark_object (obj);
+        mark_object (obj);
     }
+#endif
 }
 
 /* Return true if P can point to Lisp data, and false otherwise.
@@ -8257,14 +8328,20 @@ chez_ptr
 scheme_track (chez_ptr p)
 {
   NAMED_CONTAINER_APPEND (tracked_refs, &p);
-  chez_lock_object (p);
+  if (chez_bytevectorp (p))
+    {
+      void *ptr = chez_bytevector_data (p);
+      NAMED_CONTAINER_APPEND (tracked_pseudorefs, &ptr);
+      struct malloc_block b = {ptr, chez_bytevector_length (p)};
+      NAMED_CONTAINER_APPEND (malloc_blocks, &b);
+    }
   return p;
 }
 
 chez_ptr
 scheme_untrack (chez_ptr p)
 {
-  chez_unlock_object (p);
+  eassert (0);
   return p;
 }
 
@@ -8279,16 +8356,23 @@ do_scheme_gc (void)
 void
 before_scheme_gc (void)
 {
-  NAMED_CONTAINER_CONFIG (tracked_refs, tracked_ref_cmp);
   container_sort (&tracked_refs);
+  container_sort (&tracked_pseudorefs);
 
-  NAMED_CONTAINER_CONFIG (mark_queue, NULL);
   container_reset (&mark_queue);
-  container_reserve (&mark_queue, 4096);
-
-  NAMED_CONTAINER_CONFIG (movable_refs, NULL);
   container_reset (&movable_refs);
-  container_reserve (&movable_refs, 4096);
+  container_reset (&stack_refs);
+
+  printf ("malloc_blocks 1: %lu\n", malloc_blocks.size);
+  container_delete_if (&malloc_blocks, malloc_block_empty);
+  printf ("malloc_blocks 2: %lu\n", malloc_blocks.size);
+
+  FOR_NAMED_CONTAINER (i, malloc_blocks)
+    {
+      struct malloc_block *b = NAMED_CONTAINER_REF (malloc_blocks, i);
+      mark_memory (b->start, (char *)b->start + b->size);
+    }
+
 
   void *end;
   SET_STACK_TOP_ADDRESS (&end);
@@ -8301,13 +8385,18 @@ before_scheme_gc (void)
       set_mark_bit (*NAMED_CONTAINER_REF (mark_queue, i), false);
     }
 
+  printf("stack refs before gc: %lu\n", stack_refs.size);
   printf("tracked refs before gc: %lu\n", tracked_refs.size);
+  container_uniq (&tracked_refs);
+  printf("unique tracked refs before gc: %lu\n", tracked_refs.size);
+  printf("tracked psueudorefs before gc: %lu\n", tracked_pseudorefs.size);
   eassert (gc_vector == chez_false);
   gc_vector = chez_make_vector (movable_refs.size + tracked_refs.size, chez_false);
   chez_lock_object (gc_vector);
   FOR_NAMED_CONTAINER (i, tracked_refs)
     {
       chez_ptr ref = *NAMED_CONTAINER_REF(tracked_refs, i);
+      chez_lock_object (ref);
       //eassert (chez_locked_objectp (ref));
       chez_vector_set (gc_vector, i, ref);
     }
@@ -8335,6 +8424,7 @@ after_scheme_gc (void)
       chez_ptr ref = *NAMED_CONTAINER_REF(tracked_refs, i);
       if (chez_vector_ref (gc_vector, i) != ref)
         num_moved1++;
+      chez_unlock_object (ref);
     }
 
   FOR_NAMED_CONTAINER (i, movable_refs)
@@ -8350,6 +8440,7 @@ after_scheme_gc (void)
     }
 
   printf ("refs moved in gc1: %lu\n", num_moved1);
+  eassert (num_moved1 == 0);
   printf ("refs moved in gc2: %lu\n", num_moved2);
   chez_unlock_object (gc_vector);
   gc_vector = chez_false;
