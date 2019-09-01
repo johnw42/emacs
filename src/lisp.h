@@ -1034,7 +1034,11 @@ verify (alignof (struct Lisp_Symbol) % GCALIGNMENT == 0);
 // - It appears distinctive when see in a debugger.
 // - Chez Scheme will most likely interpret it as a bogus value.
 #define LISPSYM_INITIALLY_(name) \
-  ((ptr)((i##name << 8) | 0xdeadface0000000fUL))
+  ((chez_ptr)((i##name << 8) | 0xdeadface0000000fUL))
+#define LISPSYM_INITIAL_P(ptr) \
+  (((chez_uptr)(ptr) & 0xffffffff00000000UL) == 0xdeadface00000000UL)
+#define LISPSYM_INITIAL_NUM(ptr) \
+  (((chez_uptr)(ptr) & 0x00000000ffffffffUL) >> 8)
 void fixup_lispsym_init(ptr *p);
 #else /* not HAVE_CHEZ_SCHEME */
 #define LISPSYM_INITIALLY_(name) LISP_INITIALLY (XLI_BUILTIN_LISPSYM (i##name))

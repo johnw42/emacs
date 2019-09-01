@@ -6228,6 +6228,8 @@ purecopy (Lisp_Object obj)
 void
 staticpro (Lisp_Object *varaddress)
 {
+  if (LISPSYM_INITIAL_P (*varaddress))
+    *varaddress = lispsym[LISPSYM_INITIAL_NUM (*varaddress)];
   if (staticidx >= NSTATICS)
     fatal ("NSTATICS too small; try increasing and recompiling Emacs.");
   staticvec[staticidx++] = varaddress;
@@ -6454,10 +6456,12 @@ garbage_collect_1 (void *end)
   Lisp_Object retval = Qnil;
   size_t tot_before = 0;
 
+#ifndef HAVE_CHEZ_SCHEME
   /* Can't GC if pure storage overflowed because we can't determine
      if something is a pure object or not.  */
   if (pure_bytes_used_before_overflow)
     return Qnil;
+#endif
 
   /* Record this function, so it appears on the profiler's backtraces.  */
   record_in_backtrace (QAutomatic_GC, 0, 0);
@@ -6537,8 +6541,10 @@ garbage_collect_1 (void *end)
     mark_object (builtin_lisp_symbol (i));
 #endif
 
-#ifndef HAVE_CHEZ_SCHEME
-    // TODO(jrw)
+#ifdef HAVE_CHEZ_SCHEME
+  for (i = 0; i < staticidx; i++)
+    mark_object_ptr (staticvec[i]);
+#else
   for (i = 0; i < staticidx; i++)
     mark_object_ptr (staticvec[i]);
 #endif

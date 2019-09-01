@@ -659,6 +659,16 @@ visit_pseudovector_lisp_refs (struct Lisp_Vector *v, lisp_ref_visitor_fun fun, v
     fun(data, v->contents, n);
 }
 
+
+void
+visit_sub_char_table_lisp_refs (struct Lisp_Sub_Char_Table *v, lisp_ref_visitor_fun fun, void *data)
+{
+  fun (data, &v->header.s.scheme_obj, 1);
+  EMACS_INT n = pvsize_from_header (&v->header);
+  if (n > 0)
+    fun(data, v->contents, n);
+}
+
 struct visit_iterval_data {
   lisp_ref_visitor_fun fun;
   void *data;
@@ -859,8 +869,10 @@ visit_lisp_refs(Lisp_Object obj, lisp_ref_visitor_fun fun, void *data)
             case PVEC_FREE:
             case PVEC_COMPILED:
             case PVEC_CHAR_TABLE:
-            case PVEC_SUB_CHAR_TABLE:
               visit_pseudovector_lisp_refs (XVECTOR(obj), fun, data);
+              break;
+            case PVEC_SUB_CHAR_TABLE:
+              visit_sub_char_table_lisp_refs (XSUB_CHAR_TABLE(obj), fun, data);
               break;
             case PVEC_FRAME:
               {
