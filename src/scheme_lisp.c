@@ -575,28 +575,21 @@ static const char *scheme_classify(ptr x)
   }
 }
 
-/* static bool chez_fixnump(ptr x) { return chez_fixnump(x); } */
-/* static bool scheme_charp(ptr x) { return Scharp(x); } */
-/* static bool scheme_nullp(ptr x) { return Snullp(x); } */
-/* static bool scheme_eof_objectp(ptr x) { return Seof_objectp(x); } */
-/* static bool scheme_bwp_objectp(ptr x) { return Sbwp_objectp(x); } */
-/* static bool scheme_booleanp(ptr x) { return Sbooleanp(x); } */
-/* static bool chez_pairp(ptr x) { return chez_pairp(x); } */
-/* static bool chez_symbolp(ptr x) { return chez_symbolp(x); } */
-/* static bool chez_procedurep(ptr x) { return chez_procedurep(x); } */
-/* static bool chez_flonump(ptr x) { return chez_flonump(x); } */
-/* static bool chez_vectorp(ptr x) { return chez_vectorp(x); } */
-/* static bool scheme_fxvectorp(ptr x) { return Sfxvectorp(x); } */
-/* static bool chez_bytevectorp(ptr x) { return chez_bytevectorp(x); } */
-/* static bool chez_stringp(ptr x) { return chez_stringp(x); } */
-/* static bool scheme_bignump(ptr x) { return Sbignump(x); } */
-/* static bool scheme_boxp(ptr x) { return Sboxp(x); } */
-/* static bool scheme_inexactnump(ptr x) { return Sinexactnump(x); } */
-/* static bool scheme_exactnump(ptr x) { return Sexactnump(x); } */
-/* static bool scheme_ratnump(ptr x) { return Sratnump(x); } */
-/* static bool scheme_inputportp(ptr x) { return Sinputportp(x); } */
-/* static bool scheme_outputportp(ptr x) { return Soutputportp(x); } */
-/* static bool scheme_recordp(ptr x) { return Srecordp(x); } */
+chez_ptr
+gdb_vector_ref (chez_ptr v, iptr i)
+{
+  if (chez_vectorp (v) && 0 <= i && i < chez_vector_length (v))
+    return chez_vector_ref (v, i);
+  return 0;
+}
+
+void *
+gdb_bytevector_data (chez_ptr v)
+{
+  if (chez_bytevectorp (v))
+    return chez_bytevector_data (v);
+  return 0;
+}
 
 const char *
 gdb_print_scheme(Lisp_Object obj)

@@ -342,10 +342,10 @@ extern bool suppress_checking EXTERNALLY_VISIBLE;
 
 #ifdef HAVE_CHEZ_SCHEME
 
-#define SCHEME_MALLOC_PADDING \
-  ((uptr) chez_bytevector_data (NULL) % sizeof (ptr) == 0      \
-    ? 0 \
-    : sizeof (ptr) - (uptr) chez_bytevector_data (NULL) % sizeof(ptr))
+// XXX Setting to 0 or 16 causes a crash in scheme gc!
+// Something is writing beyond its allocated buffer.
+#define SCHEME_MALLOC_PADDING 8
+#define SCHEME_MALLOC_PADDING_AFTER 0
 
 extern ptr scheme_malloc(iptr size);
 
@@ -354,7 +354,8 @@ extern ptr scheme_malloc(iptr size);
 INLINE void *
 scheme_malloc_ptr(ptr data) {
   eassert (chez_bytevectorp (data));
-  return (char *) chez_bytevector_data(data) + SCHEME_MALLOC_PADDING;
+  void *p = (char *) chez_bytevector_data(data) + SCHEME_MALLOC_PADDING;
+  return p;
 }
 
 extern ptr scheme_function_for_name(const char *name);
@@ -5710,6 +5711,8 @@ INLINE void *
 container_search (struct container *c, const void *key)
 {
   eassert (c->compare);
+  if (*(chez_ptr *)key == (void *)0x40c92fff)
+    printf("searching for magic var\n");
 
   if (c->is_sorted)
     return bsearch (key, c->data, c->size, c->elem_size, c->compare);
@@ -5799,6 +5802,9 @@ container_uniq (struct container *c)
 #define NAMED_CONTAINER_CONFIG(name, cmp)                               \
   container_config (&name, sizeof (name##_type), cmp)
 #define FOR_NAMED_CONTAINER(i, name) FOR_CONTAINER (i, &name)
+
+#define MAGIC_SCHEME_REF ((chez_ptr)0x4045145f)
+#define MAGIC_SCHEME_REF_ADDR ((chez_ptr *)0x7fffffffcdc8)
 
 #endif /* HAVE_CHEZ_SCHEME */
 
