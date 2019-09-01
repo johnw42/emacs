@@ -69,6 +69,7 @@ void visit_lisp_refs(ptr obj, lisp_ref_visitor_fun, void *data);
 void init_nil_refs(ptr obj);
 bool symbol_is(ptr sym, const char *name);
 bool datum_starts_with(ptr, const char *);
+void do_scheme_gc (void);
 void before_scheme_gc (void);
 void after_scheme_gc (void);
 chez_ptr scheme_track (chez_ptr);
@@ -5624,6 +5625,129 @@ gdb_pop_flag (int i)
 
 void visit_pseudovector_lisp_refs (struct Lisp_Vector *v, lisp_ref_visitor_fun fun, void *data);
 void visit_buffer_lisp_refs (struct buffer *b, lisp_ref_visitor_fun fun, void *data);
+
+struct container {
+  void *data;
+  size_t size;
+  size_t capacity;
+  size_t elem_size;
+  int (*compare)(const void *, const void *);
+  bool is_sorted;
+};
+
+#define FOR_CONTAINER(i, c) for (size_t i = 0; i < (c)->size; i++)
+
+#define CONTAINER_REF(type, c, i) \
+  (eassume ((c)->elem_size == sizeof (type)), ((type *) (c)->data) + (i))
+
+INLINE void *
+container_ref (struct container *c, size_t i)
+{
+  return (char *) c->data + i * c->elem_size;
+}
+
+INLINE void
+container_config (struct container *c, size_t elem_size, int (*compare)(const void *, const void *))
+{
+  c->elem_size = elem_size;
+  c->compare = compare;
+}
+
+INLINE void
+container_init (struct container *c, size_t elem_size, int (*compare)(const void *, const void *))
+{
+  c->data = NULL;
+  c->size = 0;
+  c->capacity = 0;
+  c->is_sorted = false;
+  container_config(c, elem_size, compare);
+}
+
+INLINE void
+container_free (struct container *c)
+{
+  free (c->data);
+  c->size = 0;
+  c->capacity = 0;
+}
+
+INLINE void
+container_reset (struct container *c)
+{
+  c->size = 0;
+}
+
+INLINE void
+container_reserve (struct container *c, size_t min_capacity)
+{
+  if (min_capacity > c->capacity)
+    {
+      size_t new_capacity = 1;
+      while (new_capacity < min_capacity)
+        new_capacity *= 2;
+      eassert (new_capacity >= min_capacity);
+      c->data = reallocarray (c->data, new_capacity, c->elem_size);
+      c->capacity  = new_capacity;
+      eassert (c->data);
+    }
+  eassert (min_capacity == 0 || c->data);
+}
+
+INLINE void
+container_sort (struct container *c)
+{
+  if (!c->is_sorted)
+    qsort (c->data, c->size, c->elem_size, c->compare);
+}
+
+INLINE void *
+container_search (struct container *c, const void *key)
+{
+  eassert (c->compare);
+
+  if (c->is_sorted)
+    return bsearch (key, c->data, c->size, c->elem_size, c->compare);
+
+  FOR_CONTAINER (i, c)
+    {
+      void *found = container_ref (c, i);
+      if (c->compare (key, found) == 0)
+        return found;
+    }
+  return NULL;
+}
+
+INLINE void
+container_append (struct container *c, void *item)
+{
+  container_reserve (c, c->size + 1);
+  char *dest = container_ref (c, c->size);
+  memcpy (dest,
+          item, c->elem_size);
+  if (c->size == 0)
+    c->is_sorted = true;
+  else if (c->is_sorted && c->compare)
+    {
+      if (c->compare (container_ref (c, c->size - 1), dest) > 0)
+        c->is_sorted = false;
+    }
+  c->size++;
+}
+
+#define NAMED_CONTAINER_DECL(name, type)                                \
+  struct container name;                                                \
+  typedef type name##_type
+
+#define ASSERT_TYPE(type, x) (true ? (type)(x) : (x))
+#define EXTERN_NAMED_CONTAINER(name, type) extern NAMED_CONTAINER_DECL (name, type)
+#define STATIC_NAMED_CONTAINER(name, type) static NAMED_CONTAINER_DECL (name, type)
+#define NAMED_CONTAINER_REF(name, i) CONTAINER_REF (name##_type, &name, i)
+#define NAMED_CONTAINER_APPEND(name, val)                       \
+  (name.elem_size = sizeof (name##_type), \
+   container_append (&name, ASSERT_TYPE (name##_type *, val)))
+#define NAMED_CONTAINER_CONFIG(name, cmp)                               \
+  container_config (&name, sizeof (name##_type), cmp)
+#define FOR_NAMED_CONTAINER(i, name) FOR_CONTAINER (i, &name)
 
 #endif /* HAVE_CHEZ_SCHEME */
 

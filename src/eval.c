@@ -3906,7 +3906,6 @@ mark_specpdl (union specbinding *first, union specbinding *ptr)
 	      nargs = 1;
 	    while (nargs--)
               mark_object (backtrace_args (pdl)[nargs]);
-              }
 	  }
 	  break;
 

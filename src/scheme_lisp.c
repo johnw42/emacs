@@ -275,6 +275,7 @@ void scheme_init(void) {
   scheme_least_fixnum = chez_fixnum_value(scheme_call0("least-fixnum"));
   scheme_fixnum_width = chez_fixnum_value(scheme_call0("fixnum-width"));
 
+  chez_foreign_symbol("do_scheme_gc", do_scheme_gc);
   chez_foreign_symbol("before_scheme_gc", before_scheme_gc);
   chez_foreign_symbol("after_scheme_gc", after_scheme_gc);
   chez_foreign_symbol("abort", abort);
@@ -960,6 +961,5 @@ datum_starts_with(ptr obj, const char *str)
   /*   } */
   return strncmp(gdb_print(obj), str, strlen(str)) == 0;
 }
-
 
 #endif /* HAVE_CHEZ_SCHEME */

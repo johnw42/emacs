@@ -25,6 +25,9 @@
          c-symbol_is
          )
 
+  (define elisp-do-scheme-gc
+    (foreign-procedure __collect_safe "do_scheme_gc" () void))
+
   (define elisp-before-scheme-gc
     (foreign-procedure "before_scheme_gc" () void))
 
@@ -359,13 +362,12 @@
 
   (define (emacs-init)
     (collect-request-handler
+     #;elisp-do-scheme-gc
      (lambda ()
-       (critical-section
-        (printf "starting gc\n")
-        (elisp-before-scheme-gc)
-        (collect)
-        (elisp-after-scheme-gc)
-        (printf "gc done\n"))))
+       (parameterize ([collect-request-handler list])
+         (elisp-before-scheme-gc)
+         (collect)
+         (elisp-after-scheme-gc))))
     (let (
           #;[stderr (transcoded-port (standard-error-port)
           (native-transcoder))])

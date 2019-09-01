@@ -319,21 +319,17 @@ static ptrdiff_t pure_bytes_used_non_lisp;
 const char *pending_malloc_warning;
 
 #ifdef HAVE_CHEZ_SCHEME
-static chez_ptr *tracked_refs;
-static size_t num_tracked_refs = 0;
-static size_t tracked_refs_capacity = 0;
-static chez_ptr gc_vector = chez_false;
-
-static void mark_lisp_refs (void);
-
 struct movable_lisp_ref {
   chez_ptr *ptr;
   chez_ptr val;
 };
 
-static struct movable_lisp_ref *movable_refs;
-static size_t movable_refs_size = 0;
-static size_t movable_refs_capacity = 0;
+STATIC_NAMED_CONTAINER (tracked_refs, chez_ptr);
+STATIC_NAMED_CONTAINER (movable_refs, struct movable_lisp_ref);
+STATIC_NAMED_CONTAINER (mark_queue, chez_ptr);
+static chez_ptr gc_vector = chez_false;
+
+static void mark_lisp_refs (void);
 
 static bool
 has_mark_bit (Lisp_Object obj, bool default_result)
@@ -381,22 +377,13 @@ set_mark_bit (Lisp_Object obj, bool bit)
     }
 }
 
-static Lisp_Object *mark_queue;
-static size_t mark_queue_size;
-static size_t mark_queue_capacity;
-
 static bool
 mark_and_enqueue (Lisp_Object obj)
 {
   if (!has_mark_bit (obj, true))
     {
       set_mark_bit (obj, true);
-      if (mark_queue_size >= mark_queue_capacity)
-        {
-          mark_queue_capacity *= 2;
-          mark_queue = reallocarray (mark_queue, mark_queue_capacity, sizeof (mark_queue[0]));
-        }
-      mark_queue[mark_queue_size++] = obj;
+      container_append (&mark_queue, &obj);
       return true;
     }
   return false;
@@ -409,14 +396,8 @@ mark_object_ptr (Lisp_Object *ptr)
   if (NILP (obj))
     return;
 
-  if (movable_refs_size >= movable_refs_capacity)
-    {
-      movable_refs_capacity *= 2;
-      movable_refs = reallocarray (movable_refs, movable_refs_capacity, sizeof (movable_refs[0]));
-    }
-  movable_refs[movable_refs_size].ptr = ptr;
-  movable_refs[movable_refs_size].val = obj;
-  movable_refs_size++;
+  struct movable_lisp_ref ref = {ptr, obj};
+  container_append (&movable_refs, &ref);
 
   mark_object (obj);
 }
@@ -433,8 +414,9 @@ mark_lisp_refs_fun (void *arg, Lisp_Object *refs, ptrdiff_t n)
 static void
 mark_lisp_refs (void)
 {
-  for (size_t i = 0; i < mark_queue_size; i++)
-    visit_lisp_refs (mark_queue[i], mark_lisp_refs_fun, NULL);
+  FOR_CONTAINER (i, &mark_queue)
+    visit_lisp_refs (*CONTAINER_REF (chez_ptr, &mark_queue, i),
+                     mark_lisp_refs_fun, NULL);
 }
 
 static int
@@ -4572,8 +4554,7 @@ mem_find (void *start)
 {
 #ifdef HAVE_CHEZ_SCHEME
 #define MEM_NOT_NIL NULL
-  void *found = bsearch (start, tracked_refs, num_tracked_refs,
-                         sizeof (tracked_refs[0]), tracked_ref_cmp);
+  void *found = container_search (&tracked_refs, start);
   return found ? MEM_NOT_NIL : MEM_NIL;
 #else /* not HAVE_CHEZ_SCHEME */
   struct mem_node *p;
@@ -8275,13 +8256,7 @@ void memzero_with_nil (void *p, ptrdiff_t nbytes, ...)
 chez_ptr
 scheme_track (chez_ptr p)
 {
-  if (num_tracked_refs >= tracked_refs_capacity)
-    {
-      chez_uptr new_size = tracked_refs_capacity == 0 ? 16 : 2 * tracked_refs_capacity;
-      tracked_refs = reallocarray (tracked_refs, new_size, sizeof (chez_ptr));
-      tracked_refs_capacity = new_size;
-    }
-  tracked_refs[num_tracked_refs++] = p;
+  NAMED_CONTAINER_APPEND (tracked_refs, &p);
   chez_lock_object (p);
   return p;
 }
@@ -8294,93 +8269,90 @@ scheme_untrack (chez_ptr p)
 }
 
 void
+do_scheme_gc (void)
+{
+  before_scheme_gc ();
+  scheme_call0 ("collect");
+  after_scheme_gc ();
+}
+
+void
 before_scheme_gc (void)
 {
-  qsort (tracked_refs, num_tracked_refs, sizeof (tracked_refs[0]),
-         tracked_ref_cmp);
+  NAMED_CONTAINER_CONFIG (tracked_refs, tracked_ref_cmp);
+  container_sort (&tracked_refs);
 
-  mark_queue_size = 0;
-  if (mark_queue_capacity == 0)
-    {
-      eassert (mark_queue == NULL);
-      mark_queue_capacity = 4096;
-      mark_queue = reallocarray (NULL, mark_queue_capacity, sizeof (mark_queue[0]));
-    }
+  NAMED_CONTAINER_CONFIG (mark_queue, NULL);
+  container_reset (&mark_queue);
+  container_reserve (&mark_queue, 4096);
 
-  movable_refs_size = 0;
-  if (movable_refs_capacity == 0)
-    {
-      eassert (movable_refs == NULL);
-      movable_refs_capacity = 4096;
-      movable_refs = reallocarray (NULL, movable_refs_capacity, sizeof (movable_refs[0]));
-    }
+  NAMED_CONTAINER_CONFIG (movable_refs, NULL);
+  container_reset (&movable_refs);
+  container_reserve (&movable_refs, 4096);
+
   void *end;
   SET_STACK_TOP_ADDRESS (&end);
   garbage_collect_1 (end);
 
   mark_lisp_refs();
 
-  for (size_t i = 0; i < mark_queue_size; i++)
+  FOR_NAMED_CONTAINER (i, mark_queue)
     {
-      set_mark_bit (mark_queue[i], false);
+      set_mark_bit (*NAMED_CONTAINER_REF (mark_queue, i), false);
     }
 
-  printf("tracked refs before gc: %u\n", (unsigned)num_tracked_refs);
+  printf("tracked refs before gc: %lu\n", tracked_refs.size);
   eassert (gc_vector == chez_false);
-  gc_vector = chez_make_vector (movable_refs_size + num_tracked_refs, chez_false);
+  gc_vector = chez_make_vector (movable_refs.size + tracked_refs.size, chez_false);
   chez_lock_object (gc_vector);
-  for (size_t i = 0; i < num_tracked_refs; i++)
+  FOR_NAMED_CONTAINER (i, tracked_refs)
     {
-      //eassert (chez_locked_objectp (tracked_refs[i]));
-      chez_vector_set (gc_vector, i, tracked_refs[i]);
+      chez_ptr ref = *NAMED_CONTAINER_REF(tracked_refs, i);
+      //eassert (chez_locked_objectp (ref));
+      chez_vector_set (gc_vector, i, ref);
     }
-  for (size_t i = 0; i < movable_refs_size; i++)
+  FOR_NAMED_CONTAINER (i, movable_refs)
     {
-      Lisp_Object obj = *movable_refs[i].ptr;
-      movable_refs[i].val = obj;
+      struct movable_lisp_ref *ref = NAMED_CONTAINER_REF (movable_refs, i);
+      Lisp_Object obj = *ref->ptr;
+      ref->val = obj;
       //eassert (chez_locked_objectp (obj));
       //chez_unlock_object (obj);
-      chez_vector_set (gc_vector, i + num_tracked_refs, obj);
+      chez_vector_set (gc_vector, i + tracked_refs.size, obj);
     }
 
-  printf ("movable_refs_size: %u\n", (unsigned)movable_refs_size);
+  printf ("movable_refs_size: %lu\n", movable_refs.size);
 }
 
 void
 after_scheme_gc (void)
 {
   size_t num_moved1 = 0;
-  for (size_t i = 0; i < num_tracked_refs; i++)
+  size_t num_moved2 = 0;
+
+  FOR_NAMED_CONTAINER (i, tracked_refs)
     {
-      if (chez_vector_ref (gc_vector, i) != tracked_refs[i])
+      chez_ptr ref = *NAMED_CONTAINER_REF(tracked_refs, i);
+      if (chez_vector_ref (gc_vector, i) != ref)
         num_moved1++;
     }
 
-  size_t num_moved2 = 0;
-  for (size_t i = 0; i < movable_refs_size; i++)
+  FOR_NAMED_CONTAINER (i, movable_refs)
     {
-      chez_ptr new_ref = chez_vector_ref (gc_vector, i + num_tracked_refs);
-      if (new_ref != movable_refs[i].val)
+      chez_ptr new_ref = chez_vector_ref (gc_vector, i + tracked_refs.size);
+      struct movable_lisp_ref *old_ref = NAMED_CONTAINER_REF (movable_refs, i);
+      if (new_ref != old_ref->val)
         {
           num_moved2++;
-          *movable_refs[i].ptr = new_ref;
+          *old_ref->ptr = new_ref;
           //chez_lock_object (new_ref);
         }
     }
 
-  printf ("refs moved in gc1: %u\n", (unsigned)num_moved1);
-  printf ("refs moved in gc2: %u\n", (unsigned)num_moved2);
+  printf ("refs moved in gc1: %lu\n", num_moved1);
+  printf ("refs moved in gc2: %lu\n", num_moved2);
   chez_unlock_object (gc_vector);
   gc_vector = chez_false;
-
-  mark_queue_size = 0;
-  movable_refs_size = 0;
-
-  /* free(mark_queue); */
-  /* mark_queue = NULL; */
-
-  /* free(movable_refs); */
-  /* movable_refs = NULL; */
 }
 #endif
 
