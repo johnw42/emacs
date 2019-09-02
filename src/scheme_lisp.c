@@ -579,7 +579,7 @@ static const char *scheme_classify(ptr x)
   }
 }
 
-chez_ptr
+static chez_ptr
 gdb_vector_ref (chez_ptr v, iptr i)
 {
   if (chez_vectorp (v) && 0 <= i && i < chez_vector_length (v))
@@ -587,7 +587,7 @@ gdb_vector_ref (chez_ptr v, iptr i)
   return 0;
 }
 
-void *
+static void *
 gdb_bytevector_data (chez_ptr v)
 {
   if (chez_bytevectorp (v))
@@ -657,7 +657,7 @@ visit_pseudovector_lisp_refs (struct Lisp_Vector *v, lisp_ref_visitor_fun fun, v
 }
 
 
-void
+static void
 visit_sub_char_table_lisp_refs (struct Lisp_Sub_Char_Table *v, lisp_ref_visitor_fun fun, void *data)
 {
   fun (data, &v->header.s.scheme_obj, 1);
@@ -745,6 +745,50 @@ visit_glyph_matrix_lisp_refs (struct glyph_matrix *matrix, lisp_ref_visitor_fun 
           for (; glyph < end_glyph; ++glyph)
             fun (data, &glyph->object, 1);
         }
+}
+
+static void
+visit_specpdl_lisp_refs (union specbinding *first, union specbinding *stop,
+                         lisp_ref_visitor_fun fun, void *data)
+{
+  union specbinding *pdl;
+  for (pdl = first; pdl != stop; pdl++)
+    {
+      switch (pdl->kind)
+	{
+	case SPECPDL_UNWIND:
+          fun (data, &pdl->unwind.arg, 1);
+	  break;
+
+	case SPECPDL_BACKTRACE:
+	  {
+	    ptrdiff_t nargs = pdl->bt.nargs;
+	    fun (data, &pdl->bt.function, 1);
+	    if (nargs == UNEVALLED)
+	      nargs = 1;
+            fun (data, pdl->bt.args, nargs);
+	  }
+	  break;
+
+	case SPECPDL_LET_DEFAULT:
+	case SPECPDL_LET_LOCAL:
+	  fun (data, &pdl->let.where, 1);
+	  FALLTHROUGH;
+	case SPECPDL_LET:
+	  fun (data, &pdl->let.symbol, 1);
+	  fun (data, &pdl->let.old_value, 1);
+	  fun (data, &pdl->let.saved_value, 1);
+	  break;
+
+	case SPECPDL_UNWIND_PTR:
+	case SPECPDL_UNWIND_INT:
+	case SPECPDL_UNWIND_VOID:
+	  break;
+
+	default:
+	  emacs_abort ();
+	}
+    }
 }
 
 static void
@@ -916,7 +960,18 @@ visit_lisp_refs(Lisp_Object obj, lisp_ref_visitor_fun fun, void *data)
               {
                 visit_pseudovector_lisp_refs (XVECTOR(obj), fun, data);
                 struct thread_state *t = XTHREAD(obj);
-                fun(data, &t->m_re_match_object, 1);
+                visit_specpdl_lisp_refs (t->m_specpdl, t->m_specpdl_ptr, fun, data);
+                for (struct handler *handler = t->m_handlerlist;
+                     handler; handler = handler->next)
+                  {
+                    fun (data, &handler->tag_or_ch, 1);
+                    fun (data, &handler->val, 1);
+                  }
+                if (t->m_current_buffer)
+                  fun (data, &t->m_current_buffer->header.s.scheme_obj, 1);
+                fun (data, &t->m_re_match_object, 1);
+                fun (data, &t->m_last_thing_searched, 1);
+                fun (data, &t->m_saved_last_thing_searched, 1);
                 break;
               }
             }

@@ -5732,8 +5732,11 @@ container_uniq (struct container *c)
   container_config (&name, sizeof (name##_type), cmp)
 #define FOR_NAMED_CONTAINER(i, name) FOR_CONTAINER (i, &name)
 
-#define MAGIC_SCHEME_REF ((chez_ptr)0x4045145f)
-#define MAGIC_SCHEME_REF_ADDR ((chez_ptr *)0x7fffffffcdc8)
+void mark_lisp_refs (void);
+bool mark_and_enqueue (Lisp_Object obj);
+
+#define IS_MAGIC_SCHEME_REF(p) (p == (void *)0x403ba93f)
+#define IS_MAGIC_SCHEME_REF_ADDR(p) // false ((chez_ptr *)0x7fffffffcdc8)
 
 #endif /* HAVE_CHEZ_SCHEME */
 

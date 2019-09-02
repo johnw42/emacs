@@ -363,7 +363,7 @@ malloc_block_cmp (const void *p, const void *q)
 static bool
 malloc_block_empty (const void *p)
 {
-  return ((struct malloc_block *)p)->size == 0;
+  return ((struct malloc_block *)p)->size == -1;
 }
 
 STATIC_NAMED_CONTAINER (pure_refs, chez_ptr);
@@ -393,8 +393,6 @@ scheme_make_pure (chez_ptr ref)
   NAMED_CONTAINER_APPEND (pure_refs, &ref);
   return ref;
 }
-
-static void mark_lisp_refs (void);
 
 static bool
 has_mark_bit (Lisp_Object obj, bool default_result)
@@ -442,7 +440,7 @@ set_mark_bit (Lisp_Object obj, bool bit)
     }
 }
 
-static bool
+bool
 mark_and_enqueue (Lisp_Object obj)
 {
   if (!has_mark_bit (obj, true))
@@ -476,7 +474,7 @@ mark_lisp_refs_fun (void *arg, Lisp_Object *refs, ptrdiff_t n)
     }
 }
 
-static void
+void
 mark_lisp_refs (void)
 {
   FOR_CONTAINER (i, &mark_queue)
@@ -1090,6 +1088,10 @@ xmalloc_init (void *p, size_t size)
       footer[i] = 0xa5a5a5a5a5a5a5a5UL ^ size;
     }
   check_alloc (result);
+
+  struct malloc_block b = {result, size};
+  NAMED_CONTAINER_APPEND (malloc_blocks, &b);
+
   return result;
 }
 
@@ -1121,9 +1123,6 @@ xmalloc (size_t size)
   if (!val && size)
     memory_full (size);
   MALLOC_PROBE (size);
-
-  struct malloc_block b = {val, size};
-  NAMED_CONTAINER_APPEND (malloc_blocks, &b);
   return val;
 }
 
@@ -1208,12 +1207,14 @@ xfree (void *block)
   if (!block)
     return;
   MALLOC_BLOCK_INPUT;
+  CHECK_ALLOC(block);
+  memset (XMALLOC_HEADER (block), 0xf0, XMALLOC_HEADER (block)->size + XMALLOC_EXTRA_SIZE);
   free (XMALLOC_HEADER (block));
   MALLOC_UNBLOCK_INPUT;
   /* We don't call refill_memory_reserve here
      because in practice the call in r_alloc_free seems to suffice.  */
 
-  struct malloc_block key = {block, 0};
+  struct malloc_block key = {block, -1};
   struct malloc_block *found = container_search (&malloc_blocks, &key);
   eassert (found);
   *found = key;
@@ -5527,7 +5528,7 @@ mark_memory (void *start, void *end)
       if (alignof (Lisp_Object) == GC_POINTER_ALIGNMENT
 	  || (uintptr_t) pp % alignof (Lisp_Object) == 0)
 	mark_maybe_object (*(Lisp_Object *) pp);
-      if (*(chez_ptr *)pp == MAGIC_SCHEME_REF)
+      if (IS_MAGIC_SCHEME_REF(*(chez_ptr *)pp))
         {
           printf ("hooray: %p\n", (void *)(*(chez_ptr *)pp));
           printf ("found1? %p\n", container_search (&tracked_refs, pp));
@@ -8412,7 +8413,7 @@ void memzero_with_nil (void *p, ptrdiff_t nbytes, ...)
 chez_ptr
 scheme_track (chez_ptr p)
 {
-  if (p == MAGIC_SCHEME_REF)
+  if (IS_MAGIC_SCHEME_REF(p))
     printf ("tracking %p\n", p);
   NAMED_CONTAINER_APPEND (tracked_refs, &p);
   if (chez_bytevectorp (p))
@@ -8461,7 +8462,9 @@ before_scheme_gc (void)
   FOR_NAMED_CONTAINER (i, malloc_blocks)
     {
       struct malloc_block *b = NAMED_CONTAINER_REF (malloc_blocks, i);
-      mark_memory (b->start, (char *)b->start + b->size);
+      if (b->size != -1)
+        mark_memory (b->start,
+                     (char *) b->start + b->size);
     }
 
 
@@ -8514,14 +8517,38 @@ before_scheme_gc (void)
   FOR_NAMED_CONTAINER (i, tracked_refs)
     {
       chez_ptr ref = *NAMED_CONTAINER_REF(tracked_refs, i);
-      if (chez_bytevectorp (ref))
-        {
-          chez_unlock_object (ref);
-          chez_lock_object (ref);
-        }
+      /* if (BUFFERP (ref) || */
+      /*     CHAR_TABLE_P (ref) || */
+      /*     FRAMEP (ref) || */
+      /*     SYMBOLP (ref)) */
+      /*   { */
+      /*     chez_unlock_object (ref); */
+      /*     chez_lock_object (ref); */
+      /*   } */
     }
 
   printf ("movable_refs_size: %lu\n", movable_refs.size);
+}
+
+static void
+search_in_range (chez_ptr old_val, uintptr_t start, uintptr_t end)
+{
+  if (start < end)
+    {
+      for (chez_ptr *p = (chez_ptr *)start; p < (chez_ptr *)end; p++)
+        {
+          if (*p == old_val)
+            printf("found at %p\n", p);
+        }
+    }
+  else
+    {
+      for (chez_ptr *p = (chez_ptr *)start - 1; p >= (chez_ptr *)end; p--)
+        {
+          if (*p == old_val)
+            printf("found at %p\n", p);
+        }
+    }
 }
 
 void
@@ -8544,14 +8571,25 @@ after_scheme_gc (void)
       struct movable_lisp_ref *old_ref = NAMED_CONTAINER_REF (movable_refs, i);
       if (new_ref != old_ref->val)
         {
-          /* if (old_ref->val == MAGIC_SCHEME_REF || */
-          /*     old_ref->val == (chez_ptr)0x5f40000000060320 || */
-          /*     new_ref == (chez_ptr)0x5f40000000060320 || */
-          /*     old_ref->val == (chez_ptr)0x40450fef || */
-          /*     new_ref == (chez_ptr)0x40450fef || */
-          /*     (old_ref->ptr >= (chez_ptr)0x40450ff8 && */
-          /*      old_ref->ptr < (chez_ptr)0x40451000)) */
-          /*   printf("moved %p => %p at %p\n", old_ref->val, new_ref, old_ref->ptr); */
+          if (IS_MAGIC_SCHEME_REF(old_ref->val) ||
+              IS_MAGIC_SCHEME_REF(new_ref) ||
+              IS_MAGIC_SCHEME_REF(*old_ref->ptr))
+            {
+              chez_ptr old_val = old_ref->val;
+              void *where = old_ref->ptr;
+              printf("moved %p => %p at %p\n", old_val, new_ref, where);
+              FOR_NAMED_CONTAINER (i, malloc_blocks)
+                {
+                  struct malloc_block *b = NAMED_CONTAINER_REF (malloc_blocks, i);
+                  if (b->start <= where && where < (void *) ((char*) b->start + b->size))
+                    {
+                      printf("in malloc block %p\n", b->start);
+                    }
+                }
+              search_in_range(old_val, 0x819000, 0x1069000);
+              /* search_in_range(old_val, 0xc42ca8, 0); */
+              /* search_in_range(old_val, 0xc42ca8, 0x819000); */
+            }
           num_moved2++;
           *old_ref->ptr = new_ref;
           //chez_lock_object (new_ref);

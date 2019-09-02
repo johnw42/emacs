@@ -1641,6 +1641,10 @@ compact_buffer (struct buffer *buffer)
 {
   BUFFER_CHECK_INDIRECTION (buffer);
 
+#ifndef HAVE_CHEZ_SCHEME
+  mark_object (buffer->header.s.scheme_obj);
+#endif
+
   /* Skip dead buffers, indirect buffers and buffers
      which aren't changed since last compaction.  */
   if (BUFFER_LIVE_P (buffer)

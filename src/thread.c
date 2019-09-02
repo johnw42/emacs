@@ -621,10 +621,15 @@ mark_one_thread (struct thread_state *thread)
   /* Get the stack top now, in case mark_specpdl changes it.  */
   void *stack_top = thread->stack_top;
 
+#ifndef HAVE_CHEZ_SCHEME
   mark_specpdl (thread->m_specpdl, thread->m_specpdl_ptr);
+#endif
 
   mark_stack (thread->m_stack_bottom, stack_top);
 
+  mark_object (thread->header.s.scheme_obj);
+
+#ifndef HAVE_CHEZ_SCHEME
   for (struct handler *handler = thread->m_handlerlist;
        handler; handler = handler->next)
     {
@@ -643,6 +648,7 @@ mark_one_thread (struct thread_state *thread)
 
   if (!NILP (thread->m_saved_last_thing_searched))
     mark_object (thread->m_saved_last_thing_searched);
+#endif
 }
 
 static void
