@@ -1090,6 +1090,12 @@ bidi_unshelve_cache (void *databuf, bool just_free)
 static void
 bidi_initialize (void)
 {
+  fixup_lispsym_init (&bidi_type_table);
+  fixup_lispsym_init (&bidi_mirror_table);
+  fixup_lispsym_init (&bidi_brackets_table);
+  fixup_lispsym_init (&paragraph_start_re);
+  fixup_lispsym_init (&paragraph_separate_re);
+
   bidi_type_table = uniprop_table (intern ("bidi-class"));
   if (NILP (bidi_type_table))
     emacs_abort ();

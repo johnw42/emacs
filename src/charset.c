@@ -2339,6 +2339,13 @@ static struct charset charset_table_init[180];
 void
 syms_of_charset (void)
 {
+  fixup_lispsym_init (&Vcharset_hash_table);
+  fixup_lispsym_init (&Vcharset_ordered_list);
+  fixup_lispsym_init (&Vcharset_non_preferred_head);
+  fixup_lispsym_init (&Viso_2022_charset_list);
+  fixup_lispsym_init (&Vemacs_mule_charset_list);
+  fixup_lispsym_init (&charset_work);
+
   DEFSYM (Qcharsetp, "charsetp");
 
   /* Special charset symbols.  */

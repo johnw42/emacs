@@ -477,9 +477,30 @@ mark_lisp_refs_fun (void *arg, Lisp_Object *refs, ptrdiff_t n)
 void
 mark_lisp_refs (void)
 {
+  printf ("mq start size: %lu\n", mark_queue.size);
   FOR_CONTAINER (i, &mark_queue)
     visit_lisp_refs (*CONTAINER_REF (chez_ptr, &mark_queue, i),
                      mark_lisp_refs_fun, NULL);
+  printf ("mq start end: %lu\n", mark_queue.size);
+}
+
+static chez_ptr *min_scheme_obj_loc = NULL;
+static chez_ptr *max_scheme_obj_loc = NULL;
+
+static void
+update_scheme_obj (chez_ptr *loc, chez_ptr val)
+{
+  *loc = val;
+  if (min_scheme_obj_loc == NULL || min_scheme_obj_loc > loc)
+    min_scheme_obj_loc = loc;
+  if (max_scheme_obj_loc == NULL || max_scheme_obj_loc < loc)
+    max_scheme_obj_loc = loc;
+}
+
+static void
+set_vectorlike_lisp_obj (void *vptr, Lisp_Object obj)
+{
+  update_scheme_obj (&((union vectorlike_header *) vptr)->s.scheme_obj, obj);
 }
 
 #else
@@ -2267,7 +2288,7 @@ allocate_string (void)
 #ifdef HAVE_CHEZ_SCHEME
   ptr vec;
   struct Lisp_String *s = scheme_allocate (sizeof (struct Lisp_String), scheme_string_symbol, &vec);
-  s->u.s.scheme_obj = vec;
+  update_scheme_obj (&s->u.s.scheme_obj, vec);
   eassert(STRINGP(vec));
   return s;
 #else /* not HAVE_CHEZ_SCHEME */
@@ -5401,7 +5422,14 @@ enum { HAVE_MODULES = false };
 static void
 mark_maybe_pointer (void *p)
 {
-#ifndef HAVE_CHEZ_SCHEME
+#ifdef HAVE_CHEZ_SCHEME
+  chez_ptr *pp = p;
+  for (int i = 0; i < 2; i++) {
+    if (min_scheme_obj_loc <= pp + i &&
+        pp + i <= max_scheme_obj_loc)
+      mark_maybe_object (pp[i]);
+  }
+#else
   struct mem_node *m;
 
 #if USE_VALGRIND
@@ -8264,6 +8292,8 @@ init_alloc (void)
 void
 syms_of_alloc (void)
 {
+  fixup_lispsym_init (&Vdead);
+
   DEFVAR_INT ("gc-cons-threshold", gc_cons_threshold,
 	      doc: /* Number of bytes of consing between garbage collections.
 Garbage collection can happen automatically once this many bytes have been
@@ -8441,9 +8471,34 @@ do_scheme_gc (void)
   after_scheme_gc ();
 }
 
+static void
+search_in_range (chez_ptr old_val, uintptr_t start, uintptr_t end)
+{
+  if (start < end)
+    {
+      for (chez_ptr *p = (chez_ptr *)start; p < (chez_ptr *)end; p++)
+        {
+          if (*p == old_val)
+            printf("found at %p\n", p);
+        }
+    }
+  else
+    {
+      for (chez_ptr *p = (chez_ptr *)start - 1; p >= (chez_ptr *)end; p--)
+        {
+          if (*p == old_val)
+            printf("found at %p\n", p);
+        }
+    }
+}
+
+static int gc_count = 0;
+
 void
 before_scheme_gc (void)
 {
+  //search_in_range((chez_ptr)0xdeadface0003280f, 0x819000, 0x101e000);
+
   container_sort (&tracked_refs);
   printf("tracked refs before gc: %lu\n", tracked_refs.size);
   container_uniq (&tracked_refs);
@@ -8488,7 +8543,6 @@ before_scheme_gc (void)
     {
       chez_ptr ref = *NAMED_CONTAINER_REF(tracked_refs, i);
       chez_lock_object (ref);
-      //eassert (chez_locked_objectp (ref));
       chez_vector_set (gc_vector, i, ref);
     }
   FOR_NAMED_CONTAINER (i, movable_refs)
@@ -8496,8 +8550,8 @@ before_scheme_gc (void)
       struct movable_lisp_ref *ref = NAMED_CONTAINER_REF (movable_refs, i);
       Lisp_Object obj = *ref->ptr;
       ref->val = obj;
-      //eassert (chez_locked_objectp (obj));
-      chez_unlock_object (obj);
+      if (i == 0)
+        chez_unlock_object (obj);
       chez_vector_set (gc_vector, i + tracked_refs.size, obj);
     }
   FOR_NAMED_CONTAINER (i, stack_refs)
@@ -8514,41 +8568,20 @@ before_scheme_gc (void)
       chez_lock_object (ref);
       eassert (chez_locked_objectp (ref));
     }
-  FOR_NAMED_CONTAINER (i, tracked_refs)
-    {
-      chez_ptr ref = *NAMED_CONTAINER_REF(tracked_refs, i);
-      /* if (BUFFERP (ref) || */
-      /*     CHAR_TABLE_P (ref) || */
-      /*     FRAMEP (ref) || */
-      /*     SYMBOLP (ref)) */
-      /*   { */
-      /*     chez_unlock_object (ref); */
-      /*     chez_lock_object (ref); */
-      /*   } */
-    }
+  /* FOR_NAMED_CONTAINER (i, tracked_refs) */
+  /*   { */
+  /*     chez_ptr ref = *NAMED_CONTAINER_REF(tracked_refs, i); */
+  /*     if (BUFFERP (ref) || */
+  /*         CHAR_TABLE_P (ref) || */
+  /*         FRAMEP (ref) || */
+  /*         SYMBOLP (ref)) */
+  /*       { */
+  /*         chez_unlock_object (ref); */
+  /*         chez_lock_object (ref); */
+  /*       } */
+  /*   } */
 
   printf ("movable_refs_size: %lu\n", movable_refs.size);
-}
-
-static void
-search_in_range (chez_ptr old_val, uintptr_t start, uintptr_t end)
-{
-  if (start < end)
-    {
-      for (chez_ptr *p = (chez_ptr *)start; p < (chez_ptr *)end; p++)
-        {
-          if (*p == old_val)
-            printf("found at %p\n", p);
-        }
-    }
-  else
-    {
-      for (chez_ptr *p = (chez_ptr *)start - 1; p >= (chez_ptr *)end; p--)
-        {
-          if (*p == old_val)
-            printf("found at %p\n", p);
-        }
-    }
 }
 
 void
@@ -8565,19 +8598,21 @@ after_scheme_gc (void)
       chez_unlock_object (ref);
     }
 
+  size_t offset = tracked_refs.size;
   FOR_NAMED_CONTAINER (i, movable_refs)
     {
-      chez_ptr new_ref = chez_vector_ref (gc_vector, i + tracked_refs.size);
+      eassert (i + offset < chez_vector_length (gc_vector));
+      chez_ptr new_ref = chez_vector_ref (gc_vector, i + offset);
       struct movable_lisp_ref *old_ref = NAMED_CONTAINER_REF (movable_refs, i);
       if (new_ref != old_ref->val)
         {
-          if (IS_MAGIC_SCHEME_REF(old_ref->val) ||
-              IS_MAGIC_SCHEME_REF(new_ref) ||
-              IS_MAGIC_SCHEME_REF(*old_ref->ptr))
+          /* if (IS_MAGIC_SCHEME_REF(old_ref->val) || */
+          /*     IS_MAGIC_SCHEME_REF(new_ref) || */
+          /*     IS_MAGIC_SCHEME_REF(*old_ref->ptr)) */
             {
               chez_ptr old_val = old_ref->val;
               void *where = old_ref->ptr;
-              printf("moved %p => %p at %p\n", old_val, new_ref, where);
+              printf("moved %p => %p (%s) at %p (was %p)\n", old_val, new_ref, gdb_print_scheme (new_ref), where, *old_ref->ptr);
               FOR_NAMED_CONTAINER (i, malloc_blocks)
                 {
                   struct malloc_block *b = NAMED_CONTAINER_REF (malloc_blocks, i);
@@ -8586,13 +8621,12 @@ after_scheme_gc (void)
                       printf("in malloc block %p\n", b->start);
                     }
                 }
-              search_in_range(old_val, 0x819000, 0x1069000);
+              /* search_in_range(old_val, 0x819000, 0x1069000); */
               /* search_in_range(old_val, 0xc42ca8, 0); */
               /* search_in_range(old_val, 0xc42ca8, 0x819000); */
             }
           num_moved2++;
           *old_ref->ptr = new_ref;
-          //chez_lock_object (new_ref);
         }
     }
 
@@ -8600,6 +8634,8 @@ after_scheme_gc (void)
   printf ("refs moved in gc2: %lu\n", num_moved2);
   chez_unlock_object (gc_vector);
   gc_vector = chez_false;
+
+  printf ("*\n* GC %d complete!\n*\n", gc_count++);
 }
 #endif
 

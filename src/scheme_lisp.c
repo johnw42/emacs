@@ -495,14 +495,16 @@ XTYPE (Lisp_Object a)
 }
 
 void
-fixup_lispsym_init(ptr *p)
+fixup_lispsym_inits(ptr *p, size_t n)
 {
   // Reverse the transformation applied by LISPSYM_INITIALLY.
-  uptr index = ((uptr) *p >> 8) & 0xffff;
-  eassert (0 <= index && index < ARRAYELTS(lispsym));
-  ptr sym = lispsym[index];
-  eassert (SYMBOLP (sym));
-  *p = sym;
+  for (size_t i = 0; i < n; i++) {
+    uptr index = ((uptr) p[i] >> 8) & 0xffff;
+    eassert (0 <= index && index < ARRAYELTS(lispsym));
+    ptr sym = lispsym[index];
+    eassert (SYMBOLP (sym));
+    p[i] = sym;
+  }
 }
 
 static const char *scheme_classify(ptr x)
@@ -595,6 +597,27 @@ gdb_bytevector_data (chez_ptr v)
   return 0;
 }
 
+static void
+append_lisp_refs (void *data, chez_ptr *refs, ptrdiff_t n)
+{
+  char **buf_ptr = data;
+  for (ptrdiff_t i = 0; i < n; i++)
+    {
+      int nchars = sprintf (*buf_ptr, " %p", refs + i);
+      if (nchars > 0)
+        *buf_ptr += nchars;
+    }
+}
+
+static char *
+gdb_lisp_refs(chez_ptr obj)
+{
+  static char buffer[4096];
+  char *buf_ptr = buffer;
+  visit_lisp_refs (obj, append_lisp_refs, &buf_ptr);
+  return buffer;
+}
+
 const char *
 gdb_print_scheme(Lisp_Object obj)
 {
@@ -641,7 +664,7 @@ scheme_function_for_name(const char *name) {
   ptr sym = chez_string_to_symbol(name);
   eassert(chez_symbolp(sym));
   ptr fun = chez_top_level_value(sym);
-  scheme_track (fun);
+  //scheme_track (fun);
   //eassert(chez_procedurep(fun));
   return fun;
 }
@@ -703,6 +726,8 @@ visit_overlay_lisp_refs (struct Lisp_Overlay *ptr, lisp_ref_visitor_fun fun, voi
 void
 visit_buffer_lisp_refs(struct buffer *b, lisp_ref_visitor_fun fun, void *data)
 {
+  visit_pseudovector_lisp_refs ((void *) b, fun, data);
+
   fun (data, &b->undo_list_, 1);
 
   /* if (b->text) */

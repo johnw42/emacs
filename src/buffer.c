@@ -305,6 +305,7 @@ bset_mode_line_format (struct buffer *b, Lisp_Object val)
 static void
 bset_mode_name (struct buffer *b, Lisp_Object val)
 {
+  eassert (val != (void *)0xdeadface0003280f);
   b->mode_name_ = val;
 }
 static void
@@ -5086,6 +5087,10 @@ free_buffer_text (struct buffer *b)
 void
 scheme_init_buffer_once (void)
 {
+  fixup_lispsym_init (&Vbuffer_alist);
+  fixup_lispsym_init (&QSFundamental);
+  fixup_lispsym_init (&last_overlay_modification_hooks);
+
   buffer_defaults_ptr = allocate_buffer();
   buffer_local_symbols_ptr = allocate_buffer();
   buffer_local_flags_ptr = allocate_buffer();

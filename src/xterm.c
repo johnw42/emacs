@@ -13259,6 +13259,11 @@ init_xterm (void)
 void
 syms_of_xterm (void)
 {
+#ifdef USE_GTK
+  fixup_lispsym_init (&xg_default_icon_file);
+#endif
+  fixup_lispsym_init (&window_being_scrolled);
+
   x_error_message = NULL;
 
   DEFSYM (Qvendor_specific_keysyms, "vendor-specific-keysyms");

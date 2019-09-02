@@ -11067,6 +11067,34 @@ static const struct event_head head_table[] = {
 void
 syms_of_keyboard (void)
 {
+  fixup_lispsym_init (&recent_keys);
+  fixup_lispsym_init (&this_command_keys);
+  fixup_lispsym_init (&raw_keybuf);
+#ifdef HAVE_STACK_OVERFLOW_HANDLING
+  fixup_lispsym_init (&recover_top_level_message);
+#endif
+  fixup_lispsym_init (&regular_top_level_message);
+  fixup_lispsym_init (&echo_message_buffer);
+  fixup_lispsym_init (&unread_switch_frame);
+  fixup_lispsym_init (&internal_last_event_frame);
+  fixup_lispsym_init (&read_key_sequence_cmd);
+  fixup_lispsym_init (&read_key_sequence_remapped);
+  fixup_lispsym_init (&help_form_saved_window_configs);
+  fixup_lispsym_init (&pending_funcalls);
+  fixup_lispsym_init (&accent_key_syms);
+  fixup_lispsym_init (&func_key_syms);
+  fixup_lispsym_init (&mouse_syms);
+  fixup_lispsym_init (&wheel_syms);
+  fixup_lispsym_init (&drag_n_drop_syms);
+  fixup_lispsym_init (&Vlispy_mouse_stem);
+  fixup_lispsym_init (&button_down_location);
+  fixup_lispsym_init (&modifier_symbols);
+  fixup_lispsym_init (&menu_bar_one_keymap_changed_items);
+  fixup_lispsym_init (&menu_bar_items_vector);
+  fixup_lispsym_init (&item_properties);
+  fixup_lispsym_init (&tool_bar_items_vector);
+  fixup_lispsym_init (&tool_bar_item_properties);
+
   pending_funcalls = Qnil;
   staticpro (&pending_funcalls);
 

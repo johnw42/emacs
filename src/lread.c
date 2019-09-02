@@ -1148,8 +1148,6 @@ Return t if the file exists and loads successfully.  */)
 
   CHECK_STRING (file);
 
-  Fgarbage_collect (); // XXX
-
   /* If file name is magic, call the handler.  */
   /* This shouldn't be necessary any more now that `openp' handles it right.
     handler = Ffind_file_name_handler (file, Qload);

@@ -941,6 +941,10 @@ struct Lisp_Symbol
   {
     struct
     {
+#ifdef HAVE_CHEZ_SCHEME
+      ptr scheme_obj;
+#endif /* HAVE_CHEZ_SCHEME */
+
       bool_bf gcmarkbit : 1;
 
       /* Indicates where the value can be found:
@@ -965,10 +969,6 @@ struct Lisp_Symbol
 
       /* True if pointed to from purespace and hence can't be GC'd.  */
       bool_bf pinned : 1;
-
-#ifdef HAVE_CHEZ_SCHEME
-      ptr scheme_obj;
-#endif /* HAVE_CHEZ_SCHEME */
 
       /* The symbol's name, as a Lisp string.  */
       Lisp_Object name;
@@ -1055,11 +1055,17 @@ verify (alignof (struct Lisp_Symbol) % GCALIGNMENT == 0);
   (((chez_uptr)(ptr) & 0xffffffff00000000UL) == 0xdeadface00000000UL)
 #define LISPSYM_INITIAL_NUM(ptr) \
   (((chez_uptr)(ptr) & 0x00000000ffffffffUL) >> 8)
-void fixup_lispsym_init(ptr *p);
+void fixup_lispsym_inits(ptr *p, size_t);
 #else /* not HAVE_CHEZ_SCHEME */
 #define LISPSYM_INITIALLY_(name) LISP_INITIALLY (XLI_BUILTIN_LISPSYM (i##name))
-INLINE void fixup_lispsym_init(const Lisp_Object *p) {}
+INLINE void fixup_lispsym_init(Lisp_Object *p, size_t) {}
 #endif /* not HAVE_CHEZ_SCHEME */
+
+INLINE void
+fixup_lispsym_init(Lisp_Object *p)
+{
+  fixup_lispsym_inits(p, 1);
+}
 
 /* Declare extern constants for Lisp symbols.  These can be helpful
    when using a debugger like GDB, on older platforms where the debug
@@ -1418,12 +1424,6 @@ vectorlike_lisp_obj (void *vptr)
   ptr obj = ((union vectorlike_header *) vptr)->s.scheme_obj;
   eassert (chez_vectorp (obj));
   return obj;
-}
-
-INLINE void
-set_vectorlike_lisp_obj (void *vptr, Lisp_Object obj)
-{
-  ((union vectorlike_header *) vptr)->s.scheme_obj = obj;
 }
 
 #else /* not HAVE_CHEZ_SCHEME */
@@ -5735,8 +5735,8 @@ container_uniq (struct container *c)
 void mark_lisp_refs (void);
 bool mark_and_enqueue (Lisp_Object obj);
 
-#define IS_MAGIC_SCHEME_REF(p) (p == (void *)0x403ba93f)
-#define IS_MAGIC_SCHEME_REF_ADDR(p) // false ((chez_ptr *)0x7fffffffcdc8)
+#define IS_MAGIC_SCHEME_REF(p) (p == (void *)0x405096df)
+//#define IS_MAGIC_SCHEME_REF_ADDR(p) // false ((chez_ptr *)0x7fffffffcdc8)
 
 #endif /* HAVE_CHEZ_SCHEME */
 

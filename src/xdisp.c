@@ -32434,10 +32434,18 @@ x_intersect_rectangles (XRectangle *r1, XRectangle *r2, XRectangle *result)
 void
 syms_of_xdisp (void)
 {
-  Vwith_echo_area_save_vector = Qnil;
-  staticpro (&Vwith_echo_area_save_vector);
+  fixup_lispsym_init (&echo_area_window);
+  fixup_lispsym_init (&Vmessage_stack);
+  fixup_lispsym_init (&Vmessages_buffer_name);
+  fixup_lispsym_inits (echo_area_buffer, ARRAYELTS(echo_area_buffer));
+  fixup_lispsym_inits (echo_buffer, ARRAYELTS(echo_buffer));
+  fixup_lispsym_init (&Vwith_echo_area_save_vector);
+  fixup_lispsym_init (&help_echo_string);
+  fixup_lispsym_init (&help_echo_window);
+  fixup_lispsym_init (&help_echo_object);
+  fixup_lispsym_init (&previous_help_echo_string);
 
-  Vmessage_stack = Qnil;
+  staticpro (&Vwith_echo_area_save_vector);
   staticpro (&Vmessage_stack);
 
   /* Non-nil means don't actually do any redisplay.  */
