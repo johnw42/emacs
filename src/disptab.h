@@ -62,9 +62,9 @@ extern struct Lisp_Char_Table *buffer_display_table (void);
 /* Return the current base (for indexing) of the GLYPH table,
    or 0 if the table isn't currently valid.  */
 #define GLYPH_TABLE_BASE(var)                                           \
-  XVECTOR_CACHE_IF (VECTORP (Vglyph_table), var, Vglyph_table)
+  struct Lisp_Vector *var = VECTORP (Vglyph_table) ? XVECTOR (Vglyph_table) : NULL
 
-#define GLYPH_TABLE_NULLP(var) xv_nullp (var)
+#define GLYPH_TABLE_NULLP(var) ((var) == NULL)
 
 #define GLYPH_TABLE_REF(var, i) xv_ref (var, i)
 

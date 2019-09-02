@@ -112,7 +112,7 @@ disptab_matches_widthtab (struct Lisp_Char_Table *disptab, Lisp_Object widthtab)
 {
   int i;
 
-  XVECTOR_CACHE(cache, widthtab);
+  struct Lisp_Vector *cache = XVECTOR (widthtab);
   eassert (xv_size (cache) == 256);
 
   for (i = 0; i < 256; i++)
@@ -141,7 +141,7 @@ recompute_width_table (struct buffer *buf, struct Lisp_Char_Table *disptab)
 
   if (!VECTORP (BVAR (buf, width_table)))
     bset_width_table (buf, make_uninit_vector (256));
-  XVECTOR_CACHE (widthtab, BVAR (buf, width_table));
+  struct Lisp_Vector *widthtab = XVECTOR (BVAR (buf, width_table));
   eassert (xv_size(widthtab) == 256);
 
   for (i = 0; i < 256; i++)
@@ -1185,7 +1185,7 @@ compute_motion (ptrdiff_t from, ptrdiff_t frombyte, EMACS_INT fromvpos,
     {
       if (VECTORP (BVAR (current_buffer, width_table)))
         {
-          XVECTOR_CACHE_UPDATE(width_table, BVAR (current_buffer, width_table));
+          width_table = XVECTOR (BVAR (current_buffer, width_table));
           width_cache = width_run_cache_on_off ();
         }
       else

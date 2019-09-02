@@ -4334,7 +4334,7 @@ decode_timer (Lisp_Object timer, struct timespec *result)
 {
   if (! (VECTORP (timer) && ASIZE (timer) == 9))
     return 0;
-  XVECTOR_CACHE (vec, timer);
+  struct Lisp_Vector *vec = XVECTOR (timer);
   if (! NILP (xv_ref (vec, 0)))
     return 0;
   if (! INTEGERP (xv_ref (vec, 2)))
@@ -8101,7 +8101,7 @@ process_tool_bar_item (Lisp_Object key, Lisp_Object def, Lisp_Object data, void 
 	 discard any previously made item.  */
       for (i = 0; i < ntool_bar_items; i += TOOL_BAR_ITEM_NSLOTS)
 	{
-          XVECTOR_CACHE (v, tool_bar_items_vector);
+          struct Lisp_Vector *v = XVECTOR (tool_bar_items_vector);
 
 	  if (EQ (key, xv_ref (v, i + TOOL_BAR_ITEM_KEY)))
 	    {

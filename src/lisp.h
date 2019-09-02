@@ -1934,36 +1934,23 @@ xv_size (struct Lisp_Vector *v)
   return v->header.size;
 }
 
-INLINE ptrdiff_t
-xv_nullp (struct Lisp_Vector *v)
-{
-  return v == NULL;
-}
+/* INLINE ptrdiff_t */
+/* xv_nullp (struct Lisp_Vector *v) */
+/* { */
+/*   return v == NULL; */
+/* } */
 
-INLINE struct Lisp_Vector *
-XVECTOR_IF (bool cond, Lisp_Object a)
-{
-  if (cond)
-    {
-      eassert (VECTORLIKEP (a));
-      return XUNTAG_VECTORLIKE (a);
-    }
-  else
-    {
-      return NULL;
-    }
-}
-
-#define XVECTOR_CACHE_UPDATE(var, lisp_obj) var = XVECTOR(lisp_obj)
-#define XVECTOR_CACHE_IF(cond, var, lisp_obj) struct Lisp_Vector *var = XVECTOR_IF(cond, lisp_obj)
-#define XVECTOR_CACHE(var, lisp_obj) XVECTOR_CACHE_IF(true, var, lisp_obj);
-#define XV_SETFASTINT(var, i, val) \
-  XSETFASTINT (*xv_ref_addr(var, i), val)
+/* #define var = XVECTOR (lisp_obj) var = XVECTOR(lisp_obj) */
+/* #define struct Lisp_Vector *var = cond ? XVECTOR (lisp_obj) : NULL struct Lisp_Vector *var = XVECTOR_IF(cond, lisp_obj) */
+/* #define struct Lisp_Vector *var = XVECTOR (lisp_obj) struct Lisp_Vector *var = true ? XVECTOR (lisp_obj) : NULL; */
+/* #define XV_SETFASTINT(var, i, val) \ */
+/*   XSETFASTINT (*xv_ref_addr(var, i), val) */
 
 INLINE struct Lisp_Vector *
 XVECTOR (Lisp_Object a)
 {
-  return XVECTOR_IF(true, a);
+  eassert (VECTORLIKEP (a));
+  return XUNTAG_VECTORLIKE (a);
 }
 
 INLINE int

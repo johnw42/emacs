@@ -627,7 +627,7 @@ do								\
     ccl_prog_stack_struct[stack_idx].ic = (ret_ic);		\
     ccl_prog_stack_struct[stack_idx].eof_ic = eof_ic;		\
     stack_idx++;						\
-    XVECTOR_CACHE_UPDATE(ccl_prog, called_ccl.prog);            \
+    ccl_prog = XVECTOR (called_ccl.prog);            \
     ic = CCL_HEADER_MAIN;					\
     eof_ic = XFASTINT (xv_ref (ccl_prog, CCL_HEADER_EOF));		\
     goto ccl_repeat;						\
@@ -872,7 +872,7 @@ ccl_driver (struct ccl_program *ccl, int *source, int *destination, int src_size
   int eof_ic = ccl->eof_ic;
   int eof_hit = 0;
 
-  XVECTOR_CACHE(ccl_prog, ccl->prog);
+  struct Lisp_Vector *ccl_prog = XVECTOR (ccl->prog);
 
   if (ccl->buf_magnification == 0) /* We can't read/produce any bytes.  */
     dst = NULL;
@@ -1085,7 +1085,7 @@ ccl_driver (struct ccl_program *ccl, int *source, int *destination, int src_size
 	    ccl_prog_stack_struct[stack_idx].ic = ic;
 	    ccl_prog_stack_struct[stack_idx].eof_ic = eof_ic;
 	    stack_idx++;
-	    XVECTOR_CACHE (ccl_prog, AREF (slot, 1));
+	    struct Lisp_Vector *ccl_prog = XVECTOR (AREF (slot, 1));
 	    ic = CCL_HEADER_MAIN;
 	    eof_ic = XFASTINT (xv_ref (ccl_prog, CCL_HEADER_EOF));
 	  }
@@ -1930,7 +1930,7 @@ setup_ccl_program (struct ccl_program *ccl, Lisp_Object ccl_prog)
       ccl_prog = ccl_get_compiled_code (ccl_prog, &ccl->idx);
       if (! VECTORP (ccl_prog))
 	return false;
-      XVECTOR_CACHE (vp, ccl_prog);
+      struct Lisp_Vector *vp = XVECTOR (ccl_prog);
       ccl->size = xv_size (vp);
       ccl->prog = ccl_prog;
       ccl->eof_ic = XINT (xv_ref (vp, CCL_HEADER_EOF));

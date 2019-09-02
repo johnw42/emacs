@@ -1219,7 +1219,7 @@ uniprop_encode_value_character (Lisp_Object table, Lisp_Object value)
 static Lisp_Object
 uniprop_encode_value_run_length (Lisp_Object table, Lisp_Object value)
 {
-  XVECTOR_CACHE (value_table, XCHAR_TABLE (table)->extras[4]);
+  struct Lisp_Vector *value_table = XVECTOR (XCHAR_TABLE (table)->extras[4]);
   int i, size = ASIZE (XCHAR_TABLE (table)->extras[4]);
 
   for (i = 0; i < size; i++)
@@ -1237,7 +1237,7 @@ uniprop_encode_value_run_length (Lisp_Object table, Lisp_Object value)
 static Lisp_Object
 uniprop_encode_value_numeric (Lisp_Object table, Lisp_Object value)
 {
-  XVECTOR_CACHE (value_table, XCHAR_TABLE (table)->extras[4]);
+  struct Lisp_Vector *value_table = XVECTOR (XCHAR_TABLE (table)->extras[4]);
   int i, size = ASIZE (XCHAR_TABLE (table)->extras[4]);
 
   CHECK_NUMBER (value);

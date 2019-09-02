@@ -3392,7 +3392,7 @@ tty_menu_help_callback (char const *help_string, int pane, int item)
   Lisp_Object pane_name;
   Lisp_Object menu_object;
 
-  XVECTOR_CACHE (first_item, menu_items);
+  struct Lisp_Vector *first_item = XVECTOR (menu_items);
   if (EQ (xv_ref (first_item, 0), Qt))
     pane_name = xv_ref (first_item, MENU_ITEMS_PANE_NAME);
   else if (EQ (xv_ref (first_item, 0), Qquote))

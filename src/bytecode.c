@@ -358,7 +358,7 @@ exec_byte_code (Lisp_Object bytestr, Lisp_Object vector, Lisp_Object maxdepth,
     bytestr = Fstring_as_unibyte (bytestr);
 
   ptrdiff_t bytestr_length = SBYTES (bytestr);
-  XVECTOR_CACHE (vectorp, vector);
+  struct Lisp_Vector *vectorp = XVECTOR (vector);
 
   unsigned char quitcounter = 1;
   EMACS_INT stack_items = XFASTINT (maxdepth) + 1;

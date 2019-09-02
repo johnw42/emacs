@@ -146,7 +146,7 @@ def ArgRx(depth, single_arg):
     found = arg_rx_cache.get(key)
     if found is None:
         if depth == 0:
-            return r"[^=,;()]+" if single_arg else r"[^;()]*"
+            return r"[^=,;()]*" if single_arg else r"[^;()]*"
         subn = ArgRx(depth - 1, False)
         sub1 = ArgRx(depth - 1, True) if single_arg else subn
         found = r"(?:" + sub1 + r"(?:\(" + subn + r"\)" + sub1 + r")*)"
@@ -165,6 +165,7 @@ STRICT_ARG_REGEX = "(" + ArgRx(1, True) + ")"
 
 
 def Main():
+    print(ArgsRx(2, 1))
     os.chdir(sys.path[0])
     for fn in glob.glob("*.[ch]"):
         if fn in ["msdos.c", "global.h", "chez_scheme.h"]:
@@ -174,6 +175,19 @@ def Main():
             text = f.read()
             lines = text.split("\n")
             for i, line in enumerate(lines):
+                line = re.sub(
+                    r"\bXVECTOR_CACHE_UPDATE" + ArgsRx(2), r"\1 = XVECTOR (\2)", line
+                )
+                line = re.sub(
+                    r"\bXVECTOR_CACHE" + ArgsRx(2),
+                    r"struct Lisp_Vector *\1 = XVECTOR (\2)",
+                    line,
+                )
+                line = re.sub(
+                    r"\bXVECTOR_CACHE_IF" + ArgsRx(3),
+                    r"struct Lisp_Vector *\2 = \1 ? XVECTOR (\3) : NULL",
+                    line,
+                )
                 # line = re.sub(r"\bxvector_t\b *", r"struct Lisp_Vector *", line)
                 # line = re.sub(r"\bxvector_contents_t\b *", r"Lisp_Object *", line)
                 # line = re.sub(r"\bXVC_NULL\b", r"NULL", line)
@@ -188,7 +202,7 @@ def Main():
                 #     r"Lisp_Object \1[LFACE_VECTOR_SIZE]",
                 #     line,
                 # )
-                line = re.sub(r"\bxvc_set" + ArgsRx(3, 3), r"\1[\2] = \3", line)
+                # line = re.sub(r"\bxvc_set" + ArgsRx(3, 3), r"\1[\2] = \3", line)
                 lines[i] = line
         new_text = "\n".join(lines)
         if text != new_text:

@@ -30759,7 +30759,7 @@ on_hot_spot_p (Lisp_Object hot_spot, int x, int y)
       /* CDR is [x0 y0 x1 y1 x2 y2 ...x(n-1) y(n-1)] */
       if (VECTORP (XCDR (hot_spot)))
 	{
-	  XVECTOR_CACHE (poly, XCDR (hot_spot));
+	  struct Lisp_Vector *poly = XVECTOR (XCDR (hot_spot));
 	  ptrdiff_t n = xv_size (poly);
 	  ptrdiff_t i;
 	  bool inside = false;
