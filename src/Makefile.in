@@ -771,4 +771,6 @@ CHEZ_SCHEME_DIR = @CHEZ_SCHEME_DIR@
 chez_scheme.h: $(CHEZ_SCHEME_DIR)/scheme.h make_scheme_h.py
 	python3 make_scheme_h.py < $< > $@
 
+lisp.h: chez_scheme.h
+
 # sed 's/^#define S/#define chez_/;/^#define /s/S\([a-z0-9_]\+\)/chez_\1/g;s/^EXPORT .* S\([a-z0-9_]\+\)/#define chez_\1 S\1@\0/' < $< | tr '@' '\n' > $@

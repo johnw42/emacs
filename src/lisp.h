@@ -31,6 +31,7 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 #include <float.h>
 #include <inttypes.h>
 #include <limits.h>
+#include <stdint.h>
 
 #include <stdio.h> // for printf; TODO(jrw): Remove.
 #include <stdlib.h> // for abort()
@@ -347,15 +348,28 @@ extern bool suppress_checking EXTERNALLY_VISIBLE;
 #define SCHEME_MALLOC_PADDING 8
 #define SCHEME_MALLOC_PADDING_AFTER 0
 
-extern ptr scheme_malloc(iptr size);
+struct xmalloc_header {
+  const char *file;
+  intptr_t line;
+  size_t size;
+  uintptr_t signature[4];
+  void *data[];
+};
+
+extern const char *kilroy_file;
+extern int kilroy_line;
+#define KILROY_WAS_HERE do { if (!kilroy_file) { kilroy_file = __FILE__; kilroy_line = __LINE__; } } while (0)
+#define CHECK_ALLOC(p) do { KILROY_WAS_HERE; check_alloc(p); } while (0)
+void check_alloc (void *);
 
 /* #define scheme_malloc_ptr(data) ((void *) ((char *) chez_bytevector_data(data) + SCHEME_MALLOC_PADDING)) */
 
 INLINE void *
-scheme_malloc_ptr(ptr data) {
-  eassert (chez_bytevectorp (data));
-  void *p = (char *) chez_bytevector_data(data) + SCHEME_MALLOC_PADDING;
-  return p;
+scheme_malloc_ptr(void *data) {
+  CHECK_ALLOC (data);
+  /* eassert (chez_bytevectorp (data)); */
+  /* void *p = (char *) chez_bytevector_data(data) + SCHEME_MALLOC_PADDING; */
+  return data;
 }
 
 extern ptr scheme_function_for_name(const char *name);

@@ -268,7 +268,8 @@ void scheme_init(void) {
   eassert(!scheme_initialized);
 
   chez_scheme_init(NULL);
-  chez_register_boot_file("/usr/local/google/home/jrw/.local/lib/csv9.5.2/a6le/scheme.boot");
+  printf ("boot file: %s\n", CHEZ_SCHEME_DIR "/scheme.boot");
+  chez_register_boot_file(CHEZ_SCHEME_DIR "/scheme.boot");
   chez_build_heap(NULL, NULL);
 
   scheme_greatest_fixnum = chez_fixnum_value(scheme_call0("greatest-fixnum"));
@@ -287,7 +288,7 @@ void scheme_init(void) {
   chez_foreign_symbol("scheme_elisp_call1", scheme_elisp_call1);
   chez_foreign_symbol("scheme_elisp_apply", scheme_elisp_apply);
   chez_foreign_symbol("alloc_test", alloc_test);
-  chez_scheme_script("/usr/local/google/home/jrw/git/schemacs/scheme/main.ss", 0, argv);
+  chez_scheme_script(BUILD_ROOT "/scheme/main.ss", 0, argv);
   scheme_call0("emacs-init");
 
   SCHEME_FPTR_INIT(save_pointer);
@@ -443,9 +444,10 @@ XSYMBOL (Lisp_Object a)
 void *
 scheme_alloc_c_data (ptr key, iptr size)
 {
-  ptr bytes = scheme_malloc(size);
-  scheme_call3("hashtable-set!", c_data_table, key, bytes);
-  return scheme_malloc_ptr (bytes);
+  KILROY_WAS_HERE;
+  void *bytes = xmalloc(size);
+  scheme_call3("hashtable-set!", c_data_table, key, chez_integer ((uptr)bytes));
+  return bytes;
 }
 
 void *

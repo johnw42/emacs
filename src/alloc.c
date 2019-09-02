@@ -1064,6 +1064,53 @@ static void *lmalloc (size_t) ATTRIBUTE_MALLOC_SIZE ((1));
 static void *lrealloc (void *, size_t);
 
 /* Like malloc but check for no memory and block interrupt input.  */
+const char *kilroy_file = NULL;
+int kilroy_line = 0;
+
+#define XMALLOC_EXTRA_SIZE (sizeof (struct xmalloc_header) + 4 * sizeof (uintptr_t))
+//#define XMALLOC_HEADER(p) ((void *)(p ? (char *)p - sizeof (struct xmalloc_header) : p))
+
+#define XMALLOC_EXTRA_SIZE 0
+#define XMALLOC_HEADER(p) (p)
+
+static void *
+xmalloc_init (void *p, size_t size)
+{
+  /* if (p == NULL) */
+  /*   return NULL; */
+
+  /* char *cp = p; */
+  /* struct xmalloc_header *header = p; */
+  /* header->file = kilroy_file; */
+  /* header->line = kilroy_line; */
+  /* kilroy_file = NULL; */
+  /* header->size = size; */
+  /* uintptr_t *footer = (char *)header->data + size; */
+  /* for (int i = 0; i < 4; i++) */
+  /*   { */
+  /*     header->signature[i] = 0xa5a5a5a5a5a5a5a5UL; */
+  /*     footer[i] = 0xa5a5a5a5a5a5a5a5UL ^ size; */
+  /*   } */
+  /* return header->data; */
+
+  return p;
+}
+
+void
+check_alloc (void *p)
+{
+  /* struct xmalloc_header *header = XMALLOC_HEADER (p); */
+  /* size_t size = header->size; */
+  /* uintptr_t *footer = (char *)header->data + size; */
+  /* for (int i = 0; i < 4; i++) */
+  /*   { */
+  /*     eassert (header->signature[i] == 0xa5a5a5a5a5a5a5a5UL); */
+  /*     eassert (footer[i] == (0xa5a5a5a5a5a5a5a5UL ^ size)); */
+  /*   } */
+  /* header->file = kilroy_file; */
+  /* header->line = kilroy_line; */
+  /* kilroy_file = NULL; */
+}
 
 void *
 xmalloc (size_t size)
@@ -1071,7 +1118,7 @@ xmalloc (size_t size)
   void *val;
 
   MALLOC_BLOCK_INPUT;
-  val = lmalloc (size);
+  val = xmalloc_init (lmalloc (size + XMALLOC_EXTRA_SIZE), size);
   MALLOC_UNBLOCK_INPUT;
 
   if (!val && size)
@@ -1124,9 +1171,10 @@ xrealloc (void *block, size_t size)
   /* We must call malloc explicitly when BLOCK is 0, since some
      reallocs don't do this.  */
   if (! block)
-    val = lmalloc (size);
+    val = lmalloc (size + XMALLOC_EXTRA_SIZE);
   else
-    val = lrealloc (block, size);
+    val = lrealloc (XMALLOC_HEADER (block), size + XMALLOC_EXTRA_SIZE);
+  val = xmalloc_init (val, size);
   MALLOC_UNBLOCK_INPUT;
 
   if (!val && size)
@@ -1163,7 +1211,7 @@ xfree (void *block)
   if (!block)
     return;
   MALLOC_BLOCK_INPUT;
-  free (block);
+  free (XMALLOC_HEADER (block));
   MALLOC_UNBLOCK_INPUT;
   /* We don't call refill_memory_reserve here
      because in practice the call in r_alloc_free seems to suffice.  */
@@ -2186,27 +2234,27 @@ check_string_free_list (void)
 
 #ifdef HAVE_CHEZ_SCHEME
 
-ptr scheme_malloc(iptr size)
-{
-  eassert (0 <= size);
-  ptr bytes = chez_make_bytevector(size + SCHEME_MALLOC_PADDING + SCHEME_MALLOC_PADDING_AFTER, 0);
-  scheme_track (bytes);
-  SCHEME_FPTR_CALL(save_origin, bytes);
-  return bytes;
-}
+/* ptr scheme_malloc(iptr size) */
+/* { */
+/*   eassert (0 <= size); */
+/*   ptr bytes = chez_make_bytevector(size + SCHEME_MALLOC_PADDING + SCHEME_MALLOC_PADDING_AFTER, 0); */
+/*   scheme_track (bytes); */
+/*   SCHEME_FPTR_CALL(save_origin, bytes); */
+/*   return bytes; */
+/* } */
 
 static void *
 scheme_allocate (ptrdiff_t nbytes, ptr sym, ptr *vec_ptr)
 {
-  ptr bytes = scheme_malloc(nbytes);
+  void *data = xmalloc (nbytes);
 
   ptr vec = chez_make_vector(2, sym);
   scheme_track (vec);
   SCHEME_FPTR_CALL(save_origin, vec);
-  chez_vector_set(vec, 1, bytes);
+  chez_vector_set(vec, 1, chez_integer((uptr)data));
   *vec_ptr = vec;
 
-  return scheme_malloc_ptr (bytes);
+  return scheme_malloc_ptr (data);
 }
 #endif /* HAVE_CHEZ_SCHEME */
 

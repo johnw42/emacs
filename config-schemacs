@@ -6,4 +6,4 @@ shift
 CFLAGS='-O0 -finline-functions -g -Werror=implicit-function-declaration -Werror=nested-externs'
 
 autoreconf
-./configure --enable-checking=yes --$with-chez-scheme AM_DEFAULT_VERBOSITY=0 CANNOT_DUMP=yes CFLAGS="$CFLAGS" "$@"
+./configure --enable-checking=yes --$with-chez-scheme --without-makeinfo AM_DEFAULT_VERBOSITY=0 CANNOT_DUMP=yes CFLAGS="$CFLAGS" "$@"

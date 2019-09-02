@@ -1386,6 +1386,8 @@ AC_SUBST(CHEZ_SCHEME_CFLAGS)
 AC_SUBST(CHEZ_SCHEME_OBJ)
 AC_SUBST(CHEZ_SCHEME_LIBS)
 AC_SUBST(CHEZ_SCHEME_DIR)
+AC_DEFINE_UNQUOTED(CHEZ_SCHEME_DIR, ["$CHEZ_SCHEME_DIR"], [Location of Chez Scheme files.])
+AC_DEFINE_UNQUOTED(BUILD_ROOT, ["$PWD"], [Root of the build tree.])
 
 dnl The function dump-emacs will not be defined and temacs will do
 dnl (load "loadup") automatically unless told otherwise.
