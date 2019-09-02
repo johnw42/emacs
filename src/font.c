@@ -1008,7 +1008,7 @@ font_expand_wildcards (xvector_contents_t field, int n)
     return -1;
   xvc_clear (field, j, XLFD_LAST_INDEX - j);
   if (INTEGERP (xvc_ref (field, XLFD_ENCODING_INDEX)))
-    xvc_set (field, XLFD_ENCODING_INDEX, 
+    xvc_set (field, XLFD_ENCODING_INDEX,
              Fintern (Fnumber_to_string (xvc_ref (field, XLFD_ENCODING_INDEX)), Qnil));
   return 0;
 }
@@ -2449,7 +2449,7 @@ font_match_p (Lisp_Object spec, Lisp_Object font)
 	&& ! NILP (AREF (font, i))
 	&& ! EQ (AREF (spec, i), AREF (font, i)))
       return 0;
-  props = as_xvc (XFONT_SPEC (spec)->props);
+  props = XFONT_SPEC (spec)->props;
   if (FLOATP (xvc_ref (props, FONT_SIZE_INDEX)))
     {
       for (i = FONT_FOUNDRY_INDEX; i < FONT_SIZE_INDEX; i++)
@@ -3486,7 +3486,7 @@ void
 register_font_driver (struct font_driver CONST_UNLESS_SCHEME *driver, struct frame *f)
 {
   fixup_lispsym_init(&driver->type);
-  
+
   struct font_driver_list *root = f ? f->font_driver_list : font_driver_list;
   struct font_driver_list *prev, *list;
 
@@ -4002,13 +4002,13 @@ copy_font_spec (Lisp_Object font)
 
   /* Make an uninitialized font-spec object.  */
   spec = (struct font_spec *) allocate_vector (font_spec_size);
-  XSETPVECTYPESIZE (AS_XV (spec), PVEC_FONT, FONT_SPEC_MAX,
+  XSETPVECTYPESIZE (spec, PVEC_FONT, FONT_SPEC_MAX,
 		    font_spec_size - FONT_SPEC_MAX);
 
   spec->props[FONT_TYPE_INDEX] = spec->props[FONT_EXTRA_INDEX] = Qnil;
 
   /* Copy basic properties FONT_FOUNDRY_INDEX..FONT_AVGWIDTH_INDEX.  */
-  xvc_copy (as_xvc (spec->props + 1),
+  xvc_copy (spec->props + 1,
             xvc_add (xvector_contents (font), 1),
             FONT_EXTRA_INDEX - 1);
 
@@ -5149,7 +5149,7 @@ If the named font is not yet loaded, return nil.  */)
   else
     {
       struct face *face = FACE_FROM_ID (f, DEFAULT_FACE_ID);
-      Lisp_Object entity = font_matching_entity (f, as_xvc (face->lface), name);
+      Lisp_Object entity = font_matching_entity (f, face->lface, name);
 
       font_object = ! NILP (entity) ? font_open_entity (f, entity, 0) : Qnil;
     }
