@@ -1067,7 +1067,7 @@ static void *lrealloc (void *, size_t);
 const char *kilroy_file = NULL;
 int kilroy_line = 0;
 
-#define XMALLOC_EXTRA_SIZE (sizeof (struct xmalloc_header) + 4 * sizeof (uintptr_t))
+//#define XMALLOC_EXTRA_SIZE (sizeof (struct xmalloc_header) + 4 * sizeof (uintptr_t))
 //#define XMALLOC_HEADER(p) ((void *)(p ? (char *)p - sizeof (struct xmalloc_header) : p))
 
 #define XMALLOC_EXTRA_SIZE 0
@@ -2341,15 +2341,9 @@ allocate_string_data (struct Lisp_String *s,
 #ifdef HAVE_CHEZ_SCHEME
   /* Determine the number of bytes needed to store NBYTES bytes
      of string data.  */
-  sdata *old_data = NULL;
-  ptrdiff_t old_nbytes = 0;
   ptrdiff_t needed = SDATA_SIZE (nbytes);
-  if (s->u.s.data)
-    {
-      old_data = SDATA_OF_STRING (s);
-      old_nbytes = STRING_BYTES (s);
-    }
-  sdata *data = malloc(needed);
+  sdata *data = xmalloc(needed);
+  data->string = s;
 
 #else /* not HAVE_CHEZ_SCHEME */
   sdata *data, *old_data;
@@ -2420,7 +2414,6 @@ allocate_string_data (struct Lisp_String *s,
   b->next_free = (sdata *) ((char *) data + needed + GC_STRING_EXTRA);
 
   MALLOC_UNBLOCK_INPUT;
-#endif /* not HAVE_CHEZ_SCHEME */
 
   s->u.s.data = SDATA_DATA (data);
 #ifdef GC_CHECK_STRING_BYTES
@@ -2444,6 +2437,7 @@ allocate_string_data (struct Lisp_String *s,
     }
 
   consing_since_gc += needed;
+#endif /* not HAVE_CHEZ_SCHEME */
 }
 
 
