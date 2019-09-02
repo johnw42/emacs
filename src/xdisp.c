@@ -3412,7 +3412,7 @@ handle_stop (struct it *it)
   bool handle_overlay_change_p;
   struct props *p;
 
-  it->dpvec = XVC_NULL;
+  it->dpvec = NULL;
   it->current.dpvec_index = -1;
   handle_overlay_change_p = !it->ignore_overlay_strings_at_pos_p;
   it->ellipsis_p = false;
@@ -4675,14 +4675,14 @@ setup_for_ellipsis (struct it *it, int len)
   Lisp_Object invis_vector = DISP_INVIS_VECTOR (it->dp);
   if (it->dp && VECTORP (invis_vector))
     {
-      it->dpvec = xvector_contents (invis_vector);
+      it->dpvec = XVECTOR (invis_vector)->contents;
       it->dpend = xvc_add (it->dpvec, ASIZE (invis_vector));
     }
   else
     {
       /* Default `...'.  */
-      it->dpvec = as_xvc (default_invis_vector);
-      it->dpend = as_xvc (default_invis_vector + 3);
+      it->dpvec = default_invis_vector;
+      it->dpend = default_invis_vector + 3;
     }
 
   it->dpvec_char_len = len;
@@ -6692,7 +6692,7 @@ reseat_1 (struct it *it, struct text_pos pos, bool set_stop_p)
 
   it->current.pos = it->position = pos;
   it->end_charpos = ZV;
-  it->dpvec = XVC_NULL;
+  it->dpvec = NULL;
   it->current.dpvec_index = -1;
   it->current.overlay_string_index = -1;
   IT_STRING_CHARPOS (*it) = -1;
@@ -7098,7 +7098,7 @@ get_next_display_element (struct it *it)
 	      && (dv = DISP_CHAR_VECTOR (it->dp, c),
 		  VECTORP (dv)))
 	    {
-              xvector_t v = XVECTOR (dv);
+              struct Lisp_Vector *v = XVECTOR (dv);
 
 	      /* Return the first character from the display table
 		 entry, if not empty.  If empty, don't display the
@@ -7274,7 +7274,7 @@ get_next_display_element (struct it *it)
 	    display_control:
 	      /* Set up IT->dpvec and return first character from it.  */
 	      it->dpvec_char_len = it->len;
-	      it->dpvec = as_xvc (it->ctl_chars);
+	      it->dpvec = it->ctl_chars;
 	      it->dpend = xvc_add (it->dpvec, ctl_len);
 	      it->current.dpvec_index = 0;
 	      it->dpvec_face_id = face_id;
@@ -7629,7 +7629,7 @@ set_iterator_to_next (struct it *it, bool reseat_p)
 	      it->object = it->w->contents;
 	    }
 
-	  it->dpvec = XVC_NULL;
+	  it->dpvec = NULL;
 	  it->current.dpvec_index = -1;
 
 	  /* Skip over characters which were displayed via IT->dpvec.  */
@@ -7852,7 +7852,7 @@ next_element_from_display_vector (struct it *it)
   /* KFS: This code used to check ip->dpvec[0] instead of the current element.
      That seemed totally bogus - so I changed it...  */
   if (xvc_diff(it->dpend, it->dpvec) > 0	/* empty dpvec[] is invalid */
-      && (gc = xvc_ref (it->dpvec, it->current.dpvec_index), GLYPH_CODE_P (gc)))
+      && (gc = it->dpvec[it->current.dpvec_index], GLYPH_CODE_P (gc)))
     {
       struct face *this_face, *prev_face, *next_face;
 
@@ -7894,7 +7894,7 @@ next_element_from_display_vector (struct it *it)
 	  else
 	    {
 	      int lface_id =
-		GLYPH_CODE_FACE (xvc_ref (it->dpvec, it->current.dpvec_index + 1));
+		GLYPH_CODE_FACE (it->dpvec[it->current.dpvec_index + 1]);
 
 	      if (lface_id > 0)
 		next_face_id = merge_faces (it->f, Qt, lface_id,

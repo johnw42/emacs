@@ -10063,7 +10063,7 @@ See also `this-command-keys-vector'.  */)
   (void)
 {
   return make_event_array (this_command_key_count,
-			   xvc_unwrap (xvector_contents (this_command_keys)));
+			   XVECTOR (this_command_keys)->contents);
 }
 
 DEFUN ("set--this-command-keys", Fset__this_command_keys,

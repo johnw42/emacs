@@ -817,14 +817,14 @@ extern Lisp_Object font_spec_from_name (Lisp_Object font_name);
 extern Lisp_Object font_get_frame (Lisp_Object font_object);
 extern int font_has_char (struct frame *, Lisp_Object, int);
 
-extern void font_clear_prop (xvector_contents_t attrs,
+extern void font_clear_prop (Lisp_Object *attrs,
                              enum font_property_index prop);
-extern Lisp_Object font_find_for_lface (struct frame *f, xvector_contents_t lface,
+extern Lisp_Object font_find_for_lface (struct frame *f, Lisp_Object *lface,
                                         Lisp_Object spec, int c);
 extern Lisp_Object font_open_for_lface (struct frame *f, Lisp_Object entity,
-                                        xvector_contents_t lface,
+                                        Lisp_Object *lface,
                                         Lisp_Object spec);
-extern Lisp_Object font_load_for_lface (struct frame *f, xvector_contents_t lface,
+extern Lisp_Object font_load_for_lface (struct frame *f, Lisp_Object *lface,
                                         Lisp_Object spec);
 extern void font_prepare_for_face (struct frame *f, struct face *face);
 extern void font_done_for_face (struct frame *f, struct face *face);

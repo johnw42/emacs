@@ -1155,7 +1155,7 @@ compute_motion (ptrdiff_t from, ptrdiff_t frombyte, EMACS_INT fromvpos,
   ptrdiff_t width_run_start = from;
   ptrdiff_t width_run_end   = from;
   ptrdiff_t width_run_width = 0;
-  xvector_t width_table = XVECTOR_CACHE_INIT;
+  struct Lisp_Vector *width_table = XVECTOR_CACHE_INIT;
 
   /* The next buffer pos where we should consult the width run cache. */
   ptrdiff_t next_width_run = from;

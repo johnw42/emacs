@@ -2304,7 +2304,7 @@ struct it
      into dpvec.  This same mechanism is also used to return
      characters from translated control characters, i.e. `\003' or
      `^C'.  */
-  xvector_contents_t dpvec, dpend;
+  Lisp_Object *dpvec, dpend;
 
   /* Length in bytes of the char that filled dpvec.  A value of zero
      means that no such character is involved.  A negative value means

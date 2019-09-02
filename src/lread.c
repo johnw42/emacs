@@ -2908,10 +2908,10 @@ read1 (Lisp_Object readcharfun, int *pch, bool first_in_list)
 	  /* Accept compiled functions at read-time so that we don't have to
 	     build them using function calls.  */
 	  Lisp_Object tmp = read_vector (readcharfun, 1);
-          xvector_t vec = XVECTOR (tmp);
+          struct Lisp_Vector *vec = XVECTOR (tmp);
 	  if (xv_size (vec) == 0)
 	    invalid_syntax ("Empty byte-code object");
-	  make_byte_code (xv_unwrap (vec));
+	  make_byte_code (vec);
 	  return tmp;
 	}
       if (c == '(')
@@ -4515,7 +4515,7 @@ defsubr (struct Lisp_Subr *sname)
   subr->doc = sname->doc;
 #else /* not HAVE_CHEZ_SCHEME */
   sym = intern_c_string (sname->symbol_name);
-  XSETPVECTYPE (AS_XV (sname), PVEC_SUBR);
+  XSETPVECTYPE (sname, PVEC_SUBR);
   XSETSUBR (tem, sname);
 #endif /* not HAVE_CHEZ_SCHEME */
   set_symbol_function (sym, tem);

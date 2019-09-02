@@ -3456,7 +3456,7 @@ setup_on_free_list (struct Lisp_Vector *v, ptrdiff_t nbytes)
 #ifndef HAVE_CHEZ_SCHEME
   eassume (header_size <= nbytes);
   ptrdiff_t nwords = (nbytes - header_size) / word_size;
-  XSETPVECTYPESIZE (as_xv (v), PVEC_FREE, 0, nwords);
+  XSETPVECTYPESIZE (v, PVEC_FREE, 0, nwords);
   eassert (nbytes % roundup_size == 0);
   ptrdiff_t vindex = VINDEX (nbytes);
   eassert (vindex < VECTOR_MAX_FREE_LIST_INDEX);
@@ -3839,7 +3839,7 @@ allocate_pseudovector (int memlen, int lisplen,
 #if !defined(NIL_IS_ZERO) // && !defined(HAVE_CHEZ_SCHEME)
   set_nil (v->contents, lisplen);
 #endif
-  XSETPVECTYPESIZE (as_xv (v), tag, lisplen, memlen - lisplen);
+  XSETPVECTYPESIZE (v, tag, lisplen, memlen - lisplen);
 #ifdef HAVE_CHEZ_SCHEME
   init_nil_refs (vectorlike_lisp_obj (v));
 #endif /* HAVE_CHEZ_SCHEME */
@@ -3884,7 +3884,7 @@ allocate_record (EMACS_INT count)
 #else /* not HAVE_CHEZ_SCHEME */
   p->header.size = count;
 #endif /* not HAVE_CHEZ_SCHEME */
-  XSETPVECTYPE (as_xv (p), PVEC_RECORD);
+  XSETPVECTYPE (p, PVEC_RECORD);
   return p;
 }
 
@@ -3957,7 +3957,7 @@ make_byte_code (struct Lisp_Vector *v)
        raw 8-bit characters converted to multibyte form.  Thus, now we
        must convert them back to the original unibyte form.  */
     v->contents[1] = Fstring_as_unibyte (v->contents[1]);
-  XSETPVECTYPE (as_xv (v), PVEC_COMPILED);
+  XSETPVECTYPE (v, PVEC_COMPILED);
 }
 
 DEFUN ("make-byte-code", Fmake_byte_code, Smake_byte_code, 4, MANY, 0,
@@ -3979,7 +3979,7 @@ usage: (make-byte-code ARGLIST BYTE-CODE CONSTANTS DEPTH &optional DOCSTRING INT
   (ptrdiff_t nargs, Lisp_Object *args)
 {
   Lisp_Object val = make_uninit_vector (nargs);
-  struct Lisp_Vector *p = xv_unwrap (XVECTOR (val));
+  struct Lisp_Vector *p = XVECTOR (val);
 
   /* We used to purecopy everything here, if purify-flag was set.  This worked
      OK for Emacs-23, but with Emacs-24's lexical binding code, it can be
@@ -6138,7 +6138,7 @@ make_pure_vector (ptrdiff_t len)
   size_t size = header_size + len * word_size;
   struct Lisp_Vector *p = pure_alloc (size, Lisp_Vectorlike);
   XSETVECTOR (new, p);
-  xv_unwrap (XVECTOR (new))->header.size = len;
+  XVECTOR (new)->header.size = len;
   return new;
 #endif /* not HAVE_CHEZ_SCHEME */
 }
@@ -6258,7 +6258,7 @@ purecopy (Lisp_Object obj)
     }
   else if (COMPILEDP (obj) || VECTORP (obj) || RECORDP (obj))
     {
-      struct Lisp_Vector *objp = xv_unwrap (XVECTOR (obj));
+      struct Lisp_Vector *objp = XVECTOR (obj);
       ptrdiff_t nbytes = vector_nbytes (objp);
       struct Lisp_Vector *vec = pure_alloc (nbytes, Lisp_Vectorlike);
       register ptrdiff_t i;
@@ -6898,8 +6898,8 @@ mark_char_table (struct Lisp_Vector *ptr, enum pvec_type pvectype)
 	continue;
       if (SUB_CHAR_TABLE_P (val))
 	{
-	  if (! VECTOR_MARKED_P (xv_unwrap (XVECTOR (val))))
-	    mark_char_table (xv_unwrap (XVECTOR (val)), PVEC_SUB_CHAR_TABLE);
+	  if (! VECTOR_MARKED_P (XVECTOR (val)))
+	    mark_char_table (XVECTOR (val), PVEC_SUB_CHAR_TABLE);
 	}
       else
 	mark_object_ptr (&ptr->contents[i]);
@@ -7188,7 +7188,7 @@ mark_object (Lisp_Object arg)
 
     case Lisp_Vectorlike:
       {
-	register struct Lisp_Vector *ptr = xv_unwrap (XVECTOR (obj));
+	register struct Lisp_Vector *ptr = XVECTOR (obj);
 
 	if (VECTOR_MARKED_P (ptr))
 	  break;
@@ -7201,7 +7201,7 @@ mark_object (Lisp_Object arg)
 #endif /* GC_CHECK_MARKED_OBJECTS */
 
         enum pvec_type pvectype
-          = PSEUDOVECTOR_TYPE (as_xv (ptr));
+          = PSEUDOVECTOR_TYPE (ptr);
 
 #ifndef HAVE_CHEZ_SCHEME
 	if (pvectype != PVEC_SUBR
@@ -7300,7 +7300,7 @@ mark_object (Lisp_Object arg)
 	      if (NILP (h->weak))
 		mark_object (h->key_and_value);
 	      else
-		VECTOR_MARK (xv_unwrap (XVECTOR (h->key_and_value)));
+		VECTOR_MARK (XVECTOR (h->key_and_value));
 	    }
 	    break;
 #endif
@@ -7530,7 +7530,7 @@ survives_gc_p (Lisp_Object obj)
       break;
 
     case Lisp_Vectorlike:
-      survives_p = SUBRP (obj) || VECTOR_MARKED_P (xv_unwrap (XVECTOR (obj)));
+      survives_p = SUBRP (obj) || VECTOR_MARKED_P (XVECTOR (obj));
       break;
 
     case Lisp_Cons:
@@ -8143,7 +8143,7 @@ garbage collection bugs.  Otherwise, do nothing and return OBJ.   */)
   /* Right now, we care only about vectors.  */
   if (VECTORLIKEP (obj))
     {
-      suspicious_objects[suspicious_object_index++] = xv_unwrap (XVECTOR (obj));
+      suspicious_objects[suspicious_object_index++] = XVECTOR (obj);
       if (suspicious_object_index == ARRAYELTS (suspicious_objects))
 	suspicious_object_index = 0;
     }

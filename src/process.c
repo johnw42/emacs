@@ -2480,7 +2480,7 @@ conv_sockaddr_to_lisp (struct sockaddr *sa, ptrdiff_t len)
   Lisp_Object address;
   ptrdiff_t i;
   unsigned char *cp;
-  xvector_t p = XVECTOR_CACHE_INIT;
+  struct Lisp_Vector *p = XVECTOR_CACHE_INIT;
 
   /* Workaround for a bug in getsockname on BSD: Names bound to
      sockets in the UNIX domain are inaccessible; getsockname returns
@@ -2569,7 +2569,7 @@ conv_addrinfo_to_lisp (struct addrinfo *res)
 static ptrdiff_t
 get_lisp_to_sockaddr_size (Lisp_Object address, int *familyp)
 {
-  xvector_t p;
+  struct Lisp_Vector *p;
 
   if (VECTORP (address))
     {
@@ -2617,7 +2617,7 @@ get_lisp_to_sockaddr_size (Lisp_Object address, int *familyp)
 static void
 conv_lisp_to_sockaddr (int family, Lisp_Object address, struct sockaddr *sa, int len)
 {
-  xvector_t p = XVECTOR_CACHE_INIT;
+  struct Lisp_Vector *p = XVECTOR_CACHE_INIT;
   register unsigned char *cp = NULL;
   register int i;
   EMACS_INT hostport;

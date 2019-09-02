@@ -847,7 +847,7 @@ ccl_debug_hook (int ic)
 
 struct ccl_prog_stack
   {
-    xvector_t ccl_prog;	/* Lisp vector of CCL code.  */
+    struct Lisp_Vector *ccl_prog;	/* Lisp vector of CCL code.  */
     int ic;			/* Instruction Counter.  */
     int eof_ic;			/* Instruction Counter to jump on EOF.  */
   };

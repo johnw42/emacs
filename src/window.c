@@ -6309,7 +6309,7 @@ DEFUN ("window-configuration-frame", Fwindow_configuration_frame, Swindow_config
   (Lisp_Object config)
 {
   register struct save_window_data *data;
-  xvector_t saved_windows;
+  struct Lisp_Vector *saved_windows;
 
   CHECK_WINDOW_CONFIGURATION (config);
 
@@ -6329,7 +6329,7 @@ the return value is nil.  Otherwise the value is t.  */)
   (Lisp_Object configuration)
 {
   register struct save_window_data *data;
-  xvector_t saved_windows;
+  struct Lisp_Vector *saved_windows;
   Lisp_Object new_current_buffer;
   Lisp_Object frame;
   struct frame *f;
@@ -6841,7 +6841,7 @@ get_phys_cursor_glyph (struct window *w)
 
 
 static ptrdiff_t
-save_window_save (Lisp_Object window, xvector_t vector, ptrdiff_t i)
+save_window_save (Lisp_Object window, struct Lisp_Vector *vector, ptrdiff_t i)
 {
   struct saved_window *p;
   struct window *w;
@@ -7469,7 +7469,7 @@ compare_window_configurations (Lisp_Object configuration1,
 			       bool ignore_positions)
 {
   register struct save_window_data *d1, *d2;
-  xvector_t sws1, sws2;
+  struct Lisp_Vector *sws1, *sws2;
   ptrdiff_t i;
 
   CHECK_WINDOW_CONFIGURATION (configuration1);

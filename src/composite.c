@@ -166,7 +166,7 @@ get_composition_id (ptrdiff_t charpos, ptrdiff_t bytepos, ptrdiff_t nchars,
 {
   Lisp_Object id, length, components, key;
   ptrdiff_t glyph_len;
-  xvector_t key_contents = XVECTOR_CACHE_INIT;
+  struct Lisp_Vector *key_contents = XVECTOR_CACHE_INIT;
   struct Lisp_Hash_Table *hash_table = XHASH_TABLE (composition_hash_table);
   ptrdiff_t hash_index;
   EMACS_UINT hash_code;
