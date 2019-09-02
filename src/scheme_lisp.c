@@ -394,7 +394,8 @@ ensure_symbol_c_data (Lisp_Object symbol, Lisp_Object name)
     name = to_lisp_string (symbol);
   eassert (STRINGP (name));
 
-  p = scheme_alloc_c_data(symbol, sizeof (struct Lisp_Symbol *));
+  KILROY_WAS_HERE;
+  p = scheme_alloc_c_data(symbol, sizeof (struct Lisp_Symbol));
   // Can't use init_nil_refs here because of how builtin symbols are
   // initialized.
   p->u.s.scheme_obj = symbol;
@@ -408,6 +409,7 @@ ensure_symbol_c_data (Lisp_Object symbol, Lisp_Object name)
   p->u.s.trapped_write = SYMBOL_UNTRAPPED_WRITE;
   p->u.s.declared_special = false;
   p->u.s.pinned = false;
+  CHECK_ALLOC(p);
   return p;
 }
 
@@ -445,7 +447,7 @@ void *
 scheme_alloc_c_data (ptr key, iptr size)
 {
   KILROY_WAS_HERE;
-  void *bytes = xmalloc(size);
+  void *bytes = xzalloc (size);
   scheme_call3("hashtable-set!", c_data_table, key, chez_integer ((uptr)bytes));
   return bytes;
 }
@@ -598,8 +600,8 @@ gdb_print_scheme(Lisp_Object obj)
 {
   static char buffer[4096];
 
-  if (STRINGP (obj))
-      obj = to_scheme_string (obj);
+  /* if (STRINGP (obj)) */
+  /*     obj = to_scheme_string (obj); */
   ptr bvec = SCHEME_FPTR_CALL(print_to_bytevector, obj);
   chez_lock_object (bvec);
   eassert (chez_bytevectorp (bvec));

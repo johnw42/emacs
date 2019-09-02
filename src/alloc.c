@@ -1067,49 +1067,46 @@ static void *lrealloc (void *, size_t);
 const char *kilroy_file = NULL;
 int kilroy_line = 0;
 
-//#define XMALLOC_EXTRA_SIZE (sizeof (struct xmalloc_header) + 4 * sizeof (uintptr_t))
-//#define XMALLOC_HEADER(p) ((void *)(p ? (char *)p - sizeof (struct xmalloc_header) : p))
-
-#define XMALLOC_EXTRA_SIZE 0
-#define XMALLOC_HEADER(p) (p)
+#define XMALLOC_EXTRA_SIZE (sizeof (struct xmalloc_header) + 4 * sizeof (uintptr_t))
+#define XMALLOC_HEADER(p) ((struct xmalloc_header *)(p ? (char *)p - sizeof (struct xmalloc_header) : p))
+#define XMALLOC_FOOTER(p, size) ((uintptr_t *)((char *) XMALLOC_HEADER(p)->data + size))
+/* #define XMALLOC_EXTRA_SIZE 0 */
+/* #define XMALLOC_HEADER(p) (p) */
 
 static void *
 xmalloc_init (void *p, size_t size)
 {
-  /* if (p == NULL) */
-  /*   return NULL; */
+  if (p == NULL)
+    return NULL;
 
-  /* char *cp = p; */
-  /* struct xmalloc_header *header = p; */
-  /* header->file = kilroy_file; */
-  /* header->line = kilroy_line; */
-  /* kilroy_file = NULL; */
-  /* header->size = size; */
-  /* uintptr_t *footer = (char *)header->data + size; */
-  /* for (int i = 0; i < 4; i++) */
-  /*   { */
-  /*     header->signature[i] = 0xa5a5a5a5a5a5a5a5UL; */
-  /*     footer[i] = 0xa5a5a5a5a5a5a5a5UL ^ size; */
-  /*   } */
-  /* return header->data; */
-
-  return p;
+  char *cp = p;
+  struct xmalloc_header *header = p;
+  header->size = size;
+  void *result = header->data;
+  uintptr_t *footer = XMALLOC_FOOTER(result, size);
+  for (int i = 0; i < 4; i++)
+    {
+      header->signature[i] = 0xa5a5a5a5a5a5a5a5UL;
+      footer[i] = 0xa5a5a5a5a5a5a5a5UL ^ size;
+    }
+  check_alloc (result);
+  return result;
 }
 
 void
 check_alloc (void *p)
 {
-  /* struct xmalloc_header *header = XMALLOC_HEADER (p); */
-  /* size_t size = header->size; */
-  /* uintptr_t *footer = (char *)header->data + size; */
-  /* for (int i = 0; i < 4; i++) */
-  /*   { */
-  /*     eassert (header->signature[i] == 0xa5a5a5a5a5a5a5a5UL); */
-  /*     eassert (footer[i] == (0xa5a5a5a5a5a5a5a5UL ^ size)); */
-  /*   } */
-  /* header->file = kilroy_file; */
-  /* header->line = kilroy_line; */
-  /* kilroy_file = NULL; */
+  struct xmalloc_header *header = XMALLOC_HEADER (p);
+  size_t size = header->size;
+  uintptr_t *footer = XMALLOC_FOOTER(p, size);
+  for (int i = 0; i < 4; i++)
+    {
+      eassert (header->signature[i] == 0xa5a5a5a5a5a5a5a5UL);
+      eassert (footer[i] == (0xa5a5a5a5a5a5a5a5UL ^ size));
+    }
+  header->file = kilroy_file;
+  header->line = kilroy_line;
+  kilroy_file = NULL;
 }
 
 void *
@@ -1138,7 +1135,7 @@ xzalloc (size_t size)
   void *val;
 
   MALLOC_BLOCK_INPUT;
-  val = lmalloc (size);
+  val = xmalloc_init (lmalloc (size + XMALLOC_EXTRA_SIZE), size);
   MALLOC_UNBLOCK_INPUT;
 
   if (!val && size)
@@ -2244,17 +2241,19 @@ check_string_free_list (void)
 /* } */
 
 static void *
-scheme_allocate (ptrdiff_t nbytes, ptr sym, ptr *vec_ptr)
+scheme_allocate (ptrdiff_t nbytes, chez_ptr sym, chez_ptr *vec_ptr)
 {
-  void *data = xmalloc (nbytes);
+  void *data = xzalloc (nbytes);
+  chez_ptr addr = chez_integer ((uptr) data);
+  eassert (data == scheme_malloc_ptr (addr));
 
   ptr vec = chez_make_vector(2, sym);
   scheme_track (vec);
   SCHEME_FPTR_CALL(save_origin, vec);
-  chez_vector_set(vec, 1, chez_integer((uptr)data));
+  chez_vector_set(vec, 1, addr);
   *vec_ptr = vec;
 
-  return scheme_malloc_ptr (data);
+  return data;
 }
 #endif /* HAVE_CHEZ_SCHEME */
 
@@ -2414,6 +2413,7 @@ allocate_string_data (struct Lisp_String *s,
   b->next_free = (sdata *) ((char *) data + needed + GC_STRING_EXTRA);
 
   MALLOC_UNBLOCK_INPUT;
+#endif /* not HAVE_CHEZ_SCHEME */
 
   s->u.s.data = SDATA_DATA (data);
 #ifdef GC_CHECK_STRING_BYTES
@@ -2427,6 +2427,7 @@ allocate_string_data (struct Lisp_String *s,
 	  GC_STRING_OVERRUN_COOKIE_SIZE);
 #endif
 
+#ifndef HAVE_CHEZ_SCHEME
   /* Note that Faset may call to this function when S has already data
      assigned.  In this case, mark data as free by setting it's string
      back-pointer to null, and record the size of the data in it.  */
@@ -2838,7 +2839,7 @@ make_unibyte_string (const char *contents, ptrdiff_t length)
 {
   register Lisp_Object val;
   val = make_uninit_string (length);
-  eassert (STRINGP(val));
+  eassert (STRINGP (val));
   memcpy (SDATA (val), contents, length);
   return val;
 }
@@ -2913,9 +2914,9 @@ make_uninit_string (EMACS_INT length)
   if (!length)
     return empty_unibyte_string;
   val = make_uninit_multibyte_string (length, length);
-  eassert(STRINGP(val));
+  eassert (STRINGP (val));
   STRING_SET_UNIBYTE (val);
-  eassert(STRINGP(val));
+  eassert (STRINGP (val));
   return val;
 }
 
@@ -2928,12 +2929,13 @@ make_uninit_multibyte_string (EMACS_INT nchars, EMACS_INT nbytes)
 {
   Lisp_Object string;
 
-  eassert (STRINGP (empty_multibyte_string));
-
   if (nchars < 0)
     emacs_abort ();
   if (!nbytes)
-    return empty_multibyte_string;
+    {
+      eassert (STRINGP (empty_multibyte_string));
+      return empty_multibyte_string;
+    }
 
   struct Lisp_String *s = allocate_string ();
   s->u.s.intervals = NULL;
@@ -8542,14 +8544,14 @@ after_scheme_gc (void)
       struct movable_lisp_ref *old_ref = NAMED_CONTAINER_REF (movable_refs, i);
       if (new_ref != old_ref->val)
         {
-          if (old_ref->val == MAGIC_SCHEME_REF ||
-              old_ref->val == (chez_ptr)0x5f40000000060320 ||
-              new_ref == (chez_ptr)0x5f40000000060320 ||
-              old_ref->val == (chez_ptr)0x40450fef ||
-              new_ref == (chez_ptr)0x40450fef ||
-              (old_ref->ptr >= (chez_ptr)0x40450ff8 &&
-               old_ref->ptr < (chez_ptr)0x40451000))
-            printf("moved %p => %p at %p\n", old_ref->val, new_ref, old_ref->ptr);
+          /* if (old_ref->val == MAGIC_SCHEME_REF || */
+          /*     old_ref->val == (chez_ptr)0x5f40000000060320 || */
+          /*     new_ref == (chez_ptr)0x5f40000000060320 || */
+          /*     old_ref->val == (chez_ptr)0x40450fef || */
+          /*     new_ref == (chez_ptr)0x40450fef || */
+          /*     (old_ref->ptr >= (chez_ptr)0x40450ff8 && */
+          /*      old_ref->ptr < (chez_ptr)0x40451000)) */
+          /*   printf("moved %p => %p at %p\n", old_ref->val, new_ref, old_ref->ptr); */
           num_moved2++;
           *old_ref->ptr = new_ref;
           //chez_lock_object (new_ref);

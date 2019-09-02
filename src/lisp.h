@@ -365,7 +365,8 @@ void check_alloc (void *);
 /* #define scheme_malloc_ptr(data) ((void *) ((char *) chez_bytevector_data(data) + SCHEME_MALLOC_PADDING)) */
 
 INLINE void *
-scheme_malloc_ptr(void *data) {
+scheme_malloc_ptr(chez_ptr addr) {
+  void *data = (void *) chez_integer_value (addr);
   CHECK_ALLOC (data);
   /* eassert (chez_bytevectorp (data)); */
   /* void *p = (char *) chez_bytevector_data(data) + SCHEME_MALLOC_PADDING; */
@@ -523,8 +524,8 @@ error !;
 #define lisp_h_SYMBOLP(x) (chez_symbolp(x))
 #define lisp_h_VECTORLIKEP(x) SCHEME_VECTORP(x, scheme_vectorlike_symbol)
 #define lisp_h_XCAR(c) (eassert (chez_pairp (c)), chez_car (c))
-#define lisp_h_XCDR(c) (eassert (chez_pairp (c)), chez_cdr(c))
-#define lisp_h_make_number(n) (eassert (chez_fixnump(chez_integer(n))), chez_fixnum(n))
+#define lisp_h_XCDR(c) (eassert (chez_pairp (c)), chez_cdr (c))
+#define lisp_h_make_number(n) chez_integer(n)
 # define lisp_h_XFASTINT(a) XINT (a)
 # define lisp_h_XINT(a) (chez_fixnum_value(a))
 #define lisp_h_XHASH(a) (SCHEME_FPTR_CALL(eq_hash, (a)))
