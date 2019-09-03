@@ -671,7 +671,7 @@ close_emacs_globals (ptrdiff_t num_symbols)
 	   "extern\n"
 	   "#endif\n"
            "#ifdef HAVE_CHEZ_SCHEME\n"
-	   "ptr lispsym[%td];\n"
+	   "Lisp_Object lispsym[%td];\n"
            "#else\n"
 	   "struct Lisp_Symbol lispsym[%td];\n"
            "#endif\n"),
