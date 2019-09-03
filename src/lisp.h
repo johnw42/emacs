@@ -5718,7 +5718,9 @@ bool mark_and_enqueue (Lisp_Object obj);
 
 #define IS_SCHEME_REF(ref, num) (CHEZ (ref) == (void *)num)
 #define IS_MAGIC_SCHEME_REF(p) \
-  (IS_SCHEME_REF (p, 0x415e380f) || IS_SCHEME_REF (p, 0x40013b2b))
+  (IS_SCHEME_REF (p, 0x4044635a) || \
+   IS_SCHEME_REF (p, 0x40c5915a) || \
+   IS_SCHEME_REF (p, 0x40c591ba))
 //#define IS_MAGIC_SCHEME_REF_ADDR(p) // false ((chez_ptr *)0x7fffffffcdc8)
 
 #endif /* HAVE_CHEZ_SCHEME */

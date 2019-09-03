@@ -8245,7 +8245,8 @@ init_alloc_once (void)
 #endif /* HAVE_CHEZ_SCHEME */
 
 #ifndef NIL_IS_ZERO
-  mem_nil (&globals, offsetof (struct emacs_globals, f_auto_save_interval));
+  #define FIRST_NON_LISP_GLOBAL f_auto_save_interval
+  mem_nil (&globals, offsetof (struct emacs_globals, FIRST_NON_LISP_GLOBAL));
 #ifndef HAVE_CHEZ_SCHEME
   mem_nil (last_marked, sizeof last_marked);
 #endif /* not HAVE_CHEZ_SCHEME */
@@ -8572,6 +8573,14 @@ before_scheme_gc (void)
                      (char *) b->start + b->size);
     }
 
+  // TODO(jrw): Should not be necessary because globals are always
+  // referenced through symbols.
+  for (Lisp_Object *global_ptr = (Lisp_Object *) &globals;
+       (void *) global_ptr < (void *) &globals.FIRST_NON_LISP_GLOBAL;
+       global_ptr++)
+    {
+      add_movable_ref (global_ptr, true);
+    }
 
   void *end;
   SET_STACK_TOP_ADDRESS (&end);
@@ -8663,7 +8672,13 @@ after_scheme_gc (void)
       struct movable_lisp_ref *old_ref = NAMED_CONTAINER_REF (movable_refs, i);
       if (CHEZ (*old_ref->ptr) != CHEZ (new_ref))
         {
-          eassert (CHEZ (*old_ref->ptr) == CHEZ (old_ref->val));
+          eassert (CHEZ (*old_ref->ptr) == CHEZ (old_ref->val) ||
+                   CHEZ (*old_ref->ptr) == CHEZ (new_ref) ||
+                   (chez_flonump (CHEZ (new_ref)) &&
+                    (chez_flonum_value (CHEZ (new_ref)) ==
+                     chez_flonum_value (CHEZ (*old_ref->ptr))) &&
+                    (chez_flonum_value (CHEZ (new_ref)) ==
+                     chez_flonum_value (CHEZ (old_ref->val)))));
           if (!EQ (new_ref, old_ref->val))
             {
               if (IS_MAGIC_SCHEME_REF(old_ref->val) ||

@@ -4472,6 +4472,7 @@ init_obarray (void)
     {
       eassert (SYMBOLP (lispsym[i]));
       scheme_oblookup (initial_obarray, lispsym[i], true);
+      eassert (XSYMBOL(lispsym[i])->u.s.interned == SYMBOL_INTERNED_IN_INITIAL_OBARRAY);
     }
 #else /* not HAVE_CHEZ_SCHEME */
   for (int i = 0; i < ARRAYELTS (lispsym); i++)
