@@ -54,7 +54,6 @@ end
 break gdb_break
 command
 up
-next
 end
 
 #source .breakpoints.gdb

@@ -1907,7 +1907,7 @@ sort_vector (Lisp_Object vector, Lisp_Object predicate)
 #ifdef HAVE_CHEZ_SCHEME
   eassert(!HAVE_CHEZ_SCHEME);
 #else /* not HAVE_CHEZ_SCHEME */
-  sort_vector_inplace (predicate, len, XVECTOR (vector).vptr->contents, tmp);
+  sort_vector_inplace (predicate, len, XVECTOR (vector)->contents, tmp);
 #endif /* not HAVE_CHEZ_SCHEME */
   SAFE_FREE ();
 }
@@ -4383,20 +4383,12 @@ sxhash_list (Lisp_Object list, int depth)
   EMACS_UINT hash = 0;
   int i;
 
-  bool flag = false; /// gdb_pop_flag(0);
   if (depth < SXHASH_MAX_DEPTH)
     for (i = 0;
 	 CONSP (list) && i < SXHASH_MAX_LEN;
 	 list = XCDR (list), ++i)
       {
 	EMACS_UINT hash2 = sxhash (XCAR (list), depth + 1);
-        if (flag)
-          {
-            flag = false;
-            printf("hash2(%p %s) = %p\n", (void*)CHEZ (XCAR (list)), gdb_print(XCAR(list)), (void*)hash2);
-            gdb_break();
-            sxhash (XCAR (list), depth + 1);
-          }
 	hash = sxhash_combine (hash, hash2);
       }
 
@@ -5248,10 +5240,12 @@ syms_of_fns (void)
   fixup_lispsym_init(&hashtest_equal.user_hash_function);
   fixup_lispsym_init(&hashtest_equal.user_cmp_function);
 
+#ifdef HAVE_CHEZ_SCHEME
   // TODO(jrw): Ensure staticpro is always called when needed.
   staticpro(&hashtest_eq.name);
   staticpro(&hashtest_eql.name);
   staticpro(&hashtest_equal.name);
+#endif
 
   defsubr (&Ssxhash_eq);
   defsubr (&Ssxhash_eql);

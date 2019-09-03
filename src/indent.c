@@ -145,7 +145,7 @@ recompute_width_table (struct buffer *buf, struct Lisp_Char_Table *disptab)
   eassert (xv_size(widthtab) == 256);
 
   for (i = 0; i < 256; i++)
-    XV_SETFASTINT (widthtab, i, character_width (i, disptab));
+    XSETFASTINT (widthtab->contents[i], character_width (i, disptab));
 #endif /* not HAVE_CHEZ_SCHEME */
 }
 

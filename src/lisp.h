@@ -380,6 +380,10 @@ extern chez_ptr scheme_function_for_name(const char *name);
 #define scheme_call2(f, a, b) (chez_call2(scheme_function_for_name(f), a, b))
 #define scheme_call3(f, a, b, c) (chez_call3(scheme_function_for_name(f), a, b, c))
 
+#else
+
+#define CHECK_ALLOC(p) ((void)(p))
+
 #endif /* HAVE_CHEZ_SCHEME */
 
 
@@ -1049,17 +1053,18 @@ verify (alignof (struct Lisp_Symbol) % GCALIGNMENT == 0);
   (((chez_uptr) CHEZ (obj) & 0xffffffff00000000UL) == 0xdeadface00000000UL)
 #define LISPSYM_INITIAL_NUM(obj) \
   (((chez_uptr) CHEZ (obj) & 0x00000000ffffffffUL) >> 8)
-void fixup_lispsym_inits(Lisp_Object *p, size_t);
-#else /* not HAVE_CHEZ_SCHEME */
-#define LISPSYM_INITIALLY_(name) LISP_INITIALLY (XLI_BUILTIN_LISPSYM (i##name))
-INLINE void fixup_lispsym_init(Lisp_Object *p, size_t) {}
-#endif /* not HAVE_CHEZ_SCHEME */
+void fixup_lispsym_inits(Lisp_Object *p, size_t n);
 
 INLINE void
 fixup_lispsym_init(Lisp_Object *p)
 {
   fixup_lispsym_inits(p, 1);
 }
+#else /* not HAVE_CHEZ_SCHEME */
+#define LISPSYM_INITIALLY_(name) LISP_INITIALLY (XLI_BUILTIN_LISPSYM (i##name))
+INLINE void fixup_lispsym_inits(const Lisp_Object *p, size_t n) {}
+INLINE void fixup_lispsym_init(const Lisp_Object *p) {}
+#endif /* not HAVE_CHEZ_SCHEME */
 
 /* Declare extern constants for Lisp symbols.  These can be helpful
    when using a debugger like GDB, on older platforms where the debug
@@ -1471,9 +1476,9 @@ INLINE Lisp_Object vectorlike_lisp_obj(void *vptr)
   XSETPVECTYPESIZE(XVECTOR(v), cocde, lispsize, restsize)
 
 #define XSETPVECTYPE(v, code)						\
-  (v->header.size |= PSEUDOVECTOR_FLAG | ((code) << PSEUDOVECTOR_AREA_BITS))
+  ((v)->header.size |= PSEUDOVECTOR_FLAG | ((code) << PSEUDOVECTOR_AREA_BITS))
 #define XSETPVECTYPESIZE(v, code, lispsize, restsize)		\
-  (v->header.size = (PSEUDOVECTOR_FLAG			\
+  ((v)->header.size = (PSEUDOVECTOR_FLAG                        \
                   | ((code) << PSEUDOVECTOR_AREA_BITS)          \
                   | ((restsize) << PSEUDOVECTOR_SIZE_BITS)      \
                   | (lispsize)))
@@ -5718,9 +5723,9 @@ bool mark_and_enqueue (Lisp_Object obj);
 
 #define IS_SCHEME_REF(ref, num) (CHEZ (ref) == (void *)num)
 #define IS_MAGIC_SCHEME_REF(p) \
-  (IS_SCHEME_REF (p, 0x4044635a) || \
-   IS_SCHEME_REF (p, 0x40c5915a) || \
-   IS_SCHEME_REF (p, 0x40c591ba))
+  (IS_SCHEME_REF (p, 0x462956db) || \
+   IS_SCHEME_REF (p, 0x41787b0b) || \
+   false)
 //#define IS_MAGIC_SCHEME_REF_ADDR(p) // false ((chez_ptr *)0x7fffffffcdc8)
 
 #endif /* HAVE_CHEZ_SCHEME */

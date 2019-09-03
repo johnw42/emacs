@@ -305,7 +305,6 @@ bset_mode_line_format (struct buffer *b, Lisp_Object val)
 static void
 bset_mode_name (struct buffer *b, Lisp_Object val)
 {
-  eassert (CHEZ (val) != (void *)0xdeadface0003280f);
   b->mode_name_ = val;
 }
 static void
@@ -1641,10 +1640,6 @@ void
 compact_buffer (struct buffer *buffer)
 {
   BUFFER_CHECK_INDIRECTION (buffer);
-
-#ifndef HAVE_CHEZ_SCHEME
-  mark_object (buffer->header.s.scheme_obj);
-#endif
 
   /* Skip dead buffers, indirect buffers and buffers
      which aren't changed since last compaction.  */

@@ -1094,15 +1094,19 @@ static void *lrealloc (void *, size_t);
 const char *kilroy_file = NULL;
 int kilroy_line = 0;
 
+#ifdef HAVE_CHEZ_SCHEME
 #define XMALLOC_EXTRA_SIZE (sizeof (struct xmalloc_header) + 4 * sizeof (uintptr_t))
 #define XMALLOC_HEADER(p) ((struct xmalloc_header *)(p ? (char *)p - sizeof (struct xmalloc_header) : p))
 #define XMALLOC_FOOTER(p, size) ((uintptr_t *)((char *) XMALLOC_HEADER(p)->data + size))
-/* #define XMALLOC_EXTRA_SIZE 0 */
-/* #define XMALLOC_HEADER(p) (p) */
+#else
+#define XMALLOC_EXTRA_SIZE 0
+#define XMALLOC_HEADER(p) (p)
+#endif
 
 static void *
 xmalloc_init (void *p, size_t size)
 {
+#ifdef HAVE_CHEZ_SCHEME
   if (p == NULL)
     return NULL;
 
@@ -1122,8 +1126,12 @@ xmalloc_init (void *p, size_t size)
   NAMED_CONTAINER_APPEND (malloc_blocks, &b);
 
   return result;
+#else
+  return p;
+#endif
 }
 
+#ifdef HAVE_CHEZ_SCHEME
 void
 check_alloc (void *p)
 {
@@ -1139,6 +1147,7 @@ check_alloc (void *p)
   header->line = kilroy_line;
   kilroy_file = NULL;
 }
+#endif
 
 void *
 xmalloc (size_t size)
@@ -1206,6 +1215,7 @@ xrealloc (void *block, size_t size)
     memory_full (size);
   MALLOC_PROBE (size);
 
+#ifdef HAVE_CHEZ_SCHEME
   if (val != block)
     {
       struct malloc_block b = {val, size};
@@ -1224,6 +1234,7 @@ xrealloc (void *block, size_t size)
       else
         NAMED_CONTAINER_APPEND (malloc_blocks, &b);
     }
+#endif
   return val;
 }
 
@@ -1237,16 +1248,20 @@ xfree (void *block)
     return;
   MALLOC_BLOCK_INPUT;
   CHECK_ALLOC(block);
+#ifdef HAVE_CHEZ_SCHEME
   memset (XMALLOC_HEADER (block), 0xf0, XMALLOC_HEADER (block)->size + XMALLOC_EXTRA_SIZE);
+#endif
   free (XMALLOC_HEADER (block));
   MALLOC_UNBLOCK_INPUT;
   /* We don't call refill_memory_reserve here
      because in practice the call in r_alloc_free seems to suffice.  */
 
+#ifdef HAVE_CHEZ_SCHEME
   struct malloc_block key = {block, -1};
   struct malloc_block *found = container_search (&malloc_blocks, &key);
   eassert (found);
   *found = key;
+#endif
 }
 
 
@@ -3782,8 +3797,13 @@ allocate_vectorlike (ptrdiff_t len)
 
   MALLOC_BLOCK_INPUT;
 
+#ifdef HAVE_CHEZ_SCHEME
   if (len == 0 && zero_vector != chez_false)
-    p = xv_unwrap (XVECTOR (zero_vector));
+    p = XVECTOR (zero_vector);
+#else
+  if (len == 0)
+    p = XVECTOR (zero_vector);
+#endif
   else
     {
       size_t nbytes = header_size + len * word_size;
@@ -3964,7 +3984,7 @@ See also the function `vector'.  */)
   return vectorlike_lisp_obj (p);
 }
 
-DEFUN ("vector", Fvector, chez_vector, 0, MANY, 0,
+DEFUN ("vector", Fvector, Svector, 0, MANY, 0,
        doc: /* Return a newly created vector with specified arguments as elements.
 Allows any number of arguments, including zero.
 usage: (vector &rest OBJECTS)  */)
@@ -5565,12 +5585,14 @@ mark_memory (void *start, void *end)
       if (alignof (Lisp_Object) == GC_POINTER_ALIGNMENT
 	  || (uintptr_t) pp % alignof (Lisp_Object) == 0)
 	mark_maybe_object (*(Lisp_Object *) pp);
+#ifdef HAVE_CHEZ_SCHEME
       if (IS_MAGIC_SCHEME_REF(*(Lisp_Object *)pp))
         {
           printf ("hooray: %p\n", (void *) CHEZ (*(Lisp_Object *)pp));
           printf ("found1? %p\n", container_search (&tracked_refs, pp));
           printf ("found2? %p\n", container_search (&stack_refs, pp));
         }
+#endif
     }
 }
 
@@ -5779,7 +5801,9 @@ typedef union
 void
 mark_stack (char *bottom, char *end)
 {
+#ifdef HAVE_CHEZ_SCHEME
   printf ("mark_stack (%p, %p)\n", bottom, end);
+#endif
 
   /* This assumes that the stack is a contiguous region in memory.  If
      that's not the case, something has to be done here to iterate
@@ -6347,8 +6371,10 @@ purecopy (Lisp_Object obj)
 void
 staticpro (Lisp_Object *varaddress)
 {
+#ifdef HAVE_CHEZ_SCHEME
   if (LISPSYM_INITIAL_P (*varaddress))
     *varaddress = lispsym[LISPSYM_INITIAL_NUM (*varaddress)];
+#endif
   if (staticidx >= NSTATICS)
     fatal ("NSTATICS too small; try increasing and recompiling Emacs.");
   staticvec[staticidx++] = varaddress;
@@ -6699,7 +6725,7 @@ garbage_collect_1 (void *end)
 	bset_undo_list (nextb, compact_undo_list (BVAR (nextb, undo_list)));
       /* Now that we have stripped the elements that need not be
 	 in the undo_list any more, we can finally mark the list.  */
-      mark_object (&BVAR (nextb, undo_list));
+      mark_object (BVAR (nextb, undo_list));
     }
 
   /* Now pre-sweep finalizers.  Here, we add any unmarked finalizers
@@ -6975,7 +7001,7 @@ mark_overlay (struct Lisp_Overlay *ptr)
       /* These two are always markers and can be marked fast.  */
       XMARKER (ptr->start)->gcmarkbit = 1;
       XMARKER (ptr->end)->gcmarkbit = 1;
-      mark_object (&ptr->plist);
+      mark_object (ptr->plist);
 #endif
     }
 }
@@ -7152,6 +7178,7 @@ mark_object (Lisp_Object arg)
     return;
 #else
  loop:
+
   po = XPNTR (obj);
   if (PURE_P (po))
     return;
@@ -7234,7 +7261,6 @@ mark_object (Lisp_Object arg)
 
 	if (VECTOR_MARKED_P (ptr))
 	  break;
-        VECTOR_MARK (ptr);
 
 #if GC_CHECK_MARKED_OBJECTS
 	m = mem_find (po);
@@ -7345,9 +7371,7 @@ mark_object (Lisp_Object arg)
 		VECTOR_MARK (XVECTOR (h->key_and_value));
 	    }
 	    break;
-#endif
 
-#ifdef HAVE_CHEZ_SCHEME
 	  case PVEC_CHAR_TABLE:
 	  case PVEC_SUB_CHAR_TABLE:
 	    mark_char_table (ptr, (enum pvec_type) pvectype);
@@ -8374,12 +8398,12 @@ do hash-consing of the objects allocated to pure space.  */);
 	       doc: /* Non-nil means Emacs cannot get much more Lisp memory.  */);
   Vmemory_full = Qnil;
 
-#ifndef NIL_IS_ZERO
-  // Declare a symbol that is never used, which comes before any other
-  // global symbol in alphabetical order.  This ensures no "real"
-  // symbol has a integer value of 0.
-  DEFSYM (QAAAAA_unused, "AAAAA-unused");
-#endif
+/* #ifndef NIL_IS_ZERO */
+/*   // Declare a symbol that is never used, which comes before any other */
+/*   // global symbol in alphabetical order.  This ensures no "real" */
+/*   // symbol has a integer value of 0. */
+/*   DEFSYM (QAAAAA_unused, "AAAAA-unused"); */
+/* #endif */
 
   DEFSYM (Qconses, "conses");
   DEFSYM (Qsymbols, "symbols");
@@ -8393,7 +8417,6 @@ do hash-consing of the objects allocated to pure space.  */);
   DEFSYM (Qvector_slots, "vector-slots");
   DEFSYM (Qheap, "heap");
   DEFSYM (QAutomatic_GC, "Automatic GC");
-  DEFSYM (Qpcase, "pcase");
 
   DEFSYM (Qgc_cons_threshold, "gc-cons-threshold");
   DEFSYM (Qchar_table_extra_slots, "char-table-extra-slots");
@@ -8406,7 +8429,7 @@ The time is in seconds as a floating point value.  */);
 
   defsubr (&Scons);
   defsubr (&Slist);
-  defsubr (&chez_vector);
+  defsubr (&Svector);
   defsubr (&Srecord);
   defsubr (&Sbool_vector);
   defsubr (&Smake_byte_code);

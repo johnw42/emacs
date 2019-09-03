@@ -627,9 +627,9 @@ mark_one_thread (struct thread_state *thread)
 
   mark_stack (thread->m_stack_bottom, stack_top);
 
+#ifdef HAVE_CHEZ_SCHEME
   mark_object (thread->header.s.scheme_obj);
-
-#ifndef HAVE_CHEZ_SCHEME
+#else
   for (struct handler *handler = thread->m_handlerlist;
        handler; handler = handler->next)
     {
@@ -1033,7 +1033,7 @@ init_main_thread (void)
 #else /* not HAVE_CHEZ_SCHEME */
   main_thread.header.size
     = PSEUDOVECSIZE (struct thread_state, m_stack_bottom);
-  XSETPVECTYPE (AS_XV (&main_thread), PVEC_THREAD);
+  XSETPVECTYPE (&main_thread, PVEC_THREAD);
 #endif /* not HAVE_CHEZ_SCHEME */
   main_thread.m_last_thing_searched = Qnil;
   main_thread.m_saved_last_thing_searched = Qnil;

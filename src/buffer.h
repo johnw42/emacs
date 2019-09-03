@@ -1143,7 +1143,7 @@ bset_width_table (struct buffer *b, Lisp_Object val)
    with other pseudovectors.  */
 
 #define BUFFER_PVEC_INIT(b)                                    \
-  XSETPVECTYPESIZE (AS_XV (b), PVEC_BUFFER, BUFFER_LISP_SIZE, BUFFER_REST_SIZE)
+  XSETPVECTYPESIZE (b, PVEC_BUFFER, BUFFER_LISP_SIZE, BUFFER_REST_SIZE)
 
 #endif /* not HAVE_CHEZ_SCHEME */
 

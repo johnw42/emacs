@@ -2333,8 +2333,14 @@ eval_sub (Lisp_Object form)
 	}
       if (EQ (funcar, Qmacro))
 	{
-	  ptrdiff_t count1 = SPECPDL_INDEX ();
-	  Lisp_Object exp;
+#ifdef HAVE_CHEZ_SCHEME
+          if (CONSP(form) &&
+              symbol_is (XCAR(form), "define-obsolete-function-alias"))
+            gdb_break();
+#endif
+
+          ptrdiff_t count1 = SPECPDL_INDEX ();
+          Lisp_Object exp;
 	  /* Bind lexical-binding during expansion of the macro, so the
 	     macro can know reliably if the code it outputs will be
 	     interpreted using lexical-binding or not.  */
