@@ -29,7 +29,7 @@
     (foreign-procedure __collect_safe "do_scheme_gc" () void))
 
   (define elisp-before-scheme-gc
-    (foreign-procedure "before_scheme_gc" () void))
+    (foreign-procedure "before_scheme_gc" () boolean))
 
   (define elisp-after-scheme-gc
     (foreign-procedure "after_scheme_gc" () void))
@@ -241,11 +241,12 @@
   (define-for-c (c-print_to_bytevector #f
                                        ((scheme-object obj))
                                        scheme-object)
-    (string->utf8
-     (call-with-string-output-port
-      (lambda (port)
-        (put-datum port obj)
-        (put-char port #\x00)))))
+    (critical-section
+     (string->utf8
+      (call-with-string-output-port
+       (lambda (port)
+         (put-datum port obj)
+         (put-char port #\x00))))))
 
   (define-for-c (c-hashtable_values #f
                                     ((scheme-object obj))
@@ -346,9 +347,9 @@
      #;elisp-do-scheme-gc
      (lambda ()
        (parameterize ([collect-request-handler list])
-         (elisp-before-scheme-gc)
-         (collect)
-         (elisp-after-scheme-gc))))
+         (when (elisp-before-scheme-gc)
+           (collect)
+           (elisp-after-scheme-gc)))))
     (let (
           #;[stderr (transcoded-port (standard-error-port)
           (native-transcoder))])

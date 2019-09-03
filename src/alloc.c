@@ -456,6 +456,8 @@ mark_and_enqueue (Lisp_Object obj)
 static void
 add_movable_ref (Lisp_Object *ptr, bool should_unlock)
 {
+  // Usually but not always a valid assumption:
+  // eassert ((chez_uptr) ptr < 0x7fff00000000);
   struct movable_lisp_ref ref = {ptr, *ptr, should_unlock};
   container_append (&movable_refs, &ref);
 }
@@ -8537,9 +8539,14 @@ search_in_range (chez_ptr old_val, uintptr_t start, uintptr_t end)
 
 static int gc_count = 0;
 
-void
+int disable_scheme_gc = 0;
+
+int
 before_scheme_gc (void)
 {
+  if (disable_scheme_gc > 0)
+    return false;
+
   //search_in_range((chez_ptr)0xdeadface0003280f, 0x819000, 0x101e000);
 
   container_sort (&tracked_refs);
@@ -8639,6 +8646,7 @@ before_scheme_gc (void)
   /*   } */
 
   printf ("movable_refs_size: %lu\n", movable_refs.size);
+  return true;
 }
 
 void
@@ -8664,12 +8672,11 @@ after_scheme_gc (void)
               {
                 Lisp_Object old_val = old_ref->val;
                 Lisp_Object *where = old_ref->ptr;
-                printf("moved %p => %p (%s) at %p (was %p)\n",
+                printf("moved %p => %p (%s) at %p\n",
                        CHEZ (old_val),
                        CHEZ (new_ref),
                        gdb_print_scheme (new_ref),
-                       where,
-                       CHEZ (*where));
+                       where);
                 FOR_NAMED_CONTAINER (i, malloc_blocks)
                   {
                     struct malloc_block *b = NAMED_CONTAINER_REF (malloc_blocks, i);

@@ -70,7 +70,8 @@ void init_nil_refs(Lisp_Object obj);
 bool symbol_is(Lisp_Object sym, const char *name);
 bool datum_starts_with(Lisp_Object, const char *);
 void do_scheme_gc (void);
-void before_scheme_gc (void);
+extern int disable_scheme_gc;
+int before_scheme_gc (void);
 void after_scheme_gc (void);
 Lisp_Object scheme_track (Lisp_Object);
 Lisp_Object scheme_untrack (Lisp_Object);
@@ -5715,7 +5716,9 @@ container_uniq (struct container *c)
 void mark_lisp_refs (void);
 bool mark_and_enqueue (Lisp_Object obj);
 
-#define IS_MAGIC_SCHEME_REF(p) (CHEZ (p) == (void *)0x417123ff)
+#define IS_SCHEME_REF(ref, num) (CHEZ (ref) == (void *)num)
+#define IS_MAGIC_SCHEME_REF(p) \
+  (IS_SCHEME_REF (p, 0x415e380f) || IS_SCHEME_REF (p, 0x40013b2b))
 //#define IS_MAGIC_SCHEME_REF_ADDR(p) // false ((chez_ptr *)0x7fffffffcdc8)
 
 #endif /* HAVE_CHEZ_SCHEME */

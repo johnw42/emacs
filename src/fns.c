@@ -5248,6 +5248,11 @@ syms_of_fns (void)
   fixup_lispsym_init(&hashtest_equal.user_hash_function);
   fixup_lispsym_init(&hashtest_equal.user_cmp_function);
 
+  // TODO(jrw): Ensure staticpro is always called when needed.
+  staticpro(&hashtest_eq.name);
+  staticpro(&hashtest_eql.name);
+  staticpro(&hashtest_equal.name);
+
   defsubr (&Ssxhash_eq);
   defsubr (&Ssxhash_eql);
   defsubr (&Ssxhash_equal);

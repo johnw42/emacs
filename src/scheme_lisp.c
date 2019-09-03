@@ -423,6 +423,7 @@ gdb_print_scheme(Lisp_Object obj)
 {
   static char buffer[4096];
 
+  ++disable_scheme_gc;
   /* if (STRINGP (obj)) */
   /*     obj = to_scheme_string (obj); */
   chez_ptr bvec = SCHEME_FPTR_CALL(print_to_bytevector, CHEZ (obj));
@@ -431,6 +432,7 @@ gdb_print_scheme(Lisp_Object obj)
   chez_iptr n = chez_bytevector_length(bvec);
   memcpy(buffer, chez_bytevector_data(bvec), n);
   chez_unlock_object(bvec);
+  --disable_scheme_gc;
   return buffer;
 }
 
