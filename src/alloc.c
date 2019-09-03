@@ -2266,13 +2266,13 @@ static void *
 scheme_allocate (ptrdiff_t nbytes, Lisp_Object sym, Lisp_Object *vec_ptr)
 {
   void *data = xzalloc (nbytes);
-  chez_ptr addr = chez_integer ((chez_iptr) data);
+  Lisp_Object addr = make_number ((chez_iptr) data);
   eassert (data == scheme_malloc_ptr (addr));
 
   chez_ptr vec = chez_make_vector(2, CHEZ (sym));
   scheme_track (UNCHEZ (vec));
   SCHEME_FPTR_CALL(save_origin, vec);
-  chez_vector_set(vec, 1, addr);
+  chez_vector_set(vec, 1, CHEZ (addr));
   *vec_ptr = UNCHEZ (vec);
 
   return data;

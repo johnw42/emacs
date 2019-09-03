@@ -258,7 +258,7 @@ scheme_find_c_data (Lisp_Object key)
   chez_ptr found = SCHEME_FPTR_CALL(hashtable_ref, CHEZ (c_data_table), CHEZ (key), chez_false);
   if (found == chez_false)
     return NULL;
-  return scheme_malloc_ptr ((void *) chez_integer_value (found));
+  return scheme_malloc_ptr (UNCHEZ (found));
 }
 
 static void
@@ -299,7 +299,7 @@ fixup_lispsym_inits(Lisp_Object *p, size_t n)
 {
   // Reverse the transformation applied by LISPSYM_INITIALLY.
   for (size_t i = 0; i < n; i++) {
-    chez_uptr index = (XLI (*p) >> 8) & 0xffff;
+    chez_uptr index = (XLI (p[i]) >> 8) & 0xffff;
     eassert (0 <= index && index < ARRAYELTS(lispsym));
     Lisp_Object sym = lispsym[index];
     eassert (SYMBOLP (sym));

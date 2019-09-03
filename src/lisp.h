@@ -364,8 +364,8 @@ void check_alloc (void *);
 /* #define scheme_malloc_ptr(data) ((void *) ((char *) chez_bytevector_data(data) + SCHEME_MALLOC_PADDING)) */
 
 INLINE void *
-scheme_malloc_ptr(chez_ptr addr) {
-  void *data = (void *) chez_integer_value (addr);
+scheme_malloc_ptr(Lisp_Object addr) {
+  void *data = (void *) chez_integer_value (CHEZ (addr));
   CHECK_ALLOC (data);
   /* eassert (chez_bytevectorp (data)); */
   /* void *p = (char *) chez_bytevector_data(data) + SCHEME_MALLOC_PADDING; */
@@ -1442,7 +1442,7 @@ INLINE Lisp_Object vectorlike_lisp_obj(void *vptr)
 /* #define XSETPSEUDOVECTOR(a, b, code) ((a) = (b)->header.s.scheme_obj) */
 /* #define XSETTYPED_PSEUDOVECTOR(a, b, size, code) XSETPSEUDOVECTOR(a, b, code) */
 
-#define XUNTAG_VECTORLIKE(a) (scheme_malloc_ptr ((void *) chez_unsigned_value (chez_vector_ref (CHEZ (a), 1))))
+#define XUNTAG_VECTORLIKE(a) (scheme_malloc_ptr (UNCHEZ (chez_vector_ref (CHEZ (a), 1))))
 #define XUNTAG_MISC(a) XUNTAG_VECTORLIKE (a)
 
 #else /* not HAVE_CHEZ_SCHEME */
@@ -1716,7 +1716,7 @@ XSTRING (Lisp_Object a)
 {
   eassert (STRINGP (a));
 #ifdef HAVE_CHEZ_SCHEME
-  return scheme_malloc_ptr ((void *) chez_unsigned_value (chez_vector_ref (CHEZ (a), 1)));
+  return scheme_malloc_ptr (UNCHEZ (chez_vector_ref (CHEZ (a), 1)));
   /* ptr vec = Smake_vector (2, ); */
   /* struct Lisp_String *p = scheme_find_c_data (a); */
   /* if (p == NULL) */
