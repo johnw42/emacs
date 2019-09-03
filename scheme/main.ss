@@ -141,7 +141,9 @@
                              ((scheme-object sym)
                               (void* name-ptr))
                              boolean)
-    (let* ([name-str (symbol->string sym)]
+    (let* ([name-str (if (string? sym)
+                         sym
+                         (symbol->string sym))]
            [n (string-length name-str)])
       (let loop ([i 0])
         (let ([c1 (foreign-ref 'unsigned-8 name-ptr i)])

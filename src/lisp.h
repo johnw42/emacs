@@ -5715,7 +5715,7 @@ container_uniq (struct container *c)
 void mark_lisp_refs (void);
 bool mark_and_enqueue (Lisp_Object obj);
 
-#define IS_MAGIC_SCHEME_REF(p) (CHEZ (p) == (void *)0x405096df)
+#define IS_MAGIC_SCHEME_REF(p) (CHEZ (p) == (void *)0x417123ff)
 //#define IS_MAGIC_SCHEME_REF_ADDR(p) // false ((chez_ptr *)0x7fffffffcdc8)
 
 #endif /* HAVE_CHEZ_SCHEME */

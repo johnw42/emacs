@@ -60,9 +60,9 @@ end
 #source .breakpoints.gdb
 
 define ps
-  printf "%s\n", gdb_print_scheme($arg0)
+  printf "%s\n", gdb_print_scheme((void *)$arg0)
 end
 
 define pl
-  printf "%s\n", gdb_print($arg0)
+  printf "%s\n", gdb_print((void *)$arg0)
 end

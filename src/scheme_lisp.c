@@ -830,7 +830,8 @@ init_nil_refs (Lisp_Object obj)
 bool
 symbol_is(Lisp_Object sym, const char *name)
 {
-  if (chez_symbolp (CHEZ(sym)))
+  if (chez_symbolp (CHEZ(sym)) ||
+      chez_stringp (CHEZ(sym)))
     return SCHEME_FPTR_CALL(symbol_is, CHEZ (sym), name);
   if (STRINGP (sym))
     return strncmp(SSDATA(sym), name, SCHARS(sym)) == 0;

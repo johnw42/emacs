@@ -2145,8 +2145,6 @@ int gdb_hit_count = 0;
 Lisp_Object
 eval_sub (Lisp_Object form)
 {
-  Fgarbage_collect (); // XXX
-
   Lisp_Object fun, val, original_fun, original_args;
   Lisp_Object funcar;
   ptrdiff_t count;
