@@ -39,7 +39,7 @@ main() {
       #"${EMACS_CMD[@]}"
       echo "not running in dumb terminal"
     else
-      gdb -x "$top/src/.gdbinit" -ex r --args "${EMACS_CMD[@]}"
+      gdb -n -x "$top/schemacs.gdb" -x "$top/src/.gdbinit" -ex r --args "${EMACS_CMD[@]}"
     fi
 
     # cd lisp

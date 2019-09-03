@@ -30,14 +30,14 @@ unsigned gdb_flags = 0;
 
 SCHEME_FPTR_DEF(save_pointer, int, void *, const char *);
 SCHEME_FPTR_DEF(check_pointer, int, void *, const char *);
-SCHEME_FPTR_DEF(hashtablep, int, Lisp_Object);
-SCHEME_FPTR_DEF(print_to_bytevector, chez_ptr, Lisp_Object);
-SCHEME_FPTR_DEF(save_origin, void, Lisp_Object);
-SCHEME_FPTR_DEF(print_origin, void, Lisp_Object);
-SCHEME_FPTR_DEF(eq_hash, uint32_t, Lisp_Object);
-SCHEME_FPTR_DEF(hashtable_values, Lisp_Object, Lisp_Object);
-SCHEME_FPTR_DEF(hashtable_ref, Lisp_Object, Lisp_Object, Lisp_Object, Lisp_Object);
-SCHEME_FPTR_DEF(symbol_is, int, Lisp_Object, const char *);
+SCHEME_FPTR_DEF(hashtablep, int, chez_ptr);
+SCHEME_FPTR_DEF(print_to_bytevector, chez_ptr, chez_ptr);
+SCHEME_FPTR_DEF(save_origin, void, chez_ptr);
+SCHEME_FPTR_DEF(print_origin, void, chez_ptr);
+SCHEME_FPTR_DEF(eq_hash, uint32_t, chez_ptr);
+SCHEME_FPTR_DEF(hashtable_values, chez_ptr, chez_ptr);
+SCHEME_FPTR_DEF(hashtable_ref, chez_ptr, chez_ptr, chez_ptr, chez_ptr);
+SCHEME_FPTR_DEF(symbol_is, int, chez_ptr, const char *);
 
 void syms_of_scheme_lisp(void) {
   /* DEFSYM(Qscheme_value_ref_id, "scheme-value-ref-id"); */
@@ -119,7 +119,7 @@ void scheme_init(void) {
 static void
 print_origin(Lisp_Object obj)
 {
-  SCHEME_FPTR_CALL(print_origin, obj);
+  SCHEME_FPTR_CALL(print_origin, CHEZ (obj));
 }
 
 // Converts a symbol or Scheme string to a Lisp string.
@@ -255,10 +255,10 @@ scheme_alloc_c_data (Lisp_Object key, chez_iptr size)
 void *
 scheme_find_c_data (Lisp_Object key)
 {
-  Lisp_Object found = SCHEME_FPTR_CALL(hashtable_ref, c_data_table, key, UNCHEZ(chez_false));
-  if (EQ (found, UNCHEZ(chez_false)))
+  chez_ptr found = SCHEME_FPTR_CALL(hashtable_ref, CHEZ (c_data_table), CHEZ (key), chez_false);
+  if (found == chez_false)
     return NULL;
-  return scheme_malloc_ptr ((void *) chez_integer_value (CHEZ (found)));
+  return scheme_malloc_ptr ((void *) chez_integer_value (found));
 }
 
 static void
@@ -398,7 +398,7 @@ gdb_bytevector_data (chez_ptr v)
 }
 
 static void
-append_lisp_refs (void *data, chez_ptr *refs, ptrdiff_t n)
+append_lisp_refs (void *data, Lisp_Object *refs, ptrdiff_t n)
 {
   char **buf_ptr = data;
   for (ptrdiff_t i = 0; i < n; i++)
@@ -414,7 +414,7 @@ gdb_lisp_refs(chez_ptr obj)
 {
   static char buffer[4096];
   char *buf_ptr = buffer;
-  visit_lisp_refs (obj, append_lisp_refs, &buf_ptr);
+  visit_lisp_refs (UNCHEZ (obj), append_lisp_refs, &buf_ptr);
   return buffer;
 }
 
@@ -425,7 +425,7 @@ gdb_print_scheme(Lisp_Object obj)
 
   /* if (STRINGP (obj)) */
   /*     obj = to_scheme_string (obj); */
-  chez_ptr bvec = SCHEME_FPTR_CALL(print_to_bytevector, obj);
+  chez_ptr bvec = SCHEME_FPTR_CALL(print_to_bytevector, CHEZ (obj));
   chez_lock_object (bvec);
   eassert (chez_bytevectorp (bvec));
   chez_iptr n = chez_bytevector_length(bvec);
@@ -822,7 +822,7 @@ init_nil_ref_block (void *data, Lisp_Object *ptrs, ptrdiff_t n)
 void
 init_nil_refs (Lisp_Object obj)
 {
-  eassert (chez_symbolp (Qnil));
+  eassert (chez_symbolp (CHEZ (Qnil)));
   visit_lisp_refs(obj, init_nil_ref_block, CHEZ (obj));
 }
 
@@ -831,7 +831,7 @@ bool
 symbol_is(Lisp_Object sym, const char *name)
 {
   if (chez_symbolp (CHEZ(sym)))
-    return SCHEME_FPTR_CALL(symbol_is, sym, name);
+    return SCHEME_FPTR_CALL(symbol_is, CHEZ (sym), name);
   if (STRINGP (sym))
     return strncmp(SSDATA(sym), name, SCHARS(sym)) == 0;
   return false;

@@ -320,8 +320,8 @@ const char *pending_malloc_warning;
 
 #ifdef HAVE_CHEZ_SCHEME
 struct movable_lisp_ref {
-  chez_ptr *ptr;
-  chez_ptr val;
+  Lisp_Object *ptr;
+  Lisp_Object val;
 };
 
 struct malloc_block {
@@ -366,12 +366,12 @@ malloc_block_empty (const void *p)
   return ((struct malloc_block *)p)->size == -1;
 }
 
-STATIC_NAMED_CONTAINER (pure_refs, chez_ptr);
-STATIC_NAMED_CONTAINER (tracked_refs, chez_ptr);
-STATIC_NAMED_CONTAINER (tracked_pseudorefs, chez_ptr);
-STATIC_NAMED_CONTAINER (stack_refs, chez_ptr);
+STATIC_NAMED_CONTAINER (pure_refs, Lisp_Object);
+STATIC_NAMED_CONTAINER (tracked_refs, Lisp_Object);
+STATIC_NAMED_CONTAINER (tracked_pseudorefs, Lisp_Object);
+STATIC_NAMED_CONTAINER (stack_refs, Lisp_Object);
 STATIC_NAMED_CONTAINER (movable_refs, struct movable_lisp_ref);
-STATIC_NAMED_CONTAINER (mark_queue, chez_ptr);
+STATIC_NAMED_CONTAINER (mark_queue, Lisp_Object);
 STATIC_NAMED_CONTAINER (malloc_blocks, struct malloc_block);
 static chez_ptr gc_vector = chez_false;
 
@@ -387,8 +387,8 @@ alloc_preinit (void)
   NAMED_CONTAINER_CONFIG (stack_refs, chez_ptr_cmp);
 }
 
-static chez_ptr
-scheme_make_pure (chez_ptr ref)
+static Lisp_Object
+scheme_make_pure (Lisp_Object ref)
 {
   NAMED_CONTAINER_APPEND (pure_refs, &ref);
   return ref;
@@ -478,17 +478,17 @@ void
 mark_lisp_refs (void)
 {
   printf ("mq start size: %lu\n", mark_queue.size);
-  FOR_CONTAINER (i, &mark_queue)
-    visit_lisp_refs (*CONTAINER_REF (chez_ptr, &mark_queue, i),
+  FOR_NAMED_CONTAINER (i, mark_queue)
+    visit_lisp_refs (*NAMED_CONTAINER_REF (mark_queue, i),
                      mark_lisp_refs_fun, NULL);
   printf ("mq start end: %lu\n", mark_queue.size);
 }
 
-static chez_ptr *min_scheme_obj_loc = NULL;
-static chez_ptr *max_scheme_obj_loc = NULL;
+static Lisp_Object *min_scheme_obj_loc = NULL;
+static Lisp_Object *max_scheme_obj_loc = NULL;
 
 static void
-update_scheme_obj (chez_ptr *loc, chez_ptr val)
+update_scheme_obj (Lisp_Object *loc, Lisp_Object val)
 {
   *loc = val;
   if (min_scheme_obj_loc == NULL || min_scheme_obj_loc > loc)
@@ -736,7 +736,7 @@ pointer_align (void *ptr, int alignment)
 /* Extract the pointer hidden within A.  */
 
 #ifdef HAVE_CHEZ_SCHEME
-#define macro_XPNTR(a) ((void *)a)
+#define macro_XPNTR(a) ((void *) CHEZ (a))
 #else
 #define macro_XPNTR(a) \
   ((void *) ((intptr_t) XPNTR_OR_SYMBOL_OFFSET (a) \
@@ -2263,17 +2263,17 @@ check_string_free_list (void)
 /* } */
 
 static void *
-scheme_allocate (ptrdiff_t nbytes, chez_ptr sym, chez_ptr *vec_ptr)
+scheme_allocate (ptrdiff_t nbytes, Lisp_Object sym, Lisp_Object *vec_ptr)
 {
   void *data = xzalloc (nbytes);
-  chez_ptr addr = chez_integer ((uptr) data);
+  chez_ptr addr = chez_integer ((chez_iptr) data);
   eassert (data == scheme_malloc_ptr (addr));
 
-  ptr vec = chez_make_vector(2, sym);
-  scheme_track (vec);
+  chez_ptr vec = chez_make_vector(2, CHEZ (sym));
+  scheme_track (UNCHEZ (vec));
   SCHEME_FPTR_CALL(save_origin, vec);
   chez_vector_set(vec, 1, addr);
-  *vec_ptr = vec;
+  *vec_ptr = UNCHEZ (vec);
 
   return data;
 }
@@ -2286,7 +2286,7 @@ static struct Lisp_String *
 allocate_string (void)
 {
 #ifdef HAVE_CHEZ_SCHEME
-  ptr vec;
+  Lisp_Object vec;
   struct Lisp_String *s = scheme_allocate (sizeof (struct Lisp_String), scheme_string_symbol, &vec);
   update_scheme_obj (&s->u.s.scheme_obj, vec);
   eassert(STRINGP(vec));
@@ -3159,7 +3159,7 @@ DEFUN ("cons", Fcons, Scons, 2, 2, 0,
   (Lisp_Object car, Lisp_Object cdr)
 {
 #ifdef HAVE_CHEZ_SCHEME
-  ptr val = chez_cons (car, cdr);
+  Lisp_Object val = UNCHEZ (chez_cons (CHEZ (car), CHEZ (cdr)));
   scheme_track (val);
   eassert (CONSP(val));
   return val;
@@ -3515,7 +3515,7 @@ static void
 init_vectors (void)
 {
 #ifdef HAVE_CHEZ_SCHEME
-  zero_vector = chez_false;
+  zero_vector = UNCHEZ (chez_false);
   zero_vector = scheme_make_pure (Fmake_vector (make_number(0), Qnil));
 #else /* not HAVE_CHEZ_SCHEME */
   zero_vector = make_pure_vector (0);
@@ -3762,12 +3762,12 @@ static struct Lisp_Vector *
 allocate_vectorlike (ptrdiff_t len)
 {
 #ifdef HAVE_CHEZ_SCHEME
-  ptr vec;
+  Lisp_Object vec;
   struct Lisp_Vector *data = scheme_allocate
     (header_size + len * word_size, scheme_vectorlike_symbol, &vec);
   data->header.s.size = len;
   set_vectorlike_lisp_obj(data, vec);
-  scheme_ptr_fill (data->contents, Qnil, len); // XXX
+  set_nil (data->contents, len); // XXX
   return data;
 #else /* not HAVE_CHEZ_SCHEME */
   struct Lisp_Vector *p;
@@ -4088,8 +4088,8 @@ Its value is void, and its function definition and property list are nil.  */)
 {
 #ifdef HAVE_CHEZ_SCHEME
   CHECK_STRING (name);
-  ptr sstr = to_scheme_string (name);
-  ptr p = scheme_call1("gensym", sstr);
+  Lisp_Object sstr = to_scheme_string (name);
+  Lisp_Object p = UNCHEZ (scheme_call1 ("gensym", CHEZ (sstr)));
   scheme_track (p);
   return p;
 #else /* not HAVE_CHEZ_SCHEME */
@@ -4171,7 +4171,7 @@ static Lisp_Object
 allocate_misc (enum Lisp_Misc_Type type)
 {
 #ifdef HAVE_CHEZ_SCHEME
-  ptr val;
+  Lisp_Object val;
   struct Lisp_Misc_Any *data = scheme_allocate
     (sizeof (union Lisp_Misc), scheme_misc_symbol, &val);
   data->type = type;
@@ -5423,7 +5423,7 @@ static void
 mark_maybe_pointer (void *p)
 {
 #ifdef HAVE_CHEZ_SCHEME
-  chez_ptr *pp = p;
+  Lisp_Object *pp = p;
   for (int i = 0; i < 2; i++) {
     if (min_scheme_obj_loc <= pp + i &&
         pp + i <= max_scheme_obj_loc)
@@ -5506,7 +5506,7 @@ mark_maybe_pointer (void *p)
    a smaller alignment than GCC's __alignof__ and mark_memory might
    miss objects if __alignof__ were used.  */
 #ifdef HAVE_CHEZ_SCHEME
-#define GC_POINTER_ALIGNMENT alignof (chez_ptr)
+#define GC_POINTER_ALIGNMENT alignof (Lisp_Object)
 #else
 #define GC_POINTER_ALIGNMENT alignof (void *)
 #endif
@@ -5556,9 +5556,9 @@ mark_memory (void *start, void *end)
       if (alignof (Lisp_Object) == GC_POINTER_ALIGNMENT
 	  || (uintptr_t) pp % alignof (Lisp_Object) == 0)
 	mark_maybe_object (*(Lisp_Object *) pp);
-      if (IS_MAGIC_SCHEME_REF(*(chez_ptr *)pp))
+      if (IS_MAGIC_SCHEME_REF(*(Lisp_Object *)pp))
         {
-          printf ("hooray: %p\n", (void *)(*(chez_ptr *)pp));
+          printf ("hooray: %p\n", (void *) CHEZ (*(Lisp_Object *)pp));
           printf ("found1? %p\n", container_search (&tracked_refs, pp));
           printf ("found2? %p\n", container_search (&stack_refs, pp));
         }
@@ -5763,6 +5763,10 @@ typedef union
    would be necessary, each one starting with one byte more offset
    from the stack start.  */
 
+// TODO(jrw): Get rid of this.  Instead, record Scheme refs as they
+// are copied into C code, along with the top of the stack.
+// Periodically (in gc?) expire refs that are higher than the top of
+// the current stack.
 void
 mark_stack (char *bottom, char *end)
 {
@@ -6063,7 +6067,7 @@ make_pure_string (const char *data,
 		  ptrdiff_t nchars, ptrdiff_t nbytes, bool multibyte)
 {
 #ifdef HAVE_CHEZ_SCHEME
-  chez_ptr p;
+  Lisp_Object p;
   if (nchars == 0)
     {
       struct Lisp_String *s = allocate_string();
@@ -6163,7 +6167,7 @@ static Lisp_Object
 make_pure_vector (ptrdiff_t len)
 {
 #ifdef HAVE_CHEZ_SCHEME
-  return Fmake_vector(chez_fixnum(len), Qnil);
+  return scheme_make_pure (Fmake_vector (make_number (len), Qnil));
 #else /* not HAVE_CHEZ_SCHEME */
   Lisp_Object new;
   size_t size = header_size + len * word_size;
@@ -6176,12 +6180,10 @@ make_pure_vector (ptrdiff_t len)
 
 /* Copy all contents and parameters of TABLE to a new table allocated
    from pure space, return the purified table.  */
+#ifndef HAVE_CHEZ_SCHEME
 static struct Lisp_Hash_Table *
 purecopy_hash_table (struct Lisp_Hash_Table *table)
 {
-#ifdef HAVE_CHEZ_SCHEME
-  return table;
-#else /* not HAVE_CHEZ_SCHEME */
   eassert (NILP (table->weak));
   eassert (table->pure);
 
@@ -6207,8 +6209,8 @@ purecopy_hash_table (struct Lisp_Hash_Table *table)
   pure->test = pure_test;
 
   return pure;
-#endif /* not HAVE_CHEZ_SCHEME */
 }
+#endif /* not HAVE_CHEZ_SCHEME */
 
 DEFUN ("purecopy", Fpurecopy, Spurecopy, 1, 1, 0,
        doc: /* Make a copy of object OBJ in pure storage.
@@ -6217,7 +6219,7 @@ Does not copy symbols.  Copies strings without text properties.  */)
   (register Lisp_Object obj)
 {
 #ifdef HAVE_CHEZ_SCHEME
-  return scheme_make_pure (obj);
+  return purecopy (obj);
 #else /* not HAVE_CHEZ_SCHEME */
   if (NILP (Vpurify_flag))
     return obj;
@@ -6240,7 +6242,7 @@ static Lisp_Object
 purecopy (Lisp_Object obj)
 {
 #ifdef HAVE_CHEZ_SCHEME
-  return obj;
+  return scheme_make_pure (obj);
 #else /* not HAVE_CHEZ_SCHEME */
 
   if (INTEGERP (obj)
@@ -6644,7 +6646,7 @@ garbage_collect_1 (void *end)
 
   for (i = 0; i < ARRAYELTS (lispsym); i++)
 #ifdef HAVE_CHEZ_SCHEME
-    mark_object (&lispsym[i]);
+    mark_object (lispsym[i]);
 #else
     mark_object (builtin_lisp_symbol (i));
 #endif
@@ -7065,17 +7067,17 @@ mark_save_value (struct Lisp_Save_Value *ptr)
    LIST, and mark other items.  Return changed LIST, which is marked.  */
 
 #ifdef HAVE_CHEZ_SCHEME
-#define BEGIN_LIST_ITERATION(list_var)                             \
-  Lisp_Object list_var##_start = chez_cons (chez_false, list_var); \
-  chez_lock_object (list_var##_start);                             \
+#define BEGIN_LIST_ITERATION(list_var)                                  \
+  Lisp_Object list_var##_start = UNCHEZ (chez_cons (chez_false, CHEZ (list_var))); \
+  chez_lock_object (CHEZ (list_var##_start));                           \
   Lisp_Object list_var##_prev = list_var##_start
 #define LIST_RECORD_PREV(list_var, new_prev)    \
   list_var##_prev = new_prev
 #define LIST_UPDATE_PREV(list_var, new_list)    \
-  chez_set_cdr (list_var##_prev, new_list)
-#define END_LIST_ITERATION(list_var)      \
-  list_var = chez_cdr (list_var##_start); \
-  chez_unlock_object (list_var##_start)
+  chez_set_cdr (CHEZ (list_var##_prev), CHEZ (new_list))
+#define END_LIST_ITERATION(list_var)                            \
+  list_var = UNCHEZ (chez_cdr (CHEZ (list_var##_start)));       \
+  chez_unlock_object (CHEZ (list_var##_start))
 #else
 #define BEGIN_LIST_ITERATION(list_var)          \
   Lisp_Object *list_var##_prev = &list_var
@@ -7456,14 +7458,14 @@ mark_object (Lisp_Object arg)
 #ifdef HAVE_CHEZ_SCHEME
         Lisp_Object fast = XCDR (obj);
         Lisp_Object slow = obj;
-        while (!NILP (slow) && slow != fast)
+        while (!NILP (slow) && !EQ (slow, fast))
           {
             mark_and_enqueue (XCAR (obj));
             slow = XCDR (slow);
-            if (fast)
+            if (!NILP (fast))
               {
                 fast = XCDR (fast);
-                if (fast)
+                if (!NILP (fast))
                   fast = XCDR (fast);
               }
           }
@@ -8231,13 +8233,13 @@ void
 init_alloc_once (void)
 {
 #ifdef HAVE_CHEZ_SCHEME
-  for (iptr i = 0; i < ARRAYELTS (lispsym); i++)
+  for (chez_iptr i = 0; i < ARRAYELTS (lispsym); i++)
     {
-      lispsym[i] = chez_string_to_symbol (defsym_name[i]);
+      lispsym[i] = UNCHEZ (chez_string_to_symbol (defsym_name[i]));
       scheme_track (lispsym[i]);
     }
-  eassert (chez_symbolp (Qnil));
-  eassert (Qnil == chez_string_to_symbol ("nil"));
+  eassert (chez_symbolp (CHEZ (Qnil)));
+  eassert (CHEZ (Qnil) == chez_string_to_symbol ("nil"));
 #endif /* HAVE_CHEZ_SCHEME */
 
 #ifndef NIL_IS_ZERO
@@ -8440,24 +8442,24 @@ void memzero_with_nil (void *p, ptrdiff_t nbytes, ...)
 #endif
 
 #ifdef HAVE_CHEZ_SCHEME
-chez_ptr
-scheme_track (chez_ptr p)
+Lisp_Object
+scheme_track (Lisp_Object p)
 {
   if (IS_MAGIC_SCHEME_REF(p))
-    printf ("tracking %p\n", p);
+    printf ("tracking %p\n", CHEZ (p));
   NAMED_CONTAINER_APPEND (tracked_refs, &p);
-  if (chez_bytevectorp (p))
-    {
-      void *ptr = chez_bytevector_data (p);
-      NAMED_CONTAINER_APPEND (tracked_pseudorefs, &ptr);
-      struct malloc_block b = {ptr, chez_bytevector_length (p)};
-      NAMED_CONTAINER_APPEND (malloc_blocks, &b);
-    }
+  /* if (chez_bytevectorp (p)) */
+  /*   { */
+  /*     void *ptr = chez_bytevector_data (p); */
+  /*     NAMED_CONTAINER_APPEND (tracked_pseudorefs, &ptr); */
+  /*     struct malloc_block b = {ptr, chez_bytevector_length (p)}; */
+  /*     NAMED_CONTAINER_APPEND (malloc_blocks, &b); */
+  /*   } */
   return p;
 }
 
-chez_ptr
-scheme_untrack (chez_ptr p)
+Lisp_Object
+scheme_untrack (Lisp_Object p)
 {
   eassert (0);
   return p;
@@ -8541,9 +8543,9 @@ before_scheme_gc (void)
   chez_lock_object (gc_vector);
   FOR_NAMED_CONTAINER (i, tracked_refs)
     {
-      chez_ptr ref = *NAMED_CONTAINER_REF(tracked_refs, i);
-      chez_lock_object (ref);
-      chez_vector_set (gc_vector, i, ref);
+      Lisp_Object ref = *NAMED_CONTAINER_REF(tracked_refs, i);
+      chez_lock_object (CHEZ (ref));
+      chez_vector_set (gc_vector, i, CHEZ (ref));
     }
   FOR_NAMED_CONTAINER (i, movable_refs)
     {
@@ -8551,26 +8553,26 @@ before_scheme_gc (void)
       Lisp_Object obj = *ref->ptr;
       ref->val = obj;
       if (i == 0)
-        chez_unlock_object (obj);
-      chez_vector_set (gc_vector, i + tracked_refs.size, obj);
+        chez_unlock_object (CHEZ (obj));
+      chez_vector_set (gc_vector, i + tracked_refs.size, CHEZ (obj));
     }
   FOR_NAMED_CONTAINER (i, stack_refs)
     {
-      chez_ptr ref = *NAMED_CONTAINER_REF(stack_refs, i);
-      chez_unlock_object (ref);
-      chez_lock_object (ref);
-      eassert (chez_locked_objectp (ref));
+      Lisp_Object ref = *NAMED_CONTAINER_REF(stack_refs, i);
+      chez_unlock_object (CHEZ (ref));
+      chez_lock_object (CHEZ (ref));
+      eassert (chez_locked_objectp (CHEZ (ref)));
     }
   FOR_NAMED_CONTAINER (i, pure_refs)
     {
-      chez_ptr ref = *NAMED_CONTAINER_REF(pure_refs, i);
-      chez_unlock_object (ref);
-      chez_lock_object (ref);
-      eassert (chez_locked_objectp (ref));
+      Lisp_Object ref = *NAMED_CONTAINER_REF(pure_refs, i);
+      chez_unlock_object (CHEZ (ref));
+      chez_lock_object (CHEZ (ref));
+      eassert (chez_locked_objectp (CHEZ (ref)));
     }
   /* FOR_NAMED_CONTAINER (i, tracked_refs) */
   /*   { */
-  /*     chez_ptr ref = *NAMED_CONTAINER_REF(tracked_refs, i); */
+  /*     Lisp_Object ref = *NAMED_CONTAINER_REF(tracked_refs, i); */
   /*     if (BUFFERP (ref) || */
   /*         CHAR_TABLE_P (ref) || */
   /*         FRAMEP (ref) || */
@@ -8592,31 +8594,36 @@ after_scheme_gc (void)
 
   FOR_NAMED_CONTAINER (i, tracked_refs)
     {
-      chez_ptr ref = *NAMED_CONTAINER_REF(tracked_refs, i);
-      if (chez_vector_ref (gc_vector, i) != ref)
+      Lisp_Object ref = *NAMED_CONTAINER_REF(tracked_refs, i);
+      if (chez_vector_ref (gc_vector, i) != CHEZ (ref))
         num_moved1++;
-      chez_unlock_object (ref);
+      chez_unlock_object (CHEZ (ref));
     }
 
   size_t offset = tracked_refs.size;
   FOR_NAMED_CONTAINER (i, movable_refs)
     {
       eassert (i + offset < chez_vector_length (gc_vector));
-      chez_ptr new_ref = chez_vector_ref (gc_vector, i + offset);
+      Lisp_Object new_ref = UNCHEZ (chez_vector_ref (gc_vector, i + offset));
       struct movable_lisp_ref *old_ref = NAMED_CONTAINER_REF (movable_refs, i);
-      if (new_ref != old_ref->val)
+      if (!EQ (new_ref, old_ref->val))
         {
           /* if (IS_MAGIC_SCHEME_REF(old_ref->val) || */
           /*     IS_MAGIC_SCHEME_REF(new_ref) || */
           /*     IS_MAGIC_SCHEME_REF(*old_ref->ptr)) */
             {
-              chez_ptr old_val = old_ref->val;
-              void *where = old_ref->ptr;
-              printf("moved %p => %p (%s) at %p (was %p)\n", old_val, new_ref, gdb_print_scheme (new_ref), where, *old_ref->ptr);
+              Lisp_Object old_val = old_ref->val;
+              Lisp_Object *where = old_ref->ptr;
+              printf("moved %p => %p (%s) at %p (was %p)\n",
+                     CHEZ (old_val),
+                     CHEZ (new_ref),
+                     gdb_print_scheme (new_ref),
+                     where,
+                     CHEZ (*where));
               FOR_NAMED_CONTAINER (i, malloc_blocks)
                 {
                   struct malloc_block *b = NAMED_CONTAINER_REF (malloc_blocks, i);
-                  if (b->start <= where && where < (void *) ((char*) b->start + b->size))
+                  if (b->start <= (void *) where && (char *) where < ((char*) b->start + b->size))
                     {
                       printf("in malloc block %p\n", b->start);
                     }

@@ -3670,7 +3670,7 @@ Default face attributes override any local face attributes.  */)
 {
   int i;
   Lisp_Object global_lface, local_lface;
-  Lisp_Object *gvec, lvec;
+  Lisp_Object *gvec, *lvec;
   struct frame *f = XFRAME (frame);
 
   CHECK_LIVE_FRAME (frame);

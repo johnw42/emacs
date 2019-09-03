@@ -2151,7 +2151,7 @@ eval_sub (Lisp_Object form)
   Lisp_Object funcar;
   ptrdiff_t count;
 #ifdef HAVE_CHEZ_SCHEME
-  fun = val = original_fun = original_args = funcar = chez_false;
+  fun = val = original_fun = original_args = funcar = UNCHEZ (chez_false);
 #endif /* HAVE_CHEZ_SCHEME */
 
   /* Declare here, as this array may be accessed by call_debugger near

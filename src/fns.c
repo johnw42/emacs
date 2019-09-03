@@ -3705,7 +3705,7 @@ static EMACS_UINT
 hashfn_eq (struct hash_table_test *ht, Lisp_Object key)
 {
 #ifdef HAVE_CHEZ_SCHEME
-  return SCHEME_FPTR_CALL(eq_hash, key);
+  return SCHEME_FPTR_CALL(eq_hash, CHEZ (key));
 #else /* not HAVE_CHEZ_SCHEME */
   return XHASH (key) ^ XTYPE (key);
 #endif /* not HAVE_CHEZ_SCHEME */
@@ -4393,7 +4393,7 @@ sxhash_list (Lisp_Object list, int depth)
         if (flag)
           {
             flag = false;
-            printf("hash2(%p %s) = %p\n", (void*)XCAR(list), gdb_print(XCAR(list)), (void*)hash2);
+            printf("hash2(%p %s) = %p\n", (void*)CHEZ (XCAR (list)), gdb_print(XCAR(list)), (void*)hash2);
             gdb_break();
             sxhash (XCAR (list), depth + 1);
           }

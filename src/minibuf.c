@@ -1503,9 +1503,9 @@ with a space are ignored unless STRING itself starts with a space.  */)
   ptrdiff_t bindcount = -1;
   Lisp_Object bucket, tem, zero;
 #ifdef HAVE_CHEZ_SCHEME
-  ptr *values = NULL;
-  iptr num_values = 0;
-#endif /* HAVE_CHEZ_SCHEME */
+  chez_iptr num_values = 0;
+  Lisp_Object *values = NULL;
+#endif
 
   CHECK_STRING (string);
   if (type == 0)
@@ -1519,13 +1519,13 @@ with a space are ignored unless STRING itself starts with a space.  */)
     {
       collection = check_obarray (collection);
 #ifdef HAVE_CHEZ_SCHEME
-      ptr table = scheme_obarray_table(collection);
-      ptr values_vec = SCHEME_FPTR_CALL (hashtable_values, table);
+      chez_ptr table = scheme_obarray_table (collection);
+      chez_ptr values_vec = SCHEME_FPTR_CALL (hashtable_values, table);
       // Copy vector so we don't have to lock it.
-      iptr num_values = chez_vector_length (values_vec);
-      ptr *values = alloca (num_values * sizeof (ptr));
-      for (iptr i = 0; i < num_values; i++)
-        values[i] = chez_vector_ref (values_vec, i);
+      num_values = chez_vector_length (values_vec);
+      values = alloca (num_values * sizeof (Lisp_Object));
+      for (chez_iptr i = 0; i < num_values; i++)
+        values[i] = UNCHEZ (chez_vector_ref (values_vec, i));
 #else /* not HAVE_CHEZ_SCHEME */
       obsize = ASIZE (collection);
       bucket = AREF (collection, idx);
@@ -1553,7 +1553,10 @@ with a space are ignored unless STRING itself starts with a space.  */)
           if (idx >= num_values)
             break;
           else
-            elt = eltstring = values[idx++];
+            {
+              eassert (values);
+              elt = eltstring = values[idx++];
+            }
 #else /* not HAVE_CHEZ_SCHEME */
 	  if (!EQ (bucket, zero))
 	    {

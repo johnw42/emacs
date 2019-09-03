@@ -4032,8 +4032,8 @@ read_list (bool flag, Lisp_Object readcharfun)
 static Lisp_Object initial_obarray = NIL_INIT;
 
 #ifdef HAVE_CHEZ_SCHEME
-ptr
-scheme_obarray_table (ptr obarray)
+chez_ptr
+scheme_obarray_table (Lisp_Object obarray)
 {
   if (NILP (obarray)) obarray = Vobarray;
   if (!fatal_error_in_progress && (!VECTORP (obarray) || ASIZE (obarray) == 0))
@@ -4042,19 +4042,19 @@ scheme_obarray_table (ptr obarray)
       if (EQ (Vobarray, obarray)) Vobarray = initial_obarray;
       wrong_type_argument (Qvectorp, obarray);
     }
-  ptr table = AREF (obarray, 0);
+  chez_ptr table = CHEZ (AREF (obarray, 0));
   if (!SCHEME_FPTR_CALL (hashtablep, table))
     {
       table = scheme_call0 ("make-obarray-table");
-      scheme_track (table);
-      ASET (obarray, 0, table);
+      scheme_track (UNCHEZ (table));
+      ASET (obarray, 0, UNCHEZ (table));
     }
   eassert (SCHEME_FPTR_CALL (hashtablep, table));
   return table;
 }
 
-ptr
-scheme_oblookup(ptr obarray, ptr name, bool add_if_missing)
+Lisp_Object
+scheme_oblookup(Lisp_Object obarray, Lisp_Object name, bool add_if_missing)
 {
   if (NILP (obarray))
     obarray = Vobarray;
@@ -4062,13 +4062,13 @@ scheme_oblookup(ptr obarray, ptr name, bool add_if_missing)
   eassert (!NILP (obarray));
   eassert (!NILP (initial_obarray));
 
-  ptr lisp_str = to_lisp_string (name);
-  ptr table = scheme_obarray_table (obarray);
+  Lisp_Object lisp_str = to_lisp_string (name);
+  chez_ptr table = scheme_obarray_table (obarray);
   eassert (STRINGP (lisp_str));
-  ptr found = SCHEME_FPTR_CALL (hashtable_ref, table, lisp_str, Qnil);
-  if (found != Qnil)
-    eassert (chez_symbolp (found));
-  if (found != Qnil || !add_if_missing)
+  Lisp_Object found = UNCHEZ (SCHEME_FPTR_CALL (hashtable_ref, table, CHEZ (lisp_str), CHEZ (Qnil)));
+  if (!NILP (found))
+    eassert (SYMBOLP (found));
+  if (!NILP (found) || !add_if_missing)
     return found;
 
   bool in_initial_obarray = EQ (obarray, initial_obarray);
@@ -4077,9 +4077,9 @@ scheme_oblookup(ptr obarray, ptr name, bool add_if_missing)
                         in_initial_obarray
                         ? SYMBOL_INTERNED_IN_INITIAL_OBARRAY
                         : SYMBOL_INTERNED);
-  ptr scheme_symbol = data->u.s.scheme_obj;
-  eassert (chez_symbolp (scheme_symbol));
-  scheme_call3 ("hashtable-set!", table, lisp_str, scheme_symbol);
+  Lisp_Object scheme_symbol = data->u.s.scheme_obj;
+  eassert (SYMBOLP (scheme_symbol));
+  scheme_call3 ("hashtable-set!", table, CHEZ (lisp_str), CHEZ (scheme_symbol));
   if (in_initial_obarray
       && SCHARS (lisp_str) > 0
       && SDATA (lisp_str)[0] == ':')
@@ -4088,7 +4088,7 @@ scheme_oblookup(ptr obarray, ptr name, bool add_if_missing)
       struct Lisp_Symbol *xs = XSYMBOL(scheme_symbol);
       xs->u.s.redirect = SYMBOL_PLAINVAL;
       SET_SYMBOL_VAL (xs, scheme_symbol);
-      eassert (Fkeywordp (scheme_symbol));
+      eassert (!NILP (Fkeywordp (scheme_symbol)));
     }
   return scheme_symbol;
 }
@@ -4281,14 +4281,14 @@ usage: (unintern NAME OBARRAY)  */)
 #ifdef HAVE_CHEZ_SCHEME
   if (NILP (obarray)) obarray = Vobarray;
   name = to_lisp_string (name);
-  ptr sym = scheme_oblookup (obarray, name, false);
-  if (sym == Qnil)
+  Lisp_Object sym = scheme_oblookup (obarray, name, false);
+  if (NILP (sym))
     return Qnil;
 
   obarray = check_obarray (obarray);
-  ptr table = scheme_obarray_table (obarray);
+  chez_ptr table = scheme_obarray_table (obarray);
   eassert (STRINGP (name));
-  scheme_call2 ("hashtable-delete!", table, name);
+  scheme_call2 ("hashtable-delete!", table, CHEZ (name));
   return Qt;
 #else /* not HAVE_CHEZ_SCHEME */
   register Lisp_Object string, tem;
@@ -4406,16 +4406,16 @@ void
 map_obarray (Lisp_Object obarray, void (*fn) (Lisp_Object, Lisp_Object), Lisp_Object arg)
 {
 #ifdef HAVE_CHEZ_SCHEME
-  ptr table = scheme_obarray_table(obarray);
-  ptr values_vec = SCHEME_FPTR_CALL (hashtable_values, table);
+  chez_ptr table = scheme_obarray_table(obarray);
+  chez_ptr values_vec = SCHEME_FPTR_CALL (hashtable_values, table);
   // Copy vector so we don't have to lock it.
-  iptr n = chez_vector_length (values_vec);
-  ptr *values = alloca (n * sizeof (ptr));
-  for (iptr i = 0; i < n; i++)
-    values[i] = chez_vector_ref (values_vec, i);
-  for (iptr i = 0; i < n; i++)
+  chez_iptr n = chez_vector_length (values_vec);
+  Lisp_Object *values = alloca (n * sizeof (Lisp_Object));
+  for (chez_iptr i = 0; i < n; i++)
+    values[i] = UNCHEZ (chez_vector_ref (values_vec, i));
+  for (chez_iptr i = 0; i < n; i++)
     {
-      ptr sym = values[i];
+      Lisp_Object sym = values[i];
       eassert (SYMBOLP (sym));
       (*fn) (sym, arg);
     }
@@ -4468,7 +4468,7 @@ init_obarray (void)
 #ifdef HAVE_CHEZ_SCHEME
   for (int i = 0; i < ARRAYELTS (lispsym); i++)
     {
-      eassert (chez_symbolp (lispsym[i]));
+      eassert (SYMBOLP (lispsym[i]));
       scheme_oblookup (initial_obarray, lispsym[i], true);
     }
 #else /* not HAVE_CHEZ_SCHEME */

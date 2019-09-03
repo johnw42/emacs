@@ -4015,7 +4015,7 @@ copy_font_spec (Lisp_Object font)
   /* Copy an alist of extra information but discard :font-entity property.  */
   pcdr = spec->props + FONT_EXTRA_INDEX;
 #ifdef HAVE_CHEZ_SCHEME
-  ptr cell = Qnil;
+  Lisp_Object cell = Qnil;
 #endif /* HAVE_CHEZ_SCHEME */
   for (tail = AREF (font, FONT_EXTRA_INDEX); CONSP (tail); tail = XCDR (tail))
     if (!EQ (XCAR (XCAR (tail)), QCfont_entity))

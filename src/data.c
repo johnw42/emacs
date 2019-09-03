@@ -643,7 +643,7 @@ DEFUN ("setcar", Fsetcar, Ssetcar, 2, 2, 0,
   (register Lisp_Object cell, Lisp_Object newcar)
 {
 #ifdef HAVE_CHEZ_SCHEME
-  chez_set_car(cell, newcar);
+  chez_set_car(CHEZ (cell), CHEZ (newcar));
 #else /* not HAVE_CHEZ_SCHEME */
   CHECK_CONS (cell);
   CHECK_IMPURE (cell, XCONS (cell));
@@ -657,7 +657,7 @@ DEFUN ("setcdr", Fsetcdr, Ssetcdr, 2, 2, 0,
   (register Lisp_Object cell, Lisp_Object newcdr)
 {
 #ifdef HAVE_CHEZ_SCHEME
-  chez_set_cdr(cell, newcdr);
+  chez_set_cdr (CHEZ (cell), CHEZ (newcdr));
 #else /* not HAVE_CHEZ_SCHEME */
   CHECK_CONS (cell);
   CHECK_IMPURE (cell, XCONS (cell));

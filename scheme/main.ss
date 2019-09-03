@@ -40,27 +40,6 @@
   (define elisp-sxhash-equal
     (foreign-procedure "Fsxhash_equal" (scheme-object) scheme-object))
 
-  (define elisp-boundp
-    (foreign-procedure "scheme_elisp_boundp" (scheme-object) boolean))
-
-  (define elisp-fboundp
-    (foreign-procedure "scheme_elisp_fboundp" (scheme-object) boolean))
-
-  (define elisp-call0
-    (foreign-procedure "scheme_elisp_call0"
-                       (scheme-object)
-                       scheme-object))
-
-  (define elisp-call1
-    (foreign-procedure "scheme_elisp_call1"
-                       (scheme-object scheme-object)
-                       scheme-object))
-
-  (define elisp-apply
-    (foreign-procedure "scheme_elisp_apply"
-                       (scheme-object scheme-object)
-                       scheme-object))
-
   (define (make-obarray-table)
     (make-hashtable elisp-sxhash-equal
                     (lambda (a b)
