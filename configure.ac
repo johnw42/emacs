@@ -1373,7 +1373,8 @@ dnl Chez Scheme
 CHEZ_SCHEME_CFLAGS=
 CHEZ_SCHEME_OBJ=
 CHEZ_SCHEME_LIBS=
-CHEZ_SCHEME_DIR=$HOME/.local/lib/csv9.5.2/a6le
+#CHEZ_SCHEME_DIR=$HOME/.local/lib/csv9.5.2/a6le
+CHEZ_SCHEME_DIR=$PWD/ChezScheme/local/lib/csv9.5.2/a6le
 if test "$with_chez_scheme" != no; then
    AC_DEFINE(HAVE_CHEZ_SCHEME, 1, [Define to 1 to use Chez Scheme.])
    AC_DEFINE(USE_STACK_LISP_OBJECTS, true, [Define to true or false to avoid auto-detection.])

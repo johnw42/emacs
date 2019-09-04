@@ -2288,15 +2288,24 @@ check_string_free_list (void)
 static void *
 scheme_allocate (ptrdiff_t nbytes, Lisp_Object sym, Lisp_Object *vec_ptr)
 {
+  suspend_scheme_gc ();
+  
   void *data = xzalloc (nbytes);
   Lisp_Object addr = make_number ((chez_iptr) data);
   eassert (data == scheme_malloc_ptr (addr));
 
   chez_ptr vec = chez_make_vector(2, CHEZ (sym));
+  chez_call2 (scheme_guardian,
+              vec,
+              chez_cons (CHEZ (sym),
+                         chez_integer ((chez_iptr) data)));
+    
   scheme_track (UNCHEZ (vec));
   SCHEME_FPTR_CALL(save_origin, vec);
   chez_vector_set(vec, 1, CHEZ (addr));
   *vec_ptr = UNCHEZ (vec);
+
+  resume_scheme_gc ();
 
   return data;
 }
@@ -8561,23 +8570,23 @@ search_in_range (chez_ptr old_val, uintptr_t start, uintptr_t end)
 }
 
 static int gc_count = 0;
-int disable_scheme_gc = 1;
+int disable_scheme_gc = 0;
 static bool gc_was_deferred = false;
 
 void
 suspend_scheme_gc (void)
 {
-  /* eassert (disable_scheme_gc >= 0); */
-  /* disable_scheme_gc++; */
+  eassert (disable_scheme_gc >= 0);
+  disable_scheme_gc++;
 }
 
 void
 resume_scheme_gc (void)
 {
-  /* disable_scheme_gc--; */
-  /* eassert (disable_scheme_gc >= 0); */
-  /* if (disable_scheme_gc == 0 && gc_was_deferred) */
-  /*   Fgarbage_collect(); */
+  disable_scheme_gc--;
+  eassert (disable_scheme_gc >= 0);
+  if (disable_scheme_gc == 0 && gc_was_deferred)
+    Fgarbage_collect();
 }
 
 int
@@ -8762,8 +8771,18 @@ after_scheme_gc (void)
       chez_unlock_object (CHEZ (ref));
     }
 
+  unsigned long guardian_count = 0;
+  while (true)
+    {
+      chez_ptr rep = chez_call0 (scheme_guardian);
+      if (rep == chez_false)
+        break;
+      ++guardian_count;
+    }
+
   printf ("refs moved in gc1: %lu\n", num_moved1);
   printf ("refs moved in gc2: %lu\n", num_moved2);
+  printf ("guardian objects found: %lu\n", guardian_count);
   chez_unlock_object (gc_vector);
   gc_vector = chez_false;
 

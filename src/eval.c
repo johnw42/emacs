@@ -2326,9 +2326,9 @@ eval_sub (Lisp_Object form)
     }
   else if (COMPILEDP (fun) || MODULE_FUNCTIONP (fun))
     {
-      resume_scheme_gc ();
+      //resume_scheme_gc ();
       val = apply_lambda (fun, original_args, count);
-      suspend_scheme_gc ();
+      //suspend_scheme_gc ();
       return val;
     }
   else
@@ -2368,9 +2368,9 @@ eval_sub (Lisp_Object form)
       else if (EQ (funcar, Qlambda)
 	       || EQ (funcar, Qclosure))
 	{
-          resume_scheme_gc ();
+          //resume_scheme_gc ();
           val = apply_lambda (fun, original_args, count);
-          suspend_scheme_gc ();
+          //suspend_scheme_gc ();
           return val;
         }
       else
@@ -2872,7 +2872,7 @@ Lisp_Object
 funcall_subr (struct Lisp_Subr *subr, ptrdiff_t numargs, Lisp_Object *args)
 {
   Lisp_Object result = Qnil;
-  suspend_scheme_gc();
+  //suspend_scheme_gc();
 
   if (numargs < subr->min_args
       || (subr->max_args >= 0 && subr->max_args < numargs))
@@ -2958,7 +2958,7 @@ funcall_subr (struct Lisp_Subr *subr, ptrdiff_t numargs, Lisp_Object *args)
         }
     }
 
-  resume_scheme_gc ();
+  //resume_scheme_gc ();
   return result;
 }
 

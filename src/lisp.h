@@ -81,6 +81,7 @@ Lisp_Object scheme_untrack (Lisp_Object);
 void gdb_break(void);
 const char *gdb_print_scheme(Lisp_Object obj);
 const char *gdb_print(Lisp_Object obj);
+
 extern unsigned gdb_flags;
 extern int gdb_hit_count;
 
@@ -117,6 +118,7 @@ extern chez_iptr scheme_fixnum_width;
 extern const char *last_scheme_function;
 extern const char *last_scheme_call_file;
 extern int last_scheme_call_line;
+extern chez_ptr scheme_guardian;
 
 #define SCHEME_ALLOC_C_DATA(key, type) \
   ((type *)scheme_alloc_c_data((key), sizeof(type)))

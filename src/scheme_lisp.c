@@ -25,6 +25,7 @@ chez_iptr scheme_fixnum_width;
 const char *last_scheme_function;
 const char *last_scheme_call_file;
 int last_scheme_call_line;
+chez_ptr scheme_guardian;
 
 unsigned gdb_flags = 0;
 
@@ -38,6 +39,7 @@ SCHEME_FPTR_DEF(eq_hash, uint32_t, chez_ptr);
 SCHEME_FPTR_DEF(hashtable_values, chez_ptr, chez_ptr);
 SCHEME_FPTR_DEF(hashtable_ref, chez_ptr, chez_ptr, chez_ptr, chez_ptr);
 SCHEME_FPTR_DEF(symbol_is, int, chez_ptr, const char *);
+SCHEME_FPTR_DEF(trivial, void, int);
 
 void syms_of_scheme_lisp(void) {
   /* DEFSYM(Qscheme_value_ref_id, "scheme-value-ref-id"); */
@@ -82,6 +84,9 @@ void scheme_init(void) {
   scheme_least_fixnum = chez_fixnum_value(scheme_call0("least-fixnum"));
   scheme_fixnum_width = chez_fixnum_value(scheme_call0("fixnum-width"));
 
+  scheme_guardian = scheme_call0 ("make-guardian");
+  chez_lock_object (scheme_guardian);
+
   chez_foreign_symbol("do_scheme_gc", do_scheme_gc);
   chez_foreign_symbol("before_scheme_gc", before_scheme_gc);
   chez_foreign_symbol("after_scheme_gc", after_scheme_gc);
@@ -101,6 +106,10 @@ void scheme_init(void) {
   SCHEME_FPTR_INIT(hashtable_values);
   SCHEME_FPTR_INIT(hashtable_ref);
   SCHEME_FPTR_INIT(symbol_is);
+  SCHEME_FPTR_INIT(trivial);
+
+  printf ("test %p: %s\n", scheme_fptr_print_to_bytevector,
+          chez_bytevector_data (scheme_fptr_print_to_bytevector("", 0, chez_integer (123))));
 
   c_data_table = UNCHEZ(scheme_call0("make-eq-hashtable"));
   scheme_track (c_data_table);
