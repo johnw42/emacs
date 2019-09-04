@@ -1165,6 +1165,10 @@ unwind_to_catch (struct handler *catch, Lisp_Object value)
   /* Restore certain special C variables.  */
   set_poll_suppress_count (catch->poll_suppress_count);
   unblock_input_to (catch->interrupt_input_blocked);
+#ifdef HAVE_CHEZ_SCHEME
+  eassert (disable_scheme_gc >= catch->disable_scheme_gc);
+  disable_scheme_gc = catch->disable_scheme_gc;
+#endif
 
   do
     {
@@ -1350,6 +1354,7 @@ internal_condition_case (Lisp_Object (*bfun) (void), Lisp_Object handlers,
   struct handler *c = push_handler (handlers, CONDITION_CASE);
   if (sys_setjmp (c->jmp))
     {
+      gdb_break();
       Lisp_Object val = handlerlist->val;
       clobbered_eassert (handlerlist == c);
       handlerlist = handlerlist->next;
@@ -1374,6 +1379,7 @@ internal_condition_case_1 (Lisp_Object (*bfun) (Lisp_Object), Lisp_Object arg,
   struct handler *c = push_handler (handlers, CONDITION_CASE);
   if (sys_setjmp (c->jmp))
     {
+      gdb_break();
       Lisp_Object val = handlerlist->val;
       clobbered_eassert (handlerlist == c);
       handlerlist = handlerlist->next;
@@ -1401,6 +1407,7 @@ internal_condition_case_2 (Lisp_Object (*bfun) (Lisp_Object, Lisp_Object),
   struct handler *c = push_handler (handlers, CONDITION_CASE);
   if (sys_setjmp (c->jmp))
     {
+      gdb_break();
       Lisp_Object val = handlerlist->val;
       clobbered_eassert (handlerlist == c);
       handlerlist = handlerlist->next;
@@ -1430,6 +1437,7 @@ internal_condition_case_n (Lisp_Object (*bfun) (ptrdiff_t, Lisp_Object *),
   struct handler *c = push_handler (handlers, CONDITION_CASE);
   if (sys_setjmp (c->jmp))
     {
+      gdb_break();
       Lisp_Object val = handlerlist->val;
       clobbered_eassert (handlerlist == c);
       handlerlist = handlerlist->next;
@@ -1475,6 +1483,9 @@ push_handler_nosignal (Lisp_Object tag_ch_val, enum handlertype handlertype)
   c->pdlcount = SPECPDL_INDEX ();
   c->poll_suppress_count = poll_suppress_count;
   c->interrupt_input_blocked = interrupt_input_blocked;
+#ifdef HAVE_CHEZ_SCHEME
+  c->disable_scheme_gc = disable_scheme_gc;
+#endif
   handlerlist = c;
   return c;
 }
@@ -2199,7 +2210,7 @@ eval_sub (Lisp_Object form)
   /* At this point, only original_fun and original_args
      have values that will be used below.  */
  retry:
-  /* if (symbol_is(original_fun, "if") && ++gdb_hit_count >= 38019) gdb_break(); */
+  eassert (disable_scheme_gc >= 0);
 
   /* Optimize for no indirection.  */
   fun = original_fun;
@@ -2314,11 +2325,15 @@ eval_sub (Lisp_Object form)
 	}
     }
   else if (COMPILEDP (fun) || MODULE_FUNCTIONP (fun))
-    return apply_lambda (fun, original_args, count);
+    {
+      resume_scheme_gc ();
+      val = apply_lambda (fun, original_args, count);
+      suspend_scheme_gc ();
+      return val;
+    }
   else
     {
       if (NILP (fun)) {
-        gdb_break();
 	xsignal1 (Qvoid_function, original_fun);
       }
       if (!CONSP (fun))
@@ -2333,11 +2348,11 @@ eval_sub (Lisp_Object form)
 	}
       if (EQ (funcar, Qmacro))
 	{
-#ifdef HAVE_CHEZ_SCHEME
-          if (CONSP(form) &&
-              symbol_is (XCAR(form), "define-obsolete-function-alias"))
-            gdb_break();
-#endif
+/* #ifdef HAVE_CHEZ_SCHEME */
+/*           if (CONSP(form) && */
+/*               symbol_is (XCAR(form), "define-obsolete-function-alias")) */
+/*             gdb_break(); */
+/* #endif */
 
           ptrdiff_t count1 = SPECPDL_INDEX ();
           Lisp_Object exp;
@@ -2352,7 +2367,12 @@ eval_sub (Lisp_Object form)
 	}
       else if (EQ (funcar, Qlambda)
 	       || EQ (funcar, Qclosure))
-	return apply_lambda (fun, original_args, count);
+	{
+          resume_scheme_gc ();
+          val = apply_lambda (fun, original_args, count);
+          suspend_scheme_gc ();
+          return val;
+        }
       else
 	xsignal1 (Qinvalid_function, original_fun);
     }
@@ -2851,6 +2871,9 @@ usage: (funcall FUNCTION &rest ARGUMENTS)  */)
 Lisp_Object
 funcall_subr (struct Lisp_Subr *subr, ptrdiff_t numargs, Lisp_Object *args)
 {
+  Lisp_Object result = Qnil;
+  suspend_scheme_gc();
+
   if (numargs < subr->min_args
       || (subr->max_args >= 0 && subr->max_args < numargs))
     {
@@ -2867,7 +2890,7 @@ funcall_subr (struct Lisp_Subr *subr, ptrdiff_t numargs, Lisp_Object *args)
     }
 
   else if (subr->max_args == MANY)
-    return (subr->function.aMANY) (numargs, args);
+    result = (subr->function.aMANY) (numargs, args);
   else
     {
       Lisp_Object internal_argbuf[8];
@@ -2885,37 +2908,46 @@ funcall_subr (struct Lisp_Subr *subr, ptrdiff_t numargs, Lisp_Object *args)
       switch (subr->max_args)
         {
         case 0:
-          return (subr->function.a0 ());
+          result = (subr->function.a0 ());
+          break;
         case 1:
-          return (subr->function.a1 (internal_args[0]));
+          result = (subr->function.a1 (internal_args[0]));
+          break;
         case 2:
-          return (subr->function.a2
-                  (internal_args[0], internal_args[1]));
+          result = (subr->function.a2
+                    (internal_args[0], internal_args[1]));
+          break;
         case 3:
-          return (subr->function.a3
-                  (internal_args[0], internal_args[1], internal_args[2]));
+          result = (subr->function.a3
+                    (internal_args[0], internal_args[1], internal_args[2]));
+          break;
         case 4:
-          return (subr->function.a4
-                  (internal_args[0], internal_args[1], internal_args[2],
-                   internal_args[3]));
+          result = (subr->function.a4
+                    (internal_args[0], internal_args[1], internal_args[2],
+                     internal_args[3]));
+          break;
         case 5:
-          return (subr->function.a5
-                  (internal_args[0], internal_args[1], internal_args[2],
-                   internal_args[3], internal_args[4]));
+          result = (subr->function.a5
+                    (internal_args[0], internal_args[1], internal_args[2],
+                     internal_args[3], internal_args[4]));
+          break;
         case 6:
-          return (subr->function.a6
-                  (internal_args[0], internal_args[1], internal_args[2],
-                   internal_args[3], internal_args[4], internal_args[5]));
+          result = (subr->function.a6
+                    (internal_args[0], internal_args[1], internal_args[2],
+                     internal_args[3], internal_args[4], internal_args[5]));
+          break;
         case 7:
-          return (subr->function.a7
-                  (internal_args[0], internal_args[1], internal_args[2],
-                   internal_args[3], internal_args[4], internal_args[5],
-                   internal_args[6]));
+          result = (subr->function.a7
+                    (internal_args[0], internal_args[1], internal_args[2],
+                     internal_args[3], internal_args[4], internal_args[5],
+                     internal_args[6]));
+          break;
         case 8:
-          return (subr->function.a8
-                  (internal_args[0], internal_args[1], internal_args[2],
-                   internal_args[3], internal_args[4], internal_args[5],
-                   internal_args[6], internal_args[7]));
+          result = (subr->function.a8
+                    (internal_args[0], internal_args[1], internal_args[2],
+                     internal_args[3], internal_args[4], internal_args[5],
+                     internal_args[6], internal_args[7]));
+          break;
 
         default:
 
@@ -2925,6 +2957,9 @@ funcall_subr (struct Lisp_Subr *subr, ptrdiff_t numargs, Lisp_Object *args)
           emacs_abort ();
         }
     }
+
+  resume_scheme_gc ();
+  return result;
 }
 
 static Lisp_Object

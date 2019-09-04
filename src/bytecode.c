@@ -781,6 +781,7 @@ exec_byte_code (Lisp_Object bytestr, Lisp_Object vector, Lisp_Object maxdepth,
 
 	    if (sys_setjmp (c->jmp))
 	      {
+                gdb_break();
 		struct handler *c = handlerlist;
 		top = c->bytecode_top;
 		op = c->bytecode_dest;

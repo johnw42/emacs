@@ -70,6 +70,8 @@ void init_nil_refs(Lisp_Object obj);
 bool symbol_is(Lisp_Object sym, const char *name);
 bool datum_starts_with(Lisp_Object, const char *);
 void do_scheme_gc (void);
+void suspend_scheme_gc (void);
+void resume_scheme_gc (void);
 extern int disable_scheme_gc;
 int before_scheme_gc (void);
 void after_scheme_gc (void);
@@ -3884,6 +3886,10 @@ struct handler
   ptrdiff_t pdlcount;
   int poll_suppress_count;
   int interrupt_input_blocked;
+
+#ifdef HAVE_CHEZ_SCHEME
+  int disable_scheme_gc;
+#endif
 };
 
 extern Lisp_Object memory_signal_data;

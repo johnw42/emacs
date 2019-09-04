@@ -6872,7 +6872,6 @@ See Info node `(elisp)Garbage Collection'.  */
   (void)
 {
 #ifdef HAVE_CHEZ_SCHEME
-  printf("calling collect-request-handler\n");
   chez_call0 (scheme_call0 ("collect-request-handler"));
   return Qnil;
 #else /* not HAVE_CHEZ_SCHEME */
@@ -8562,14 +8561,35 @@ search_in_range (chez_ptr old_val, uintptr_t start, uintptr_t end)
 }
 
 static int gc_count = 0;
+int disable_scheme_gc = 1;
+static bool gc_was_deferred = false;
 
-int disable_scheme_gc = 0;
+void
+suspend_scheme_gc (void)
+{
+  /* eassert (disable_scheme_gc >= 0); */
+  /* disable_scheme_gc++; */
+}
+
+void
+resume_scheme_gc (void)
+{
+  /* disable_scheme_gc--; */
+  /* eassert (disable_scheme_gc >= 0); */
+  /* if (disable_scheme_gc == 0 && gc_was_deferred) */
+  /*   Fgarbage_collect(); */
+}
 
 int
 before_scheme_gc (void)
 {
   if (disable_scheme_gc > 0)
-    return false;
+    {
+      gc_was_deferred = true;
+      return false;
+    }
+
+  gc_was_deferred = false;
 
   //search_in_range((chez_ptr)0xdeadface0003280f, 0x819000, 0x101e000);
 
