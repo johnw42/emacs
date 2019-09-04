@@ -8730,10 +8730,9 @@ after_scheme_gc (void)
               {
                 Lisp_Object old_val = old_ref->val;
                 Lisp_Object *where = old_ref->ptr;
-                printf("moved %p => %p (%s) at %p\n",
+                printf("moved %p => %p at %p\n",
                        CHEZ (old_val),
                        CHEZ (new_ref),
-                       gdb_print_scheme (new_ref),
                        where);
                 FOR_NAMED_CONTAINER (i, malloc_blocks)
                   {

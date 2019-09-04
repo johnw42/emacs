@@ -23,6 +23,7 @@
          c-hashtable_values
          c-hashtable_ref
          c-symbol_is
+         c-trivial
          )
 
   (define elisp-do-scheme-gc
@@ -136,6 +137,8 @@
                       result)))
                 (void* int arg-type ...)
                 result-type)))])))
+
+  (define-for-c (c-trivial #f ((int arg)) int) arg)
 
   (define-for-c (c-symbol_is #f
                              ((scheme-object sym)
