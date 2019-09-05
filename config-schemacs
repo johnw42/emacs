@@ -5,14 +5,10 @@ shift
 
 autoreconf
 
+config_args=(--$with-chez-scheme --without-jpeg --without-makeinfo AM_DEFAULT_VERBOSITY=0)
+
 if [[ $with == with ]]; then
-  CFLAGS='-O0 -finline-functions -g -Werror=implicit-function-declaration -Werror=nested-externs'
-  checking=yes
-  cannot_dump=yes
-else
-  CFLAGS=
-  checking=no
-  cannot_dump=no
+  config_args+=(--enable-checking=yes CANNOT_DUMP=yes CFLAGS='-O0 -finline-functions -g -Werror=implicit-function-declaration -Werror=nested-externs')
 fi
 
-./configure --enable-checking=$checking --$with-chez-scheme --without-makeinfo AM_DEFAULT_VERBOSITY=0 CANNOT_DUMP=$cannot_dump CFLAGS="$CFLAGS" "$@"
+./configure "${config_args[@]}"

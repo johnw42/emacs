@@ -79,8 +79,6 @@ Lisp_Object scheme_track (Lisp_Object);
 Lisp_Object scheme_untrack (Lisp_Object);
 
 void gdb_break(void);
-const char *gdb_print_scheme(Lisp_Object obj);
-const char *gdb_print(Lisp_Object obj);
 
 extern unsigned gdb_flags;
 extern int gdb_hit_count;

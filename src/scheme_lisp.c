@@ -39,7 +39,7 @@ SCHEME_FPTR_DEF(eq_hash, uint32_t, chez_ptr);
 SCHEME_FPTR_DEF(hashtable_values, chez_ptr, chez_ptr);
 SCHEME_FPTR_DEF(hashtable_ref, chez_ptr, chez_ptr, chez_ptr, chez_ptr);
 SCHEME_FPTR_DEF(symbol_is, int, chez_ptr, const char *);
-SCHEME_FPTR_DEF(trivial, void, int);
+SCHEME_FPTR_DEF(trivial, int, int);
 
 void syms_of_scheme_lisp(void) {
   /* DEFSYM(Qscheme_value_ref_id, "scheme-value-ref-id"); */
@@ -107,9 +107,7 @@ void scheme_init(void) {
   SCHEME_FPTR_INIT(hashtable_ref);
   SCHEME_FPTR_INIT(symbol_is);
   SCHEME_FPTR_INIT(trivial);
-
-  printf ("test %p: %s\n", scheme_fptr_print_to_bytevector,
-          chez_bytevector_data (scheme_fptr_print_to_bytevector("", 0, chez_integer (123))));
+(??)
 
   c_data_table = UNCHEZ(scheme_call0("make-eq-hashtable"));
   scheme_track (c_data_table);
@@ -427,44 +425,81 @@ gdb_lisp_refs(chez_ptr obj)
   return buffer;
 }
 
-const char *
-gdb_print_scheme(Lisp_Object obj)
-{
-  static char buffer[4096];
+#include <sys/types.h>
+#include <unistd.h>
+#include <sys/wait.h>
 
+#define DEBUG_BUF_SIZE 4096
+
+static const char *
+gdb_write (void (*fun)(char *buf, Lisp_Object obj), chez_ptr obj)
+{
+  char path[PATH_MAX];
+  char *tmpdir = getenv("TMPDIR");
+  if (!tmpdir)
+    tmpdir = P_tmpdir;
+  strncpy (path, tmpdir, sizeof (path) - 1);
+  strncat (path, "/lispXXXXXX", sizeof (path) - 1);
+  int fd = mkstemp(path);
+  unlink (path);
+
+  static char buffer[DEBUG_BUF_SIZE];
+  pid_t child = fork();
+  if (child != 0)
+    {
+      int status;
+      waitpid(child, &status, 0);
+      if (status == 0)
+        {
+          lseek (fd, 0, SEEK_SET);
+          size_t n = read (fd, buffer, DEBUG_BUF_SIZE - 1);
+          buffer[n] = '\0';
+        }
+      else
+        sprintf(buffer, "child process error: %d\n", status);
+      close (fd);
+      return buffer;
+    }
+  else
+    {
+      fun (buffer, UNCHEZ (obj));
+      size_t n = write (fd, buffer, DEBUG_BUF_SIZE);
+      exit(n == DEBUG_BUF_SIZE ? 0 : 1);
+    }
+}
+
+static void
+gdb_print_scheme(char *buf, Lisp_Object obj)
+{
   suspend_scheme_gc();
-  /* if (STRINGP (obj)) */
-  /*     obj = to_scheme_string (obj); */
+  if (STRINGP (obj))
+    obj = to_scheme_string (obj);
   chez_ptr bvec = SCHEME_FPTR_CALL(print_to_bytevector, CHEZ (obj));
   chez_lock_object (bvec);
   eassert (chez_bytevectorp (bvec));
   chez_iptr n = chez_bytevector_length(bvec);
-  memcpy(buffer, chez_bytevector_data(bvec), n);
-  chez_unlock_object(bvec);
-  resume_scheme_gc();
-  return buffer;
+  n = min (n, DEBUG_BUF_SIZE - 1);
+  memcpy (buf, chez_bytevector_data (bvec), n);
+  buf[n] = '\0';
 }
 
-const char *
-gdb_print(Lisp_Object obj)
+static void
+gdb_print_lisp(char *buf, Lisp_Object obj)
 {
-  static char buffer[4096];
-
-  memset(buffer, 0, sizeof(buffer));
-
   if (XTYPE (obj) == Lisp_Chez_Internal)
-    return gdb_print_scheme(obj);
+    {
+      gdb_print_scheme (buf, obj);
+      return;
+    }
 
   Lisp_Object str = Fprin1_to_string (obj, Qnil);
   chez_iptr n = SCHARS(str);
-  if (n > sizeof(buffer) - 5)
-    n = sizeof(buffer) - 5;
+  n = min (n, DEBUG_BUF_SIZE - 1);
   for (chez_iptr i = 0; i < n; i++) {
     EMACS_INT c = XINT (Faref(str, make_number(i)));
-    buffer[i] = 0 < c && c < 255 ? c : 255;
+    buf[i] = 0 < c && c < 255 ? c : 255;
   }
-
-  return buffer;
+  buf[n] = '\0';
 }
 
 static const char *last_func_name = NULL;
@@ -860,7 +895,9 @@ datum_starts_with(Lisp_Object obj, const char *str)
   /*     prev_str = str; */
   /*     prev_length = strlen(str); */
   /*   } */
-  return strncmp(gdb_print(obj), str, strlen(str)) == 0;
+  char buffer[DEBUG_BUF_SIZE];
+  gdb_print_lisp (buffer, obj);
+  return strcmp(buffer, str) == 0;
 }
 
 #endif /* HAVE_CHEZ_SCHEME */

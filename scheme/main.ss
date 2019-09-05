@@ -138,8 +138,7 @@
                 (void* int arg-type ...)
                 result-type)))])))
 
-  (define-for-c (c-trivial #f ((int x)) void)
-    (void))
+  (define-for-c (c-trivial #f ((int arg)) int) arg)
 
   (define-for-c (c-symbol_is #f
                              ((scheme-object sym)

@@ -2289,7 +2289,7 @@ static void *
 scheme_allocate (ptrdiff_t nbytes, Lisp_Object sym, Lisp_Object *vec_ptr)
 {
   suspend_scheme_gc ();
-  
+
   void *data = xzalloc (nbytes);
   Lisp_Object addr = make_number ((chez_iptr) data);
   eassert (data == scheme_malloc_ptr (addr));
@@ -2299,7 +2299,7 @@ scheme_allocate (ptrdiff_t nbytes, Lisp_Object sym, Lisp_Object *vec_ptr)
               vec,
               chez_cons (CHEZ (sym),
                          chez_integer ((chez_iptr) data)));
-    
+
   scheme_track (UNCHEZ (vec));
   SCHEME_FPTR_CALL(save_origin, vec);
   chez_vector_set(vec, 1, CHEZ (addr));
@@ -8739,10 +8739,9 @@ after_scheme_gc (void)
               {
                 Lisp_Object old_val = old_ref->val;
                 Lisp_Object *where = old_ref->ptr;
-                printf("moved %p => %p (%s) at %p\n",
+                printf("moved %p => %p at %p\n",
                        CHEZ (old_val),
                        CHEZ (new_ref),
-                       gdb_print_scheme (new_ref),
                        where);
                 FOR_NAMED_CONTAINER (i, malloc_blocks)
                   {
