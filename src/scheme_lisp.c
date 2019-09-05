@@ -220,7 +220,7 @@ ensure_symbol_c_data (Lisp_Object symbol, Lisp_Object name)
 }
 
 struct Lisp_Symbol *
-scheme_make_symbol(Lisp_Object name, enum symbol_interned interned)
+scheme_make_symbol(Lisp_Object name, int /*enum symbol_interned*/ interned)
 {
   Lisp_Object scheme_symbol = UNCHEZ (chez_false);
   if (chez_symbolp (CHEZ (name)))

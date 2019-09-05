@@ -2210,7 +2210,7 @@ eval_sub (Lisp_Object form)
   /* At this point, only original_fun and original_args
      have values that will be used below.  */
  retry:
-  eassert (disable_scheme_gc >= 0);
+  IF_SCHEME(eassert (disable_scheme_gc >= 0));
 
   /* Optimize for no indirection.  */
   fun = original_fun;

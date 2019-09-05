@@ -302,5 +302,7 @@ intervals.o: intervals.c buffer.h $(INTERVALS_H) keyboard.h puresize.h \
 textprop.o: textprop.c buffer.h window.h $(INTERVALS_H) \
    lisp.h globals.h $(config_h)
 
+lisp.h: scheme_lisp.h
+
 
 ### deps.mk ends here
