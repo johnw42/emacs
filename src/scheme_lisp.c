@@ -107,7 +107,6 @@ void scheme_init(void) {
   SCHEME_FPTR_INIT(hashtable_ref);
   SCHEME_FPTR_INIT(symbol_is);
   SCHEME_FPTR_INIT(trivial);
-(??)
 
   c_data_table = UNCHEZ(scheme_call0("make-eq-hashtable"));
   scheme_track (c_data_table);

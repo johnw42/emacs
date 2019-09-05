@@ -343,6 +343,14 @@ extern bool suppress_checking EXTERNALLY_VISIBLE;
     : die (# cond, __FILE__, __LINE__))
 #endif /* ENABLE_CHECKING */
 
+
+#ifdef PARANOID_XMALLOC
+#define CHECK_ALLOC(p) do { KILROY_WAS_HERE; check_alloc(p); } while (0)
+void check_alloc (void *);
+#else
+#define CHECK_ALLOC(p) ((void)(p))
+#endif
+
 #ifdef HAVE_CHEZ_SCHEME
 
 // XXX Setting to 0 or 16 causes a crash in scheme gc!
@@ -361,8 +369,6 @@ struct xmalloc_header {
 extern const char *kilroy_file;
 extern int kilroy_line;
 #define KILROY_WAS_HERE do { if (!kilroy_file) { kilroy_file = __FILE__; kilroy_line = __LINE__; } } while (0)
-#define CHECK_ALLOC(p) do { KILROY_WAS_HERE; check_alloc(p); } while (0)
-void check_alloc (void *);
 
 /* #define scheme_malloc_ptr(data) ((void *) ((char *) chez_bytevector_data(data) + SCHEME_MALLOC_PADDING)) */
 
@@ -382,11 +388,8 @@ extern chez_ptr scheme_function_for_name(const char *name);
 #define scheme_call2(f, a, b) (chez_call2(scheme_function_for_name(f), a, b))
 #define scheme_call3(f, a, b, c) (chez_call3(scheme_function_for_name(f), a, b, c))
 
-#else
-
-#define CHECK_ALLOC(p) ((void)(p))
-
 #endif /* HAVE_CHEZ_SCHEME */
+
 
 
 

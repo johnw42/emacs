@@ -1094,7 +1094,7 @@ static void *lrealloc (void *, size_t);
 const char *kilroy_file = NULL;
 int kilroy_line = 0;
 
-#ifdef HAVE_CHEZ_SCHEME
+#ifdef PARANOID_XMALLOC
 #define XMALLOC_EXTRA_SIZE (sizeof (struct xmalloc_header) + 4 * sizeof (uintptr_t))
 #define XMALLOC_HEADER(p) ((struct xmalloc_header *)(p ? (char *)p - sizeof (struct xmalloc_header) : p))
 #define XMALLOC_FOOTER(p, size) ((uintptr_t *)((char *) XMALLOC_HEADER(p)->data + size))
@@ -1106,7 +1106,7 @@ int kilroy_line = 0;
 static void *
 xmalloc_init (void *p, size_t size)
 {
-#ifdef HAVE_CHEZ_SCHEME
+#ifdef PARANOID_XMALLOC
   if (p == NULL)
     return NULL;
 
@@ -1131,7 +1131,7 @@ xmalloc_init (void *p, size_t size)
 #endif
 }
 
-#ifdef HAVE_CHEZ_SCHEME
+#ifdef PARANOID_XMALLOC
 void
 check_alloc (void *p)
 {
@@ -1248,7 +1248,7 @@ xfree (void *block)
     return;
   MALLOC_BLOCK_INPUT;
   CHECK_ALLOC(block);
-#ifdef HAVE_CHEZ_SCHEME
+#ifdef PARANOID_XMALLOC
   memset (XMALLOC_HEADER (block), 0xf0, XMALLOC_HEADER (block)->size + XMALLOC_EXTRA_SIZE);
 #endif
   free (XMALLOC_HEADER (block));
