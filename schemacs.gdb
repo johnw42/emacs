@@ -15,6 +15,9 @@ set print frame-arguments none
 #set print address off
 set trace-commands off
 
+handle SIGSEGV nostop
+handle SIGSEGV noprint
+
 #handle SIGINT nopass
 
 set confirm off

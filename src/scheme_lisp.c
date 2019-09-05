@@ -29,17 +29,9 @@ chez_ptr scheme_guardian;
 
 unsigned gdb_flags = 0;
 
-SCHEME_FPTR_DEF(save_pointer, int, void *, const char *);
-SCHEME_FPTR_DEF(check_pointer, int, void *, const char *);
-SCHEME_FPTR_DEF(hashtablep, int, chez_ptr);
-SCHEME_FPTR_DEF(print_to_bytevector, chez_ptr, chez_ptr);
-SCHEME_FPTR_DEF(save_origin, void, chez_ptr);
-SCHEME_FPTR_DEF(print_origin, void, chez_ptr);
-SCHEME_FPTR_DEF(eq_hash, uint32_t, chez_ptr);
-SCHEME_FPTR_DEF(hashtable_values, chez_ptr, chez_ptr);
-SCHEME_FPTR_DEF(hashtable_ref, chez_ptr, chez_ptr, chez_ptr, chez_ptr);
-SCHEME_FPTR_DEF(symbol_is, int, chez_ptr, const char *);
-SCHEME_FPTR_DEF(trivial, int, int);
+#define SCHEME_FPTR_DEF(name, rtype, ...) \
+  rtype (*scheme_fptr_##name)(const char *, int, __VA_ARGS__) = 0
+#include "scheme_fptr.h"
 
 void syms_of_scheme_lisp(void) {
   /* DEFSYM(Qscheme_value_ref_id, "scheme-value-ref-id"); */
@@ -96,17 +88,9 @@ void scheme_init(void) {
   chez_scheme_script(BUILD_ROOT "/scheme/main.ss", 0, argv);
   scheme_call0("emacs-init");
 
-  SCHEME_FPTR_INIT(save_pointer);
-  SCHEME_FPTR_INIT(check_pointer);
-  SCHEME_FPTR_INIT(hashtablep);
-  SCHEME_FPTR_INIT(print_to_bytevector);
-  SCHEME_FPTR_INIT(save_origin);
-  SCHEME_FPTR_INIT(print_origin);
-  SCHEME_FPTR_INIT(eq_hash);
-  SCHEME_FPTR_INIT(hashtable_values);
-  SCHEME_FPTR_INIT(hashtable_ref);
-  SCHEME_FPTR_INIT(symbol_is);
-  SCHEME_FPTR_INIT(trivial);
+#define SCHEME_FPTR_DEF(name, ...)                      \
+  (scheme_fptr_##name = get_scheme_func ("c-" #name))
+#include "scheme_fptr.h"
 
   c_data_table = UNCHEZ(scheme_call0("make-eq-hashtable"));
   scheme_track (c_data_table);

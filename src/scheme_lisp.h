@@ -72,26 +72,15 @@ void gdb_break(void);
 extern unsigned gdb_flags;
 extern int gdb_hit_count;
 
-#define SCHEME_FPTR_DECL(name, rtype, ...) \
-  extern rtype (*scheme_fptr_##name)(const char *, int, __VA_ARGS__)
 #define SCHEME_FPTR_DEF(name, rtype, ...) \
-  rtype (*scheme_fptr_##name)(const char *, int, __VA_ARGS__) = 0
-#define SCHEME_FPTR_INIT(name) \
-  (scheme_fptr_##name = get_scheme_func ("c-" #name))
+  extern rtype (*scheme_fptr_##name)(const char *, int, __VA_ARGS__)
+#include "scheme_fptr.h"
+
 #define SCHEME_FPTR_CALL(name, ...)                             \
   (last_scheme_function = #name,                                \
    last_scheme_call_file = __FILE__,                            \
    last_scheme_call_line = __LINE__,                            \
    (*scheme_fptr_##name)(__FILE__, __LINE__, __VA_ARGS__))
-
-SCHEME_FPTR_DECL(save_pointer, int, void *, const char *);
-SCHEME_FPTR_DECL(check_pointer, int, void *, const char *);
-SCHEME_FPTR_DECL(hashtablep, int, chez_ptr);
-SCHEME_FPTR_DECL(save_origin, void, chez_ptr);
-SCHEME_FPTR_DECL(print_origin, void, chez_ptr);
-SCHEME_FPTR_DECL(eq_hash, uint32_t, chez_ptr);
-SCHEME_FPTR_DECL(hashtable_values, chez_ptr, chez_ptr);
-SCHEME_FPTR_DECL(hashtable_ref, chez_ptr, chez_ptr, chez_ptr, chez_ptr);
 
 extern Lisp_Object scheme_vectorlike_symbol;
 extern Lisp_Object scheme_misc_symbol;
@@ -104,18 +93,25 @@ extern const char *last_scheme_call_file;
 extern int last_scheme_call_line;
 extern chez_ptr scheme_guardian;
 
+#define SCHEME_PV_TAG(pv) chez_vector_ref(pv, 0)
+#define SCHEME_PV_ADDR(pv) chez_vector_ref(pv, 1)
+#define SCHEME_PV_EPHEMERON(pv) chez_vector_ref(pv, 2)
+#define SCHEME_PV_ADDR_SET(pv, x) chez_vector_set(pv, 1, x)
+#define SCHEME_PV_EPHEMERON_SET(pv, x) chez_vector_set(pv, 2, x)
+#define SCHEME_PV_LENGTH 3
+
 #define SCHEME_ALLOC_C_DATA(key, type) \
   ((type *)scheme_alloc_c_data((key), sizeof(type)))
 
 #undef LOCK
 #undef UNLOCK
 
-INLINE Lisp_Object
-scheme_locked_symbol(const char *name) {
-  chez_ptr sym = chez_string_to_symbol(name);
-  chez_lock_object(sym);
-  return UNCHEZ (sym);
-}
+/* INLINE Lisp_Object */
+/* scheme_locked_symbol(const char *name) { */
+/*   chez_ptr sym = chez_string_to_symbol(name); */
+/*   chez_lock_object(sym); */
+/*   return UNCHEZ (sym); */
+/* } */
 
 #define Smake_string emacs_Smake_string
 #define Smake_vector emacs_Smake_vector
@@ -352,8 +348,9 @@ bool mark_and_enqueue (Lisp_Object obj);
 
 #define IS_SCHEME_REF(ref, num) (CHEZ (ref) == (void *)num)
 #define IS_MAGIC_SCHEME_REF(p) \
-  (IS_SCHEME_REF (p, 0x462956db) || \
-   IS_SCHEME_REF (p, 0x41787b0b) || \
+  (false ||                         \
+   IS_SCHEME_REF (p, 0x4165a19f) || \
+   IS_SCHEME_REF (p, 0x4165a1cb) || \
    false)
 //#define IS_MAGIC_SCHEME_REF_ADDR(p) // false ((chez_ptr *)0x7fffffffcdc8)
 

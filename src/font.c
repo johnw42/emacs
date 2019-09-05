@@ -280,7 +280,7 @@ font_intern_prop (const char *str, ptrdiff_t len, bool force_symbol)
     }
 
 #ifdef HAVE_CHEZ_SCHEME
-  SCHEME_UNUSED(tem);
+  (void) tem;
   parse_str_as_multibyte ((unsigned char *) str, len, &nchars, &nbytes);
   name = make_specified_string (str, nchars, len,
 				len != nchars && len == nbytes);

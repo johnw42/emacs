@@ -3,6 +3,8 @@
 cd $(dirname "$0")
 top=$PWD
 
+./update-tags &> /dev/null &!
+
 HAVE_CHEZ_SCHEME=false
 if fgrep -q '#define HAVE_CHEZ_SCHEME' src/globals.h; then
   HAVE_CHEZ_SCHEME=true

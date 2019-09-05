@@ -24,6 +24,7 @@
          c-hashtable_ref
          c-symbol_is
          c-trivial
+         c-ephemeron_cons
          )
 
   (define elisp-do-scheme-gc
@@ -117,9 +118,12 @@
   (define-syntax define-for-c
     (lambda (x)
       (syntax-case x ()
-        [(k (name min-count
+        [(k (name result-type (arg ...)) form ...)
+         #'(k (name result-type (arg ...) #f)
+              form ...)]
+        [(k (name result-type
                   ((arg-type arg) ...)
-                  result-type)
+                  min-count)
             form ...)
          (let ([c-file-arg (datum->syntax #'k 'c-file)]
                [c-line-arg (datum->syntax #'k 'c-line)])
@@ -138,12 +142,17 @@
                 (void* int arg-type ...)
                 result-type)))])))
 
-  (define-for-c (c-trivial #f ((int arg)) int) arg)
+  (define-for-c (c-ephemeron_cons
+                 scheme-object ((scheme-object the-car)
+                                (scheme-object the-cdr)))
+    (ephemeron-cons the-car the-cdr))
 
-  (define-for-c (c-symbol_is #f
-                             ((scheme-object sym)
-                              (void* name-ptr))
-                             boolean)
+  (define-for-c (c-trivial int ((int arg))) arg)
+
+  (define-for-c (c-symbol_is
+                 boolean
+                 ((scheme-object sym)
+                  (void* name-ptr)))
     (let* ([name-str (if (string? sym)
                          sym
                          (symbol->string sym))]
@@ -159,24 +168,23 @@
 
   (define eq-hash-table (make-weak-eq-hashtable))
 
-  (define-for-c (c-eq_hash #f
-                           ((scheme-object x))
-                           unsigned-32)
+  (define-for-c (c-eq_hash
+                 unsigned-32
+                 ((scheme-object x)))
     (or (hashtable-ref eq-hash-table x #f)
         (let ([hash (random #x100000000)])
           (hashtable-set! eq-hash-table x hash)
           hash)))
 
-  (define-for-c (c-hashtablep #f
-                              ((scheme-object x))
-                              boolean)
+  (define-for-c (c-hashtablep boolean
+                              ((scheme-object x)))
     (hashtable? x))
 
-  (define-for-c (c-hashtable_ref #f
-                                 ((scheme-object table)
-                                  (scheme-object key)
-                                  (scheme-object default))
-                                 scheme-object)
+  (define-for-c (c-hashtable_ref
+                 scheme-object
+                 ((scheme-object table)
+                  (scheme-object key)
+                  (scheme-object default)))
     (hashtable-ref table key default))
 
   (define-record-type def-info
@@ -189,10 +197,9 @@
             (decode-char* (def-info-c-file info))
             (def-info-c-line info)))
 
-  (define-for-c (c-save_pointer #f
+  (define-for-c (c-save_pointer boolean
                                 ((void* ptr)
-                                 (void* type-str))
-                                boolean)
+                                 (void* type-str)))
     (let ([def-info (hashtable-ref pointer-table ptr #f)])
       (if def-info
           (let ([old-type (def-info-type-str def-info)])
@@ -209,10 +216,9 @@
                             (make-def-info type-str c-file c-line))
             #t))))
 
-  (define-for-c (c-check_pointer #f
+  (define-for-c (c-check_pointer boolean
                                  ((void* ptr)
-                                  (void* type-str))
-                                 boolean)
+                                  (void* type-str)))
     (let* ([def-info (hashtable-ref pointer-table ptr #f)]
            [old-type (if def-info (def-info-type-str def-info) 0)])
       (or (strcmp? old-type type-str)
@@ -228,22 +234,19 @@
 
   (define origin-table (make-eq-hashtable))
 
-  (define-for-c (c-save_origin #f
-                               ((scheme-object obj))
-                               void)
+  (define-for-c (c-save_origin
+                 void ((scheme-object obj)))
     (hashtable-set! origin-table obj (cons c-file c-line)))
 
-  (define-for-c (c-print_origin #f
-                                ((scheme-object obj))
-                                void)
+  (define-for-c (c-print_origin
+                 void ((scheme-object obj)))
     (let ([origin (hashtable-ref origin-table obj #f)])
       (if origin
           (printf "~a:~a\n" (decode-char* (car origin)) (cdr origin))
           (printf "unknown\n"))))
 
-  (define-for-c (c-print_to_bytevector #f
-                                       ((scheme-object obj))
-                                       scheme-object)
+  (define-for-c (c-print_to_bytevector
+                 scheme-object ((scheme-object obj)))
     (critical-section
      (string->utf8
       (call-with-string-output-port
@@ -251,9 +254,8 @@
          (put-datum port obj)
          (put-char port #\x00))))))
 
-  (define-for-c (c-hashtable_values #f
-                                    ((scheme-object obj))
-                                    scheme-object)
+  (define-for-c (c-hashtable_values
+                 scheme-object ((scheme-object obj)))
     (let-values ([(keys values) (hashtable-entries obj)])
       values))
 

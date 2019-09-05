@@ -319,6 +319,16 @@ static ptrdiff_t pure_bytes_used_non_lisp;
 const char *pending_malloc_warning;
 
 #ifdef HAVE_CHEZ_SCHEME
+static void
+scheme_dont_track (Lisp_Object p, const char *note)
+{
+  char buf[4096];
+  sprintf (buf, "%s (%p)", note, CHEZ (p));
+  if (IS_MAGIC_SCHEME_REF(p))
+    printf ("not tracking %s\n", note);
+  chez_call2 (scheme_guardian, CHEZ (p), chez_string (buf));
+}
+
 struct movable_lisp_ref {
   Lisp_Object *ptr;
   Lisp_Object val;
@@ -1121,10 +1131,6 @@ xmalloc_init (void *p, size_t size)
       footer[i] = 0xa5a5a5a5a5a5a5a5UL ^ size;
     }
   check_alloc (result);
-
-  struct malloc_block b = {result, size};
-  NAMED_CONTAINER_APPEND (malloc_blocks, &b);
-
   return result;
 #else
   return p;
@@ -1157,6 +1163,11 @@ xmalloc (size_t size)
   MALLOC_BLOCK_INPUT;
   val = xmalloc_init (lmalloc (size + XMALLOC_EXTRA_SIZE), size);
   MALLOC_UNBLOCK_INPUT;
+
+#ifdef HAVE_CHEZ_SCHEME
+  struct malloc_block b = {val, size};
+  NAMED_CONTAINER_APPEND (malloc_blocks, &b);
+#endif
 
   if (!val && size)
     memory_full (size);
@@ -2275,16 +2286,6 @@ check_string_free_list (void)
 
 
 #ifdef HAVE_CHEZ_SCHEME
-
-/* ptr scheme_malloc(iptr size) */
-/* { */
-/*   eassert (0 <= size); */
-/*   ptr bytes = chez_make_bytevector(size + SCHEME_MALLOC_PADDING + SCHEME_MALLOC_PADDING_AFTER, 0); */
-/*   scheme_track (bytes); */
-/*   SCHEME_FPTR_CALL(save_origin, bytes); */
-/*   return bytes; */
-/* } */
-
 static void *
 scheme_allocate (ptrdiff_t nbytes, Lisp_Object sym, Lisp_Object *vec_ptr)
 {
@@ -2294,15 +2295,18 @@ scheme_allocate (ptrdiff_t nbytes, Lisp_Object sym, Lisp_Object *vec_ptr)
   Lisp_Object addr = make_number ((chez_iptr) data);
   eassert (data == scheme_malloc_ptr (addr));
 
-  chez_ptr vec = chez_make_vector(2, CHEZ (sym));
+  chez_ptr vec = chez_make_vector(SCHEME_PV_LENGTH, CHEZ (sym));
   chez_call2 (scheme_guardian,
               vec,
               chez_cons (CHEZ (sym),
                          chez_integer ((chez_iptr) data)));
 
+  chez_ptr eph = SCHEME_FPTR_CALL(ephemeron_cons, vec, chez_false);
+
   scheme_track (UNCHEZ (vec));
   SCHEME_FPTR_CALL(save_origin, vec);
-  chez_vector_set(vec, 1, CHEZ (addr));
+  SCHEME_PV_ADDR_SET(vec, CHEZ (addr));
+  SCHEME_PV_EPHEMERON_SET(vec, eph);
   *vec_ptr = UNCHEZ (vec);
 
   resume_scheme_gc ();
@@ -3192,7 +3196,7 @@ DEFUN ("cons", Fcons, Scons, 2, 2, 0,
 {
 #ifdef HAVE_CHEZ_SCHEME
   Lisp_Object val = UNCHEZ (chez_cons (CHEZ (car), CHEZ (cdr)));
-  scheme_track (val);
+  scheme_dont_track (val, "cons");
   eassert (CONSP(val));
   return val;
 #else /* not HAVE_CHEZ_SCHEME */
@@ -4128,7 +4132,7 @@ Its value is void, and its function definition and property list are nil.  */)
   CHECK_STRING (name);
   Lisp_Object sstr = to_scheme_string (name);
   Lisp_Object p = UNCHEZ (scheme_call1 ("gensym", CHEZ (sstr)));
-  scheme_track (p);
+  scheme_dont_track (p, "gensym");
   return p;
 #else /* not HAVE_CHEZ_SCHEME */
   Lisp_Object val;
@@ -8270,7 +8274,7 @@ init_alloc_once (void)
   for (chez_iptr i = 0; i < ARRAYELTS (lispsym); i++)
     {
       lispsym[i] = UNCHEZ (chez_string_to_symbol (defsym_name[i]));
-      scheme_track (lispsym[i]);
+      scheme_dont_track (lispsym[i], "lispsym");
     }
   eassert (chez_symbolp (CHEZ (Qnil)));
   eassert (CHEZ (Qnil) == chez_string_to_symbol ("nil"));
@@ -8569,6 +8573,104 @@ search_in_range (chez_ptr old_val, uintptr_t start, uintptr_t end)
     }
 }
 
+static const char *
+scheme_string_data (chez_ptr str)
+{
+  eassert (chez_stringp (str));
+  static char buf[4096];
+  int n = chez_string_length (str);
+  int di = 0;
+  for (int si = 0; si < n; si++)
+    {
+      if (n >= sizeof(buf) - 10)
+        break;
+      unsigned c = chez_string_ref (str, si);
+      if (c >= 0x20 && c <= 0x7f)
+        {
+          buf[di++] = c;
+        }
+      else
+        {
+          di += sprintf(buf + di, "\\u%04x", c);
+        }
+    }
+  buf[di] = '\0';
+  return buf;
+}
+
+static jmp_buf segv_buf;
+static char * volatile segv_addr;
+static char *memgrep_ignore_min, *memgrep_ignore_max;
+
+static void
+memgrep_sigaction (int sig, siginfo_t *info, void *ucontext)
+{
+  segv_addr = info->si_addr;
+  longjmp (segv_buf, 1);
+}
+
+static void
+try_memgrep1 (size_t start, uint64_t word, uint64_t mask, size_t size, int step)
+{
+  asm ("movq %%rsp, %0" : "=r" (memgrep_ignore_max));
+  if (memgrep_ignore_min > memgrep_ignore_max)
+    {
+      char *tmp = memgrep_ignore_max;
+      memgrep_ignore_max = memgrep_ignore_min;
+      memgrep_ignore_min = tmp;
+    }
+  start -= start % size;
+
+  struct sigaction act;
+  act.sa_sigaction = memgrep_sigaction;
+  act.sa_flags = SA_SIGINFO | SA_RESETHAND | SA_NODEFER;
+  sigemptyset(&act.sa_mask);
+  sigaction(SIGSEGV, &act, NULL);
+  if (setjmp (segv_buf) == 0)
+    {
+      for (char *p = (char *)start;; p += step)
+        {
+          uint64_t data = *(uint64_t *)p;
+          if ((data & mask) == word &&
+              (p < memgrep_ignore_min || p > memgrep_ignore_max))
+            {
+              printf ("found 0x%lx at %p\n", (unsigned long) data, p);
+            }
+        }
+    }
+  else if (segv_addr - step != (void *)start)
+    {
+      printf ("caught segv at %p with step %d\n", segv_addr, step);
+    }
+}
+
+static void
+try_memgrep (size_t start, uint64_t word, uint64_t mask, size_t size)
+{
+  try_memgrep1(start, word, mask, size, -(int)size);
+  try_memgrep1(start, word, mask, size, (int)size);
+}
+
+static void
+memgrep (uint64_t word, uint64_t mask, size_t size)
+{
+  asm ("movq %%rbp, %0" : "=r" (memgrep_ignore_min));
+
+  if (mask == 0)
+    mask = ~mask;
+  eassert ((word & mask) == word);
+
+  // Check in the stack.  This will always turn up some results
+  // because the arguments of this function are in the stack!
+  try_memgrep ((size_t) &word, word, mask, size);
+
+  // Check in global data.
+  try_memgrep (0xe61e60, word, mask, size);
+
+  // ???
+  try_memgrep (0x40000000, word, mask, size);
+}
+
 static int gc_count = 0;
 int disable_scheme_gc = 0;
 static bool gc_was_deferred = false;
@@ -8599,6 +8701,8 @@ before_scheme_gc (void)
     }
 
   gc_was_deferred = false;
+
+  memgrep(0xdeadface0000000f, 0xffffffff0000000f, 8);
 
   //search_in_range((chez_ptr)0xdeadface0003280f, 0x819000, 0x101e000);
 
@@ -8776,6 +8880,12 @@ after_scheme_gc (void)
       chez_ptr rep = chez_call0 (scheme_guardian);
       if (rep == chez_false)
         break;
+      if (chez_stringp (rep))
+        {
+          const char *note = scheme_string_data (rep);
+          if (strncmp (note, "cons ", 5) != 0)
+            printf ("collected untracked ref: %s\n", note);
+        }
       ++guardian_count;
     }
 

@@ -347,10 +347,10 @@ error !;
 
 #ifdef HAVE_CHEZ_SCHEME
 
-#define SCHEME_VECTORP(x, sym)                      \
-  (chez_vectorp(CHECK_NOT_ZERO(CHEZ(x))) &&         \
-   chez_vector_length(CHEZ(x)) == 2 &&              \
-   chez_vector_ref(CHEZ(x), 0) == CHEZ(sym))
+#define SCHEME_VECTORP(x, tag)                          \
+  (chez_vectorp(CHECK_NOT_ZERO(CHEZ(x))) &&             \
+   chez_vector_length(CHEZ(x)) == SCHEME_PV_LENGTH &&   \
+   SCHEME_PV_TAG(CHEZ(x)) == CHEZ(tag))
 
 #define lisp_h_XLI(o) ((EMACS_INT) CHEZ (o))
 #define lisp_h_XIL(i) UNCHEZ ((chez_ptr) (i))
@@ -1554,17 +1554,6 @@ XSTRING (Lisp_Object a)
   eassert (STRINGP (a));
 #ifdef HAVE_CHEZ_SCHEME
   return scheme_malloc_ptr (UNCHEZ (chez_vector_ref (CHEZ (a), 1)));
-  /* ptr vec = Smake_vector (2, ); */
-  /* struct Lisp_String *p = scheme_find_c_data (a); */
-  /* if (p == NULL) */
-  /*   { */
-  /*     p = scheme_alloc_c_data (a, sizeof (struct Lisp_String)); */
-  /*     p->u.s.scheme_obj = a; */
-  /*     p->u.s.size = chez_string_length (a); */
-  /*     p->u.s.size_byte = */
-  /*       chez_bytevector_length (scheme_call1 ("string->utf8", a)); */
-  /*   } */
-  /* return p; */
 #else /* not HAVE_CHEZ_SCHEME */
   return XUNTAG (a, Lisp_String);
 #endif /* not HAVE_CHEZ_SCHEME */
