@@ -8612,13 +8612,11 @@ memgrep_sigaction (int sig, siginfo_t *info, void *ucontext)
 static void
 try_memgrep1 (size_t start, uint64_t word, uint64_t mask, size_t size, int step)
 {
-  asm ("movq %%rsp, %0" : "=r" (memgrep_ignore_max));
-  if (memgrep_ignore_min > memgrep_ignore_max)
-    {
-      char *tmp = memgrep_ignore_max;
-      memgrep_ignore_max = memgrep_ignore_min;
-      memgrep_ignore_min = tmp;
-    }
+  // Find the top of the stack.
+  //asm ("movq %%rsp, %0" : "=r" (memgrep_ignore_min));
+  memgrep_ignore_min = alloca(1);
+  eassert (memgrep_ignore_min < memgrep_ignore_max);
+
   start -= start % size;
 
   struct sigaction act;
@@ -8654,14 +8652,18 @@ try_memgrep (size_t start, uint64_t word, uint64_t mask, size_t size)
 static void
 memgrep (uint64_t word, uint64_t mask, size_t size)
 {
-  asm ("movq %%rbp, %0" : "=r" (memgrep_ignore_min));
+  // Find the start of the caller's stack frame.
+  //asm ("movq (%%rbp), %0" : "=r" (memgrep_ignore_max));
+  memgrep_ignore_max = __builtin_frame_address(1);
 
   if (mask == 0)
     mask = ~mask;
   eassert ((word & mask) == word);
 
-  // Check in the stack.  This will always turn up some results
-  // because the arguments of this function are in the stack!
+  // Check in the stack.  This would always turn up some results
+  // because the arguments of this function are in the stack, so we
+  // use memgrep_ignore_{min,max} to avoid printing anything from the
+  // relevant stack frames.
   try_memgrep ((size_t) &word, word, mask, size);
 
   // Check in global data.
