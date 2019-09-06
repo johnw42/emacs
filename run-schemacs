@@ -26,40 +26,39 @@ do_make() {
 
 main() {
   export EMACSLOADPATH=$top/lisp
-  do_make -j lib lib-src
+  do_make -j lib lib-src || exit $?
 
   find lisp -depth -name \*.elc -delete
   #do_byte_compile
 
-  if "${MAKE_CMD[@]}"; then
+  "${MAKE_CMD[@]}" || exit $?
 
-    cd "$RUN_DIR"
-    # exec ddd $top/src/temacs
-    
-    echo "${EMACS_CMD[*]}"
-    if [[ $TERM == dumb ]]; then
-      #"${EMACS_CMD[@]}"
-      echo "not running in dumb terminal"
-    else
-      gdb -n -x "$top/schemacs.gdb" -x "$top/src/.gdbinit" -ex r --args "${EMACS_CMD[@]}"
-    fi
-
-    # cd lisp
-    # for lisp_file in autoload.el; do
-    #   EMACS_CMD=('./bootstrap-emacs' --batch --no-site-file --no-site-lisp --eval '(setq load-prefer-newer t)'  -f batch-byte-compile ../lisp/emacs-lisp/$lisp_file)
-    #   echo "${EMACS_CMD[*]}"
-    #   "${EMACS_CMD[@]}" || $GDB "${EMACS_CMD[@]}"
-    # done
-    
-    #   $GDB $EMACS_CMD --eval \
-      #     "
-    # (progn
-    #  (setq garbage-collection-messages t)
-    #  (message \"after-idle: %S\"
-    #    (prog1 (scheme-funcall 'after-idle (cons nil nil))
-    #    (garbage-collect))))"
-    #src/emacs -Q --batch --eval "(message \"after-idle: %S\" (scheme-funcall 'after-idle))"
+  cd "$RUN_DIR"
+  # exec ddd $top/src/temacs
+  
+  echo "${EMACS_CMD[*]}"
+  if [[ $TERM == dumb ]]; then
+    #"${EMACS_CMD[@]}"
+    echo "not running in dumb terminal"
+  else
+    gdb -n -x "$top/schemacs.gdb" -x "$top/src/.gdbinit" -ex r --args "${EMACS_CMD[@]}"
   fi
+
+  # cd lisp
+  # for lisp_file in autoload.el; do
+  #   EMACS_CMD=('./bootstrap-emacs' --batch --no-site-file --no-site-lisp --eval '(setq load-prefer-newer t)'  -f batch-byte-compile ../lisp/emacs-lisp/$lisp_file)
+  #   echo "${EMACS_CMD[*]}"
+  #   "${EMACS_CMD[@]}" || $GDB "${EMACS_CMD[@]}"
+  # done
+  
+  #   $GDB $EMACS_CMD --eval \
+    #     "
+  # (progn
+  #  (setq garbage-collection-messages t)
+  #  (message \"after-idle: %S\"
+  #    (prog1 (scheme-funcall 'after-idle (cons nil nil))
+  #    (garbage-collect))))"
+  #src/emacs -Q --batch --eval "(message \"after-idle: %S\" (scheme-funcall 'after-idle))"
 }
 
 byte_compile_all() {
