@@ -229,7 +229,7 @@ bool may_be_valid (chez_ptr x);
 #define IS_SCHEME_REF(ref, num) (CHEZ (ref) == (void *)num)
 #define IS_MAGIC_SCHEME_REF(p) \
   (false ||                         \
-   IS_SCHEME_REF (p, 0x443435b9) || \
+   IS_SCHEME_REF (p, 0x40e9c009) || \
    false)
 //#define IS_MAGIC_SCHEME_REF_ADDR(p) // false ((chez_ptr *)0x7fffffffcdc8)
 
