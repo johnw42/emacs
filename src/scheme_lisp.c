@@ -1109,4 +1109,90 @@ may_be_valid (chez_ptr x)
   return false;
 }
 
+static union lisp_frame_record *lisp_frame_records = NULL;
+static ptrdiff_t lisp_frame_record_capacity = 0;
+ptrdiff_t lisp_frame_record_count = 0;
+
+static void
+ensure_lisp_frame_record_capacity (ptrdiff_t n)
+{
+  ptrdiff_t cap_needed = lisp_frame_record_count + n;
+  if (lisp_frame_record_capacity < cap_needed)
+    {
+      ptrdiff_t new_cap = lisp_frame_record_capacity;
+      if (new_cap == 0)
+        new_cap = 256;
+      while (new_cap < cap_needed)
+        new_cap *= 2;
+      printf ("expanding to %ld\n", new_cap);
+      lisp_frame_records = reallocarray
+        (lisp_frame_records,
+         new_cap, sizeof (union lisp_frame_record));
+      eassert (lisp_frame_records);
+      lisp_frame_record_capacity = new_cap;
+    }
+}
+
+void
+push_lisp_locals(bool already_initialized, int n, ...)
+{
+  eassert (n > 0);
+  ensure_lisp_frame_record_capacity (n + 1);
+
+  va_list ap;
+  va_start(ap, n);
+  for (int i = 0; i < n; i++)
+    {
+      Lisp_Object *ptr = va_arg(ap, Lisp_Object *);
+      lisp_frame_records[lisp_frame_record_count++].ptr = ptr;
+      if (!already_initialized)
+        *ptr = UNCHEZ (chez_false);
+    }
+  va_end(ap);
+  lisp_frame_records[lisp_frame_record_count++].count = n;
+}
+
+void
+push_lisp_local_array(Lisp_Object *ptr, ptrdiff_t n)
+{
+  eassert (n >= 0);
+  ensure_lisp_frame_record_capacity (n + 1);
+  for (int i = 0; i < n; i++)
+    lisp_frame_records[lisp_frame_record_count++].ptr =
+      &ptr[i];
+  lisp_frame_records[lisp_frame_record_count++].count = n;
+}
+
+// On the first call, *pos must be 0.  If any unexamined records
+// exist, the function returns true, sets *ptr to the start of a block
+// of frame records, and sets *count to the number of records in the
+// block.  Only the 'ptr' field of each record should be examined.
+// When there are no more records left, the return value is false.
+bool
+walk_lisp_frame_records (ptrdiff_t *pos,
+                         union lisp_frame_record **pptr,
+                         ptrdiff_t *count)
+{
+  eassert (*pos >= 0);
+  ptrdiff_t index = lisp_frame_record_count - *pos;
+  while (index > 0)
+    {
+      ptrdiff_t ptr_count = lisp_frame_records[--index].count;
+      eassert (ptr_count >= 0);
+      eassert (ptr_count < 100);
+      if (ptr_count > 0)
+        {
+          *pptr = &lisp_frame_records[index - ptr_count];
+          *count = ptr_count;
+          *pos += 1 + ptr_count;
+          return true;
+        }
+    }
+  *pptr = NULL;
+  *count = 0;
+  *pos = -1;
+  return false;
+}
+
+
 #endif /* HAVE_CHEZ_SCHEME */

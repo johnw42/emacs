@@ -1168,6 +1168,7 @@ unwind_to_catch (struct handler *catch, Lisp_Object value)
 #ifdef HAVE_CHEZ_SCHEME
   eassert (disable_scheme_gc >= catch->disable_scheme_gc);
   disable_scheme_gc = catch->disable_scheme_gc;
+  lisp_frame_record_count = catch->lisp_frame_record_count;
 #endif
 
   do
@@ -1485,6 +1486,7 @@ push_handler_nosignal (Lisp_Object tag_ch_val, enum handlertype handlertype)
   c->interrupt_input_blocked = interrupt_input_blocked;
 #ifdef HAVE_CHEZ_SCHEME
   c->disable_scheme_gc = disable_scheme_gc;
+  c->lisp_frame_record_count = lisp_frame_record_count;
 #endif
   handlerlist = c;
   return c;
@@ -2156,34 +2158,34 @@ int gdb_hit_count = 0;
 Lisp_Object
 eval_sub (Lisp_Object form)
 {
-  Lisp_Object fun, val, original_fun, original_args;
-  Lisp_Object funcar;
+  ENTER_LISP_FRAME (form);
+  LISP_LOCALS (fun, val, original_fun, original_args,
+               funcar, lex_binding, exp, arg, args_left);
   ptrdiff_t count;
-#ifdef HAVE_CHEZ_SCHEME
-  fun = val = original_fun = original_args = funcar = UNCHEZ (chez_false);
-#endif /* HAVE_CHEZ_SCHEME */
 
   /* Declare here, as this array may be accessed by call_debugger near
      the end of this function.  See Bug#21245.  */
-  Lisp_Object argvals[8];
+  LISP_LOCAL_ARRAY (argvals, 8);
 
   if (SYMBOLP (form))
     {
       /* Look up its binding in the lexical environment.
 	 We do not pay attention to the declared_special flag here, since we
 	 already did that when let-binding the variable.  */
-      Lisp_Object lex_binding
+      lex_binding
 	= !NILP (Vinternal_interpreter_environment) /* Mere optimization!  */
 	? Fassq (form, Vinternal_interpreter_environment)
 	: Qnil;
       if (CONSP (lex_binding))
-	return XCDR (lex_binding);
+	EXIT_LISP_FRAME (XCDR (lex_binding));
       else
-	return Fsymbol_value (form);
+	EXIT_LISP_FRAME (Fsymbol_value (form));
     }
 
   if (!CONSP (form))
-    return form;
+    {
+      EXIT_LISP_FRAME (form);
+    }
 
   maybe_quit ();
 
@@ -2221,7 +2223,7 @@ eval_sub (Lisp_Object form)
 
   if (SUBRP (fun))
     {
-      Lisp_Object args_left = original_args;
+      args_left = original_args;
       Lisp_Object numargs = Flength (args_left);
 
       check_cons_list ();
@@ -2236,15 +2238,13 @@ eval_sub (Lisp_Object form)
       else if (XSUBR (fun)->max_args == MANY)
 	{
 	  /* Pass a vector of evaluated arguments.  */
-	  Lisp_Object *vals;
 	  ptrdiff_t argnum = 0;
 	  USE_SAFE_ALLOCA;
-
-	  SAFE_ALLOCA_LISP (vals, XINT (numargs));
+	  LISP_LOCAL_ALLOCA (vals, XINT (numargs));
 
 	  while (CONSP (args_left) && argnum < XINT (numargs))
 	    {
-	      Lisp_Object arg = XCAR (args_left);
+	      arg = XCAR (args_left);
 	      args_left = XCDR (args_left);
 	      vals[argnum++] = eval_sub (arg);
 	    }
@@ -2260,7 +2260,7 @@ eval_sub (Lisp_Object form)
 	    val = call_debugger (list2 (Qexit, val));
 	  SAFE_FREE ();
 	  specpdl_ptr--;
-	  return val;
+	  EXIT_LISP_FRAME (val);
 	}
       else
 	{
@@ -2326,10 +2326,8 @@ eval_sub (Lisp_Object form)
     }
   else if (COMPILEDP (fun) || MODULE_FUNCTIONP (fun))
     {
-      //resume_scheme_gc ();
       val = apply_lambda (fun, original_args, count);
-      //suspend_scheme_gc ();
-      return val;
+      EXIT_LISP_FRAME (val);
     }
   else
     {
@@ -2344,6 +2342,7 @@ eval_sub (Lisp_Object form)
       if (EQ (funcar, Qautoload))
 	{
 	  Fautoload_do_load (fun, original_fun, Qnil);
+          printf ("goto\n");
 	  goto retry;
 	}
       if (EQ (funcar, Qmacro))
@@ -2355,7 +2354,6 @@ eval_sub (Lisp_Object form)
 /* #endif */
 
           ptrdiff_t count1 = SPECPDL_INDEX ();
-          Lisp_Object exp;
 	  /* Bind lexical-binding during expansion of the macro, so the
 	     macro can know reliably if the code it outputs will be
 	     interpreted using lexical-binding or not.  */
@@ -2368,10 +2366,8 @@ eval_sub (Lisp_Object form)
       else if (EQ (funcar, Qlambda)
 	       || EQ (funcar, Qclosure))
 	{
-          //resume_scheme_gc ();
           val = apply_lambda (fun, original_args, count);
-          //suspend_scheme_gc ();
-          return val;
+          EXIT_LISP_FRAME (val);
         }
       else
 	xsignal1 (Qinvalid_function, original_fun);
@@ -2383,7 +2379,7 @@ eval_sub (Lisp_Object form)
     val = call_debugger (list2 (Qexit, val));
   specpdl_ptr--;
 
-  return val;
+  EXIT_LISP_FRAME (val);
 }
 
 DEFUN ("apply", Fapply, Sapply, 1, MANY, 0,

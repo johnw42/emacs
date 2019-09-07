@@ -8734,6 +8734,23 @@ before_scheme_gc (void)
 
   gc_was_deferred = false;
 
+  ptrdiff_t pos = 0, count, frames_found = 0, entries_found = 0;
+  union lisp_frame_record *records;
+  while (walk_lisp_frame_records (&pos, &records, &count))
+    {
+      eassert (count > 0);
+      printf ("count: %ld\n", count);
+      /* while (count--) */
+      /*   { */
+      /*     printf("found %p at %p\n", */
+      /*            CHEZ(*records[count].ptr), */
+      /*            records[count].ptr); */
+      /*   } */
+      frames_found++;
+      entries_found += count;
+    }
+  printf ("found %ld entries in %ld frames\n", entries_found, frames_found);
+
   //memgrep(0xdeadface0000000f, 0xffffffff0000000f, 8);
 
   // TODO(jrw): Should not be necessary because globals are always

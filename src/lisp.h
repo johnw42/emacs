@@ -3707,6 +3707,7 @@ struct handler
 
 #ifdef HAVE_CHEZ_SCHEME
   int disable_scheme_gc;
+  ptrdiff_t lisp_frame_record_count;
 #endif
 };
 
@@ -4417,6 +4418,7 @@ extern Lisp_Object quit (void);
 INLINE _Noreturn void
 xsignal (Lisp_Object error_symbol, Lisp_Object data)
 {
+  printf ("xsignal\n");
   Fsignal (error_symbol, data);
 }
 extern _Noreturn void xsignal0 (Lisp_Object);
@@ -5148,7 +5150,7 @@ extern void *record_xmalloc (size_t) ATTRIBUTE_ALLOC_SIZE ((1));
 	|| INT_ADD_WRAPV (alloca_nbytes, extra, &alloca_nbytes) \
 	|| SIZE_MAX < alloca_nbytes)			       \
       memory_full (SIZE_MAX);				       \
-    else if (alloca_nbytes <= sa_avail)			       \
+    else if (alloca_nbytes <= sa_avail)                        \
       (buf) = AVAIL_ALLOCA (alloca_nbytes);		       \
     else						       \
       {							       \
