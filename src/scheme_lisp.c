@@ -883,4 +883,230 @@ datum_starts_with(Lisp_Object obj, const char *str)
   return strcmp(buffer, str) == 0;
 }
 
+void *
+container_ref (struct container *c, size_t i)
+{
+  return (char *) c->data + i * c->elem_size;
+}
+
+void
+container_config (struct container *c, size_t elem_size)
+{
+  c->elem_size = elem_size;
+}
+
+void
+container_init (struct container *c, size_t elem_size)
+{
+  c->data = NULL;
+  c->size = 0;
+  c->capacity = 0;
+  c->sorted_by = NULL;
+  container_config(c, elem_size);
+}
+
+void
+container_free (struct container *c)
+{
+  free (c->data);
+  c->size = 0;
+  c->capacity = 0;
+}
+
+void
+container_reset (struct container *c)
+{
+  c->size = 0;
+  c->sorted_by = NULL;
+}
+
+void
+container_reserve (struct container *c, size_t min_capacity)
+{
+  if (min_capacity > c->capacity)
+    {
+      size_t new_capacity = 1;
+      while (new_capacity < min_capacity)
+        new_capacity *= 2;
+      eassert (new_capacity >= min_capacity);
+      c->data = reallocarray (c->data, new_capacity, c->elem_size);
+      c->capacity  = new_capacity;
+      eassert (c->data);
+    }
+  eassert (min_capacity == 0 || c->data);
+}
+
+void
+container_sort (struct container *c, compare_fun compare)
+{
+  if (c->sorted_by != compare)
+    qsort (c->data, c->size, c->elem_size, compare);
+}
+
+void *
+container_search (struct container *c,
+                  const void *key,
+                  compare_fun compare,
+                  bool force_sort)
+{
+  eassert (compare);
+
+  if (force_sort)
+    container_sort (c, compare);
+
+  if (c->sorted_by == compare)
+      return bsearch (key, c->data, c->size, c->elem_size, compare);
+  else
+      FOR_CONTAINER (i, c)
+        {
+          void *item = container_ref (c, i);
+          if (compare (key, item) == 0)
+            return item;
+        }
+
+  return NULL;
+}
+
+
+// Returns number of items found.
+size_t
+container_find_all (struct container *c,
+                    const void *key,
+                    compare_fun compare,
+                    size_t *begin,
+                    size_t *end)
+{
+  eassert (compare);
+  eassert (begin);
+  eassert (end);
+
+  void *found = container_search (c, key, compare, true);
+  if (!found)
+    {
+      *begin = *end = 0;
+      return 0;
+    }
+
+  size_t start =
+    ((char *) found - (char *) c->data) / c->elem_size;
+  eassert (container_ref (c, start) == found);
+
+  // Find the first matching item.
+  size_t i;
+  for (i = start; i > 0; i--)
+    if (compare (container_ref (c, i - 1), found) != 0)
+      break;
+
+  // Find the last matching item.
+  size_t j;
+  for (j = start + 1; j < c->size; j++)
+    if (compare (container_ref (c, j), found) != 0)
+      break;
+
+  eassert (i <= j);
+  *begin = i;
+  *end = j;
+  return j - i;
+}
+
+void
+container_append (struct container *c, void *item)
+{
+  container_reserve (c, c->size + 1);
+  char *dest = container_ref (c, c->size);
+  memcpy (dest, item, c->elem_size);
+  c->sorted_by = NULL;
+  c->size++;
+}
+
+void
+container_delete_if (struct container *c, bool (*pred)(const void *))
+{
+  size_t j = 0;
+  FOR_CONTAINER (i, c)
+    {
+      eassert (j <= i);
+      if (pred (container_ref (c, i)))
+        {
+          if (i != j)
+            {
+              memcpy (container_ref (c, j),
+                      container_ref (c, i),
+                      c->elem_size);
+            }
+          j++;
+        }
+    }
+  c->size = j;
+}
+
+void
+container_uniq (struct container *c, compare_fun compare, merge_fun merge)
+{
+  container_sort (c, compare);
+
+  size_t di = 0;
+  FOR_CONTAINER (si, c)
+    if (si > 0)
+      {
+        eassert (di < si);
+        if (compare (container_ref (c, di),
+                     container_ref (c, si)) == 0)
+          {
+            if (merge)
+              merge (container_ref (c, di),
+                     container_ref (c, si));
+            else
+              memcpy (container_ref (c, di),
+                      container_ref (c, si),
+                      c->elem_size);
+          }
+        else
+          {
+            di++;
+          }
+      }
+  c->size = di;
+}
+
+bool
+may_be_valid (chez_ptr x)
+{
+  if (x == chez_false ||
+      chez_pairp(x) ||
+      chez_symbolp(x) ||
+      chez_fixnump(x) ||
+      chez_bignump(x) ||
+      chez_flonump(x) ||
+      chez_vectorp(x))
+    return true;
+
+  if (chez_stringp(x) ||
+      chez_procedurep(x) ||
+      chez_recordp(x))
+    return true;
+
+  // Valid Scheme types never used as Lisp values.
+  /* if (x == chez_true || */
+  /*     x == chez_nil || */
+  /*     x == chez_eof_object || */
+  /*     x == chez_bwp_object || */
+  /*     x == chez_unbound || */
+  /*     x == chez_void || */
+  /*     chez_charp(x) || */
+  /*     chez_bignump(x) || */
+  /*     chez_stringp(x) || */
+  /*     chez_ratnump(x) || */
+  /*     chez_inexactnump(x) || */
+  /*     chez_exactnump(x) || */
+  /*     chez_fxvectorp(x) || */
+  /*     chez_bytevectorp(x) || */
+  /*     chez_boxp(x) || */
+  /*     chez_codep(x) || */
+  /*     chez_portp(x)) */
+  /*   return true; */
+
+  return false;
+}
+
 #endif /* HAVE_CHEZ_SCHEME */

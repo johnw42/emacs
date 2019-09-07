@@ -319,20 +319,50 @@ static ptrdiff_t pure_bytes_used_non_lisp;
 const char *pending_malloc_warning;
 
 #ifdef HAVE_CHEZ_SCHEME
-static void
-scheme_dont_track (Lisp_Object p, const char *note)
-{
-  char buf[4096];
-  sprintf (buf, "%s (%p)", note, CHEZ (p));
-  if (IS_MAGIC_SCHEME_REF(p))
-    printf ("not tracking %s\n", note);
-  chez_call2 (scheme_guardian, CHEZ (p), chez_string (buf));
-}
+/* static void */
+/* scheme_dont_track (Lisp_Object p, const char *note) */
+/* { */
+/*   char buf[4096]; */
+/*   sprintf (buf, "%s (%p)", note, CHEZ (p)); */
+/*   if (IS_MAGIC_SCHEME_REF(p)) */
+/*     printf ("*** not tracking %s\n", buf); */
 
-struct movable_lisp_ref {
-  Lisp_Object *ptr;
-  Lisp_Object val;
-  bool should_unlock;
+/*   record_scheme_ref (CHEZ(p), rt_untracked); */
+
+/*   chez_call2 (scheme_guardian, CHEZ (p), chez_string (buf)); */
+/* } */
+
+enum scheme_ref_type
+  {
+   // Invalid ref.
+   rt_dead,
+
+   // Ref found by tracing live Lisp objects.
+   rt_trace,
+
+   // Ref may or may not be valid.
+   rt_trace_uncertain,
+
+   // ???
+   rt_tracked,
+
+   // Pure ref.
+   rt_pure
+  };
+
+#define IS_VALID_REF_TYPE(rt) \
+  ((rt) == rt_trace || (rt) == rt_tracked || (rt) == rt_pure)
+
+struct scheme_ref_info {
+  // The reference itself.
+  chez_ptr ref;
+
+  // A pointer to where the ref is stored in memory.  If not NULL,
+  // it's safe for the referenced value to be moved by the garbage
+  // collector.
+  chez_ptr *ref_ptr;
+
+  enum scheme_ref_type type;
 };
 
 struct malloc_block {
@@ -353,14 +383,52 @@ pointer_cmp (const void *p, const void *q)
 }
 
 static int
-chez_ptr_cmp (const void *p, const void *q)
+scheme_ref_cmp (const void *p, const void *q)
 {
-  chez_ptr pp = *(chez_ptr *)p;
-  chez_ptr qq = *(chez_ptr *)q;
-  /* if (pp == MAGIC_SCHEME_REF || */
-  /*     qq == MAGIC_SCHEME_REF) */
-  /*   printf("%p <=> %p\n", pp, qq); */
-  return pointer_cmp(pp, qq);
+  const struct scheme_ref_info *pp = p, *qq = q;
+  return pointer_cmp (pp->ref, qq->ref);
+}
+
+static int
+scheme_ref_ptr_cmp (const void *p, const void *q)
+{
+  const struct scheme_ref_info *pp = p, *qq = q;
+  return pointer_cmp (pp->ref_ptr, qq->ref_ptr);
+}
+
+static int
+scheme_ref_memcmp (const void *p, const void *q)
+{
+  return memcmp(p, q, sizeof (struct scheme_ref_info));
+}
+
+
+static void
+scheme_ref_merge_unlock (void *p, const void *q)
+{
+  struct scheme_ref_info *pp = p;
+  const struct scheme_ref_info *qq = q;
+  chez_unlock_object (pp->ref);
+  if (IS_MAGIC_SCHEME_REF(UNCHEZ(pp->ref)))
+    {
+      printf ("*** unlocked %p during merge\n", pp->ref);
+    }
+  *pp = *qq;
+}
+
+static bool
+scheme_ref_dead_or_trace (const void *p)
+{
+  const struct scheme_ref_info *pp = p;
+  switch (pp->type)
+    {
+    case rt_dead:
+    case rt_trace:
+    case rt_trace_uncertain:
+      return true;
+    default:
+      return false;
+    }
 }
 
 static int
@@ -377,11 +445,7 @@ malloc_block_empty (const void *p)
   return ((struct malloc_block *)p)->size == -1;
 }
 
-STATIC_NAMED_CONTAINER (pure_refs, Lisp_Object);
-STATIC_NAMED_CONTAINER (tracked_refs, Lisp_Object);
-STATIC_NAMED_CONTAINER (tracked_pseudorefs, Lisp_Object);
-STATIC_NAMED_CONTAINER (stack_refs, Lisp_Object);
-STATIC_NAMED_CONTAINER (movable_refs, struct movable_lisp_ref);
+STATIC_NAMED_CONTAINER (scheme_refs, struct scheme_ref_info);
 STATIC_NAMED_CONTAINER (mark_queue, Lisp_Object);
 STATIC_NAMED_CONTAINER (malloc_blocks, struct malloc_block);
 static chez_ptr gc_vector = chez_false;
@@ -389,20 +453,57 @@ static chez_ptr gc_vector = chez_false;
 void
 alloc_preinit (void)
 {
-  NAMED_CONTAINER_CONFIG (pure_refs, chez_ptr_cmp);
-  NAMED_CONTAINER_CONFIG (malloc_blocks, malloc_block_cmp);
-  NAMED_CONTAINER_CONFIG (tracked_refs, chez_ptr_cmp);
-  NAMED_CONTAINER_CONFIG (tracked_pseudorefs, chez_ptr_cmp);
-  NAMED_CONTAINER_CONFIG (mark_queue, NULL);
-  NAMED_CONTAINER_CONFIG (movable_refs, NULL);
-  NAMED_CONTAINER_CONFIG (stack_refs, chez_ptr_cmp);
+  NAMED_CONTAINER_CONFIG (scheme_refs);
+  NAMED_CONTAINER_CONFIG (malloc_blocks);
+  NAMED_CONTAINER_CONFIG (mark_queue);
+}
+
+static void
+record_scheme_ref_ptr (Lisp_Object *ref_ptr, enum scheme_ref_type type)
+{
+  if (IS_MAGIC_SCHEME_REF(*ref_ptr))
+    {
+      printf ("*** recording %p at %p\n", CHEZ (*ref_ptr), ref_ptr);
+    }
+  struct scheme_ref_info info =
+    { CHEZ(*ref_ptr), &CHEZ(*ref_ptr), type };
+  eassert (IS_VALID_REF_TYPE(type));
+  eassert (type != rt_tracked);
+  eassert (may_be_valid (info.ref));
+  NAMED_CONTAINER_APPEND (scheme_refs, &info);
+}
+
+static Lisp_Object
+record_scheme_ref (Lisp_Object ref, enum scheme_ref_type type)
+{
+  struct scheme_ref_info info = { CHEZ(ref), NULL, type };
+
+  switch (type)
+    {
+    case rt_dead:
+      eassert (0);
+    case rt_trace_uncertain:
+      break;
+    default:
+      eassert (may_be_valid (info.ref));
+    }
+  if (type == rt_tracked || type == rt_pure) {
+    // We can't lock objects that are referenced only from the stack,
+    // and those object can't be allowed to move or be collected.
+    if (IS_MAGIC_SCHEME_REF(UNCHEZ(info.ref)))
+      {
+        printf ("*** locking tracked ref %p\n", info.ref);
+      }
+    chez_lock_object (info.ref);
+  }
+  NAMED_CONTAINER_APPEND (scheme_refs, &info);
+  return ref;
 }
 
 static Lisp_Object
 scheme_make_pure (Lisp_Object ref)
 {
-  NAMED_CONTAINER_APPEND (pure_refs, &ref);
-  return ref;
+  return record_scheme_ref (ref, rt_pure);
 }
 
 static bool
@@ -464,15 +565,6 @@ mark_and_enqueue (Lisp_Object obj)
 }
 
 static void
-add_movable_ref (Lisp_Object *ptr, bool should_unlock)
-{
-  // Usually but not always a valid assumption:
-  // eassert ((chez_uptr) ptr < 0x7fff00000000);
-  struct movable_lisp_ref ref = {ptr, *ptr, should_unlock};
-  container_append (&movable_refs, &ref);
-}
-
-static void
 mark_object_ptr (Lisp_Object *ptr)
 {
   Lisp_Object obj = *ptr;
@@ -480,7 +572,7 @@ mark_object_ptr (Lisp_Object *ptr)
     return;
 
   mark_object (obj);
-  add_movable_ref (ptr, true);
+  record_scheme_ref_ptr (ptr, rt_trace);
 }
 
 static void
@@ -1234,13 +1326,13 @@ xrealloc (void *block, size_t size)
       if (block != NULL)
         {
           struct malloc_block key = {block};
-          container_sort (&malloc_blocks);
-          found = container_search (&malloc_blocks, &key);
+          found = container_search
+            (&malloc_blocks, &key, malloc_block_cmp, true);
         }
       if (found)
         {
           *found = b;
-          malloc_blocks.is_sorted = false;
+          malloc_blocks.sorted_by = NULL;
         }
       else
         NAMED_CONTAINER_APPEND (malloc_blocks, &b);
@@ -1269,7 +1361,8 @@ xfree (void *block)
 
 #ifdef HAVE_CHEZ_SCHEME
   struct malloc_block key = {block, -1};
-  struct malloc_block *found = container_search (&malloc_blocks, &key);
+  struct malloc_block *found = container_search
+    (&malloc_blocks, &key, malloc_block_cmp, true);
   eassert (found);
   *found = key;
 #endif
@@ -3196,7 +3289,7 @@ DEFUN ("cons", Fcons, Scons, 2, 2, 0,
 {
 #ifdef HAVE_CHEZ_SCHEME
   Lisp_Object val = UNCHEZ (chez_cons (CHEZ (car), CHEZ (cdr)));
-  scheme_dont_track (val, "cons");
+  scheme_track (val);
   eassert (CONSP(val));
   return val;
 #else /* not HAVE_CHEZ_SCHEME */
@@ -4132,7 +4225,7 @@ Its value is void, and its function definition and property list are nil.  */)
   CHECK_STRING (name);
   Lisp_Object sstr = to_scheme_string (name);
   Lisp_Object p = UNCHEZ (scheme_call1 ("gensym", CHEZ (sstr)));
-  scheme_dont_track (p, "gensym");
+  scheme_track (p);
   return p;
 #else /* not HAVE_CHEZ_SCHEME */
   Lisp_Object val;
@@ -5377,18 +5470,7 @@ static void
 mark_maybe_object (Lisp_Object obj)
 {
 #ifdef HAVE_CHEZ_SCHEME
-  void *found = container_search (&tracked_refs, &obj);
-  if (found)
-    {
-      NAMED_CONTAINER_APPEND (stack_refs, &obj);
-      mark_object (obj);
-    }
-  else
-    {
-      found = container_search (&tracked_pseudorefs, &obj);
-      if (found)
-        NAMED_CONTAINER_APPEND (stack_refs, &obj);
-    }
+  record_scheme_ref (obj, rt_trace_uncertain);
 #else
 #if USE_VALGRIND
   if (valgrind_p)
@@ -5599,11 +5681,12 @@ mark_memory (void *start, void *end)
 	  || (uintptr_t) pp % alignof (Lisp_Object) == 0)
 	mark_maybe_object (*(Lisp_Object *) pp);
 #ifdef HAVE_CHEZ_SCHEME
-      if (IS_MAGIC_SCHEME_REF(*(Lisp_Object *)pp))
+      Lisp_Object obj = *(Lisp_Object *)pp;
+      if (IS_MAGIC_SCHEME_REF(obj))
         {
-          printf ("hooray: %p\n", (void *) CHEZ (*(Lisp_Object *)pp));
-          printf ("found1? %p\n", container_search (&tracked_refs, pp));
-          printf ("found2? %p\n", container_search (&stack_refs, pp));
+          printf ("*** hooray: %p\n", (CHEZ (obj)));
+          struct scheme_ref_info key = { .ref_ptr = (chez_ptr *) pp };
+          printf ("found? %p\n", container_search (&scheme_refs, &key, scheme_ref_ptr_cmp, false));
         }
 #endif
     }
@@ -8274,7 +8357,7 @@ init_alloc_once (void)
   for (chez_iptr i = 0; i < ARRAYELTS (lispsym); i++)
     {
       lispsym[i] = UNCHEZ (chez_string_to_symbol (defsym_name[i]));
-      scheme_dont_track (lispsym[i], "lispsym");
+      scheme_track (lispsym[i]);
     }
   eassert (chez_symbolp (CHEZ (Qnil)));
   eassert (CHEZ (Qnil) == chez_string_to_symbol ("nil"));
@@ -8480,61 +8563,10 @@ void memzero_with_nil (void *p, ptrdiff_t nbytes, ...)
 #endif
 
 #ifdef HAVE_CHEZ_SCHEME
-static bool
-may_be_valid (chez_ptr x)
-{
-  if (x == chez_false ||
-      chez_pairp(x) ||
-      chez_symbolp(x) ||
-      chez_fixnump(x) ||
-      chez_bignump(x) ||
-      chez_flonump(x) ||
-      chez_vectorp(x))
-    return true;
-
-  if (chez_stringp(x) ||
-      chez_procedurep(x) ||
-      chez_recordp(x))
-    return true;
-
-  // Valid Scheme types never used as Lisp values.
-  /* if (x == chez_true || */
-  /*     x == chez_nil || */
-  /*     x == chez_eof_object || */
-  /*     x == chez_bwp_object || */
-  /*     x == chez_unbound || */
-  /*     x == chez_void || */
-  /*     chez_charp(x) || */
-  /*     chez_bignump(x) || */
-  /*     chez_stringp(x) || */
-  /*     chez_ratnump(x) || */
-  /*     chez_inexactnump(x) || */
-  /*     chez_exactnump(x) || */
-  /*     chez_fxvectorp(x) || */
-  /*     chez_bytevectorp(x) || */
-  /*     chez_boxp(x) || */
-  /*     chez_codep(x) || */
-  /*     chez_portp(x)) */
-  /*   return true; */
-
-  return false;
-}
-
 Lisp_Object
 scheme_track (Lisp_Object p)
 {
-  if (IS_MAGIC_SCHEME_REF(p))
-    printf ("tracking %p\n", CHEZ (p));
-  eassert (may_be_valid (CHEZ (p)));
-  NAMED_CONTAINER_APPEND (tracked_refs, &p);
-  /* if (chez_bytevectorp (p)) */
-  /*   { */
-  /*     void *ptr = chez_bytevector_data (p); */
-  /*     NAMED_CONTAINER_APPEND (tracked_pseudorefs, &ptr); */
-  /*     struct malloc_block b = {ptr, chez_bytevector_length (p)}; */
-  /*     NAMED_CONTAINER_APPEND (malloc_blocks, &b); */
-  /*   } */
-  return p;
+  return record_scheme_ref (p, rt_tracked);
 }
 
 Lisp_Object
@@ -8704,20 +8736,20 @@ before_scheme_gc (void)
 
   gc_was_deferred = false;
 
-  memgrep(0xdeadface0000000f, 0xffffffff0000000f, 8);
+  //memgrep(0xdeadface0000000f, 0xffffffff0000000f, 8);
 
-  //search_in_range((chez_ptr)0xdeadface0003280f, 0x819000, 0x101e000);
+  // TODO(jrw): Should not be necessary because globals are always
+  // referenced through symbols.
+  for (Lisp_Object *global_ptr = (Lisp_Object *) &globals;
+       (void *) global_ptr < (void *) &globals.FIRST_NON_LISP_GLOBAL;
+       global_ptr++)
+    {
+      record_scheme_ref_ptr (global_ptr, rt_trace);
+    }
 
-  container_sort (&tracked_refs);
-  printf("tracked refs before gc: %lu\n", tracked_refs.size);
-  container_uniq (&tracked_refs);
-  printf("unique tracked refs before gc: %lu\n", tracked_refs.size);
-
-  container_sort (&tracked_pseudorefs);
+  printf("tracked refs before mark: %lu\n", scheme_refs.size);
 
   container_reset (&mark_queue);
-  container_reset (&movable_refs);
-  container_reset (&stack_refs);
 
   printf ("malloc_blocks 1: %lu\n", malloc_blocks.size);
   container_delete_if (&malloc_blocks, malloc_block_empty);
@@ -8731,15 +8763,6 @@ before_scheme_gc (void)
                      (char *) b->start + b->size);
     }
 
-  // TODO(jrw): Should not be necessary because globals are always
-  // referenced through symbols.
-  for (Lisp_Object *global_ptr = (Lisp_Object *) &globals;
-       (void *) global_ptr < (void *) &globals.FIRST_NON_LISP_GLOBAL;
-       global_ptr++)
-    {
-      add_movable_ref (global_ptr, true);
-    }
-
   void *end;
   SET_STACK_TOP_ADDRESS (&end);
   garbage_collect_1 (end);
@@ -8751,130 +8774,103 @@ before_scheme_gc (void)
       set_mark_bit (*NAMED_CONTAINER_REF (mark_queue, i), false);
     }
 
-  // TODO(jrw): Surely a more elegant solution is possible!
-  FOR_NAMED_CONTAINER (i, tracked_refs)
-    {
-      Lisp_Object *ref_ptr = NAMED_CONTAINER_REF(tracked_refs, i);
-      add_movable_ref (ref_ptr, false);
-    }
+  printf("tracked refs after mark: %lu\n", scheme_refs.size);
+  /* container_uniq (&scheme_refs, scheme_ref_memcmp, NULL); */
+  /* printf("unique tracked refs after mark: %lu\n", scheme_refs.size); */
 
-  printf("stack refs before gc: %lu\n", stack_refs.size);
-  printf("tracked psueudorefs before gc: %lu\n", tracked_pseudorefs.size);
   eassert (gc_vector == chez_false);
-  gc_vector = chez_make_vector (movable_refs.size + tracked_refs.size, chez_false);
+  gc_vector = chez_make_vector (scheme_refs.size, chez_false);
   chez_lock_object (gc_vector);
-  FOR_NAMED_CONTAINER (i, tracked_refs)
+  FOR_NAMED_CONTAINER (i, scheme_refs)
     {
-      Lisp_Object ref = *NAMED_CONTAINER_REF(tracked_refs, i);
-      eassert (may_be_valid (CHEZ (ref)));
-      chez_lock_object (CHEZ (ref));
-      chez_vector_set (gc_vector, i, CHEZ (ref));
+      NAMED_CONTAINER_REF_VAR (info, scheme_refs, i);
+      if (!IS_VALID_REF_TYPE (info->type))
+        continue;
+      eassert (may_be_valid (info->ref));
+      if (info->ref_ptr)
+        {
+          info->ref = *info->ref_ptr;
+          if (IS_MAGIC_SCHEME_REF(UNCHEZ(info->ref)))
+            {
+              printf ("*** unlocking %p at %p with type %u\n", info->ref, info->ref_ptr, info->type);
+            }
+          eassert (chez_locked_objectp (info->ref));
+          chez_unlock_object (info->ref);
+        }
+      chez_vector_set (gc_vector, i, info->ref);
     }
-  FOR_NAMED_CONTAINER (i, movable_refs)
-    {
-      struct movable_lisp_ref *ref = NAMED_CONTAINER_REF (movable_refs, i);
-      Lisp_Object obj = *ref->ptr;
-      ref->val = obj;
-      /* // XXX */
-      /* if (i == 0) */
-      /*   { */
-      /*     printf ("unlocking %p at %p\n", CHEZ (obj), ref->ptr); */
-      /*     chez_unlock_object (CHEZ (obj)); */
-      /*   } */
-      if (ref->should_unlock)
-        chez_unlock_object (CHEZ (obj));
-      chez_vector_set (gc_vector, i + tracked_refs.size, CHEZ (obj));
-    }
-  FOR_NAMED_CONTAINER (i, stack_refs)
-    {
-      Lisp_Object ref = *NAMED_CONTAINER_REF(stack_refs, i);
-      chez_unlock_object (CHEZ (ref));
-      chez_lock_object (CHEZ (ref));
-      eassert (chez_locked_objectp (CHEZ (ref)));
-    }
-  FOR_NAMED_CONTAINER (i, pure_refs)
-    {
-      Lisp_Object ref = *NAMED_CONTAINER_REF(pure_refs, i);
-      chez_unlock_object (CHEZ (ref));
-      chez_lock_object (CHEZ (ref));
-      eassert (chez_locked_objectp (CHEZ (ref)));
-    }
-  /* FOR_NAMED_CONTAINER (i, tracked_refs) */
-  /*   { */
-  /*     Lisp_Object ref = *NAMED_CONTAINER_REF(tracked_refs, i); */
-  /*     if (BUFFERP (ref) || */
-  /*         CHAR_TABLE_P (ref) || */
-  /*         FRAMEP (ref) || */
-  /*         SYMBOLP (ref)) */
-  /*       { */
-  /*         chez_unlock_object (ref); */
-  /*         chez_lock_object (ref); */
-  /*       } */
-  /*   } */
 
-  printf ("movable_refs_size: %lu\n", movable_refs.size);
+  int num_unlocked = 0;
+  FOR_NAMED_CONTAINER (i, scheme_refs)
+    {
+      NAMED_CONTAINER_REF_VAR (info, scheme_refs, i);
+      if (info->type == rt_tracked)
+        if (!chez_locked_objectp (info->ref))
+          ++num_unlocked;
+    }
+
+  printf ("fully unlocked objects: %d\n", num_unlocked);
+
   return true;
 }
 
 void
 after_scheme_gc (void)
 {
-  size_t num_moved1 = 0;
-  size_t num_moved2 = 0;
+  size_t num_moved = 0;
 
-  size_t offset = tracked_refs.size;
-  FOR_NAMED_CONTAINER (i, movable_refs)
+  FOR_NAMED_CONTAINER (i, scheme_refs)
     {
-      eassert (i + offset < chez_vector_length (gc_vector));
-      Lisp_Object new_ref = UNCHEZ (chez_vector_ref (gc_vector, i + offset));
-      struct movable_lisp_ref *old_ref = NAMED_CONTAINER_REF (movable_refs, i);
-      if (CHEZ (*old_ref->ptr) != CHEZ (new_ref))
+      NAMED_CONTAINER_REF_VAR (ref_info, scheme_refs, i);
+      chez_ptr new_ref = chez_vector_ref (gc_vector, i);
+
+      if (!ref_info->ref_ptr)
+          continue;
+
+      // Undo previous unlock.
+      if (IS_MAGIC_SCHEME_REF(UNCHEZ(new_ref)))
         {
-          eassert (CHEZ (*old_ref->ptr) == CHEZ (old_ref->val) ||
-                   CHEZ (*old_ref->ptr) == CHEZ (new_ref) ||
-                   (chez_flonump (CHEZ (new_ref)) &&
-                    (chez_flonum_value (CHEZ (new_ref)) ==
-                     chez_flonum_value (CHEZ (*old_ref->ptr))) &&
-                    (chez_flonum_value (CHEZ (new_ref)) ==
-                     chez_flonum_value (CHEZ (old_ref->val)))));
-          if (!EQ (new_ref, old_ref->val))
+          printf ("*** re-locking %p\n", new_ref);
+        }
+      chez_lock_object (new_ref);
+      continue;
+
+      chez_ptr old_ref = ref_info->ref;
+      eassert (may_be_valid (old_ref));
+
+      if (old_ref != new_ref)
+        {
+          chez_ptr *old_ref_ptr = ref_info->ref_ptr;
+          if (IS_MAGIC_SCHEME_REF(UNCHEZ(old_ref)) ||
+              IS_MAGIC_SCHEME_REF(UNCHEZ(new_ref)) ||
+              IS_MAGIC_SCHEME_REF(UNCHEZ(*old_ref_ptr)))
             {
-              if (IS_MAGIC_SCHEME_REF(old_ref->val) ||
-                  IS_MAGIC_SCHEME_REF(new_ref) ||
-                  IS_MAGIC_SCHEME_REF(*old_ref->ptr))
-              {
-                Lisp_Object old_val = old_ref->val;
-                Lisp_Object *where = old_ref->ptr;
-                printf("moved %p => %p at %p\n",
-                       CHEZ (old_val),
-                       CHEZ (new_ref),
-                       where);
-                FOR_NAMED_CONTAINER (i, malloc_blocks)
-                  {
-                    struct malloc_block *b = NAMED_CONTAINER_REF (malloc_blocks, i);
-                    if (b->start <= (void *) where && (char *) where < ((char*) b->start + b->size))
-                      {
-                        printf("in malloc block %p\n", b->start);
-                      }
-                  }
-                /* search_in_range(old_val, 0x819000, 0x1069000); */
-                /* search_in_range(old_val, 0xc42ca8, 0); */
-                /* search_in_range(old_val, 0xc42ca8, 0x819000); */
-              }
-              num_moved2++;
-              *old_ref->ptr = new_ref;
+              printf("*** moved %p => %p at %p\n",
+                     old_ref, new_ref, old_ref_ptr);
+              FOR_NAMED_CONTAINER (i, malloc_blocks)
+                {
+                  NAMED_CONTAINER_REF_VAR (b, malloc_blocks, i);
+                  if (b->start <= (void *) old_ref_ptr &&
+                      (char *) old_ref_ptr < ((char*) b->start + b->size))
+                    {
+                      printf("in malloc block %p\n", b->start);
+                    }
+                }
             }
+          eassert (*old_ref_ptr == old_ref ||
+                   *old_ref_ptr == new_ref ||
+                   (chez_flonump (new_ref) &&
+                    (chez_flonum_value (old_ref) ==
+                     chez_flonum_value (*old_ref_ptr)) &&
+                    (chez_flonum_value (new_ref) ==
+                     chez_flonum_value (*old_ref_ptr))));
+          num_moved++;
+          ref_info->ref = new_ref;
+          *old_ref_ptr = new_ref;
         }
     }
 
-  FOR_NAMED_CONTAINER (i, tracked_refs)
-    {
-      Lisp_Object ref = *NAMED_CONTAINER_REF(tracked_refs, i);
-      eassert (may_be_valid (CHEZ (ref)));
-      if (chez_vector_ref (gc_vector, i) != CHEZ (ref))
-        num_moved1++;
-      chez_unlock_object (CHEZ (ref));
-    }
+  container_delete_if (&scheme_refs, scheme_ref_dead_or_trace);
 
   unsigned long guardian_count = 0;
   while (true)
@@ -8891,8 +8887,7 @@ after_scheme_gc (void)
       ++guardian_count;
     }
 
-  printf ("refs moved in gc1: %lu\n", num_moved1);
-  printf ("refs moved in gc2: %lu\n", num_moved2);
+  printf ("refs moved in gc: %lu\n", num_moved);
   printf ("guardian objects found: %lu\n", guardian_count);
   chez_unlock_object (gc_vector);
   gc_vector = chez_false;

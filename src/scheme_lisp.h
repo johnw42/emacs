@@ -175,158 +175,35 @@ void visit_buffer_lisp_refs (struct buffer *b, lisp_ref_visitor_fun fun, void *d
 
 void alloc_preinit (void);
 
+typedef int (*compare_fun)(const void *, const void *);
+typedef void (*merge_fun)(void *, const void *);
+
 struct container {
   void *data;
   size_t size;
   size_t capacity;
   size_t elem_size;
-  int (*compare)(const void *, const void *);
-  bool is_sorted;
+  compare_fun sorted_by;
 };
+
+void *container_ref (struct container *c, size_t i);
+void container_config (struct container *c, size_t elem_size);
+void container_init (struct container *c, size_t elem_size);
+void container_free (struct container *c);
+void container_reset (struct container *c);
+void container_reserve (struct container *c, size_t min_capacity);
+void container_sort (struct container *c, compare_fun compare);
+void *container_search (struct container *c, const void *key, compare_fun compare, bool force_sort);
+size_t container_find_all (struct container *c, const void *key, compare_fun compare, size_t *begin, size_t *end);
+void container_append (struct container *c, void *item);
+void container_delete_if (struct container *c, bool (*pred)(const void *));
+void container_uniq (struct container *c, compare_fun compare, merge_fun merge);
+
 
 #define FOR_CONTAINER(i, c) for (size_t i = 0; i < (c)->size; i++)
 
 #define CONTAINER_REF(type, c, i) \
   (eassume ((c)->elem_size == sizeof (type)), ((type *) (c)->data) + (i))
-
-INLINE void *
-container_ref (struct container *c, size_t i)
-{
-  return (char *) c->data + i * c->elem_size;
-}
-
-INLINE void
-container_config (struct container *c, size_t elem_size, int (*compare)(const void *, const void *))
-{
-  c->elem_size = elem_size;
-  c->compare = compare;
-}
-
-INLINE void
-container_init (struct container *c, size_t elem_size, int (*compare)(const void *, const void *))
-{
-  c->data = NULL;
-  c->size = 0;
-  c->capacity = 0;
-  c->is_sorted = false;
-  container_config(c, elem_size, compare);
-}
-
-INLINE void
-container_free (struct container *c)
-{
-  free (c->data);
-  c->size = 0;
-  c->capacity = 0;
-}
-
-INLINE void
-container_reset (struct container *c)
-{
-  c->size = 0;
-}
-
-INLINE void
-container_reserve (struct container *c, size_t min_capacity)
-{
-  if (min_capacity > c->capacity)
-    {
-      size_t new_capacity = 1;
-      while (new_capacity < min_capacity)
-        new_capacity *= 2;
-      eassert (new_capacity >= min_capacity);
-      c->data = reallocarray (c->data, new_capacity, c->elem_size);
-      c->capacity  = new_capacity;
-      eassert (c->data);
-    }
-  eassert (min_capacity == 0 || c->data);
-}
-
-INLINE void
-container_sort (struct container *c)
-{
-  if (!c->is_sorted)
-    qsort (c->data, c->size, c->elem_size, c->compare);
-}
-
-INLINE void *
-container_search (struct container *c, const void *key)
-{
-  eassert (c->compare);
-
-  if (c->is_sorted)
-    return bsearch (key, c->data, c->size, c->elem_size, c->compare);
-
-  FOR_CONTAINER (i, c)
-    {
-      void *found = container_ref (c, i);
-      if (c->compare (key, found) == 0)
-        return found;
-    }
-  return NULL;
-}
-
-INLINE void
-container_append (struct container *c, void *item)
-{
-  container_reserve (c, c->size + 1);
-  char *dest = container_ref (c, c->size);
-  memcpy (dest,
-          item, c->elem_size);
-  if (c->size == 0)
-    c->is_sorted = true;
-  else if (c->is_sorted && c->compare)
-    {
-      if (c->compare (container_ref (c, c->size - 1), dest) > 0)
-        c->is_sorted = false;
-    }
-  c->size++;
-}
-
-INLINE void
-container_delete_if (struct container *c, bool (*pred)(const void *))
-{
-  size_t j = 0;
-  FOR_CONTAINER (i, c)
-    {
-      eassert (j <= i);
-      if (pred (container_ref (c, i)))
-        {
-          if (i != j)
-            {
-              memcpy (container_ref (c, j),
-                      container_ref (c, i),
-                      c->elem_size);
-            }
-          j++;
-        }
-    }
-  c->size = j;
-}
-
-INLINE void
-container_uniq (struct container *c)
-{
-  container_sort (c);
-
-  size_t j = 0;
-  FOR_CONTAINER (i, c)
-    if (i > 0)
-      {
-        eassert (j <= i);
-        if (c->compare (container_ref (c, j),
-                        container_ref (c, i)) != 0)
-          {
-            j++;
-            if (i != j)
-              {
-                memcpy (container_ref (c, j),
-                        container_ref (c, i),
-                        c->elem_size);
-              }
-          }
-      }
-}
 
 #define NAMED_CONTAINER_DECL(name, type)                                \
   struct container name;                                                \
@@ -336,21 +213,23 @@ container_uniq (struct container *c)
 #define EXTERN_NAMED_CONTAINER(name, type) extern NAMED_CONTAINER_DECL (name, type)
 #define STATIC_NAMED_CONTAINER(name, type) static NAMED_CONTAINER_DECL (name, type)
 #define NAMED_CONTAINER_REF(name, i) CONTAINER_REF (name##_type, &name, i)
+#define NAMED_CONTAINER_REF_VAR(var, name, i) name##_type *var = CONTAINER_REF (name##_type, &name, i)
 #define NAMED_CONTAINER_APPEND(name, val)                       \
-  (name.elem_size = sizeof (name##_type), \
+  (name.elem_size = sizeof (name##_type),                       \
    container_append (&name, ASSERT_TYPE (name##_type *, val)))
-#define NAMED_CONTAINER_CONFIG(name, cmp)                               \
-  container_config (&name, sizeof (name##_type), cmp)
+#define NAMED_CONTAINER_CONFIG(name)                    \
+  container_config (&name, sizeof (name##_type))
 #define FOR_NAMED_CONTAINER(i, name) FOR_CONTAINER (i, &name)
 
 void mark_lisp_refs (void);
 bool mark_and_enqueue (Lisp_Object obj);
 
+bool may_be_valid (chez_ptr x);
+
 #define IS_SCHEME_REF(ref, num) (CHEZ (ref) == (void *)num)
 #define IS_MAGIC_SCHEME_REF(p) \
   (false ||                         \
-   IS_SCHEME_REF (p, 0x4165a19f) || \
-   IS_SCHEME_REF (p, 0x4165a1cb) || \
+   IS_SCHEME_REF (p, 0x443435b9) || \
    false)
 //#define IS_MAGIC_SCHEME_REF_ADDR(p) // false ((chez_ptr *)0x7fffffffcdc8)
 
