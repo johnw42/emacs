@@ -760,7 +760,8 @@ To define a user option, use `defcustom' instead of `defvar'.
 usage: (defvar SYMBOL &optional INITVALUE DOCSTRING)  */)
   (Lisp_Object args)
 {
-  Lisp_Object sym, tem, tail;
+  ENTER_LISP_FRAME (args);
+  LISP_LOCALS (sym, tem, tail);
 
   sym = XCAR (args);
   tail = XCDR (args);
@@ -810,7 +811,7 @@ usage: (defvar SYMBOL &optional INITVALUE DOCSTRING)  */)
 	 package could try to make the variable unbound.  */
     }
 
-  return sym;
+  EXIT_LISP_FRAME (sym);
 }
 
 DEFUN ("defconst", Fdefconst, Sdefconst, 2, UNEVALLED, 0,
@@ -1116,23 +1117,29 @@ Lisp_Object
 internal_catch (Lisp_Object tag,
 		Lisp_Object (*func) (Lisp_Object), Lisp_Object arg)
 {
+  ENTER_LISP_FRAME (tag);
+
   /* This structure is made part of the chain `catchlist'.  */
   struct handler *c = push_handler (tag, CATCHER);
 
   /* Call FUNC.  */
   if (! sys_setjmp (c->jmp))
     {
-      Lisp_Object val = func (arg);
+      LISP_LOCALS (val);
+      val = func (arg);
       eassert (handlerlist == c);
       handlerlist = c->next;
-      return val;
+      EXIT_LISP_FRAME (val);
     }
   else
     { /* Throw works by a longjmp that comes right here.  */
-      Lisp_Object val = handlerlist->val;
+      printf ("longjmp to internal_catch\n");
+      gdb_break();
+      LISP_LOCALS (val);
+      val = handlerlist->val;
       clobbered_eassert (handlerlist == c);
       handlerlist = handlerlist->next;
-      return val;
+      EXIT_LISP_FRAME (val);
     }
 }
 
@@ -1305,6 +1312,8 @@ internal_lisp_condition_case (Lisp_Object var, Lisp_Object bodyform,
       struct handler *c = push_handler (condition, CONDITION_CASE);
       if (sys_setjmp (c->jmp))
 	{
+          printf ("longjmp to internal_lisp_condition_case\n");
+          gdb_break();
 	  Lisp_Object val = handlerlist->val;
 	  Lisp_Object volatile *chosen_clause = clauses;
 	  for (struct handler *h = handlerlist->next; h != oldhandlerlist;
@@ -1355,6 +1364,7 @@ internal_condition_case (Lisp_Object (*bfun) (void), Lisp_Object handlers,
   struct handler *c = push_handler (handlers, CONDITION_CASE);
   if (sys_setjmp (c->jmp))
     {
+      printf ("longjmp to internal_condition_case\n");
       gdb_break();
       Lisp_Object val = handlerlist->val;
       clobbered_eassert (handlerlist == c);
@@ -1380,6 +1390,7 @@ internal_condition_case_1 (Lisp_Object (*bfun) (Lisp_Object), Lisp_Object arg,
   struct handler *c = push_handler (handlers, CONDITION_CASE);
   if (sys_setjmp (c->jmp))
     {
+      printf ("longjmp to internal_condition_case_1\n");
       gdb_break();
       Lisp_Object val = handlerlist->val;
       clobbered_eassert (handlerlist == c);
@@ -1408,6 +1419,7 @@ internal_condition_case_2 (Lisp_Object (*bfun) (Lisp_Object, Lisp_Object),
   struct handler *c = push_handler (handlers, CONDITION_CASE);
   if (sys_setjmp (c->jmp))
     {
+      printf ("longjmp to internal_condition_case_2\n");
       gdb_break();
       Lisp_Object val = handlerlist->val;
       clobbered_eassert (handlerlist == c);
@@ -1438,6 +1450,7 @@ internal_condition_case_n (Lisp_Object (*bfun) (ptrdiff_t, Lisp_Object *),
   struct handler *c = push_handler (handlers, CONDITION_CASE);
   if (sys_setjmp (c->jmp))
     {
+      printf ("longjmp to internal_condition_case_n\n");
       gdb_break();
       Lisp_Object val = handlerlist->val;
       clobbered_eassert (handlerlist == c);
@@ -2092,10 +2105,13 @@ LEXICAL can also be an actual lexical environment, in the form of an
 alist mapping symbols to their value.  */)
   (Lisp_Object form, Lisp_Object lexical)
 {
+  ENTER_LISP_FRAME (form, lexical);
   ptrdiff_t count = SPECPDL_INDEX ();
   specbind (Qinternal_interpreter_environment,
 	    CONSP (lexical) || NILP (lexical) ? lexical : list1 (Qt));
-  return unbind_to (count, eval_sub (form));
+  LISP_LOCALS (val);
+  val = unbind_to (count, eval_sub (form));
+  EXIT_LISP_FRAME (val);
 }
 
 /* Grow the specpdl stack by one entry.

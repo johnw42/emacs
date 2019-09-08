@@ -736,13 +736,14 @@ one level up.
 This function is called by the editor initialization to begin editing.  */)
   (void)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (buffer);
   ptrdiff_t count = SPECPDL_INDEX ();
-  Lisp_Object buffer;
 
   /* If we enter while input is blocked, don't lock up here.
      This may happen through the debugger during redisplay.  */
   if (input_blocked_p ())
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
 
   if (command_loop_level >= 0
       && current_buffer != XBUFFER (XWINDOW (selected_window)->contents))
@@ -765,7 +766,7 @@ This function is called by the editor initialization to begin editing.  */)
     temporarily_switch_to_single_kboard (SELECTED_FRAME ());
 
   recursive_edit_1 ();
-  return unbind_to (count, Qnil);
+  EXIT_LISP_FRAME_WITH (unbind_to (count, Qnil));
 }
 
 void
@@ -1065,6 +1066,8 @@ command_loop (void)
   /* At least on GNU/Linux, saving signal mask is important here.  */
   if (sigsetjmp (return_to_command_loop, 1) != 0)
     {
+      printf ("longjmp to command_loop\n");
+      gdb_break();
       /* Comes here from handle_sigsegv (see sysdep.c) and
 	 stack_overflow_handler (see w32fns.c).  */
 #ifdef WINDOWSNT
@@ -1078,10 +1081,11 @@ command_loop (void)
 #endif /* HAVE_STACK_OVERFLOW_HANDLING */
   if (command_loop_level > 0 || minibuf_level > 0)
     {
-      Lisp_Object val;
+      ENTER_LISP_FRAME ();
+      LISP_LOCALS (val);
       val = internal_catch (Qexit, command_loop_2, Qnil);
       executing_kbd_macro = Qnil;
-      return val;
+      EXIT_LISP_FRAME (val);
     }
   else
     while (1)
@@ -1128,6 +1132,8 @@ top_level_2 (void)
 static Lisp_Object
 top_level_1 (Lisp_Object ignore)
 {
+  ENTER_LISP_FRAME (ignore);
+
   /* On entry to the outer level, run the startup file.  */
   if (!NILP (Vtop_level))
 #ifdef HAVE_CHEZ_SCHEME
@@ -1139,7 +1145,7 @@ top_level_1 (Lisp_Object ignore)
     message1 ("Bare impure Emacs (standard Lisp code not loaded)");
   else
     message1 ("Bare Emacs (standard Lisp code not loaded)");
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 DEFUN ("top-level", Ftop_level, Stop_level, 0, 0, "",
@@ -2573,6 +2579,8 @@ read_char (int commandflag, Lisp_Object map,
   jmpcount = SPECPDL_INDEX ();
   if (sys_setjmp (local_getcjmp))
     {
+      printf ("longjmp to read_char\n");
+      gdb_break();
       /* Handle quits while reading the keyboard.  */
       /* We must have saved the outer value of getcjmp here,
 	 so restore it now.  */

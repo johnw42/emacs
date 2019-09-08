@@ -1132,6 +1132,8 @@ Return t if the file exists and loads successfully.  */)
   (Lisp_Object file, Lisp_Object noerror, Lisp_Object nomessage,
    Lisp_Object nosuffix, Lisp_Object must_suffix)
 {
+  SUSPEND_GC();
+
   FILE *stream;
   int fd;
   int fd_index UNINIT;
@@ -1164,7 +1166,7 @@ Return t if the file exists and loads successfully.  */)
       file = internal_condition_case_1 (Fsubstitute_in_file_name, file,
 					Qt, load_error_handler);
       if (NILP (file))
-	return Qnil;
+	RETURN_RESUME_GC (Qnil);
     }
   else
     file = Fsubstitute_in_file_name (file);
@@ -1213,7 +1215,7 @@ Return t if the file exists and loads successfully.  */)
     {
       if (NILP (noerror))
 	report_file_error ("Cannot open load file", file);
-      return Qnil;
+      RETURN_RESUME_GC (Qnil);
     }
 
   /* Tell startup.el whether or not we found the user's init file.  */
@@ -1231,7 +1233,7 @@ Return t if the file exists and loads successfully.  */)
       else
 	handler = Ffind_file_name_handler (found, Qload);
       if (! NILP (handler))
-	return call5 (handler, Qload, found, noerror, nomessage, Qt);
+	RETURN_RESUME_GC (call5 (handler, Qload, found, noerror, nomessage, Qt));
 #ifdef DOS_NT
       /* Tramp has to deal with semi-broken packages that prepend
 	 drive letters to remote files.  For that reason, Tramp
@@ -1258,7 +1260,7 @@ Return t if the file exists and loads successfully.  */)
 
 #ifdef HAVE_MODULES
   if (suffix_p (found, MODULES_SUFFIX))
-    return unbind_to (count, Fmodule_load (found));
+    RETURN_RESUME_GC (unbind_to (count, Fmodule_load (found)));
 #endif
 
   /* Check if we're stuck in a recursive load cycle.
@@ -1378,7 +1380,7 @@ Return t if the file exists and loads successfully.  */)
 	  val = call4 (Vload_source_file_function, found, hist_file_name,
 		       NILP (noerror) ? Qnil : Qt,
 		       (NILP (nomessage) || force_load_messages) ? Qnil : Qt);
-	  return unbind_to (count, val);
+	  RETURN_RESUME_GC (unbind_to (count, val));
 	}
     }
 
@@ -1473,7 +1475,7 @@ Return t if the file exists and loads successfully.  */)
 	message_with_string ("Loading %s...done", file, 1);
     }
 
-  return Qt;
+  RETURN_RESUME_GC (Qt);
 }
 
 static bool
@@ -1879,17 +1881,17 @@ readevalloop (Lisp_Object readcharfun,
 	      Lisp_Object unibyte, Lisp_Object readfun,
 	      Lisp_Object start, Lisp_Object end)
 {
+  ENTER_LISP_FRAME (readcharfun, sourcename, unibyte, readfun, start, end);
+  LISP_LOCALS (val, lex_bound, macroexpand);
   int c;
-  Lisp_Object val;
   ptrdiff_t count = SPECPDL_INDEX ();
   struct buffer *b = 0;
   bool continue_reading_p;
-  Lisp_Object lex_bound;
   /* True if reading an entire buffer.  */
   bool whole_buffer = 0;
   /* True on the first time around.  */
   bool first_sexp = 1;
-  Lisp_Object macroexpand = intern ("internal-macroexpand-for-load");
+  macroexpand = intern ("internal-macroexpand-for-load");
   eassert (SYMBOLP (macroexpand));
 
   if (NILP (Ffboundp (macroexpand))
@@ -2067,6 +2069,7 @@ readevalloop (Lisp_Object readcharfun,
 		      infile0 || whole_buffer);
 
   unbind_to (count, Qnil);
+  EXIT_LISP_FRAME ();
 }
 
 DEFUN ("eval-buffer", Feval_buffer, Seval_buffer, 0, 5, "",

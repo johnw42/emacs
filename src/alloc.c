@@ -117,6 +117,12 @@ static bool valgrind_p;
 #define CHECK_NOT_ZERO(x) x
 #endif
 
+#define IS_MAGIC_SCHEME_REF(p)      \
+  (false ||                         \
+   IS_SCHEME_REF(p, 0x406d000f) ||  \
+   IS_SCHEME_REF(p, 0x409aaaaf) ||  \
+   false)
+
 #ifndef HAVE_CHEZ_SCHEME
 #ifdef GNU_LINUX
 /* The address where the heap starts.  */
@@ -322,12 +328,12 @@ const char *pending_malloc_warning;
 static void
 scheme_dont_track (Lisp_Object p, const char *note)
 {
-  char buf[4096];
-  sprintf (buf, "%s (%p)", note, CHEZ (p));
-  if (IS_MAGIC_SCHEME_REF(p))
-    printf ("*** not tracking %s\n", buf);
-  chez_lock_object (CHEZ(p));
-  chez_call2 (scheme_guardian, CHEZ (p), chez_string (buf));
+  /* char buf[4096]; */
+  /* sprintf (buf, "%s (%p)", note, CHEZ (p)); */
+  /* if (IS_MAGIC_SCHEME_REF(p)) */
+  /*   printf ("*** not tracking %s\n", buf); */
+  /* chez_lock_object (CHEZ(p)); */
+  /* chez_call2 (scheme_guardian, CHEZ (p), chez_string (buf)); */
 }
 
 enum scheme_ref_type
@@ -473,7 +479,6 @@ record_scheme_ref_ptr (Lisp_Object *ref_ptr, enum scheme_ref_type type)
       break;
     }
   eassert (may_be_valid (info.ref));
-  chez_lock_object (info.ref);
   NAMED_CONTAINER_APPEND (scheme_refs, &info);
 }
 
@@ -492,7 +497,6 @@ record_scheme_ref (Lisp_Object ref, enum scheme_ref_type type)
     default:
       eassert (may_be_valid (info.ref));
     }
-  chez_lock_object (info.ref);
   NAMED_CONTAINER_APPEND (scheme_refs, &info);
   return ref;
 }
@@ -3284,14 +3288,14 @@ DEFUN ("cons", Fcons, Scons, 2, 2, 0,
        doc: /* Create a new cons, give it CAR and CDR as components, and return it.  */)
   (Lisp_Object car, Lisp_Object cdr)
 {
+  ENTER_LISP_FRAME (car, cdr);
+  LISP_LOCALS (val);
 #ifdef HAVE_CHEZ_SCHEME
-  Lisp_Object val = UNCHEZ (chez_cons (CHEZ (car), CHEZ (cdr)));
+  val = UNCHEZ (chez_cons (CHEZ (car), CHEZ (cdr)));
   scheme_dont_track (val, "cons");
   eassert (CONSP(val));
-  return val;
+  EXIT_LISP_FRAME (val);
 #else /* not HAVE_CHEZ_SCHEME */
-  register Lisp_Object val;
-
   MALLOC_BLOCK_INPUT;
 
   if (cons_free_list)
@@ -3323,7 +3327,7 @@ DEFUN ("cons", Fcons, Scons, 2, 2, 0,
   consing_since_gc += sizeof (struct Lisp_Cons);
   total_free_conses--;
   cons_cells_consed++;
-  return val;
+  EXIT_LISP_FRAME (val);
 #endif /* not HAVE_CHEZ_SCHEME */
 }
 
@@ -8563,8 +8567,9 @@ void memzero_with_nil (void *p, ptrdiff_t nbytes, ...)
 Lisp_Object
 scheme_track (Lisp_Object p)
 {
-  chez_lock_object (CHEZ (p));
-  return record_scheme_ref (p, rt_track);
+  /* chez_lock_object (CHEZ (p)); */
+  /* return record_scheme_ref (p, rt_track); */
+  return p;
 }
 
 Lisp_Object
@@ -8734,24 +8739,27 @@ before_scheme_gc (void)
 
   gc_was_deferred = false;
 
+  eassert (STRINGP(empty_unibyte_string));
+  memgrep(0x409aaaaf, 0, 8);
+  //memgrep(0xdeadface0000000f, 0xffffffff0000000f, 8);
+
   ptrdiff_t pos = 0, count, frames_found = 0, entries_found = 0;
   union lisp_frame_record *records;
   while (walk_lisp_frame_records (&pos, &records, &count))
     {
       eassert (count > 0);
-      printf ("count: %ld\n", count);
-      /* while (count--) */
-      /*   { */
-      /*     printf("found %p at %p\n", */
-      /*            CHEZ(*records[count].ptr), */
-      /*            records[count].ptr); */
-      /*   } */
       frames_found++;
       entries_found += count;
+      /* printf ("count: %ld\n", count); */
+      for (ptrdiff_t i = 0; i < count; i++)
+        {
+          record_scheme_ref_ptr (records[i].ptr, rt_trace);
+          /* printf("found %p at %p\n", */
+          /*        CHEZ(*records[count].ptr), */
+          /*        records[count].ptr); */
+        }
     }
   printf ("found %ld entries in %ld frames\n", entries_found, frames_found);
-
-  //memgrep(0xdeadface0000000f, 0xffffffff0000000f, 8);
 
   // TODO(jrw): Should not be necessary because globals are always
   // referenced through symbols.
@@ -8810,12 +8818,15 @@ before_scheme_gc (void)
       eassert (may_be_valid (info->ref));
       if (info->ref_ptr)
         {
+          info->ref = *info->ref_ptr;
+        }
+      else
+        {
           if (IS_MAGIC_SCHEME_REF(UNCHEZ(info->ref)))
             {
-              printf ("*** unlocking %p at %p with type %u\n", info->ref, info->ref_ptr, info->type);
+              printf ("*** locking %p at %p with type %u\n", info->ref, info->ref_ptr, info->type);
             }
-          eassert (chez_locked_objectp (info->ref));
-          chez_unlock_object (info->ref);
+          chez_lock_object (info->ref);
         }
       chez_vector_set (gc_vector, i, info->ref);
     }
@@ -8830,18 +8841,25 @@ after_scheme_gc (void)
 
   FOR_NAMED_CONTAINER (i, scheme_refs)
     {
-      NAMED_CONTAINER_REF_VAR (ref_info, scheme_refs, i);
-      if (!ref_info->ref_ptr)
-        continue;
       chez_ptr new_ref = chez_vector_ref (gc_vector, i);
-      chez_ptr old_ref = ref_info->ref;
-      eassert (may_be_valid (old_ref));
+      if (new_ref == chez_false)
+        continue;
 
-      // Undo previous unlock.
-      chez_lock_object (ref_info->ref);
-      if (IS_MAGIC_SCHEME_REF(UNCHEZ(ref_info->ref)))
+      NAMED_CONTAINER_REF_VAR (ref_info, scheme_refs, i);
+      chez_ptr old_ref = ref_info->ref;
+
+      if (!ref_info->ref_ptr)
         {
-          printf ("*** re-locked %p\n", ref_info->ref);
+          eassert (old_ref == new_ref);
+
+          // Undo previous lock.
+          eassert (chez_locked_objectp (new_ref));
+          chez_unlock_object (new_ref);
+          if (IS_MAGIC_SCHEME_REF(UNCHEZ(new_ref)))
+            {
+              printf ("*** unlocked %p\n", new_ref);
+            }
+          continue;
         }
 
       if (old_ref != new_ref)

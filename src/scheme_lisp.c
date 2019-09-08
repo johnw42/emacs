@@ -455,8 +455,8 @@ static void
 gdb_print_scheme(char *buf, Lisp_Object obj)
 {
   suspend_scheme_gc();
-  if (STRINGP (obj))
-    obj = to_scheme_string (obj);
+  /* if (STRINGP (obj)) */
+  /*   obj = to_scheme_string (obj); */
   chez_ptr bvec = SCHEME_FPTR_CALL(print_to_bytevector, CHEZ (obj));
   chez_lock_object (bvec);
   eassert (chez_bytevectorp (bvec));
@@ -1144,8 +1144,11 @@ push_lisp_locals(bool already_initialized, int n, ...)
   for (int i = 0; i < n; i++)
     {
       Lisp_Object *ptr = va_arg(ap, Lisp_Object *);
+      eassert (ptr != (void*)0x7fffffffcc68);
       lisp_frame_records[lisp_frame_record_count++].ptr = ptr;
-      if (!already_initialized)
+      if (already_initialized)
+        eassert (may_be_valid (CHEZ (*ptr)));
+      else
         *ptr = UNCHEZ (chez_false);
     }
   va_end(ap);

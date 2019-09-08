@@ -95,7 +95,7 @@ extern chez_ptr scheme_guardian;
 #define SCHEME_PV_ADDR(pv) chez_vector_ref(pv, 1)
 #define SCHEME_PV_EPHEMERON(pv) chez_vector_ref(pv, 2)
 #define SCHEME_PV_ADDR_SET(pv, x) chez_vector_set(pv, 1, x)
-#define SCHEME_PV_EPHEMERON_SET(pv, x) chez_vector_set(pv, 2, x)
+#define SCHEME_PV_EPHEMERON_SET(pv, x) chez_vector_set(pv, 2, chez_false)  // XXX
 #define SCHEME_PV_LENGTH 3
 
 #define SCHEME_ALLOC_C_DATA(key, type) \
@@ -242,12 +242,12 @@ bool may_be_valid (chez_ptr x);
          _51,_52,_53,_54,_55,_56,_57,_58,_59,_60, \
          _61,_62,_63,N,...) N
 
-#define SCHEME_ENTER_LISP_FRAME(...) \
-    LISP_LOCALS_SELECT (__VA_ARGS__, LISP_LOCALS_ARGS_16, LISP_LOCALS_ARGS_15, LISP_LOCALS_ARGS_14, LISP_LOCALS_ARGS_13, LISP_LOCALS_ARGS_12, LISP_LOCALS_ARGS_11, LISP_LOCALS_ARGS_10, LISP_LOCALS_ARGS_9, LISP_LOCALS_ARGS_8, LISP_LOCALS_ARGS_7, LISP_LOCALS_ARGS_6, LISP_LOCALS_ARGS_5, LISP_LOCALS_ARGS_4, LISP_LOCALS_ARGS_3, LISP_LOCALS_ARGS_2, LISP_LOCALS_ARGS_1) (__VA_ARGS__)
+#define SCHEME_ENTER_LISP_FRAME(...)                                    \
+  LISP_LOCALS_SELECT (__VA_ARGS__ __VA_OPT__(,), LISP_LOCALS_ARGS_16, LISP_LOCALS_ARGS_15, LISP_LOCALS_ARGS_14, LISP_LOCALS_ARGS_13, LISP_LOCALS_ARGS_12, LISP_LOCALS_ARGS_11, LISP_LOCALS_ARGS_10, LISP_LOCALS_ARGS_9, LISP_LOCALS_ARGS_8, LISP_LOCALS_ARGS_7, LISP_LOCALS_ARGS_6, LISP_LOCALS_ARGS_5, LISP_LOCALS_ARGS_4, LISP_LOCALS_ARGS_3, LISP_LOCALS_ARGS_2, LISP_LOCALS_ARGS_1, LISP_LOCALS_ARGS_0) (__VA_ARGS__)
 #define LISP_LOCALS(...) \
-    LISP_LOCALS_SELECT (__VA_ARGS__, LISP_LOCALS_DECL_16, LISP_LOCALS_DECL_15, LISP_LOCALS_DECL_14, LISP_LOCALS_DECL_13, LISP_LOCALS_DECL_12, LISP_LOCALS_DECL_11, LISP_LOCALS_DECL_10, LISP_LOCALS_DECL_9, LISP_LOCALS_DECL_8, LISP_LOCALS_DECL_7, LISP_LOCALS_DECL_6, LISP_LOCALS_DECL_5, LISP_LOCALS_DECL_4, LISP_LOCALS_DECL_3, LISP_LOCALS_DECL_2, LISP_LOCALS_DECL_1) (__VA_ARGS__); \
-    PUSH_LISP_LOCALS (false, PP_NARG(__VA_ARGS__), LISP_LOCALS_SELECT(__VA_ARGS__, LISP_LOCALS_ADDR_16, LISP_LOCALS_ADDR_15, LISP_LOCALS_ADDR_14, LISP_LOCALS_ADDR_13, LISP_LOCALS_ADDR_12, LISP_LOCALS_ADDR_11, LISP_LOCALS_ADDR_10, LISP_LOCALS_ADDR_9, LISP_LOCALS_ADDR_8, LISP_LOCALS_ADDR_7, LISP_LOCALS_ADDR_6, LISP_LOCALS_ADDR_5, LISP_LOCALS_ADDR_4, LISP_LOCALS_ADDR_3, LISP_LOCALS_ADDR_2, LISP_LOCALS_ADDR_1)(__VA_ARGS__))
-#define LISP_LOCALS_SELECT(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16, macro, ...) macro
+  LISP_LOCALS_SELECT (__VA_ARGS__ __VA_OPT__(,), LISP_LOCALS_DECL_16, LISP_LOCALS_DECL_15, LISP_LOCALS_DECL_14, LISP_LOCALS_DECL_13, LISP_LOCALS_DECL_12, LISP_LOCALS_DECL_11, LISP_LOCALS_DECL_10, LISP_LOCALS_DECL_9, LISP_LOCALS_DECL_8, LISP_LOCALS_DECL_7, LISP_LOCALS_DECL_6, LISP_LOCALS_DECL_5, LISP_LOCALS_DECL_4, LISP_LOCALS_DECL_3, LISP_LOCALS_DECL_2, LISP_LOCALS_DECL_1, LISP_LOCALS_DECL_0) (__VA_ARGS__); \
+  push_lisp_locals (false, PP_NARG(__VA_ARGS__), LISP_LOCALS_SELECT (__VA_ARGS__ __VA_OPT__(,), LISP_LOCALS_ADDR_16, LISP_LOCALS_ADDR_15, LISP_LOCALS_ADDR_14, LISP_LOCALS_ADDR_13, LISP_LOCALS_ADDR_12, LISP_LOCALS_ADDR_11, LISP_LOCALS_ADDR_10, LISP_LOCALS_ADDR_9, LISP_LOCALS_ADDR_8, LISP_LOCALS_ADDR_7, LISP_LOCALS_ADDR_6, LISP_LOCALS_ADDR_5, LISP_LOCALS_ADDR_4, LISP_LOCALS_ADDR_3, LISP_LOCALS_ADDR_2, LISP_LOCALS_ADDR_1, LISP_LOCALS_ADDR_0) (__VA_ARGS__))
+#define LISP_LOCALS_SELECT(_0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16, macro, ...) macro
 #define LISP_LOCALS_DECL_16(n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12, n13, n14, n15, n16) LISP_LOCALS_DECL_1(n1); LISP_LOCALS_DECL_15 (n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12, n13, n14, n15, n16)
 #define LISP_LOCALS_ADDR_16(n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12, n13, n14, n15, n16) LISP_LOCALS_ADDR_1(n1), LISP_LOCALS_ADDR_15 (n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12, n13, n14, n15, n16)
 #define LISP_LOCALS_DECL_15(n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12, n13, n14, n15) LISP_LOCALS_DECL_1(n1); LISP_LOCALS_DECL_14 (n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12, n13, n14, n15)
@@ -272,7 +272,7 @@ bool may_be_valid (chez_ptr x);
 #define LISP_LOCALS_ADDR_6(n1, n2, n3, n4, n5, n6) LISP_LOCALS_ADDR_1(n1), LISP_LOCALS_ADDR_5 (n2, n3, n4, n5, n6)
 #define LISP_LOCALS_DECL_5(n1, n2, n3, n4, n5) LISP_LOCALS_DECL_1(n1); LISP_LOCALS_DECL_4 (n2, n3, n4, n5)
 #define LISP_LOCALS_ADDR_5(n1, n2, n3, n4, n5) LISP_LOCALS_ADDR_1(n1), LISP_LOCALS_ADDR_4 (n2, n3, n4, n5)
-#define LISP_LOCALS_DECL_4(n1, n2, n3, n4) LISP_LOCALS_DECL_1(n1); LISP_LOCALS_DECL_3 (n2, n3, n4)
+#define LISP_LOCALS_DECL_4(n1, n2, n3,  n4) LISP_LOCALS_DECL_1(n1); LISP_LOCALS_DECL_3 (n2, n3, n4)
 #define LISP_LOCALS_ADDR_4(n1, n2, n3, n4) LISP_LOCALS_ADDR_1(n1), LISP_LOCALS_ADDR_3 (n2, n3, n4)
 #define LISP_LOCALS_DECL_3(n1, n2, n3) LISP_LOCALS_DECL_1(n1); LISP_LOCALS_DECL_2 (n2, n3)
 #define LISP_LOCALS_ADDR_3(n1, n2, n3) LISP_LOCALS_ADDR_1(n1), LISP_LOCALS_ADDR_2 (n2, n3)
@@ -295,6 +295,11 @@ bool may_be_valid (chez_ptr x);
 #define LISP_LOCALS_ARGS_2(n1, n2) push_lisp_locals(true, 2, LISP_LOCALS_ADDR_2 (n1, n2))
 #define LISP_LOCALS_ARGS_1(n1) push_lisp_locals(true, 1, LISP_LOCALS_ADDR_1 (n1))
 
+// TODO(jrw)
+#define SUSPEND_GC()
+#define RESUME_GC()
+#define RETURN_RESUME_GC(...) return __VA_ARGS__
+
 #ifdef HAVE_CHEZ_SCHEME
 #define ENTER_LISP_FRAME(...)                                           \
   ptrdiff_t orig_lisp_frame_record_count = lisp_frame_record_count;     \
@@ -304,6 +309,14 @@ bool may_be_valid (chez_ptr x);
     {                                                           \
       lisp_frame_record_count = orig_lisp_frame_record_count;   \
       return __VA_ARGS__;                                       \
+    }                                                           \
+  while (0)
+#define EXIT_LISP_FRAME_WITH(expr)                              \
+  do                                                            \
+    {                                                           \
+      Lisp_Object temp##__LINE__ = expr;                        \
+      lisp_frame_record_count = orig_lisp_frame_record_count;   \
+      return temp##__LINE__;                                    \
     }                                                           \
   while (0)
 #define PUSH_LISP_LOCALS(...) push_lisp_locals (__VA_ARGS__)
@@ -336,6 +349,7 @@ bool walk_lisp_frame_records (ptrdiff_t *pos,
 #else
 #define ENTER_LISP_FRAME(...) ((void)0)
 #define EXIT_LISP_FRAME(...) return __VA_ARGS__
+#define EXIT_LISP_FRAME_WITH(expr) return (expr)
 #define LISP_LOCALS_DECL_1(n1) Lisp_Object n1
 #define LISP_LOCALS_ADDR_1(n1) ((void)0)
 #define PUSH_LISP_LOCALS(...) ((void)0)
@@ -350,8 +364,3 @@ bool walk_lisp_frame_records (ptrdiff_t *pos,
 #else
 #define IS_SCHEME_REF(ref, num) false
 #endif
-
-#define IS_MAGIC_SCHEME_REF(p) \
-  (false ||                         \
-   IS_SCHEME_REF (p, 0x40e9c009) || \
-   false)

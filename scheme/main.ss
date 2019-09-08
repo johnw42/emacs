@@ -251,8 +251,9 @@
      (string->utf8
       (call-with-string-output-port
        (lambda (port)
-         (put-datum port obj)
-         (put-char port #\x00))))))
+         (parameterize ([print-graph #t])
+           (put-datum port obj)
+           (put-char port #\x00)))))))
 
   (define-for-c (c-hashtable_values
                  scheme-object ((scheme-object obj)))

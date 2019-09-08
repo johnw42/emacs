@@ -2055,10 +2055,11 @@ DEFUN ("put", Fput, Sput, 3, 3, 0,
 It can be retrieved with `(get SYMBOL PROPNAME)'.  */)
   (Lisp_Object symbol, Lisp_Object propname, Lisp_Object value)
 {
+  ENTER_LISP_FRAME (symbol, propname, value);
   CHECK_SYMBOL (symbol);
   set_symbol_plist
     (symbol, Fplist_put (XSYMBOL (symbol)->u.s.plist, propname, value));
-  return value;
+  EXIT_LISP_FRAME (value);
 }
 
 DEFUN ("lax-plist-get", Flax_plist_get, Slax_plist_get, 2, 2, 0,

@@ -62,9 +62,11 @@ end
 #source .breakpoints.gdb
 
 define ps
+  p $arg0
   printf "%s\n", gdb_write(gdb_print_scheme, (void *)$arg0)
 end
 
 define pl
+  p $arg0
   printf "%s\n", gdb_write(gdb_print_lisp, (void *)$arg0)
 end

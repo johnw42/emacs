@@ -1663,6 +1663,7 @@ void
 set_default_internal (Lisp_Object symbol, Lisp_Object value,
                       enum Set_Internal_Bind bindflag)
 {
+  ENTER_LISP_FRAME (symbol, value);
   struct Lisp_Symbol *sym;
 
   CHECK_SYMBOL (symbol);
@@ -1675,7 +1676,7 @@ set_default_internal (Lisp_Object symbol, Lisp_Object value,
         xsignal1 (Qsetting_constant, symbol);
       else
         /* Allow setting keywords to their own value.  */
-        return;
+        EXIT_LISP_FRAME ();
 
     case SYMBOL_TRAPPED_WRITE:
       /* Don't notify here if we're going to call Fset anyway.  */
@@ -1705,7 +1706,7 @@ set_default_internal (Lisp_Object symbol, Lisp_Object value,
 	/* If the default binding is now loaded, set the REALVALUE slot too.  */
 	if (blv->fwd && EQ (blv->defcell, blv->valcell))
 	  store_symval_forwarding (blv->fwd, value, NULL);
-        return;
+        EXIT_LISP_FRAME ();
       }
     case SYMBOL_FORWARDED:
       {
@@ -1734,7 +1735,7 @@ set_default_internal (Lisp_Object symbol, Lisp_Object value,
 	  }
 	else
           set_internal (symbol, value, Qnil, bindflag);
-        return;
+        EXIT_LISP_FRAME ();
       }
     default: emacs_abort ();
     }
@@ -1746,8 +1747,9 @@ The default value is seen in buffers that do not have their own values
 for this variable.  */)
   (Lisp_Object symbol, Lisp_Object value)
 {
+  ENTER_LISP_FRAME (symbol, value);
   set_default_internal (symbol, value, SET_INTERNAL_SET);
-  return value;
+  EXIT_LISP_FRAME (value);
 }
 
 DEFUN ("setq-default", Fsetq_default, Ssetq_default, 0, UNEVALLED, 0,
