@@ -51,7 +51,11 @@ def Main():
             comma = ", "
             ret = "" if re.match(r"void *", rtype) else "return "
             print(
-                f"INLINE {rtype}chez_{name} ({comma.join(arg_decls)}) {{ {ret}S{name}({comma.join(arg_names)}); }}"
+                f"""\
+INLINE {rtype}chez_{name} ({comma.join(arg_decls)}) {{
+  CHEZ_PREAMBLE;
+  {ret}S{name}({comma.join(arg_names)});
+}}"""
             )
             extra_lines += [f"#define S{name} emacs_S{name}"]
     for line in extra_lines:

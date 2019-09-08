@@ -117,13 +117,6 @@ static bool valgrind_p;
 #define CHECK_NOT_ZERO(x) x
 #endif
 
-#define IS_MAGIC_SCHEME_REF(p)      \
-  (false ||                         \
-   IS_SCHEME_REF(p, 0x679917) ||    \
-   IS_SCHEME_REF(p, 0x6798de) ||    \
-   IS_SCHEME_REF(p, 0x679866) ||    \
-   false)
-
 #define MAX_MAGIC_REFS 8
 static size_t magic_refs[MAX_MAGIC_REFS];
 static size_t magic_ref_ptrs[MAX_MAGIC_REFS];
@@ -558,7 +551,7 @@ has_mark_bit (Lisp_Object obj, bool default_result)
     case Lisp_Vectorlike:
       return VECTOR_MARKED_P (XVECTOR (obj));
     case Lisp_Symbol:
-      return XSYMBOL (obj)->u.s.gcmarkbit;
+      return !scheme_find_c_data (obj) || XSYMBOL (obj)->u.s.gcmarkbit;
     case Lisp_Misc:
       return XMISCANY (obj)->gcmarkbit;
     default:
@@ -7004,7 +6997,7 @@ See Info node `(elisp)Garbage Collection'.  */
   (void)
 {
 #ifdef HAVE_CHEZ_SCHEME
-  chez_call0 (scheme_call0 ("collect-request-handler"));
+  do_scheme_gc();
   return Qnil;
 #else /* not HAVE_CHEZ_SCHEME */
   void *end;
@@ -8617,9 +8610,11 @@ scheme_untrack (Lisp_Object p)
 void
 do_scheme_gc (void)
 {
-  before_scheme_gc ();
-  scheme_call0 ("collect");
-  after_scheme_gc ();
+  if (before_scheme_gc ())
+    {
+      scheme_call0 ("collect");
+      after_scheme_gc ();
+    }
 }
 
 static void
@@ -8672,44 +8667,60 @@ static jmp_buf segv_buf;
 static char * volatile segv_addr;
 static char *memgrep_ignore_min, *memgrep_ignore_max;
 
+#include <ucontext.h>
+
 static void
 memgrep_sigaction (int sig, siginfo_t *info, void *ucontext)
 {
+  sigset_t set;
+  sigemptyset (&set);
+  sigaddset (&set, sig);
+  sigprocmask (SIG_UNBLOCK, &set, (sigset_t *) 0);
   segv_addr = info->si_addr;
-  longjmp (segv_buf, 1);
+  ucontext_t *ctx = ucontext;
+  ctx->uc_mcontext.gregs[REG_RAX] = 1;
+  ctx->uc_mcontext.gregs[REG_RCX] = (uint64_t) &segv_addr; // any readable address
 }
 
 static void
 try_memgrep1 (size_t start, uint64_t word, uint64_t mask, size_t size, int step)
 {
   // Find the top of the stack.
-  //asm ("movq %%rsp, %0" : "=r" (memgrep_ignore_min));
-  memgrep_ignore_min = alloca(1);
+  asm ("movq %%rsp, %0" : "=m" (memgrep_ignore_min));
+  //memgrep_ignore_min = alloca(1);
   eassert (memgrep_ignore_min < memgrep_ignore_max);
 
   start -= start % size;
 
-  struct sigaction act;
+  struct sigaction act, old_act;
   act.sa_sigaction = memgrep_sigaction;
   act.sa_flags = SA_SIGINFO | SA_RESETHAND | SA_NODEFER;
   sigemptyset(&act.sa_mask);
-  sigaction(SIGSEGV, &act, NULL);
-  if (setjmp (segv_buf) == 0)
+  sigaction(SIGSEGV, &act, &old_act);
+  for (char *p = (char *)start;; p += step)
     {
-      for (char *p = (char *)start;; p += step)
+      uint64_t segv_flag, data;
+      asm ("movq %[zero], %%rax\n"
+           "movq %[addr], %%rcx\n"
+           "movq (%%rcx), %[data]\n"
+           "movq %%rax, %[flag]"
+           : [flag] "=rm" (segv_flag),
+             [data] "=r" (data)
+           : [addr] "rm" (p),
+             [zero] "rmi" (0)
+           : "rax", "rcx");
+      if (segv_flag)
         {
-          uint64_t data = *(uint64_t *)p;
-          if ((data & mask) == word &&
-              (p < memgrep_ignore_min || p > memgrep_ignore_max))
-            {
-              printf ("found 0x%lx at %p\n", (unsigned long) data, p);
-            }
+          printf ("caught segv at %p with step %d\n", segv_addr, step);
+          break;
+        }
+      if ((data & mask) == word &&
+          (p < memgrep_ignore_min || p > memgrep_ignore_max))
+        {
+          printf ("found 0x%lx at %p\n", (unsigned long) data, p);
         }
     }
-  else if (segv_addr - step != (void *)start)
-    {
-      printf ("caught segv at %p with step %d\n", segv_addr, step);
-    }
+  sigaction(SIGSEGV, &old_act, NULL);
 }
 
 static void
@@ -8719,12 +8730,15 @@ try_memgrep (size_t start, uint64_t word, uint64_t mask, size_t size)
   try_memgrep1(start, word, mask, size, (int)size);
 }
 
+#include <sys/types.h>
+#include <sys/wait.h>
+
 static void
 memgrep (uint64_t word, uint64_t mask, size_t size)
 {
   // Find the start of the caller's stack frame.
-  //asm ("movq (%%rbp), %0" : "=r" (memgrep_ignore_max));
-  memgrep_ignore_max = __builtin_frame_address(1);
+  asm ("movq (%%rbp), %0" : "=r" (memgrep_ignore_max));
+  //memgrep_ignore_max = __builtin_frame_address(1);
 
   if (mask == 0)
     mask = ~mask;
@@ -8768,15 +8782,17 @@ before_scheme_gc (void)
 {
   if (disable_scheme_gc > 0)
     {
+      printf ("skipping gc\n");
       gc_was_deferred = true;
       return false;
     }
 
+  printf ("starting gc\n");
+  disable_scheme_gc++;
   gc_was_deferred = false;
 
   eassert (STRINGP(empty_unibyte_string));
-  //memgrep(0x409aaaaf, 0, 8);
-  //memgrep(0xdeadface0000000f, 0xffffffff0000000f, 8);
+  memgrep(0xdeadface0000000f, 0xffffffff0000000f, 8);
   for (int i = 0; i < MAX_MAGIC_REFS; i++)
     {
       if (magic_refs[i])
@@ -8826,12 +8842,15 @@ before_scheme_gc (void)
         mark_memory (b->start,
                      (char *) b->start + b->size);
     }
+  printf ("marked memory\n");
 
   void *end;
   SET_STACK_TOP_ADDRESS (&end);
   garbage_collect_1 (end);
+  printf ("did garbage_collect_1\n");
 
   mark_lisp_refs();
+  printf ("did mark_lisp_refs\n");
 
   FOR_NAMED_CONTAINER (i, mark_queue)
     {
@@ -8953,6 +8972,7 @@ after_scheme_gc (void)
   gc_vector = chez_false;
 
   printf ("*\n* GC %d complete!\n*\n", gc_count++);
+  --disable_scheme_gc;
 }
 #endif
 
@@ -8983,10 +9003,12 @@ static size_t magic_refs[MAX_MAGIC_REFS] =
   {
    //0x407f165f,
    //0x43a4f14b,
-   0x6798de,
-   0x679584,
-   0x67957a,
-   0x406cd65f
+   /* 0x6798de, */
+   /* 0x679584, */
+   /* 0x67957a, */
+   /* 0x406cd65f */
+   0x679637,
+   0x6799d6,
   };
 static size_t magic_ref_ptrs[MAX_MAGIC_REFS] =
   {

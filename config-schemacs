@@ -8,7 +8,7 @@ autoreconf
 config_args=(--$with-chez-scheme --without-jpeg --without-makeinfo AM_DEFAULT_VERBOSITY=0)
 
 if [[ $with == with ]]; then
-  config_args+=(--enable-checking=yes CANNOT_DUMP=yes CFLAGS='-O0 -finline-functions -g -Werror=implicit-function-declaration -Werror=nested-externs')
+  config_args+=(--enable-checking=yes CANNOT_DUMP=yes --without-threads CFLAGS='-O0 -finline-functions -g -Werror=implicit-function-declaration -Werror=nested-externs -fno-builtin')
 fi
 
 ./configure "${config_args[@]}"

@@ -474,16 +474,18 @@ DEFUN ("progn", Fprogn, Sprogn, 0, UNEVALLED, 0,
 usage: (progn BODY...)  */)
   (Lisp_Object body)
 {
-  Lisp_Object val = Qnil;
+  ENTER_LISP_FRAME (body);
+  LISP_LOCALS (val, form);
+  val = Qnil;
 
   while (CONSP (body))
     {
-      Lisp_Object form = XCAR (body);
+      form = XCAR (body);
       body = XCDR (body);
       val = eval_sub (form);
     }
 
-  return val;
+  EXIT_LISP_FRAME (val);
 }
 
 /* Evaluate BODY sequentially, discarding its value.  */
@@ -2041,16 +2043,18 @@ If equal to `macro', MACRO-ONLY specifies that FUNDEF should only be loaded if
 it defines a macro.  */)
   (Lisp_Object fundef, Lisp_Object funname, Lisp_Object macro_only)
 {
+  ENTER_LISP_FRAME (fundef, funname, macro_only);
   ptrdiff_t count = SPECPDL_INDEX ();
 
   if (!CONSP (fundef) || !EQ (Qautoload, XCAR (fundef)))
-    return fundef;
+    EXIT_LISP_FRAME (fundef);
 
   if (EQ (macro_only, Qmacro))
     {
-      Lisp_Object kind = Fnth (make_number (4), fundef);
+      LISP_LOCALS (kind);
+      kind = Fnth (make_number (4), fundef);
       if (! (EQ (kind, Qt) || EQ (kind, Qmacro)))
-	return fundef;
+	EXIT_LISP_FRAME (fundef);
     }
 
   /* This is to make sure that loadup.el gives a clear picture
@@ -2083,17 +2087,18 @@ it defines a macro.  */)
   unbind_to (count, Qnil);
 
   if (NILP (funname))
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
   else
     {
-      Lisp_Object fun = Findirect_function (funname, Qnil);
+      LISP_LOCALS (fun);
+      fun = Findirect_function (funname, Qnil);
 
       if (!NILP (Fequal (fun, fundef)))
 	error ("Autoloading file %s failed to define function %s",
 	       SDATA (Fcar (Fcar (Vload_history))),
 	       SDATA (SYMBOL_NAME (funname)));
       else
-	return fun;
+	EXIT_LISP_FRAME (fun);
     }
 }
 
@@ -2496,12 +2501,13 @@ Instead, use `add-hook' and specify t for the LOCAL argument.
 usage: (run-hooks &rest HOOKS)  */)
   (ptrdiff_t nargs, Lisp_Object *args)
 {
+  ENTER_LISP_FRAME_VA (nargs, args);
   ptrdiff_t i;
 
   for (i = 0; i < nargs; i++)
     run_hook (args[i]);
 
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 DEFUN ("run-hook-with-args", Frun_hook_with_args,
@@ -2598,7 +2604,9 @@ Lisp_Object
 run_hook_with_args (ptrdiff_t nargs, Lisp_Object *args,
 		    Lisp_Object (*funcall) (ptrdiff_t nargs, Lisp_Object *args))
 {
-  Lisp_Object sym, val, ret = Qnil;
+  ENTER_LISP_FRAME_VA (nargs, args);
+  LISP_LOCALS (sym, val, ret, global_vals);
+  ret = Qnil;
 
   /* If we are dying or still initializing,
      don't do anything--it would probably crash if we tried.  */
@@ -2609,15 +2617,15 @@ run_hook_with_args (ptrdiff_t nargs, Lisp_Object *args,
   val = find_symbol_value (sym);
 
   if (EQ (val, Qunbound) || NILP (val))
-    return ret;
+    EXIT_LISP_FRAME (ret);
   else if (!CONSP (val) || FUNCTIONP (val))
     {
       args[0] = val;
-      return funcall (nargs, args);
+      EXIT_LISP_FRAME_WITH (funcall (nargs, args));
     }
   else
     {
-      Lisp_Object global_vals = Qnil;
+      global_vals = Qnil;
 
       for (;
 	   CONSP (val) && NILP (ret);
@@ -2656,7 +2664,7 @@ run_hook_with_args (ptrdiff_t nargs, Lisp_Object *args,
 	    }
 	}
 
-      return ret;
+      EXIT_LISP_FRAME (ret);
     }
 }
 
@@ -2808,10 +2816,9 @@ Thus, (funcall \\='cons \\='x \\='y) returns (x . y).
 usage: (funcall FUNCTION &rest ARGUMENTS)  */)
   (ptrdiff_t nargs, Lisp_Object *args)
 {
-  Lisp_Object fun, original_fun;
-  Lisp_Object funcar;
+  ENTER_LISP_FRAME_VA (nargs, args);
+  LISP_LOCALS (fun, original_fun, funcar, val);
   ptrdiff_t numargs = nargs - 1;
-  Lisp_Object val;
   ptrdiff_t count;
 
   maybe_quit ();
@@ -2873,7 +2880,7 @@ usage: (funcall FUNCTION &rest ARGUMENTS)  */)
   if (backtrace_debug_on_exit (specpdl + count))
     val = call_debugger (list2 (Qexit, val));
   specpdl_ptr--;
-  return val;
+  EXIT_LISP_FRAME (val);
 }
 
 
@@ -3017,7 +3024,8 @@ static Lisp_Object
 funcall_lambda (Lisp_Object fun, ptrdiff_t nargs,
 		register Lisp_Object *arg_vector)
 {
-  Lisp_Object val, syms_left, next, lexenv;
+  ENTER_LISP_FRAME (fun);
+  LISP_LOCALS (val, syms_left, next, lexenv);
   ptrdiff_t count = SPECPDL_INDEX ();
   ptrdiff_t i;
   bool optional, rest;
@@ -3060,17 +3068,18 @@ funcall_lambda (Lisp_Object fun, ptrdiff_t nargs,
 	     and constants vector yet, fetch them from the file.  */
 	  if (CONSP (AREF (fun, COMPILED_BYTECODE)))
 	    Ffetch_bytecode (fun);
-	  return exec_byte_code (AREF (fun, COMPILED_BYTECODE),
-				 AREF (fun, COMPILED_CONSTANTS),
-				 AREF (fun, COMPILED_STACK_DEPTH),
-				 syms_left,
-				 nargs, arg_vector);
+	  EXIT_LISP_FRAME_WITH
+            (exec_byte_code (AREF (fun, COMPILED_BYTECODE),
+                             AREF (fun, COMPILED_CONSTANTS),
+                             AREF (fun, COMPILED_STACK_DEPTH),
+                             syms_left,
+                             nargs, arg_vector));
 	}
       lexenv = Qnil;
     }
 #ifdef HAVE_MODULES
   else if (MODULE_FUNCTIONP (fun))
-    return funcall_module (fun, nargs, arg_vector);
+    EXIT_LISP_FRAME_WITH (funcall_module (fun, nargs, arg_vector));
 #endif
   else
     emacs_abort ();
@@ -3148,7 +3157,7 @@ funcall_lambda (Lisp_Object fun, ptrdiff_t nargs,
 			    Qnil, 0, 0);
     }
 
-  return unbind_to (count, val);
+  EXIT_LISP_FRAME_WITH (unbind_to (count, val));
 }
 
 DEFUN ("func-arity", Ffunc_arity, Sfunc_arity, 1, 1, 0,

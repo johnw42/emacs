@@ -59,6 +59,22 @@ command
 up
 end
 
+# break before_scheme_gc
+# command
+# set record full memory-query off
+# record full
+# #cont
+# end
+
+#b __strlen_avx2
+#dis
+
+# break Scall0
+# command
+# record stop
+# cont
+# end
+
 #source .breakpoints.gdb
 
 define ps

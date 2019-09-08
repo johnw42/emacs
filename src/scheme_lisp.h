@@ -1,6 +1,9 @@
 // Only include via lisp.h!
 
 #ifdef HAVE_CHEZ_SCHEME
+extern void *chez_saved_bp;
+
+#define CHEZ_PREAMBLE asm ("movq %%rbp, %0" : "=r" (chez_saved_bp))
 #include "chez_scheme.h"
 #endif
 
@@ -74,10 +77,17 @@ extern int gdb_hit_count;
   extern rtype (*scheme_fptr_##name)(const char *, int, __VA_ARGS__)
 #include "scheme_fptr.h"
 
+INLINE void
+do_chez_preamble (void)
+{
+  CHEZ_PREAMBLE;
+}
+
 #define SCHEME_FPTR_CALL(name, ...)                             \
   (last_scheme_function = #name,                                \
    last_scheme_call_file = __FILE__,                            \
    last_scheme_call_line = __LINE__,                            \
+   do_chez_preamble(),                                          \
    (*scheme_fptr_##name)(__FILE__, __LINE__, __VA_ARGS__))
 
 extern chez_ptr scheme_vectorlike_symbol;
@@ -304,6 +314,9 @@ bool may_be_valid (chez_ptr x);
 #define ENTER_LISP_FRAME(...)                                           \
   ptrdiff_t orig_lisp_frame_record_count = lisp_frame_record_count;     \
   SCHEME_ENTER_LISP_FRAME(__VA_ARGS__)
+#define ENTER_LISP_FRAME_VA(nargs, args)                                \
+  ptrdiff_t orig_lisp_frame_record_count = lisp_frame_record_count;     \
+  push_lisp_local_array(true, args, nargs)
 #define EXIT_LISP_FRAME(...)                                    \
   do                                                            \
     {                                                           \
@@ -325,12 +338,12 @@ bool may_be_valid (chez_ptr x);
 #define LISP_LOCALS_ADDR_1(n1) &n1
 #define LISP_LOCAL_ARRAY(name, size) \
   Lisp_Object name[size];            \
-  push_lisp_local_array(name, size)
+  push_lisp_local_array(false, name, size)
 #define LISP_LOCAL_ALLOCA(name, size)           \
   ptrdiff_t name##_size = size;                 \
   Lisp_Object *name;                            \
   SAFE_ALLOCA_LISP(name, name##_size);          \
-  push_lisp_local_array(name, name##_size)
+  push_lisp_local_array(false, name, name##_size)
 
 extern ptrdiff_t lisp_frame_record_count;
 
@@ -340,8 +353,7 @@ union lisp_frame_record {
 };
 
 void push_lisp_locals(bool already_initialized, int n, ...);
-void push_lisp_local_array(Lisp_Object *ptr, ptrdiff_t n);
-void push_lisp_heap_array(Lisp_Object *ptr, ptrdiff_t n);
+void push_lisp_local_array(bool already_initialized, Lisp_Object *ptr, ptrdiff_t n);
 void pop_lisp_locals(int n);
 bool walk_lisp_frame_records (ptrdiff_t *pos,
                               union lisp_frame_record **ptr,

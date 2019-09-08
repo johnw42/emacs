@@ -36,6 +36,10 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 #include <stdio.h> // for printf; TODO(jrw): Remove.
 #include <stdlib.h> // for abort()
 
+//#include <unistd.h>
+//#define printf(s, ...) write(1, s, sizeof(s) - 1)
+
+
 #include <intprops.h>
 #include <verify.h>
 
@@ -881,7 +885,7 @@ verify (alignof (struct Lisp_Symbol) % GCALIGNMENT == 0);
 // - It appears distinctive when see in a debugger.
 // - Chez Scheme will most likely interpret it as a bogus value.
 #define LISPSYM_INITIALLY_(name) \
-  XIL((i##name << 8) | 0xdeadface0000000fUL)
+  UNCHEZ ((chez_ptr) ((i##name << 8) | 0xdeadface0000000fUL))
 #define LISPSYM_INITIAL_P(obj) \
   (((chez_uptr) CHEZ (obj) & 0xffffffff00000000UL) == 0xdeadface00000000UL)
 #define LISPSYM_INITIAL_NUM(obj) \
@@ -903,10 +907,8 @@ INLINE void fixup_lispsym_init(const Lisp_Object *p) {}
    when using a debugger like GDB, on older platforms where the debug
    format does not represent C macros.  */
 #ifdef HAVE_CHEZ_SCHEME
-#define DEFINE_LISP_SYMBOL(name) \
-  DEFINE_GDB_SYMBOL_BEGIN (Lisp_Object, name) \
-  DEFINE_GDB_SYMBOL_END (LISPSYM_INITIALLY_(name))
-#else /* not HAVE_CHEZ_SCHEME */
+#define DEFINE_LISP_SYMBOL(name)
+#else
 #define DEFINE_LISP_SYMBOL(name) \
   DEFINE_GDB_SYMBOL_BEGIN (Lisp_Object, name) \
   DEFINE_GDB_SYMBOL_END (LISPSYM_INITIALLY_ (name))
@@ -3930,6 +3932,8 @@ extern void set_default_internal (Lisp_Object, Lisp_Object,
 
 extern void syms_of_data (void);
 extern void swap_in_global_binding (struct Lisp_Symbol *);
+
+extern void init_bidi_once (void);
 
 /* Defined in cmds.c */
 extern void syms_of_cmds (void);

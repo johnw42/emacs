@@ -1233,7 +1233,14 @@ Return t if the file exists and loads successfully.  */)
       else
 	handler = Ffind_file_name_handler (found, Qload);
       if (! NILP (handler))
-	RETURN_RESUME_GC (call5 (handler, Qload, found, noerror, nomessage, Qt));
+        {
+          ENTER_LISP_FRAME ();
+          LISP_LOCALS (val);
+          val = call5 (handler, Qload, found, noerror, nomessage, Qt);
+          RESUME_GC();
+          do_scheme_gc();
+          EXIT_LISP_FRAME (val);
+        }
 #ifdef DOS_NT
       /* Tramp has to deal with semi-broken packages that prepend
 	 drive letters to remote files.  For that reason, Tramp

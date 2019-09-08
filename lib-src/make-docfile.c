@@ -76,6 +76,12 @@ static void write_globals (void);
 
 #include <unistd.h>
 
+#if defined(HAVE_CHEZ_SCHEME) || defined(NIL_IS_ZERO)
+#define NIL_IS_SYM0 1
+#else
+#define NIL_IS_SYM0 0
+#endif
+
 /* Name this program was invoked with.  */
 static char *progname;
 
@@ -646,17 +652,15 @@ compare_globals (const void *a, const void *b)
   if (ga->type != gb->type)
     return ga->type - gb->type;
 
-#ifdef NIL_IS_ZERO
   /* Consider "nil" to be the least, so that iQnil is zero.  That
      way, Qnil's internal representation is zero, which is a bit faster.  */
-  if (ga->type == SYMBOL)
+  if (NIL_IS_SYM0 && ga->type == SYMBOL)
     {
       bool a_nil = strcmp (ga->name, "Qnil") == 0;
       bool b_nil = strcmp (gb->name, "Qnil") == 0;
       if (a_nil | b_nil)
 	return b_nil - a_nil;
     }
-#endif
 
   return strcmp (ga->name, gb->name);
 }
@@ -778,19 +782,14 @@ write_globals (void)
   puts ("};");
   puts ("#endif");
 
-#ifdef NIL_IS_ZERO
-  puts ("#define Qnil builtin_lisp_symbol (0)");
-#endif
-
   puts ("#if DEFINE_NON_NIL_Q_SYMBOL_MACROS");
+  if (NIL_IS_SYM0)
+    puts ("# define Qnil builtin_lisp_symbol (0)");
   num_symbols = 0;
   for (ptrdiff_t i = 0; i < num_globals; i++)
-    if (globals[i].type == SYMBOL && num_symbols++ != 0)
+    if (globals[i].type == SYMBOL && (num_symbols++ != 0 || !NIL_IS_SYM0))
       {
-        bool is_nil = false;
-#ifndef NIL_IS_ZERO
-        is_nil = strcmp (globals[i].name, "Qnil") == 0;
-#endif
+        bool is_nil = !NIL_IS_SYM0 && strcmp (globals[i].name, "Qnil") == 0;
         if (is_nil)
           puts ("#endif");
         printf ("# define %s builtin_lisp_symbol (%td)\n",

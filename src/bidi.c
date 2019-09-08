@@ -1087,15 +1087,22 @@ bidi_unshelve_cache (void *databuf, bool just_free)
 /***********************************************************************
 			Initialization
  ***********************************************************************/
-static void
-bidi_initialize (void)
+
+#ifdef HAVE_CHEZ_SCHEME
+void
+init_bidi_once (void)
 {
   fixup_lispsym_init (&bidi_type_table);
   fixup_lispsym_init (&bidi_mirror_table);
   fixup_lispsym_init (&bidi_brackets_table);
   fixup_lispsym_init (&paragraph_start_re);
   fixup_lispsym_init (&paragraph_separate_re);
+}
+#endif
 
+static void
+bidi_initialize (void)
+{
   bidi_type_table = uniprop_table (intern ("bidi-class"));
   if (NILP (bidi_type_table))
     emacs_abort ();

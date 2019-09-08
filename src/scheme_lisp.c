@@ -10,6 +10,9 @@
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/types.h>
+#include <signal.h>
+#include <ucontext.h>
 
 #pragma GCC diagnostic ignored "-Wdiscarded-qualifiers"
 
@@ -61,6 +64,34 @@ get_scheme_func(const char *name)
   return chez_foreign_callable_entry_point (code);
 }
 
+void *chez_saved_bp = NULL;
+
+static void
+scheme_abort (void)
+{
+  printf ("scheme_abort\n");
+  //abort();
+}
+
+static void
+scheme_sigaction (int sig, siginfo_t *info, void *ucontext)
+{
+  sigset_t set;
+  sigemptyset (&set);
+  sigaddset (&set, sig);
+  sigprocmask (SIG_UNBLOCK, &set, (sigset_t *) 0);
+
+  // Both versions seem to have the same effect.
+#if 1
+  asm ("movq %0, %%rbp" : : "r" (chez_saved_bp));
+#else
+  ucontext_t *ctx = ucontext;
+  ctx->uc_mcontext.gregs[REG_RBP] = (uint64_t) chez_saved_bp;
+#endif
+
+  abort();
+}
+
 void scheme_init(void) {
   const char *char_ptr = NULL;
   const char **argv = &char_ptr;
@@ -71,6 +102,12 @@ void scheme_init(void) {
   printf ("boot file: %s\n", CHEZ_SCHEME_DIR "/scheme.boot");
   chez_register_boot_file(CHEZ_SCHEME_DIR "/scheme.boot");
   chez_build_heap(NULL, NULL);
+
+  struct sigaction act, old_act;
+  act.sa_sigaction = scheme_sigaction;
+  act.sa_flags = SA_SIGINFO | SA_RESETHAND | SA_NODEFER;
+  sigemptyset(&act.sa_mask);
+  sigaction(SIGSEGV, &act, &old_act);
 
   scheme_greatest_fixnum = chez_fixnum_value(scheme_call0("greatest-fixnum"));
   scheme_least_fixnum = chez_fixnum_value(scheme_call0("least-fixnum"));
@@ -1157,13 +1194,20 @@ push_lisp_locals(bool already_initialized, int n, ...)
 }
 
 void
-push_lisp_local_array(Lisp_Object *ptr, ptrdiff_t n)
+push_lisp_local_array(bool already_initialized,
+                      Lisp_Object *ptr, ptrdiff_t n)
 {
   eassert (n >= 0);
   ensure_lisp_frame_record_capacity (n + 1);
   for (int i = 0; i < n; i++)
-    lisp_frame_records[lisp_frame_record_count++].ptr =
-      &ptr[i];
+    {
+      lisp_frame_records[lisp_frame_record_count++].ptr =
+        &ptr[i];
+      if (already_initialized)
+        eassert (may_be_valid (CHEZ (ptr[i])));
+      else
+        ptr[i] = UNCHEZ (chez_false);
+    }
   lisp_frame_records[lisp_frame_record_count++].count = n;
 }
 
