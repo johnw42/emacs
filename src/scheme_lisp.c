@@ -16,9 +16,9 @@
 static bool scheme_initialized = false;
 static Lisp_Object c_data_table;
 
-Lisp_Object scheme_vectorlike_symbol = UNCHEZ(chez_false);
-Lisp_Object scheme_misc_symbol = UNCHEZ(chez_false);
-Lisp_Object scheme_string_symbol = UNCHEZ(chez_false);
+chez_ptr scheme_vectorlike_symbol = chez_false;
+chez_ptr scheme_misc_symbol = chez_false;
+chez_ptr scheme_string_symbol = chez_false;
 chez_iptr scheme_greatest_fixnum;
 chez_iptr scheme_least_fixnum;
 chez_iptr scheme_fixnum_width;
@@ -95,12 +95,12 @@ void scheme_init(void) {
   c_data_table = UNCHEZ(scheme_call0("make-eq-hashtable"));
   scheme_track (c_data_table);
 
-  scheme_vectorlike_symbol = UNCHEZ(scheme_call1("gensym", chez_string("emacs-vectorlike")));
-  scheme_track (scheme_vectorlike_symbol);
-  scheme_misc_symbol = UNCHEZ(scheme_call1("gensym", chez_string("emacs-misc")));
-  scheme_track (scheme_misc_symbol);
-  scheme_string_symbol = UNCHEZ(scheme_call1("gensym", chez_string("emacs-string")));
-  scheme_track (scheme_string_symbol);
+  scheme_vectorlike_symbol = scheme_call1("gensym", chez_string("emacs-vectorlike"));
+  chez_lock_object (scheme_vectorlike_symbol);
+  scheme_misc_symbol = scheme_call1("gensym", chez_string("emacs-misc"));
+  chez_lock_object (scheme_misc_symbol);
+  scheme_string_symbol = scheme_call1("gensym", chez_string("emacs-string"));
+  chez_lock_object (scheme_string_symbol);
 
   //atexit(scheme_deinit);
   scheme_initialized = true;
@@ -294,6 +294,7 @@ fixup_lispsym_inits(Lisp_Object *p, size_t n)
     Lisp_Object sym = lispsym[index];
     eassert (SYMBOLP (sym));
     p[i] = sym;
+    staticpro (p);
   }
 }
 
@@ -1144,7 +1145,7 @@ push_lisp_locals(bool already_initialized, int n, ...)
   for (int i = 0; i < n; i++)
     {
       Lisp_Object *ptr = va_arg(ap, Lisp_Object *);
-      eassert (ptr != (void*)0x7fffffffcc68);
+      analyze_scheme_ref (*ptr, "in push_lisp_locals");
       lisp_frame_records[lisp_frame_record_count++].ptr = ptr;
       if (already_initialized)
         eassert (may_be_valid (CHEZ (*ptr)));

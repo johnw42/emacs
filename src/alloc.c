@@ -119,9 +119,57 @@ static bool valgrind_p;
 
 #define IS_MAGIC_SCHEME_REF(p)      \
   (false ||                         \
-   IS_SCHEME_REF(p, 0x406d000f) ||  \
-   IS_SCHEME_REF(p, 0x409aaaaf) ||  \
+   IS_SCHEME_REF(p, 0x679917) ||    \
+   IS_SCHEME_REF(p, 0x6798de) ||    \
+   IS_SCHEME_REF(p, 0x679866) ||    \
    false)
+
+#define MAX_MAGIC_REFS 8
+static size_t magic_refs[MAX_MAGIC_REFS];
+static size_t magic_ref_ptrs[MAX_MAGIC_REFS];
+
+static void
+gdb_found_ref(void)
+{
+}
+
+bool
+analyze_scheme_ref(Lisp_Object ref, const char *label)
+{
+  for (int i = 0; i < MAX_MAGIC_REFS; i++)
+    {
+      if (magic_refs[i] == 0) break;
+      if (CHEZ (ref) == (chez_ptr) magic_refs[i])
+        {
+          if (label)
+            printf ("*** %s: ref %p\n", label, CHEZ (ref));
+          gdb_found_ref();
+          return true;
+        }
+    }
+  return false;
+}
+
+bool
+analyze_scheme_ref_ptr(Lisp_Object *ptr, const char *label)
+{
+  bool found = false;
+  for (int i = 0; i < MAX_MAGIC_REFS; i++)
+    {
+      if (magic_ref_ptrs[i] == 0) break;
+      if (ptr == (Lisp_Object *) magic_ref_ptrs[i])
+        {
+          if (label)
+            printf ("*** %s: ref ptr %p\n", label, ptr);
+          found = true;
+          break;
+        }
+    }
+  if (ptr && analyze_scheme_ref (*ptr, label))
+    return true;
+  if (found) gdb_found_ref();
+  return found;
+}
 
 #ifndef HAVE_CHEZ_SCHEME
 #ifdef GNU_LINUX
@@ -411,10 +459,7 @@ scheme_ref_merge_unlock (void *p, const void *q)
   struct scheme_ref_info *pp = p;
   const struct scheme_ref_info *qq = q;
   chez_unlock_object (pp->ref);
-  if (IS_MAGIC_SCHEME_REF(UNCHEZ(pp->ref)))
-    {
-      printf ("*** unlocked %p during merge\n", pp->ref);
-    }
+  analyze_scheme_ref (UNCHEZ(pp->ref), "unlocked during merge");
   *pp = *qq;
 }
 
@@ -463,10 +508,7 @@ alloc_preinit (void)
 static void
 record_scheme_ref_ptr (Lisp_Object *ref_ptr, enum scheme_ref_type type)
 {
-  if (IS_MAGIC_SCHEME_REF(*ref_ptr))
-    {
-      printf ("*** tracking %p at %p\n", CHEZ (*ref_ptr), ref_ptr);
-    }
+  analyze_scheme_ref_ptr (ref_ptr, "at record_scheme_ref_ptr");
   struct scheme_ref_info info =
     { CHEZ(*ref_ptr), &CHEZ(*ref_ptr), type };
   switch (type)
@@ -478,15 +520,14 @@ record_scheme_ref_ptr (Lisp_Object *ref_ptr, enum scheme_ref_type type)
     default:
       break;
     }
-  eassert (may_be_valid (info.ref));
+  //eassert (may_be_valid (info.ref));
   NAMED_CONTAINER_APPEND (scheme_refs, &info);
 }
 
 static Lisp_Object
 record_scheme_ref (Lisp_Object ref, enum scheme_ref_type type)
 {
-  if (IS_MAGIC_SCHEME_REF(ref))
-    printf ("*** tracking %p\n", CHEZ (ref));
+  analyze_scheme_ref (ref, "at record_scheme_ref");
   struct scheme_ref_info info = { CHEZ(ref), NULL, type };
   switch (type)
     {
@@ -2381,7 +2422,7 @@ check_string_free_list (void)
 
 #ifdef HAVE_CHEZ_SCHEME
 static void *
-scheme_allocate (ptrdiff_t nbytes, Lisp_Object sym, Lisp_Object *vec_ptr)
+scheme_allocate (ptrdiff_t nbytes, chez_ptr sym, Lisp_Object *vec_ptr)
 {
   suspend_scheme_gc ();
 
@@ -2389,10 +2430,10 @@ scheme_allocate (ptrdiff_t nbytes, Lisp_Object sym, Lisp_Object *vec_ptr)
   Lisp_Object addr = make_number ((chez_iptr) data);
   eassert (data == scheme_malloc_ptr (addr));
 
-  chez_ptr vec = chez_make_vector(SCHEME_PV_LENGTH, CHEZ (sym));
+  chez_ptr vec = chez_make_vector(SCHEME_PV_LENGTH, sym);
   chez_call2 (scheme_guardian,
               vec,
-              chez_cons (CHEZ (sym),
+              chez_cons (sym,
                          chez_integer ((chez_iptr) data)));
 
   chez_ptr eph = SCHEME_FPTR_CALL(ephemeron_cons, vec, chez_false);
@@ -5682,13 +5723,7 @@ mark_memory (void *start, void *end)
 	  || (uintptr_t) pp % alignof (Lisp_Object) == 0)
 	mark_maybe_object (*(Lisp_Object *) pp);
 #ifdef HAVE_CHEZ_SCHEME
-      Lisp_Object obj = *(Lisp_Object *)pp;
-      if (IS_MAGIC_SCHEME_REF(obj))
-        {
-          printf ("*** hooray: %p\n", (CHEZ (obj)));
-          struct scheme_ref_info key = { .ref_ptr = (chez_ptr *) pp };
-          printf ("found? %p\n", container_search (&scheme_refs, &key, scheme_ref_ptr_cmp, false));
-        }
+      analyze_scheme_ref_ptr ((Lisp_Object *)pp, "in mark_memory");
 #endif
     }
 }
@@ -8740,8 +8775,13 @@ before_scheme_gc (void)
   gc_was_deferred = false;
 
   eassert (STRINGP(empty_unibyte_string));
-  memgrep(0x409aaaaf, 0, 8);
+  //memgrep(0x409aaaaf, 0, 8);
   //memgrep(0xdeadface0000000f, 0xffffffff0000000f, 8);
+  for (int i = 0; i < MAX_MAGIC_REFS; i++)
+    {
+      if (magic_refs[i])
+        memgrep(magic_refs[i], 0, 8);
+    }
 
   ptrdiff_t pos = 0, count, frames_found = 0, entries_found = 0;
   union lisp_frame_record *records;
@@ -8753,6 +8793,7 @@ before_scheme_gc (void)
       /* printf ("count: %ld\n", count); */
       for (ptrdiff_t i = 0; i < count; i++)
         {
+          analyze_scheme_ref_ptr (records[i].ptr, "walking stack in before_scheme_gc");
           record_scheme_ref_ptr (records[i].ptr, rt_trace);
           /* printf("found %p at %p\n", */
           /*        CHEZ(*records[count].ptr), */
@@ -8822,15 +8863,13 @@ before_scheme_gc (void)
         }
       else
         {
-          if (IS_MAGIC_SCHEME_REF(UNCHEZ(info->ref)))
-            {
-              printf ("*** locking %p at %p with type %u\n", info->ref, info->ref_ptr, info->type);
-            }
+          analyze_scheme_ref (UNCHEZ (info->ref), "locking");
           chez_lock_object (info->ref);
         }
       chez_vector_set (gc_vector, i, info->ref);
     }
 
+  printf ("entering scheme gc\n");
   return true;
 }
 
@@ -8853,28 +8892,18 @@ after_scheme_gc (void)
           eassert (old_ref == new_ref);
 
           // Undo previous lock.
+          analyze_scheme_ref (UNCHEZ(new_ref), "unlocking");
           eassert (chez_locked_objectp (new_ref));
           chez_unlock_object (new_ref);
-          if (IS_MAGIC_SCHEME_REF(UNCHEZ(new_ref)))
-            {
-              printf ("*** unlocked %p\n", new_ref);
-            }
           continue;
         }
 
       if (old_ref != new_ref)
         {
           chez_ptr *old_ref_ptr = ref_info->ref_ptr;
-          eassert (*old_ref_ptr == old_ref ||
-                   *old_ref_ptr == new_ref ||
-                   (chez_flonump (new_ref) &&
-                    (chez_flonum_value (old_ref) ==
-                     chez_flonum_value (*old_ref_ptr)) &&
-                    (chez_flonum_value (new_ref) ==
-                     chez_flonum_value (*old_ref_ptr))));
-          if (IS_MAGIC_SCHEME_REF(UNCHEZ(old_ref)) ||
-              IS_MAGIC_SCHEME_REF(UNCHEZ(new_ref)) ||
-              IS_MAGIC_SCHEME_REF(UNCHEZ(*old_ref_ptr)))
+          if (analyze_scheme_ref(UNCHEZ(old_ref), NULL) ||
+              analyze_scheme_ref(UNCHEZ(new_ref), NULL) ||
+              analyze_scheme_ref(UNCHEZ(*old_ref_ptr), NULL))
             {
               printf("*** moved %p => %p at %p\n",
                      old_ref, new_ref, old_ref_ptr);
@@ -8888,6 +8917,13 @@ after_scheme_gc (void)
                     }
                 }
             }
+          eassert (*old_ref_ptr == old_ref ||
+                   *old_ref_ptr == new_ref ||
+                   (chez_flonump (new_ref) &&
+                    (chez_flonum_value (old_ref) ==
+                     chez_flonum_value (*old_ref_ptr)) &&
+                    (chez_flonum_value (new_ref) ==
+                     chez_flonum_value (*old_ref_ptr))));
           num_moved++;
           ref_info->ref = new_ref;
           *old_ref_ptr = new_ref;
@@ -8942,3 +8978,17 @@ union
   enum pvec_type pvec_type;
 } const EXTERNALLY_VISIBLE gdb_make_enums_visible = {0};
 #endif	/* __GNUC__ */
+
+static size_t magic_refs[MAX_MAGIC_REFS] =
+  {
+   //0x407f165f,
+   //0x43a4f14b,
+   0x6798de,
+   0x679584,
+   0x67957a,
+   0x406cd65f
+  };
+static size_t magic_ref_ptrs[MAX_MAGIC_REFS] =
+  {
+   0x7fffffffcc08,
+  };

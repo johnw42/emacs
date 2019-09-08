@@ -80,9 +80,9 @@ extern int gdb_hit_count;
    last_scheme_call_line = __LINE__,                            \
    (*scheme_fptr_##name)(__FILE__, __LINE__, __VA_ARGS__))
 
-extern Lisp_Object scheme_vectorlike_symbol;
-extern Lisp_Object scheme_misc_symbol;
-extern Lisp_Object scheme_string_symbol;
+extern chez_ptr scheme_vectorlike_symbol;
+extern chez_ptr scheme_misc_symbol;
+extern chez_ptr scheme_string_symbol;
 extern chez_iptr scheme_greatest_fixnum;
 extern chez_iptr scheme_least_fixnum;
 extern chez_iptr scheme_fixnum_width;

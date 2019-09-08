@@ -7557,6 +7557,11 @@ and scrolling positions.  */)
 void
 init_window_once (void)
 {
+  fixup_lispsym_init (&selected_window);
+  fixup_lispsym_init (&Vwindow_list);
+  fixup_lispsym_init (&minibuf_window);
+  fixup_lispsym_init (&minibuf_selected_window);
+
   struct frame *f = make_initial_frame ();
   XSETFRAME (selected_frame, f);
   Vterminal_frame = selected_frame;

@@ -350,7 +350,7 @@ error !;
 #define SCHEME_VECTORP(x, tag)                          \
   (chez_vectorp(CHECK_NOT_ZERO(CHEZ(x))) &&             \
    chez_vector_length(CHEZ(x)) == SCHEME_PV_LENGTH &&   \
-   SCHEME_PV_TAG(CHEZ(x)) == CHEZ(tag))
+   SCHEME_PV_TAG(CHEZ(x)) == tag)
 
 #define lisp_h_XLI(o) ((EMACS_INT) CHEZ (o))
 #define lisp_h_XIL(i) UNCHEZ ((chez_ptr) (i))
@@ -4108,6 +4108,8 @@ extern void parse_str_as_multibyte (const unsigned char *, ptrdiff_t,
 				    ptrdiff_t *, ptrdiff_t *);
 
 /* Defined in alloc.c.  */
+bool analyze_scheme_ref(Lisp_Object ref, const char *label);
+bool analyze_scheme_ref_ptr(Lisp_Object *ptr, const char *label);
 extern void *my_heap_start (void);
 extern void check_pure_size (void);
 extern void free_misc (Lisp_Object);
