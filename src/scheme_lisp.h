@@ -3,7 +3,8 @@
 #ifdef HAVE_CHEZ_SCHEME
 extern void *chez_saved_bp;
 
-#define CHEZ_PREAMBLE asm ("movq %%rbp, %0" : "=r" (chez_saved_bp))
+#define CHEZ_PROLOG asm ("movq %%rbp, %0" : "=r" (chez_saved_bp))
+#define CHEZ_EPILOG chez_saved_bp = 0
 #include "chez_scheme.h"
 #endif
 
@@ -70,6 +71,11 @@ Lisp_Object scheme_untrack (Lisp_Object);
 
 void gdb_break(void);
 
+
+bool analyze_scheme_ref(Lisp_Object ref, const char *label);
+bool analyze_scheme_ref_ptr(Lisp_Object *ptr, const char *label);
+
+extern uint64_t gdb_misc_val;
 extern unsigned gdb_flags;
 extern int gdb_hit_count;
 
@@ -77,11 +83,7 @@ extern int gdb_hit_count;
   extern rtype (*scheme_fptr_##name)(const char *, int, __VA_ARGS__)
 #include "scheme_fptr.h"
 
-INLINE void
-do_chez_preamble (void)
-{
-  CHEZ_PREAMBLE;
-}
+void do_chez_preamble (void);
 
 #define SCHEME_FPTR_CALL(name, ...)                             \
   (last_scheme_function = #name,                                \
@@ -133,7 +135,10 @@ extern chez_ptr scheme_guardian;
 
 INLINE void *
 scheme_malloc_ptr(Lisp_Object addr) {
-  void *data = (void *) chez_integer_value (CHEZ (addr));
+  gdb_misc_val = (uint64_t) CHEZ (addr);
+  analyze_scheme_ref (addr, "scheme_malloc_ptr");
+  eassert (chez_fixnump (CHEZ (addr)));
+  void *data = (void *) chez_fixnum_value (CHEZ (addr));
   CHECK_ALLOC (data);
   return data;
 }

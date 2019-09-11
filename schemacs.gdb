@@ -15,8 +15,8 @@ set print frame-arguments none
 #set print address off
 set trace-commands off
 
-handle SIGSEGV nostop
-handle SIGSEGV noprint
+#handle SIGSEGV nostop
+#handle SIGSEGV noprint
 
 #handle SIGINT nopass
 
@@ -56,6 +56,14 @@ end
 
 break gdb_break
 command
+up
+end
+
+break gdb_found_ref
+disable
+command
+bt 5
+up
 up
 end
 

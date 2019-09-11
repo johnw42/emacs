@@ -30,11 +30,17 @@ const char *last_scheme_call_file;
 int last_scheme_call_line;
 chez_ptr scheme_guardian;
 
+uint64_t gdb_misc_val = 0;
 unsigned gdb_flags = 0;
 
 #define SCHEME_FPTR_DEF(name, rtype, ...) \
   rtype (*scheme_fptr_##name)(const char *, int, __VA_ARGS__) = 0
 #include "scheme_fptr.h"
+
+void do_chez_preamble (void)
+{
+}
+
 
 void syms_of_scheme_lisp(void) {
   /* DEFSYM(Qscheme_value_ref_id, "scheme-value-ref-id"); */
@@ -82,14 +88,16 @@ scheme_sigaction (int sig, siginfo_t *info, void *ucontext)
   sigprocmask (SIG_UNBLOCK, &set, (sigset_t *) 0);
 
   // Both versions seem to have the same effect.
+  if (chez_saved_bp)
+    {
 #if 1
-  asm ("movq %0, %%rbp" : : "r" (chez_saved_bp));
+      asm ("movq %0, %%rbp" : : "rm" (chez_saved_bp));
 #else
-  ucontext_t *ctx = ucontext;
-  ctx->uc_mcontext.gregs[REG_RBP] = (uint64_t) chez_saved_bp;
+      ucontext_t *ctx = ucontext;
+      ctx->uc_mcontext.gregs[REG_RBP] = (uint64_t) chez_saved_bp;
 #endif
-
-  abort();
+      abort();
+    }
 }
 
 void scheme_init(void) {

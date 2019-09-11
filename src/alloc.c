@@ -122,7 +122,12 @@ static size_t magic_refs[MAX_MAGIC_REFS];
 static size_t magic_ref_ptrs[MAX_MAGIC_REFS];
 
 static void
-gdb_found_ref(void)
+gdb_found_ref(Lisp_Object ref)
+{
+}
+
+static void
+gdb_found_ref_ptr(Lisp_Object *ptr)
 {
 }
 
@@ -136,7 +141,7 @@ analyze_scheme_ref(Lisp_Object ref, const char *label)
         {
           if (label)
             printf ("*** %s: ref %p\n", label, CHEZ (ref));
-          gdb_found_ref();
+          gdb_found_ref(ref);
           return true;
         }
     }
@@ -160,7 +165,7 @@ analyze_scheme_ref_ptr(Lisp_Object *ptr, const char *label)
     }
   if (ptr && analyze_scheme_ref (*ptr, label))
     return true;
-  if (found) gdb_found_ref();
+  if (found) gdb_found_ref_ptr(ptr);
   return found;
 }
 
@@ -2424,17 +2429,17 @@ scheme_allocate (ptrdiff_t nbytes, chez_ptr sym, Lisp_Object *vec_ptr)
   eassert (data == scheme_malloc_ptr (addr));
 
   chez_ptr vec = chez_make_vector(SCHEME_PV_LENGTH, sym);
-  chez_call2 (scheme_guardian,
-              vec,
-              chez_cons (sym,
-                         chez_integer ((chez_iptr) data)));
+  /* chez_call2 (scheme_guardian, */
+  /*             vec, */
+  /*             chez_cons (sym, */
+  /*                        chez_integer ((chez_iptr) data))); */
 
-  chez_ptr eph = SCHEME_FPTR_CALL(ephemeron_cons, vec, chez_false);
+  /* chez_ptr eph = SCHEME_FPTR_CALL(ephemeron_cons, vec, chez_false); */
 
   scheme_track (UNCHEZ (vec));
   SCHEME_FPTR_CALL(save_origin, vec);
   SCHEME_PV_ADDR_SET(vec, CHEZ (addr));
-  SCHEME_PV_EPHEMERON_SET(vec, eph);
+  //SCHEME_PV_EPHEMERON_SET(vec, eph);
   *vec_ptr = UNCHEZ (vec);
 
   resume_scheme_gc ();
@@ -2450,11 +2455,12 @@ static struct Lisp_String *
 allocate_string (void)
 {
 #ifdef HAVE_CHEZ_SCHEME
-  Lisp_Object vec;
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (vec);
   struct Lisp_String *s = scheme_allocate (sizeof (struct Lisp_String), scheme_string_symbol, &vec);
   update_scheme_obj (&s->u.s.scheme_obj, vec);
   eassert(STRINGP(vec));
-  return s;
+  EXIT_LISP_FRAME (s);
 #else /* not HAVE_CHEZ_SCHEME */
   struct Lisp_String *s;
 
@@ -8773,8 +8779,8 @@ resume_scheme_gc (void)
 {
   disable_scheme_gc--;
   eassert (disable_scheme_gc >= 0);
-  if (disable_scheme_gc == 0 && gc_was_deferred)
-    Fgarbage_collect();
+  /* if (disable_scheme_gc == 0 && gc_was_deferred) */
+  /*   Fgarbage_collect(); */
 }
 
 int
@@ -8792,12 +8798,12 @@ before_scheme_gc (void)
   gc_was_deferred = false;
 
   eassert (STRINGP(empty_unibyte_string));
-  memgrep(0xdeadface0000000f, 0xffffffff0000000f, 8);
-  for (int i = 0; i < MAX_MAGIC_REFS; i++)
-    {
-      if (magic_refs[i])
-        memgrep(magic_refs[i], 0, 8);
-    }
+  /* memgrep(0xdeadface0000000f, 0xffffffff0000000f, 8); */
+  /* for (int i = 0; i < MAX_MAGIC_REFS; i++) */
+  /*   { */
+  /*     if (magic_refs[i]) */
+  /*       memgrep(magic_refs[i], 0, 8); */
+  /*   } */
 
   ptrdiff_t pos = 0, count, frames_found = 0, entries_found = 0;
   union lisp_frame_record *records;
@@ -9001,16 +9007,9 @@ union
 
 static size_t magic_refs[MAX_MAGIC_REFS] =
   {
-   //0x407f165f,
-   //0x43a4f14b,
-   /* 0x6798de, */
-   /* 0x679584, */
-   /* 0x67957a, */
-   /* 0x406cd65f */
-   0x679637,
-   0x6799d6,
+   0x40b4cdff
   };
 static size_t magic_ref_ptrs[MAX_MAGIC_REFS] =
   {
-   0x7fffffffcc08,
+   //0x7fffffffcc08,
   };

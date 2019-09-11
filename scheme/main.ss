@@ -352,8 +352,12 @@
     (collect-request-handler
      #;elisp-do-scheme-gc
      (lambda ()
-       (parameterize ([collect-request-handler list])
+       (parameterize ([collect-request-handler
+                       (lambda ()
+                         (printf "skipping gc from scheme\n"))])
+         (printf "maybe starting gc from scheme\n")
          (when (elisp-before-scheme-gc)
+           (printf "invoking (collect) from scheme\n")
            (collect)
            (elisp-after-scheme-gc)))))
     (let (

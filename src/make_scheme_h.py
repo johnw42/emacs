@@ -49,14 +49,25 @@ def Main():
                     for atype, name in zip(arg_types, arg_names)
                 ]
             comma = ", "
-            ret = "" if re.match(r"void *", rtype) else "return "
-            print(
-                f"""\
-INLINE {rtype}chez_{name} ({comma.join(arg_decls)}) {{
-  CHEZ_PREAMBLE;
-  {ret}S{name}({comma.join(arg_names)});
+            if re.match(r"void *", rtype):
+                print(
+                    f"""\
+INLINE void chez_{name} ({comma.join(arg_decls)}) {{
+  CHEZ_PROLOG;
+  S{name}({comma.join(arg_names)});
+  CHEZ_EPILOG;
 }}"""
-            )
+                )
+            else:
+                print(
+                    f"""\
+INLINE {rtype}chez_{name} ({comma.join(arg_decls)}) {{
+  CHEZ_PROLOG;
+  {rtype} result = S{name}({comma.join(arg_names)});
+  CHEZ_EPILOG;
+  return result;
+}}"""
+                )
             extra_lines += [f"#define S{name} emacs_S{name}"]
     for line in extra_lines:
         print(line)

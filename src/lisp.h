@@ -1281,7 +1281,7 @@ INLINE Lisp_Object vectorlike_lisp_obj(void *vptr)
 /* #define XSETPSEUDOVECTOR(a, b, code) ((a) = (b)->header.s.scheme_obj) */
 /* #define XSETTYPED_PSEUDOVECTOR(a, b, size, code) XSETPSEUDOVECTOR(a, b, code) */
 
-#define XUNTAG_VECTORLIKE(a) (scheme_malloc_ptr (UNCHEZ (chez_vector_ref (CHEZ (a), 1))))
+#define XUNTAG_VECTORLIKE(a) (eassert (chez_vectorp (CHEZ (a))), scheme_malloc_ptr (UNCHEZ (chez_vector_ref (CHEZ (a), 1))))
 #define XUNTAG_MISC(a) XUNTAG_VECTORLIKE (a)
 
 #else /* not HAVE_CHEZ_SCHEME */
@@ -4112,8 +4112,6 @@ extern void parse_str_as_multibyte (const unsigned char *, ptrdiff_t,
 				    ptrdiff_t *, ptrdiff_t *);
 
 /* Defined in alloc.c.  */
-bool analyze_scheme_ref(Lisp_Object ref, const char *label);
-bool analyze_scheme_ref_ptr(Lisp_Object *ptr, const char *label);
 extern void *my_heap_start (void);
 extern void check_pure_size (void);
 extern void free_misc (Lisp_Object);
