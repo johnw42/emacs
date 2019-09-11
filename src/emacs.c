@@ -1214,11 +1214,12 @@ Using an Emacs configured with --with-x-toolkit=lucid does not have this problem
 
   /* Perform basic initializations (not merely interning symbols).  */
 
+#ifdef HAVE_CHEZ_SCHEME
+  scheme_init ();
+#endif /* HAVE_CHEZ_SCHEME */
+
   if (!initialized)
     {
-#ifdef HAVE_CHEZ_SCHEME
-      scheme_init ();
-#endif /* HAVE_CHEZ_SCHEME */
       init_alloc_once ();
       init_threads_once ();
       init_bidi_once ();
@@ -1740,6 +1741,7 @@ Using an Emacs configured with --with-x-toolkit=lucid does not have this problem
 
   /* Enter editor command loop.  This never returns.  */
   Frecursive_edit ();
+
   /* NOTREACHED */
   return 0;
 }

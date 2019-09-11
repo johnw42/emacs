@@ -1676,7 +1676,7 @@ set_default_internal (Lisp_Object symbol, Lisp_Object value,
         xsignal1 (Qsetting_constant, symbol);
       else
         /* Allow setting keywords to their own value.  */
-        EXIT_LISP_FRAME ();
+        EXIT_LISP_FRAME_VOID ();
 
     case SYMBOL_TRAPPED_WRITE:
       /* Don't notify here if we're going to call Fset anyway.  */
@@ -1706,7 +1706,7 @@ set_default_internal (Lisp_Object symbol, Lisp_Object value,
 	/* If the default binding is now loaded, set the REALVALUE slot too.  */
 	if (blv->fwd && EQ (blv->defcell, blv->valcell))
 	  store_symval_forwarding (blv->fwd, value, NULL);
-        EXIT_LISP_FRAME ();
+        EXIT_LISP_FRAME_VOID ();
       }
     case SYMBOL_FORWARDED:
       {
@@ -1735,10 +1735,11 @@ set_default_internal (Lisp_Object symbol, Lisp_Object value,
 	  }
 	else
           set_internal (symbol, value, Qnil, bindflag);
-        EXIT_LISP_FRAME ();
+        EXIT_LISP_FRAME_VOID ();
       }
     default: emacs_abort ();
     }
+  EXIT_LISP_FRAME_VOID ();
 }
 
 DEFUN ("set-default", Fset_default, Sset_default, 2, 2, 0,
@@ -1767,7 +1768,8 @@ of previous VARs.
 usage: (setq-default [VAR VALUE]...)  */)
   (Lisp_Object args)
 {
-  Lisp_Object args_left, symbol, val;
+  ENTER_LISP_FRAME (args);
+  LISP_LOCALS (args_left, symbol, val);
 
   args_left = val = args;
 
@@ -1779,7 +1781,7 @@ usage: (setq-default [VAR VALUE]...)  */)
       args_left = Fcdr (XCDR (args_left));
     }
 
-  return val;
+  EXIT_LISP_FRAME (val);
 }
 
 /* Lisp functions for creating and removing buffer-local variables.  */

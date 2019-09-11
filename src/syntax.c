@@ -3618,8 +3618,9 @@ Sixth arg COMMENTSTOP non-nil means stop after the start of a comment.
 void
 init_syntax_once (void)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (temp);
   register int i, c;
-  Lisp_Object temp;
 
   /* This has to be done here, before we call Fmake_char_table.  */
   DEFSYM (Qsyntax_table, "syntax-table");
@@ -3696,6 +3697,8 @@ init_syntax_once (void)
   /* All multibyte characters have syntax `word' by default.  */
   temp = AREF (Vsyntax_code_object, Sword);
   char_table_set_range (Vstandard_syntax_table, 0x80, MAX_CHAR, temp);
+
+  EXIT_LISP_FRAME_VOID ();
 }
 
 void

@@ -1215,12 +1215,12 @@ end
 
 # Show Lisp backtrace after normal backtrace.
 define hookpost-backtrace
-  set $bt = backtrace_top ()
-  if backtrace_p ($bt)
-    echo \n
-    echo Lisp Backtrace:\n
-    xbacktrace
-  end
+  # set $bt = backtrace_top ()
+  # if backtrace_p ($bt)
+  #   echo \n
+  #   echo Lisp Backtrace:\n
+  #   xbacktrace
+  # end
 end
 
 # Flush display (X only)

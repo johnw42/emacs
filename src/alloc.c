@@ -2455,7 +2455,7 @@ static struct Lisp_String *
 allocate_string (void)
 {
 #ifdef HAVE_CHEZ_SCHEME
-  ENTER_LISP_FRAME ();
+  ENTER_LISP_FRAME_T (struct Lisp_String *);
   LISP_LOCALS (vec);
   struct Lisp_String *s = scheme_allocate (sizeof (struct Lisp_String), scheme_string_symbol, &vec);
   update_scheme_obj (&s->u.s.scheme_obj, vec);

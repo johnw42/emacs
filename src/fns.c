@@ -2024,7 +2024,9 @@ use `(setq x (plist-put x prop val))' to be sure to use the new value.
 The PLIST is modified by side effects.  */)
   (Lisp_Object plist, Lisp_Object prop, Lisp_Object val)
 {
-  Lisp_Object prev = Qnil, tail = plist;
+  ENTER_LISP_FRAME (plist, prop, val);
+  LISP_LOCALS (prev, tail);
+  prev = Qnil, tail = plist;
   FOR_EACH_TAIL (tail)
     {
       if (! CONSP (XCDR (tail)))
@@ -2045,9 +2047,9 @@ The PLIST is modified by side effects.  */)
   Lisp_Object newcell
     = Fcons (prop, Fcons (val, NILP (prev) ? plist : XCDR (XCDR (prev))));
   if (NILP (prev))
-    return newcell;
+    EXIT_LISP_FRAME (newcell);
   Fsetcdr (XCDR (prev), newcell);
-  return plist;
+  EXIT_LISP_FRAME (plist);
 }
 
 DEFUN ("put", Fput, Sput, 3, 3, 0,

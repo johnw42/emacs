@@ -5,6 +5,8 @@ top=$PWD
 
 ./update-tags &> /dev/null &!
 
+make_args=("$@")
+
 HAVE_CHEZ_SCHEME=false
 if fgrep -q '#define HAVE_CHEZ_SCHEME' src/globals.h; then
   HAVE_CHEZ_SCHEME=true
@@ -21,7 +23,7 @@ EMACS_CMD=($top/src/temacs --batch --load loadup)
 # EMACS_CMD=($top/src/temacs --batch --no-site-file --no-site-lisp --eval '(setq load-prefer-newer t)' -f batch-byte-compile htmlfontify.el)
 
 do_make() {
-  make -j1 "$@"
+  make -j1 "${make_args[@]}" "$@"
 }
 
 main() {

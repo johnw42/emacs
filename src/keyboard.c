@@ -766,7 +766,7 @@ This function is called by the editor initialization to begin editing.  */)
     temporarily_switch_to_single_kboard (SELECTED_FRAME ());
 
   recursive_edit_1 ();
-  EXIT_LISP_FRAME_WITH (unbind_to (count, Qnil));
+  EXIT_LISP_FRAME (unbind_to (count, Qnil));
 }
 
 void

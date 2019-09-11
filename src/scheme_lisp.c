@@ -16,6 +16,12 @@
 
 #pragma GCC diagnostic ignored "-Wdiscarded-qualifiers"
 
+#ifdef ENABLE_CHECKING
+static void run_init_checks(void);
+#endif
+
+static void lisp_frame_record_init (void);
+
 static bool scheme_initialized = false;
 static Lisp_Object c_data_table;
 
@@ -146,6 +152,12 @@ void scheme_init(void) {
   chez_lock_object (scheme_misc_symbol);
   scheme_string_symbol = scheme_call1("gensym", chez_string("emacs-string"));
   chez_lock_object (scheme_string_symbol);
+
+  lisp_frame_record_init ();
+
+#ifdef ENABLE_CHECKING
+  run_init_checks();
+#endif
 
   //atexit(scheme_deinit);
   scheme_initialized = true;
@@ -1156,8 +1168,20 @@ may_be_valid (chez_ptr x)
 }
 
 static union lisp_frame_record *lisp_frame_records = NULL;
-static ptrdiff_t lisp_frame_record_capacity = 0;
+static ptrdiff_t lisp_frame_record_capacity = 256;
 ptrdiff_t lisp_frame_record_count = 0;
+
+static void
+lisp_frame_record_init (void)
+{
+  lisp_frame_records =
+    reallocarray (lisp_frame_records,
+                  lisp_frame_record_capacity,
+                  sizeof (union lisp_frame_record));
+  eassert (lisp_frame_records);
+  lisp_frame_records[0].sentinel = NULL;
+  lisp_frame_record_count = 1;
+}
 
 static void
 ensure_lisp_frame_record_capacity (ptrdiff_t n)
@@ -1166,8 +1190,7 @@ ensure_lisp_frame_record_capacity (ptrdiff_t n)
   if (lisp_frame_record_capacity < cap_needed)
     {
       ptrdiff_t new_cap = lisp_frame_record_capacity;
-      if (new_cap == 0)
-        new_cap = 256;
+      eassert (new_cap > 0);
       while (new_cap < cap_needed)
         new_cap *= 2;
       printf ("expanding to %ld\n", new_cap);
@@ -1179,18 +1202,40 @@ ensure_lisp_frame_record_capacity (ptrdiff_t n)
     }
 }
 
+static uint64_t push_frame_counter = 0;
+
+#define LOWER_IN_STACK(a, b) ((void *)(a) > (void *)(b))
+
+// If the assertion fails, it probably means ENTER_LISP_FRAME* wasn't
+// paired correctly with EXIT_LISP_FRAME* somewhere.
+#define BEGIN_PUSH_FRAME(n)                                             \
+  ++push_frame_counter;                                                 \
+  eassert (n >= 0);                                                     \
+  ensure_lisp_frame_record_capacity (n + 1);                            \
+  void *old_sentinel = lisp_frame_records[lisp_frame_record_count - 1].sentinel; \
+  eassert (old_sentinel == NULL || !LOWER_IN_STACK (&old_sentinel, old_sentinel))
+
+  /* printf ("BEGIN_PUSH_FRAME: depth: %d; old sentinel: %p; new sentinel: %p\n", \ */
+  /*         (int)lisp_frame_record_count, old_sentinel, &old_sentinel);   \ */
+
+#define END_PUSH_FRAME(n)                                               \
+  lisp_frame_records[lisp_frame_record_count++].count = n;              \
+  lisp_frame_records[lisp_frame_record_count++].sentinel = &old_sentinel
+
+    /* printf ("END_PUSH_FRAME: depth: %d\n", (int)lisp_frame_record_count) */
+
+
 void
 push_lisp_locals(bool already_initialized, int n, ...)
 {
-  eassert (n > 0);
-  ensure_lisp_frame_record_capacity (n + 1);
-
+  BEGIN_PUSH_FRAME(n);
   va_list ap;
   va_start(ap, n);
   for (int i = 0; i < n; i++)
     {
       Lisp_Object *ptr = va_arg(ap, Lisp_Object *);
       analyze_scheme_ref (*ptr, "in push_lisp_locals");
+      /* printf ("push_lisp_locals: pushing %p at %d\n", ptr, (int) lisp_frame_record_count); */
       lisp_frame_records[lisp_frame_record_count++].ptr = ptr;
       if (already_initialized)
         eassert (may_be_valid (CHEZ (*ptr)));
@@ -1198,15 +1243,14 @@ push_lisp_locals(bool already_initialized, int n, ...)
         *ptr = UNCHEZ (chez_false);
     }
   va_end(ap);
-  lisp_frame_records[lisp_frame_record_count++].count = n;
+  END_PUSH_FRAME(n);
 }
 
 void
 push_lisp_local_array(bool already_initialized,
                       Lisp_Object *ptr, ptrdiff_t n)
 {
-  eassert (n >= 0);
-  ensure_lisp_frame_record_capacity (n + 1);
+  BEGIN_PUSH_FRAME(n);
   for (int i = 0; i < n; i++)
     {
       lisp_frame_records[lisp_frame_record_count++].ptr =
@@ -1216,7 +1260,7 @@ push_lisp_local_array(bool already_initialized,
       else
         ptr[i] = UNCHEZ (chez_false);
     }
-  lisp_frame_records[lisp_frame_record_count++].count = n;
+  END_PUSH_FRAME(n);
 }
 
 // On the first call, *pos must be 0.  If any unexamined records
@@ -1231,8 +1275,9 @@ walk_lisp_frame_records (ptrdiff_t *pos,
 {
   eassert (*pos >= 0);
   ptrdiff_t index = lisp_frame_record_count - *pos;
-  while (index > 0)
+  while (index > 2)
     {
+      --index;
       ptrdiff_t ptr_count = lisp_frame_records[--index].count;
       eassert (ptr_count >= 0);
       eassert (ptr_count < 100);
@@ -1240,7 +1285,8 @@ walk_lisp_frame_records (ptrdiff_t *pos,
         {
           *pptr = &lisp_frame_records[index - ptr_count];
           *count = ptr_count;
-          *pos += 1 + ptr_count;
+          index -= ptr_count;
+          *pos = lisp_frame_record_count - index;
           return true;
         }
     }
@@ -1249,6 +1295,88 @@ walk_lisp_frame_records (ptrdiff_t *pos,
   *pos = -1;
   return false;
 }
+
+#ifdef ENABLE_CHECKING
+#pragma GCC diagnostic ignored "-Wunused-local-typedefs"
+
+static ptrdiff_t
+get_lisp_frame_ptrs (Lisp_Object **buf)
+{
+  ptrdiff_t total = 0;
+  ptrdiff_t pos = 0;
+  union lisp_frame_record *rec;
+  ptrdiff_t count;
+  while (walk_lisp_frame_records (&pos, &rec, &count))
+    {
+      for (ptrdiff_t i = 0; i < count; i++)
+        {
+          buf[total++] = rec[i].ptr;
+        }
+    }
+  return total;
+}
+
+static int ptr_cmp (const void *p, const void *q)
+{
+  Lisp_Object **pp = p, **qq = q;
+  if (*pp - *qq > 0) return 1;
+  if (*pp - *qq < 0) return -1;
+  return 0;
+}
+
+static void
+run_init_checks(void)
+{
+  return;
+
+  Lisp_Object a = make_number(1), b = make_number(2);
+  ENTER_LISP_FRAME (a, b);
+  LISP_LOCALS (c, d);
+
+  Lisp_Object *expected[] = {&a, &b, &c, &d};
+  qsort (expected, ARRAYELTS (expected),
+         sizeof (Lisp_Object *), ptr_cmp);
+  Lisp_Object *found[256];
+  ptrdiff_t nfound = get_lisp_frame_ptrs (found);
+  eassert (nfound == ARRAYELTS (expected));
+  qsort (found, nfound, sizeof (Lisp_Object *), ptr_cmp);
+  eassert (memcmp (found, expected, sizeof expected) == 0);
+
+  {
+    Lisp_Object args[] = {make_number(3), make_number(4)};
+    ENTER_LISP_FRAME_VA (2, args);
+    LISP_LOCAL_ARRAY (e, 2);
+
+    Lisp_Object *expected[] =
+      {
+       &a, &b, &c, &d,
+       &args[0], &args[1],
+       &e[0], &e[1]
+      };
+    qsort (expected, ARRAYELTS (expected),
+           sizeof (Lisp_Object *), ptr_cmp);
+    ptrdiff_t nfound = get_lisp_frame_ptrs (found);
+    eassert (nfound == ARRAYELTS (expected));
+    qsort (found, nfound, sizeof (Lisp_Object *), ptr_cmp);
+    eassert (memcmp (found, expected, sizeof expected) == 0);
+
+    EXIT_LISP_FRAME_NO_RETURN ();
+  }
+
+  nfound = get_lisp_frame_ptrs (found);
+  eassert (nfound == ARRAYELTS (expected));
+  qsort (found, nfound, sizeof (Lisp_Object *), ptr_cmp);
+  eassert (memcmp (found, expected, sizeof expected) == 0);
+
+  EXIT_LISP_FRAME_NO_RETURN();
+  eassert (lisp_frame_record_count == 1);
+
+  lisp_frame_record_init();
+
+  printf("tests pass!\n");
+}
+#endif
+
 
 
 #endif /* HAVE_CHEZ_SCHEME */

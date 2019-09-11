@@ -2611,7 +2611,7 @@ run_hook_with_args (ptrdiff_t nargs, Lisp_Object *args,
   /* If we are dying or still initializing,
      don't do anything--it would probably crash if we tried.  */
   if (NILP (Vrun_hooks))
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
 
   sym = args[0];
   val = find_symbol_value (sym);
@@ -2621,7 +2621,7 @@ run_hook_with_args (ptrdiff_t nargs, Lisp_Object *args,
   else if (!CONSP (val) || FUNCTIONP (val))
     {
       args[0] = val;
-      EXIT_LISP_FRAME_WITH (funcall (nargs, args));
+      EXIT_LISP_FRAME (funcall (nargs, args));
     }
   else
     {
@@ -3068,7 +3068,7 @@ funcall_lambda (Lisp_Object fun, ptrdiff_t nargs,
 	     and constants vector yet, fetch them from the file.  */
 	  if (CONSP (AREF (fun, COMPILED_BYTECODE)))
 	    Ffetch_bytecode (fun);
-	  EXIT_LISP_FRAME_WITH
+	  EXIT_LISP_FRAME
             (exec_byte_code (AREF (fun, COMPILED_BYTECODE),
                              AREF (fun, COMPILED_CONSTANTS),
                              AREF (fun, COMPILED_STACK_DEPTH),
@@ -3079,7 +3079,7 @@ funcall_lambda (Lisp_Object fun, ptrdiff_t nargs,
     }
 #ifdef HAVE_MODULES
   else if (MODULE_FUNCTIONP (fun))
-    EXIT_LISP_FRAME_WITH (funcall_module (fun, nargs, arg_vector));
+    EXIT_LISP_FRAME (funcall_module (fun, nargs, arg_vector));
 #endif
   else
     emacs_abort ();
@@ -3157,7 +3157,7 @@ funcall_lambda (Lisp_Object fun, ptrdiff_t nargs,
 			    Qnil, 0, 0);
     }
 
-  EXIT_LISP_FRAME_WITH (unbind_to (count, val));
+  EXIT_LISP_FRAME (unbind_to (count, val));
 }
 
 DEFUN ("func-arity", Ffunc_arity, Sfunc_arity, 1, 1, 0,

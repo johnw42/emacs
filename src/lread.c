@@ -2076,7 +2076,7 @@ readevalloop (Lisp_Object readcharfun,
 		      infile0 || whole_buffer);
 
   unbind_to (count, Qnil);
-  EXIT_LISP_FRAME ();
+  EXIT_LISP_FRAME_VOID ();
 }
 
 DEFUN ("eval-buffer", Feval_buffer, Seval_buffer, 0, 5, "",
