@@ -3,6 +3,7 @@ import glob
 import sys
 import os
 import re
+import warnings
 
 
 # class Chunk:
@@ -51,10 +52,15 @@ class SourceFile:
             self.data = f.read()
 
     def Save(self):
+        data = self.data
         if self.HasChanges():
             self.CommitChanges()
+            assert data != self.data
+            assert len(data) * 0.8 <= len(self.data) <= len(data) * 1.2
+            assert "LISP_LOCALS" in self.data
             with open(self.path, "wt", encoding="Latin-1") as f:
                 f.write(self.data)
+            print("wrote to", self.path)
 
     def HasChanges(self):
         return len(self.changes) != 0
@@ -66,19 +72,19 @@ class SourceFile:
         changes = self.changes
         changes.sort(key=lambda c: (c[1], c[0]))
         for c1, c2 in zip(self.changes, self.changes[1:]):
-            if c2[0] < c1[2]:
+            if c2[0] < c1[1]:
                 raise Exception("overlapping changes")
-
-        changes.reverse()
+        # print(changes)
         data = self.data
         parts = []
-        prev_start = len(self.data)
+        prev_stop = 0
         for start, stop, new_data in changes:
-            parts.append(data[prev_start:stop])
+            parts.append(data[prev_stop:start])
             parts.append(new_data)
-            prev_start = start
-        parts.append(data[:prev_start])
+            prev_stop = stop
+        parts.append(data[prev_stop:])
         self.data = "".join(parts)
+        assert self.data != data
         self.changes = []
 
     def LineEnd(self, pos):
@@ -116,7 +122,10 @@ class SourceFile:
     def __setitem__(self, index, val):
         if not isinstance(index, slice):
             index = slice(index, index + 1)
-        self.changes.append((index.start, index.stop, val))
+        if self.data[index] == val:
+            warnings.warn("no change")
+        else:
+            self.changes.append((index.start, index.stop, val))
 
     def CompilePattern(self, pattern):
         if pattern not in RE_CACHE:
@@ -149,11 +158,16 @@ class SourceFile:
             return "name", pos, m.end()
         return self.data[pos], pos, pos + 1
 
+    def BackToLineStart(self, pos):
+        while pos > 0 and self.data[pos - 1] != "\n":
+            pos -= 1
+        return pos
+
     def NextMatchingDelimiter(self, pos):
         data = self.data
         depth = 0
         start = pos
-        while True:
+        while pos < len(data):
             c = data[pos]
             if c in "([{":
                 depth += 1
@@ -172,9 +186,11 @@ class SourceFile:
             elif data[pos : pos + 2] == "/*":
                 while data[pos : pos + 2] != "*/":
                     pos += 1
+                pos += 1
             if depth == 0:
-                return pos if pos != start else None
+                return pos + 1 if pos != start else None
             pos += 1
+        raise Exception(f"error at {start}")
 
     def SkipSpaces(self, pos):
         data = self.data
@@ -196,17 +212,21 @@ class SourceFile:
 
 
 def ParseLocalVarDecl(f, start, stop):
+    if "(*cons)" in f[start:stop]:
+        return
     while True:
         m = f.match(r"\**", start)
         pre_decl = m.group()
         pos = m.end()
         t, name_start, name_end = f.ForwardExpr(pos)
-        assert t == "name"
+        assert t == "name", (t, pos)
         name = f[name_start:name_end]
         expr_end = name_end
         init_start = None
         while True:
+            prev_expr_end = expr_end
             t, expr_start, expr_end = f.ForwardExpr(expr_end)
+            assert expr_end <= stop + 1, (t, prev_expr_end, expr_start)
             if t == "=":
                 post_decl = f[name_end:expr_start].strip()
                 init_start = expr_end
@@ -239,23 +259,50 @@ def ProcessFunction(f, open_brace_pos):
     m = f.match(r"([A-Za-z0-9_]+)\s*\(", name_start)
     if not m:
         return
-    name = m.group(1)
+    f_name = m.group(1)
+    print(f_name)
     t_start = f.PrevLineStart(name_start)
-    if name == "record_event":
+    if f_name == "record_event":
         return
     m = f.MustMatch(r"(?:(?:INLINE|static)\s+)?(\S.*)", t_start)
     r_type = m.group(1)
     close_brace_pos = f.NextMatchingDelimiter(open_brace_pos)
-    f.MustMatch(r"}\s", close_brace_pos)
+    f.MustMatch(r"}\s", close_brace_pos - 1)
     here = f.NextLineStart(open_brace_pos)
+    local_vars = []
     while here < close_brace_pos:
-        m = f.match(r"\s*(?:for\s*\(\s*)Lisp_Object\s", here)
+        m = f.match(
+            r"(\s*)(for\s*\(\s*)?((?:(?:register|const)\s+)*Lisp_Object\s)", here
+        )
         if m:
+            indent = m.group(1)
+            in_loop = m.group(2)
+            decl_start = m.start(3)
             decl_end = f.index(";", m.end())
-            for v in ParseLocalVarDecl(f, m.end(), decl_end):
-                print(v)
+            assign_exprs = []
+            for pre_decl, name, post_decl, init_expr in ParseLocalVarDecl(
+                f, m.end(), decl_end
+            ):
+                if pre_decl or post_decl:
+                    warnings.warn(f"pre_decl or post_decl in {f_name}")
+                    return
+                if name not in local_vars:
+                    local_vars.append(name)
+                if init_expr:
+                    assign_exprs.append(name + " = " + init_expr)
+            if assign_exprs or in_loop:
+                if in_loop:
+                    sep = ", "
+                else:
+                    sep = ";\n" + indent
+                f[decl_start:decl_end] = sep.join(assign_exprs)
+            else:
+                f[f.BackToLineStart(decl_start) : f.NextLineStart(decl_end)] = ""
             here = decl_end
         here = f.NextLineStart(here)
+    if local_vars:
+        pos = f.NextLineStart(open_brace_pos)
+        f[pos:pos] = "  LISP_LOCALS(" + ", ".join(local_vars) + ");\n"
 
 
 def Main():
@@ -267,15 +314,13 @@ def Main():
         here = 0
         while not f.IsEof(here):
             eol = f.LineEnd(here)
-            try:
-                if f[here:eol] == "{":
-                    ProcessFunction(f, here)
-            except IndexError:
-                pass
+            if f[here:eol] == "{":
+                ProcessFunction(f, here)
             here = f.NextLineStart(eol)
         if f.HasChanges():
-            f.CommitChanges()
-            return
+            print(path, "updated")
+            f.Save()
+            sys.exit(1)
 
 
 Main()
