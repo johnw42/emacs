@@ -117,8 +117,11 @@ SYNTAX_ENTRY (int c)
 INLINE int
 syntax_property_with_flags (int c, bool via_property)
 {
-  Lisp_Object ent = syntax_property_entry (c, via_property);
-  return CONSP (ent) ? XINT (XCAR (ent)) : Swhitespace;
+  ENTER_LISP_FRAME_T (int);
+  LISP_LOCALS (ent);
+  ent = syntax_property_entry (c, via_property);
+
+  EXIT_LISP_FRAME (CONSP (ent) ? XINT (XCAR (ent)) : Swhitespace);
 }
 INLINE int
 SYNTAX_WITH_FLAGS (int c)

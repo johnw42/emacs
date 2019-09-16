@@ -158,6 +158,8 @@ smc_save_yourself_CB (SmcConn smcConn,
 		      int interactStyle,
 		      Bool fast)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (user_login_name);
 #define NR_PROPS 5
 
   SmProp *props[NR_PROPS];
@@ -168,11 +170,12 @@ smc_save_yourself_CB (SmcConn smcConn,
   int props_idx = 0;
   int i;
   char *smid_opt, *chdir_opt = NULL;
-  Lisp_Object user_login_name = Fuser_login_name (Qnil);
+  user_login_name = Fuser_login_name (Qnil);
+
 
   /* Must have these.  */
   if (! STRINGP (Vinvocation_name) || ! STRINGP (user_login_name))
-    return;
+    EXIT_LISP_FRAME_VOID ();
 
   /* How to start a new instance of Emacs.  */
   props[props_idx] = &prop_ptr[props_idx];
@@ -279,6 +282,7 @@ smc_save_yourself_CB (SmcConn smcConn,
       /* No interaction, we are done saving ourself.  */
       SmcSaveYourselfDone (smcConn, True);
     }
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* According to the SM specification, this shall close the connection.  */
@@ -504,6 +508,7 @@ is told to abort the window system shutdown.
 Do not call this function yourself. */)
   (Lisp_Object event)
 {
+  ENTER_LISP_FRAME (event);
   bool kill_emacs = (CONSP (event) && CONSP (XCDR (event))
 		     && EQ (Qt, XCAR (XCDR (event))));
 
@@ -531,7 +536,7 @@ Do not call this function yourself. */)
 #endif
     }
 
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 

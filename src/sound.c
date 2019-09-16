@@ -355,9 +355,10 @@ sound_warning (const char *msg)
 static bool
 parse_sound (Lisp_Object sound, Lisp_Object *attrs)
 {
+  ENTER_LISP_FRAME_T (bool, sound);
   /* SOUND must be a list starting with the symbol `sound'.  */
   if (!CONSP (sound) || !EQ (XCAR (sound), Qsound))
-    return 0;
+    EXIT_LISP_FRAME (0);
 
   sound = XCDR (sound);
   attrs[SOUND_FILE] = Fplist_get (sound, QCfile);
@@ -369,7 +370,7 @@ parse_sound (Lisp_Object sound, Lisp_Object *attrs)
   /* File name or data must be specified.  */
   if (!STRINGP (attrs[SOUND_FILE])
       && !STRINGP (attrs[SOUND_DATA]))
-    return 0;
+    EXIT_LISP_FRAME (0);
 #else /* WINDOWSNT */
   /*
     Data is not supported in Windows.  Therefore a
@@ -377,7 +378,7 @@ parse_sound (Lisp_Object sound, Lisp_Object *attrs)
   */
   if (!STRINGP (attrs[SOUND_FILE]))
     {
-      return 0;
+      EXIT_LISP_FRAME (0);
     }
 #endif /* WINDOWSNT */
 
@@ -388,29 +389,29 @@ parse_sound (Lisp_Object sound, Lisp_Object *attrs)
 	{
 	  EMACS_INT volume = XINT (attrs[SOUND_VOLUME]);
 	  if (! (0 <= volume && volume <= 100))
-	    return 0;
+	    EXIT_LISP_FRAME (0);
 	}
       else if (FLOATP (attrs[SOUND_VOLUME]))
 	{
 	  double volume = XFLOAT_DATA (attrs[SOUND_VOLUME]);
 	  if (! (0 <= volume && volume <= 1))
-	    return 0;
+	    EXIT_LISP_FRAME (0);
 	}
       else
-	return 0;
+	EXIT_LISP_FRAME (0);
     }
 
 #ifndef WINDOWSNT
   /* Device must be a string or unspecified.  */
   if (!NILP (attrs[SOUND_DEVICE])
       && !STRINGP (attrs[SOUND_DEVICE]))
-    return 0;
+    EXIT_LISP_FRAME (0);
 #endif  /* WINDOWSNT */
   /*
     Since device is ignored in Windows, it does not matter
     what it is.
    */
-  return 1;
+  EXIT_LISP_FRAME (1);
 }
 
 /* END: Common functions */
@@ -423,7 +424,8 @@ parse_sound (Lisp_Object sound, Lisp_Object *attrs)
 static char const *
 string_default (Lisp_Object s, char const *default_value)
 {
-  return STRINGP (s) ? SSDATA (s) : default_value;
+  ENTER_LISP_FRAME_T (char const *, s);
+  EXIT_LISP_FRAME (STRINGP (s) ? SSDATA (s) : default_value);
 }
 
 
@@ -1349,6 +1351,8 @@ DEFUN ("play-sound-internal", Fplay_sound_internal, Splay_sound_internal, 1, 1, 
 Internal use only, use `play-sound' instead.  */)
   (Lisp_Object sound)
 {
+  ENTER_LISP_FRAME (sound);
+  LISP_LOCALS (file);
   Lisp_Object attrs[SOUND_ATTR_SENTINEL];
   ptrdiff_t count = SPECPDL_INDEX ();
 
@@ -1361,7 +1365,8 @@ Internal use only, use `play-sound' instead.  */)
   if (!parse_sound (sound, attrs))
     error ("Invalid sound specification");
 
-  Lisp_Object file = Qnil;
+  file = Qnil;
+
 
 #ifndef WINDOWSNT
   current_sound_device = xzalloc (sizeof *current_sound_device);
@@ -1450,7 +1455,7 @@ Internal use only, use `play-sound' instead.  */)
 
 #endif /* WINDOWSNT */
 
-  return unbind_to (count, Qnil);
+  EXIT_LISP_FRAME (unbind_to (count, Qnil));
 }
 
 /***********************************************************************

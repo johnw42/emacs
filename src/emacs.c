@@ -406,10 +406,10 @@ terminate_due_to_signal (int sig, int backtrace_limit)
 static void
 init_cmdargs (int argc, char **argv, int skip_args, char *original_pwd)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (name, dir, handler, raw_name, found, odir, tem, lib_src_exists, etc_exists, info_exists);
   int i;
-  Lisp_Object name, dir, handler;
   ptrdiff_t count = SPECPDL_INDEX ();
-  Lisp_Object raw_name;
   AUTO_STRING (slash_colon, "/:");
 
   initial_argv = argv;
@@ -443,7 +443,6 @@ init_cmdargs (int argc, char **argv, int skip_args, char *original_pwd)
      Emacs actually came from.  */
   if (NILP (Vinvocation_directory))
     {
-      Lisp_Object found;
       int yes = openp (Vexec_path, Vinvocation_name,
 		       Vexec_suffixes, &found, make_number (X_OK), false);
       if (yes == 1)
@@ -462,8 +461,8 @@ init_cmdargs (int argc, char **argv, int skip_args, char *original_pwd)
     /* Emacs was started with relative path, like ./emacs.
        Make it absolute.  */
     {
-      Lisp_Object odir =
-	original_pwd ? build_unibyte_string (original_pwd) : Qnil;
+      odir = original_pwd ? build_unibyte_string (original_pwd) : Qnil;
+
 
       Vinvocation_directory = Fexpand_file_name (Vinvocation_directory, odir);
     }
@@ -489,8 +488,6 @@ init_cmdargs (int argc, char **argv, int skip_args, char *original_pwd)
       name = Fexpand_file_name (Vinvocation_name, dir);
       while (1)
 	{
-	  Lisp_Object tem, lib_src_exists;
-	  Lisp_Object etc_exists, info_exists;
 
 	  /* See if dir contains subdirs for use by Emacs.
 	     Check for the ones that would exist in a build directory,
@@ -572,6 +569,7 @@ init_cmdargs (int argc, char **argv, int skip_args, char *original_pwd)
     }
 
   unbind_to (count, Qnil);
+  EXIT_LISP_FRAME_VOID ();
 }
 
 DEFUN ("invocation-name", Finvocation_name, Sinvocation_name, 0, 0, 0,
@@ -676,6 +674,8 @@ close_output_streams (void)
 int
 main (int argc, char **argv)
 {
+  ENTER_LISP_FRAME_T (int);
+  LISP_LOCALS (tem, tem2, old_log_max);
 #ifdef HAVE_CHEZ_SCHEME
   alloc_preinit ();
 #endif
@@ -787,7 +787,6 @@ main (int argc, char **argv)
       const char *version, *copyright;
       if (initialized)
 	{
-	  Lisp_Object tem, tem2;
 	  tem = Fsymbol_value (intern_c_string ("emacs-version"));
 	  tem2 = Fsymbol_value (intern_c_string ("emacs-copyright"));
 	  if (!STRINGP (tem))
@@ -1474,7 +1473,6 @@ Using an Emacs configured with --with-x-toolkit=lucid does not have this problem
   if (initialized)
     {
       /* Erase any pre-dump messages in the message log, to avoid confusion.  */
-      Lisp_Object old_log_max;
       old_log_max = Vmessage_log_max;
       XSETFASTINT (Vmessage_log_max, 0);
       message_dolog ("", 0, 1, 0);
@@ -1743,7 +1741,7 @@ Using an Emacs configured with --with-x-toolkit=lucid does not have this problem
   Frecursive_edit ();
 
   /* NOTREACHED */
-  return 0;
+  EXIT_LISP_FRAME (0);
 }
 
 /* Sort the args so we can find the most important ones
@@ -2039,6 +2037,8 @@ all of which are called before Emacs is actually killed.  */
        attributes: noreturn)
   (Lisp_Object arg)
 {
+  ENTER_LISP_FRAME (arg);
+  LISP_LOCALS (listfile);
   int exit_code;
 
 /* #ifdef HAVE_CHEZ_SCHEME */
@@ -2070,7 +2070,6 @@ all of which are called before Emacs is actually killed.  */
      Do it after shut_down_emacs, which does an auto-save.  */
   if (STRINGP (Vauto_save_list_file_name))
     {
-      Lisp_Object listfile;
       listfile = Fexpand_file_name (Vauto_save_list_file_name, Qnil);
       unlink (SSDATA (listfile));
     }
@@ -2099,6 +2098,7 @@ all of which are called before Emacs is actually killed.  */
 void
 shut_down_emacs (int sig, Lisp_Object stuff)
 {
+  ENTER_LISP_FRAME (stuff);
   /* Prevent running of hooks from now on.  */
   Vrun_hooks = Qnil;
 
@@ -2164,6 +2164,7 @@ shut_down_emacs (int sig, Lisp_Object stuff)
 #ifdef WINDOWSNT
   term_ntproc (0);
 #endif
+  EXIT_LISP_FRAME_VOID ();
 }
 
 
@@ -2181,8 +2182,8 @@ This is used in the file `loadup.el' when building Emacs.
 You must run Emacs in batch mode in order to dump it.  */)
   (Lisp_Object filename, Lisp_Object symfile)
 {
-  Lisp_Object tem;
-  Lisp_Object symbol;
+  ENTER_LISP_FRAME (filename, symfile);
+  LISP_LOCALS (tem, symbol);
   ptrdiff_t count = SPECPDL_INDEX ();
 
   check_pure_size ();
@@ -2270,7 +2271,7 @@ You must run Emacs in batch mode in order to dump it.  */)
 
   Vpurify_flag = tem;
 
-  return unbind_to (count, Qnil);
+  EXIT_LISP_FRAME (unbind_to (count, Qnil));
 }
 
 #endif /* not CANNOT_DUMP */
@@ -2291,6 +2292,7 @@ fixup_locale (void)
 static void
 synchronize_locale (int category, Lisp_Object *plocale, Lisp_Object desired_locale)
 {
+  ENTER_LISP_FRAME (desired_locale);
   if (! EQ (*plocale, desired_locale))
     {
       *plocale = desired_locale;
@@ -2311,6 +2313,7 @@ synchronize_locale (int category, Lisp_Object *plocale, Lisp_Object desired_loca
 			    : ""));
 #endif	/* !WINDOWSNT */
     }
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Set system time locale to match Vsystem_time_locale, if possible.  */
@@ -2346,11 +2349,13 @@ emacs_strerror (int error_number)
 Lisp_Object
 decode_env_path (const char *evarname, const char *defalt, bool empty)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (lpath, element, tem, empty_element, prop);
   const char *path, *p;
-  Lisp_Object lpath, element, tem;
   /* Default is to use "." for empty path elements.
      But if argument EMPTY is true, use nil instead.  */
-  Lisp_Object empty_element = empty ? Qnil : build_string (".");
+  empty_element = empty ? Qnil : build_string (".");
+
 #ifdef WINDOWSNT
   bool defaulted = 0;
   static const char *emacs_dir_env = "%emacs_dir%/";
@@ -2454,7 +2459,6 @@ decode_env_path (const char *evarname, const char *defalt, bool empty)
              don't bother adding /:.  */
           if (SYMBOLP (tem))
             {
-              Lisp_Object prop;
               prop = Fget (tem, intern ("safe-magic"));
               if (! NILP (prop))
                 tem = Qnil;
@@ -2473,7 +2477,7 @@ decode_env_path (const char *evarname, const char *defalt, bool empty)
       else
 	break;
     }
-  return Fnreverse (lpath);
+  EXIT_LISP_FRAME (Fnreverse (lpath));
 }
 
 DEFUN ("daemonp", Fdaemonp, Sdaemonp, 0, 0, 0,

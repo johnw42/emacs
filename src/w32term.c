@@ -1336,6 +1336,8 @@ x_draw_glyph_string_foreground (struct glyph_string *s)
 static void
 x_draw_composite_glyph_string_foreground (struct glyph_string *s)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (gstring, glyph);
   int i, j, x;
   struct font *font = s->font;
 
@@ -1387,8 +1389,8 @@ x_draw_composite_glyph_string_foreground (struct glyph_string *s)
     }
   else
     {
-      Lisp_Object gstring = composition_gstring_from_id (s->cmp_id);
-      Lisp_Object glyph;
+      gstring = composition_gstring_from_id (s->cmp_id);
+
       int y = s->ybase;
       int width = 0;
       HFONT old_font;
@@ -1423,6 +1425,7 @@ x_draw_composite_glyph_string_foreground (struct glyph_string *s)
 
       SelectObject (s->hdc, old_font);
     }
+  EXIT_LISP_FRAME_VOID ();
 }
 
 
@@ -1431,6 +1434,8 @@ x_draw_composite_glyph_string_foreground (struct glyph_string *s)
 static void
 x_draw_glyphless_glyph_string_foreground (struct glyph_string *s)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (acronym);
   struct glyph *glyph = s->first_glyph;
   XChar2b char2b[8];
   int x, i, j;
@@ -1463,11 +1468,11 @@ x_draw_glyphless_glyph_string_foreground (struct glyph_string *s)
 	      && (CHAR_TABLE_EXTRA_SLOTS (XCHAR_TABLE (Vglyphless_char_display))
 		  >= 1))
 	    {
-	      Lisp_Object acronym
-		= (! glyph->u.glyphless.for_no_font
+	      acronym = (! glyph->u.glyphless.for_no_font
 		   ? CHAR_TABLE_REF (Vglyphless_char_display,
 				     glyph->u.glyphless.ch)
 		   : XCHAR_TABLE (Vglyphless_char_display)->extras[0]);
+
 	      if (STRINGP (acronym))
 		str = SSDATA (acronym);
 	    }
@@ -1511,6 +1516,7 @@ x_draw_glyphless_glyph_string_foreground (struct glyph_string *s)
 	}
       x += glyph->pixel_width;
    }
+  EXIT_LISP_FRAME_VOID ();
 }
 
 
@@ -3148,8 +3154,8 @@ construct_mouse_wheel (struct input_event *result, W32Msg *msg, struct frame *f)
 static Lisp_Object
 construct_drag_n_drop (struct input_event *result, W32Msg *msg, struct frame *f)
 {
-  Lisp_Object files;
-  Lisp_Object frame;
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (files, frame);
   HDROP hdrop;
   POINT p;
   WORD num_files;
@@ -3216,7 +3222,7 @@ construct_drag_n_drop (struct input_event *result, W32Msg *msg, struct frame *f)
   XSETFRAME (frame, f);
   result->frame_or_window = frame;
   result->arg = files;
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 
@@ -3227,8 +3233,9 @@ construct_drag_n_drop (struct input_event *result, W32Msg *msg, struct frame *f)
 Lisp_Object
 lispy_file_action (DWORD action)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (retval);
   static char unknown_fmt[] = "unknown-action(%d)";
-  Lisp_Object retval;
 
   switch (action)
     {
@@ -3257,7 +3264,7 @@ lispy_file_action (DWORD action)
       break;
     }
 
-  return retval;
+  EXIT_LISP_FRAME (retval);
 }
 
 #ifdef WINDOWSNT
@@ -3268,14 +3275,15 @@ static void
 queue_notifications (struct input_event *event, W32Msg *msg, struct frame *f,
 		     int *evcount)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (frame, cs, obj, callback, utf_16_fn, fname, action);
   struct notifications_set *ns = NULL;
-  Lisp_Object frame;
   int done = 0;
 
   /* We cannot process notification before Emacs is fully initialized,
      since we need the UTF-16LE coding-system to be set up.  */
   if (!initialized)
-    return;
+    EXIT_LISP_FRAME_VOID ();
 
   XSETFRAME (frame, f);
 
@@ -3304,8 +3312,10 @@ queue_notifications (struct input_event *event, W32Msg *msg, struct frame *f,
 	  const DWORD min_size
 	    = offsetof (FILE_NOTIFY_INFORMATION, FileName) + sizeof(wchar_t);
 	  DWORD info_size = ns->size;
-	  Lisp_Object cs = Qutf_16le;
-	  Lisp_Object obj = w32_get_watch_object (ns->desc);
+	  cs = Qutf_16le;
+
+	  obj = w32_get_watch_object (ns->desc);
+
 
 	  /* notifications size could be zero when the buffer of
 	     notifications overflowed on the OS level, or when the
@@ -3314,18 +3324,20 @@ queue_notifications (struct input_event *event, W32Msg *msg, struct frame *f,
 	  if (info_size
 	      && !NILP (obj) && CONSP (obj))
 	    {
-	      Lisp_Object callback = XCDR (obj);
+	      callback = XCDR (obj);
+
 
 	      while (info_size >= min_size)
 		{
-		  Lisp_Object utf_16_fn
-		    = make_unibyte_string ((char *)fni->FileName,
+		  utf_16_fn = make_unibyte_string ((char *)fni->FileName,
 					   fni->FileNameLength);
+
 		  /* Note: mule-conf is preloaded, so utf-16le must
 		     already be defined at this point.  */
-		  Lisp_Object fname
-		    = code_convert_string_norecord (utf_16_fn, cs, 0);
-		  Lisp_Object action = lispy_file_action (fni->Action);
+		  fname = code_convert_string_norecord (utf_16_fn, cs, 0);
+
+		  action = lispy_file_action (fni->Action);
+
 
 		  event->kind = FILE_NOTIFY_EVENT;
 		  event->timestamp = msg->msg.time;
@@ -3349,6 +3361,7 @@ queue_notifications (struct input_event *event, W32Msg *msg, struct frame *f,
     }
   /* We've stuffed all the events ourselves, so w32_read_socket shouldn't.  */
   event->kind = NO_EVENT;
+  EXIT_LISP_FRAME_VOID ();
 }
 #endif	/* WINDOWSNT */
 #endif	/* HAVE_W32NOTIFY */
@@ -3454,6 +3467,8 @@ w32_mouse_position (struct frame **fp, int insist, Lisp_Object *bar_window,
 		    enum scroll_bar_part *part, Lisp_Object *x, Lisp_Object *y,
 		    Time *time)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (frame, tail);
   struct w32_display_info *dpyinfo = FRAME_DISPLAY_INFO (*fp);
 
   block_input ();
@@ -3470,7 +3485,6 @@ w32_mouse_position (struct frame **fp, int insist, Lisp_Object *bar_window,
   else
     {
       POINT pt;
-      Lisp_Object frame, tail;
       struct frame *f1 = NULL;
 
       /* Clear the mouse-moved flag for every frame on this display.  */
@@ -3552,6 +3566,7 @@ w32_mouse_position (struct frame **fp, int insist, Lisp_Object *bar_window,
     }
 
   unblock_input ();
+  EXIT_LISP_FRAME_VOID ();
 }
 
 
@@ -3591,11 +3606,11 @@ w32_handle_tool_bar_click (struct frame *f, struct input_event *button_event)
 static struct scroll_bar *
 x_window_to_scroll_bar (Window window_id, int type)
 {
-  Lisp_Object tail, frame;
+  ENTER_LISP_FRAME_T (struct scroll_bar *);
+  LISP_LOCALS (tail, frame, bar, condemned);
 
   FOR_EACH_FRAME (tail, frame)
     {
-      Lisp_Object bar, condemned;
 
       /* Scan this frame's scroll bar list for a scroll bar with the
 	 right window ID.  */
@@ -3611,10 +3626,10 @@ x_window_to_scroll_bar (Window window_id, int type)
 	    && (type = 2
 		|| (type == 1 && XSCROLL_BAR (bar)->horizontal)
 		|| (type == 0 && !XSCROLL_BAR (bar)->horizontal)))
-	  return XSCROLL_BAR (bar);
+	  EXIT_LISP_FRAME (XSCROLL_BAR (bar));
     }
 
-  return 0;
+  EXIT_LISP_FRAME (0);
 }
 
 
@@ -3810,12 +3825,13 @@ my_bring_window_to_top (HWND hwnd)
 static struct scroll_bar *
 x_scroll_bar_create (struct window *w, int left, int top, int width, int height, bool horizontal)
 {
+  ENTER_LISP_FRAME_T (struct scroll_bar *);
+  LISP_LOCALS (barobj);
   struct frame *f = XFRAME (WINDOW_FRAME (w));
   HWND hwnd;
   SCROLLINFO si;
   struct scroll_bar *bar
     = ALLOCATE_PSEUDOVECTOR (struct scroll_bar, top, PVEC_OTHER);
-  Lisp_Object barobj;
 
   block_input ();
 
@@ -3862,7 +3878,7 @@ x_scroll_bar_create (struct window *w, int left, int top, int width, int height,
 
   unblock_input ();
 
-  return bar;
+  EXIT_LISP_FRAME (bar);
 }
 
 
@@ -3896,8 +3912,9 @@ static void
 w32_set_vertical_scroll_bar (struct window *w,
 			     int portion, int whole, int position)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (barobj);
   struct frame *f = XFRAME (w->frame);
-  Lisp_Object barobj;
   struct scroll_bar *bar;
   int top, height, left, width;
   int window_y, window_height;
@@ -3990,6 +4007,7 @@ w32_set_vertical_scroll_bar (struct window *w,
   w32_set_scroll_bar_thumb (bar, portion, position, whole);
   XSETVECTOR (barobj, bar);
   wset_vertical_scroll_bar (w, barobj);
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Set the handle of the horizontal scroll bar for WINDOW to indicate
@@ -4000,8 +4018,9 @@ static void
 w32_set_horizontal_scroll_bar (struct window *w,
 			       int portion, int whole, int position)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (barobj);
   struct frame *f = XFRAME (w->frame);
-  Lisp_Object barobj;
   struct scroll_bar *bar;
   int top, height, left, width;
   int window_x, window_width;
@@ -4094,6 +4113,7 @@ w32_set_horizontal_scroll_bar (struct window *w,
   w32_set_horizontal_scroll_bar_thumb (bar, portion, position, whole);
   XSETVECTOR (barobj, bar);
   wset_horizontal_scroll_bar (w, barobj);
+  EXIT_LISP_FRAME_VOID ();
 }
 
 
@@ -4112,12 +4132,15 @@ w32_set_horizontal_scroll_bar (struct window *w,
 static void
 w32_condemn_scroll_bars (struct frame *frame)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (last);
   if (!NILP (FRAME_SCROLL_BARS (frame)))
     {
       if (!NILP (FRAME_CONDEMNED_SCROLL_BARS (frame)))
 	{
 	  /* Prepend scrollbars to already condemned ones.  */
-	  Lisp_Object last = FRAME_SCROLL_BARS (frame);
+	  last = FRAME_SCROLL_BARS (frame);
+
 
 	  while (!NILP (XSCROLL_BAR (last)->next))
 	    last = XSCROLL_BAR (last)->next;
@@ -4129,6 +4152,7 @@ w32_condemn_scroll_bars (struct frame *frame)
       fset_condemned_scroll_bars (frame, FRAME_SCROLL_BARS (frame));
       fset_scroll_bars (frame, Qnil);
     }
+  EXIT_LISP_FRAME_VOID ();
 }
 
 
@@ -4138,8 +4162,9 @@ w32_condemn_scroll_bars (struct frame *frame)
 static void
 w32_redeem_scroll_bar (struct window *w)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (barobj);
   struct scroll_bar *bar;
-  Lisp_Object barobj;
   struct frame *f;
 
   /* We can't redeem this window's scroll bar if it doesn't have one.  */
@@ -4192,7 +4217,7 @@ w32_redeem_scroll_bar (struct window *w)
 	     the lists.  */
 	  if (EQ (FRAME_SCROLL_BARS (f), w->horizontal_scroll_bar))
 	    /* It's not condemned.  Everything's fine.  */
-	    return;
+	    EXIT_LISP_FRAME_VOID ();
 	  else if (EQ (FRAME_CONDEMNED_SCROLL_BARS (f),
 		       w->horizontal_scroll_bar))
 	    fset_condemned_scroll_bars (f, bar->next);
@@ -4214,6 +4239,7 @@ w32_redeem_scroll_bar (struct window *w)
       if (! NILP (bar->next))
 	XSETVECTOR (XSCROLL_BAR (bar->next)->prev, bar);
     }
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Remove all scroll bars on FRAME that haven't been saved since the
@@ -4222,7 +4248,8 @@ w32_redeem_scroll_bar (struct window *w)
 static void
 w32_judge_scroll_bars (struct frame *f)
 {
-  Lisp_Object bar, next;
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (bar, next);
 
   bar = FRAME_CONDEMNED_SCROLL_BARS (f);
 
@@ -4242,6 +4269,7 @@ w32_judge_scroll_bars (struct frame *f)
 
   /* Now there should be no references to the condemned scroll bars,
      and they should get garbage-collected.  */
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Handle a mouse click on the vertical scroll bar BAR.  If
@@ -4585,7 +4613,8 @@ x_horizontal_scroll_bar_report_motion (struct frame **fp, Lisp_Object *bar_windo
 void
 x_scroll_bar_clear (struct frame *f)
 {
-  Lisp_Object bar;
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (bar);
 
   /* We can have scroll bars even if this is 0,
      if we just turned off scroll bar mode.
@@ -4611,6 +4640,7 @@ x_scroll_bar_clear (struct frame *f)
 
         ReleaseDC (window, hdc);
       }
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* The main W32 event-reading loop - w32_read_socket.  */
@@ -4649,6 +4679,8 @@ static int
 w32_read_socket (struct terminal *terminal,
 		 struct input_event *hold_quit)
 {
+  ENTER_LISP_FRAME_T (int);
+  LISP_LOCALS (window, frame1, fullscreen, frame, tail);
   int count = 0;
   int check_visibility = 0;
   W32Msg msg;
@@ -4919,8 +4951,9 @@ w32_read_socket (struct terminal *terminal,
 			  && !FRAME_NO_ACCEPT_FOCUS (f))))
 		{
 		  static Lisp_Object last_mouse_window;
-		  Lisp_Object window = window_from_coordinates
+		  window = window_from_coordinates
 		    (f, LOWORD (msg.msg.lParam), HIWORD (msg.msg.lParam), 0, 0);
+
 
 		  /* Window will be selected only when it is not
 		     selected now and last mouse movement event was
@@ -4988,7 +5021,6 @@ w32_read_socket (struct terminal *terminal,
                 if (WINDOWP (f->tool_bar_window)
                     && WINDOW_TOTAL_LINES (XWINDOW (f->tool_bar_window)))
                   {
-                    Lisp_Object window;
 		    int x = XFASTINT (inev.x);
 		    int y = XFASTINT (inev.y);
 
@@ -5059,7 +5091,8 @@ w32_read_socket (struct terminal *terminal,
 		else if (FRAME_NO_ACCEPT_FOCUS (f)
 			 && !x_mouse_grabbed (dpyinfo))
 		  {
-		    Lisp_Object frame1 = get_frame_param (f, Qmouse_wheel_frame);
+		    frame1 = get_frame_param (f, Qmouse_wheel_frame);
+
 		    struct frame *f1 = FRAMEP (frame1) ? XFRAME (frame1) : NULL;
 
 		    if (f1 && FRAME_LIVE_P (f1) && FRAME_W32_P (f1))
@@ -5241,7 +5274,8 @@ w32_read_socket (struct terminal *terminal,
 		case SIZE_MAXIMIZED:
 		  {
 		    bool iconified = FRAME_ICONIFIED_P (f);
-		    Lisp_Object fullscreen = get_frame_param (f, Qfullscreen);
+		    fullscreen = get_frame_param (f, Qfullscreen);
+
 
 		    SET_FRAME_VISIBLE (f, 1);
 		    SET_FRAME_ICONIFIED (f, false);
@@ -5471,7 +5505,8 @@ w32_read_socket (struct terminal *terminal,
 
 	  if (f)
 	    {
-	      Lisp_Object fullscreen = get_frame_param (f, Qfullscreen);
+	      fullscreen = get_frame_param (f, Qfullscreen);
+
 
 	      dpyinfo->n_cbits = msg.msg.wParam;
 	      /* The new display could have a different resolution, in
@@ -5519,7 +5554,6 @@ w32_read_socket (struct terminal *terminal,
       if (do_help
 	  && !(hold_quit && hold_quit->kind != NO_EVENT))
 	{
-	  Lisp_Object frame;
 
 	  if (f)
 	    XSETFRAME (frame, f);
@@ -5562,7 +5596,6 @@ w32_read_socket (struct terminal *terminal,
      changed (at least, not in all cases).  */
   if (count > 0 || check_visibility)
     {
-      Lisp_Object tail, frame;
 
       FOR_EACH_FRAME (tail, frame)
       {
@@ -5625,7 +5658,7 @@ w32_read_socket (struct terminal *terminal,
     }
 
   unblock_input ();
-  return count;
+  EXIT_LISP_FRAME (count);
 }
 
 
@@ -5923,11 +5956,12 @@ w32_draw_window_cursor (struct window *w, struct glyph_row *glyph_row,
 bool
 x_bitmap_icon (struct frame *f, Lisp_Object icon)
 {
+  ENTER_LISP_FRAME_T (bool, icon);
   HANDLE main_icon;
   HANDLE small_icon = NULL;
 
   if (FRAME_W32_WINDOW (f) == 0)
-    return 1;
+    EXIT_LISP_FRAME (1);
 
   if (NILP (icon))
     main_icon = LoadIcon (hinst, EMACS_CLASS);
@@ -5959,15 +5993,15 @@ x_bitmap_icon (struct frame *f, Lisp_Object icon)
       else if (EQ (icon, intern ("winlogo")))
 	name = (LPCTSTR) IDI_WINLOGO;
       else
-	return 1;
+	EXIT_LISP_FRAME (1);
 
       main_icon = LoadIcon (NULL, name);
     }
   else
-    return 1;
+    EXIT_LISP_FRAME (1);
 
   if (main_icon == NULL)
-    return 1;
+    EXIT_LISP_FRAME (1);
 
   PostMessage (FRAME_W32_WINDOW (f), WM_SETICON, (WPARAM) ICON_BIG,
                (LPARAM) main_icon);
@@ -5977,7 +6011,7 @@ x_bitmap_icon (struct frame *f, Lisp_Object icon)
     PostMessage (FRAME_W32_WINDOW (f), WM_SETICON, (WPARAM) ICON_SMALL,
 		 (LPARAM) small_icon);
 
-  return 0;
+  EXIT_LISP_FRAME (0);
 }
 
 
@@ -6011,6 +6045,7 @@ x_io_error_quitter (display)
 Lisp_Object
 x_new_font (struct frame *f, Lisp_Object font_object, int fontset)
 {
+  ENTER_LISP_FRAME (font_object);
   struct font *font = XFONT_OBJECT (font_object);
   int unit, font_ascent, font_descent;
 
@@ -6020,7 +6055,7 @@ x_new_font (struct frame *f, Lisp_Object font_object, int fontset)
   if (FRAME_FONT (f) == font)
     /* This font is already set in frame F.  There's nothing more to
        do.  */
-    return font_object;
+    EXIT_LISP_FRAME (font_object);
 
   FRAME_FONT (f) = font;
   FRAME_BASELINE_OFFSET (f) = font->baseline_offset;
@@ -6054,7 +6089,7 @@ x_new_font (struct frame *f, Lisp_Object font_object, int fontset)
 
   /* X version sets font of input methods here also.  */
 
-  return font_object;
+  EXIT_LISP_FRAME (font_object);
 }
 
 
@@ -6079,6 +6114,8 @@ xim_close_dpy (dpyinfo)
 static void
 x_calc_absolute_position (struct frame *f)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (list, attributes, geometry, monitor_left, monitor_top);
   int flags = f->size_hint_flags;
 
   /* The sum of the widths of the frame's left and right borders, and
@@ -6121,14 +6158,12 @@ x_calc_absolute_position (struct frame *f)
 
   if (!p && flags & (XNegative | YNegative))
     {
-      Lisp_Object list;
 
       list = Fw32_display_monitor_attributes_list (Qnil);
       while (CONSP (list))
         {
-          Lisp_Object attributes = CAR(list);
-          Lisp_Object geometry;
-          Lisp_Object monitor_left, monitor_top;
+          attributes = CAR(list);
+
 
           list = CDR(list);
 
@@ -6185,6 +6220,7 @@ x_calc_absolute_position (struct frame *f)
   /* The left_pos and top_pos are now relative to the top and left
      screen edges, so the flags should correspond.  */
   f->size_hint_flags &= ~ (XNegative | YNegative);
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* CHANGE_GRAVITY is 1 when calling from Fset_frame_position,
@@ -6341,8 +6377,11 @@ void
 x_set_window_size (struct frame *f, bool change_gravity,
 		   int width, int height, bool pixelwise)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (fullscreen);
   int pixelwidth, pixelheight;
-  Lisp_Object fullscreen = get_frame_param (f, Qfullscreen);
+  fullscreen = get_frame_param (f, Qfullscreen);
+
   RECT rect;
   MENUBARINFO info;
   int menu_bar_height;
@@ -6465,6 +6504,7 @@ x_set_window_size (struct frame *f, bool change_gravity,
   unblock_input ();
 
   do_pending_window_change (false);
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Mouse warping.  */
@@ -6622,6 +6662,8 @@ w32_frame_raise_lower (struct frame *f, bool raise_flag)
 void
 x_make_frame_visible (struct frame *f)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (frame);
   block_input ();
 
   x_set_bitmap_icon (f);
@@ -6674,14 +6716,13 @@ x_make_frame_visible (struct frame *f)
   if (!FLOATP (Vx_wait_for_event_timeout))
     {
       unblock_input ();
-      return;
+      EXIT_LISP_FRAME_VOID ();
     }
 
   /* Synchronize to ensure Emacs knows the frame is visible
      before we do anything else.  We do this loop with input not blocked
      so that incoming events are handled.  */
   {
-    Lisp_Object frame;
     double timeout = XFLOAT_DATA (Vx_wait_for_event_timeout);
     double start_time = XFLOAT_DATA (Ffloat_time (Qnil));
 
@@ -6715,6 +6756,7 @@ x_make_frame_visible (struct frame *f)
 	  }
       }
   }
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Change from mapped state to withdrawn state. */
@@ -6920,6 +6962,7 @@ static int w32_initialized = 0;
 void
 w32_initialize_display_info (Lisp_Object display_name)
 {
+  ENTER_LISP_FRAME (display_name);
   struct w32_display_info *dpyinfo = &one_w32_display_info;
 
   memset (dpyinfo, 0, sizeof (*dpyinfo));
@@ -6949,6 +6992,7 @@ w32_initialize_display_info (Lisp_Object display_name)
   /* TODO: dpyinfo->gray */
 
   reset_mouse_highlight (&dpyinfo->mouse_highlight);
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Create an xrdb-style database of resources to supersede registry settings.
@@ -7108,6 +7152,7 @@ x_delete_terminal (struct terminal *terminal)
 struct w32_display_info *
 w32_term_init (Lisp_Object display_name, char *xrm_option, char *resource_name)
 {
+  ENTER_LISP_FRAME_T (struct w32_display_info *, display_name);
   struct w32_display_info *dpyinfo;
   struct terminal *terminal;
   HDC hdc;
@@ -7172,7 +7217,7 @@ w32_term_init (Lisp_Object display_name, char *xrm_option, char *resource_name)
 
   unblock_input ();
 
-  return dpyinfo;
+  EXIT_LISP_FRAME (dpyinfo);
 }
 
 /* Get rid of display DPYINFO, assuming all frames are already gone.  */

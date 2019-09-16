@@ -80,7 +80,7 @@ class SourceFile:
             self.CommitChanges()
             assert data != self.data
             assert len(data) * 0.8 <= len(self.data) <= len(data) * 1.2
-            assert "LISP_LOCALS" in self.data
+            assert "ENTER_LISP_FRAME" in self.data
             with open(self.path, "wt", encoding="Latin-1") as f:
                 f.write(self.data)
             print("wrote to", self.path)
@@ -217,22 +217,8 @@ class SourceFile:
         self.exprs = stack[0]
         LinkExprs(self.exprs)
 
-    def ExprAt(self, pos):
-        def FindIn(exprs):
-            for i, expr in enumerate(exprs):
-                if expr.start == pos:
-                    return exprs, i
-                if expr.end > pos:
-                    return FindIn(expr.children)
-            raise Exception(f"no expr found at {pos}")
-
-        return FindIn(self.exprs)
-
     def NextLineStart(self, pos):
         return self.LineEnd(pos) + 1
-
-    def IsEof(self, pos):
-        return pos == len(self.data)
 
     def Lines(self):
         offset = 0
@@ -285,67 +271,67 @@ class SourceFile:
             raise Exception(f"no match at {self.path} starting at offset {start}")
         return m
 
-    def ForwardExpr(self, pos):
-        pos = self.SkipSpaces(pos)
-        next_pos = self.NextMatchingDelimiter(pos)
-        if next_pos is not None:
-            return "other", pos, next_pos
-        m = self.Match(r"[a-zA-Z0-9_]+", pos)
-        if m:
-            return "name", pos, m.end()
-        return self.data[pos], pos, pos + 1
+    # def ForwardExpr(self, pos):
+    #     pos = self.SkipSpaces(pos)
+    #     next_pos = self.NextMatchingDelimiter(pos)
+    #     if next_pos is not None:
+    #         return "other", pos, next_pos
+    #     m = self.Match(r"[a-zA-Z0-9_]+", pos)
+    #     if m:
+    #         return "name", pos, m.end()
+    #     return self.data[pos], pos, pos + 1
 
-    def BackToLineStart(self, pos):
-        while pos > 0 and self.data[pos - 1] != "\n":
-            pos -= 1
-        return pos
+    # def BackToLineStart(self, pos):
+    #     while pos > 0 and self.data[pos - 1] != "\n":
+    #         pos -= 1
+    #     return pos
 
-    def NextMatchingDelimiter(self, pos):
-        data = self.data
-        depth = 0
-        start = pos
-        while pos < len(data):
-            c = data[pos]
-            if c in "([{":
-                depth += 1
-            elif c in ")]}":
-                depth -= 1
-            elif c in "'\"":
-                while True:
-                    pos += 1
-                    if data[pos] == c:
-                        break
-                    elif data[pos] == "\\":
-                        pos += 1
-            elif data[pos : pos + 2] == "//":
-                while data[pos] != "\n":
-                    pos += 1
-            elif data[pos : pos + 2] == "/*":
-                while data[pos : pos + 2] != "*/":
-                    pos += 1
-                pos += 1
-            if depth == 0:
-                return pos + 1 if pos != start else None
-            pos += 1
-        raise Exception(f"error at {start}")
+    # def NextMatchingDelimiter(self, pos):
+    #     data = self.data
+    #     depth = 0
+    #     start = pos
+    #     while pos < len(data):
+    #         c = data[pos]
+    #         if c in "([{":
+    #             depth += 1
+    #         elif c in ")]}":
+    #             depth -= 1
+    #         elif c in "'\"":
+    #             while True:
+    #                 pos += 1
+    #                 if data[pos] == c:
+    #                     break
+    #                 elif data[pos] == "\\":
+    #                     pos += 1
+    #         elif data[pos : pos + 2] == "//":
+    #             while data[pos] != "\n":
+    #                 pos += 1
+    #         elif data[pos : pos + 2] == "/*":
+    #             while data[pos : pos + 2] != "*/":
+    #                 pos += 1
+    #             pos += 1
+    #         if depth == 0:
+    #             return pos + 1 if pos != start else None
+    #         pos += 1
+    #     raise Exception(f"error at {start}")
 
-    def SkipSpaces(self, pos):
-        data = self.data
-        while True:
-            m = self.Match(r"\s+", pos)
-            if m:
-                pos = m.end()
-            # if data[pos : pos + 2] == "//":
-            #     while data[pos] != "\n":
-            #         pos += 1
-            # elif data[pos : pos + 2] == "/*":
-            #     while data[pos : pos + 2] != "*/":
-            #         pos += 1
-            # else:
-            return pos
+    # def SkipSpaces(self, pos):
+    #     data = self.data
+    #     while True:
+    #         m = self.Match(r"\s+", pos)
+    #         if m:
+    #             pos = m.end()
+    #         # if data[pos : pos + 2] == "//":
+    #         #     while data[pos] != "\n":
+    #         #         pos += 1
+    #         # elif data[pos : pos + 2] == "/*":
+    #         #     while data[pos : pos + 2] != "*/":
+    #         #         pos += 1
+    #         # else:
+    #         return pos
 
-    def index(self, text, pos):
-        return self.data.index(text, pos)
+    # def index(self, text, pos):
+    #     return self.data.index(text, pos)
 
 
 def ParseLocalVarDecl(f, type_token):
@@ -362,7 +348,10 @@ def ParseLocalVarDecl(f, type_token):
         if token.text == "*":
             pre_decl += token.text
             token = token.next_expr
-        assert token.type == "word"
+        if token.type != "word":
+            # This happens when the parser gets confused and tries to
+            # parts a function pointer declaration.
+            return
         name = token.text
         post_decl = ""
         token = token.next_expr
@@ -418,25 +407,28 @@ def ProcessFunction(f, body_expr):
     else:
         return
 
+    is_noreturn = False
     if is_defun:
         r_type = "Lisp_Object"
     else:
         type_start = type_end = name_tok.prev_expr
         while type_start.col != 0:
             type_start = type_start.prev_expr
-        if type_start.text in ["INLINE", "static"]:
+        while type_start.text in ["INLINE", "static", "_Noreturn"]:
+            if type_start.text == "_Noreturn":
+                is_noreturn = True
             type_start = type_start.next_expr
         r_type = f[type_start.start : type_end.stop]
 
     lisp_args = []
     has_varargs = False
-    for i in range(1, len(args_expr.tokens) - 1):
-        if (
-            args_expr.tokens[i].text == "Lisp_Object"
-            and args_expr.tokens[i + 1].type == "word"
-        ):
-            lisp_args.append(args_expr.tokens[i + 1].text)
-        elif list(t.text for t in args_expr.tokens[i : i + 5]) == [
+    arg_tokens = args_expr.tokens
+    for i in range(1, len(arg_tokens) - 1):
+        if arg_tokens[i].text == "Lisp_Object" and arg_tokens[i + 1].type == "word":
+            if arg_tokens[i - 1].text == "register":
+                f[arg_tokens[i - 1].start : arg_tokens[i].start] = ""
+            lisp_args.append(arg_tokens[i + 1].text)
+        elif list(t.text for t in arg_tokens[i : i + 5]) == [
             "nargs",
             ",",
             "Lisp_Object",
@@ -463,14 +455,14 @@ def ProcessFunction(f, body_expr):
         decl_start = token
         while decl_start.prev_expr.text in ["register", "const"]:
             decl_start = decl_start.prev_token
-        context = f[f.line_starts[decl_start.line] : token.start]
+        context = f[f.line_starts[decl_start.line] : decl_start.start]
         m = re.match(r"(\s*)(for\s*\(\s*)?$", context)
         if not m:
             continue
         indent = m[1]
         in_loop = bool(m[2])
         decl_end = token
-        while decl_end.text != ";":
+        while decl_end.text != ";" and decl_end.next_expr:
             decl_end = decl_end.next_expr
         assign_exprs = []
         if not all(
@@ -506,11 +498,12 @@ def ProcessFunction(f, body_expr):
             to_insert += "\n  LISP_LOCALS (" + ", ".join(local_vars) + ");"
         f[pos:pos] = to_insert
         if r_type == "void":
-            pos = body_expr.tokens[-1].start
-            f[pos:pos] = "  EXIT_LISP_FRAME_VOID ();\n"
-            for token in body_expr.tokens:
-                if token.text == "return":
-                    f[token] = "EXIT_LISP_FRAME_VOID ()"
+            if not is_noreturn:
+                pos = body_expr.tokens[-1].start
+                f[pos:pos] = "  EXIT_LISP_FRAME_VOID ();\n"
+                for token in body_expr.tokens:
+                    if token.text == "return":
+                        f[token] = "EXIT_LISP_FRAME_VOID ()"
         else:
             for token in body_expr.tokens:
                 if token.text == "return":
@@ -524,7 +517,7 @@ def ProcessFunction(f, body_expr):
 
 def Main():
     os.chdir(sys.path[0])
-    # for path in ["src/window.h"]:
+    #    for path in ["src/menu.c"]:
     for path in sorted(glob.glob("src/*.[ch]")):
         if path in ["src/scheme_lisp.c", "src/alloc.c"]:
             continue

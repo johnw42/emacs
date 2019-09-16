@@ -465,6 +465,8 @@ static int
 do_mouse_event (MOUSE_EVENT_RECORD *event,
 		struct input_event *emacs_ev)
 {
+  ENTER_LISP_FRAME_T (int);
+  LISP_LOCALS (mouse_window);
   static DWORD button_state = 0;
   static Lisp_Object last_mouse_window;
   DWORD but_change, mask, flags = event->dwEventFlags;
@@ -491,8 +493,9 @@ do_mouse_event (MOUSE_EVENT_RECORD *event,
 	    /* Generate SELECT_WINDOW_EVENTs when needed.  */
 	    if (!NILP (Vmouse_autoselect_window))
 	      {
-		Lisp_Object mouse_window = window_from_coordinates (f, mx, my,
+		mouse_window = window_from_coordinates (f, mx, my,
 								    0, 0);
+
 		/* A window will be selected only when it is not
 		   selected now, and the last mouse movement event was
 		   not in it.  A minibuffer window will be selected iff
@@ -528,7 +531,7 @@ do_mouse_event (MOUSE_EVENT_RECORD *event,
 	  }
 	/* We already called kbd_buffer_store_event, so indicate to
 	   the caller it shouldn't.  */
-	return 0;
+	EXIT_LISP_FRAME (0);
       }
     case MOUSE_WHEELED:
     case MOUSE_HWHEELED:
@@ -548,7 +551,7 @@ do_mouse_event (MOUSE_EVENT_RECORD *event,
 	XSETFRAME (emacs_ev->frame_or_window, f);
 	emacs_ev->arg = Qnil;
 	emacs_ev->timestamp = GetTickCount ();
-	return 1;
+	EXIT_LISP_FRAME (1);
       }
     case DOUBLE_CLICK:
     default:	/* mouse pressed or released */
@@ -557,7 +560,7 @@ do_mouse_event (MOUSE_EVENT_RECORD *event,
 	 activated and when the mouse is first clicked.  Ignore this
 	 case.  */
       if (event->dwButtonState == button_state)
-	return 0;
+	EXIT_LISP_FRAME (0);
 
       emacs_ev->kind = MOUSE_CLICK_EVENT;
 
@@ -586,7 +589,7 @@ do_mouse_event (MOUSE_EVENT_RECORD *event,
       emacs_ev->arg = Qnil;
       emacs_ev->timestamp = GetTickCount ();
 
-      return 1;
+      EXIT_LISP_FRAME (1);
     }
 }
 
@@ -620,6 +623,8 @@ maybe_generate_resize_event (void)
 int
 handle_file_notifications (struct input_event *hold_quit)
 {
+  ENTER_LISP_FRAME_T (int);
+  LISP_LOCALS (cs, obj, callback, utf_16_fn, fname, action);
   struct notifications_set *ns = NULL;
   int nevents = 0;
   int done = 0;
@@ -628,7 +633,7 @@ handle_file_notifications (struct input_event *hold_quit)
      since we need the UTF-16LE coding-system to be set up.  */
   if (!initialized)
     {
-      return nevents;
+      EXIT_LISP_FRAME (nevents);
     }
 
   while (!done)
@@ -657,8 +662,10 @@ handle_file_notifications (struct input_event *hold_quit)
 	    = offsetof (FILE_NOTIFY_INFORMATION, FileName) + sizeof(wchar_t);
 	  struct input_event inev;
 	  DWORD info_size = ns->size;
-	  Lisp_Object cs = Qutf_16le;
-	  Lisp_Object obj = w32_get_watch_object (ns->desc);
+	  cs = Qutf_16le;
+
+	  obj = w32_get_watch_object (ns->desc);
+
 
 	  /* notifications size could be zero when the buffer of
 	     notifications overflowed on the OS level, or when the
@@ -667,20 +674,22 @@ handle_file_notifications (struct input_event *hold_quit)
 	  if (info_size
 	      && !NILP (obj) && CONSP (obj))
 	    {
-	      Lisp_Object callback = XCDR (obj);
+	      callback = XCDR (obj);
+
 
 	      EVENT_INIT (inev);
 
 	      while (info_size >= min_size)
 		{
-		  Lisp_Object utf_16_fn
-		    = make_unibyte_string ((char *)fni->FileName,
+		  utf_16_fn = make_unibyte_string ((char *)fni->FileName,
 					   fni->FileNameLength);
+
 		  /* Note: mule-conf is preloaded, so utf-16le must
 		     already be defined at this point.  */
-		  Lisp_Object fname
-		    = code_convert_string_norecord (utf_16_fn, cs, 0);
-		  Lisp_Object action = lispy_file_action (fni->Action);
+		  fname = code_convert_string_norecord (utf_16_fn, cs, 0);
+
+		  action = lispy_file_action (fni->Action);
+
 
 		  inev.kind = FILE_NOTIFY_EVENT;
 		  inev.timestamp = GetTickCount ();
@@ -703,7 +712,7 @@ handle_file_notifications (struct input_event *hold_quit)
 	  free (ns);
 	}
     }
-  return nevents;
+  EXIT_LISP_FRAME (nevents);
 }
 #else  /* !HAVE_W32NOTIFY */
 int

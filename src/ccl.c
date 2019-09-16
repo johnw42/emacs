@@ -858,6 +858,8 @@ static struct ccl_prog_stack ccl_prog_stack_struct[256];
 void
 ccl_driver (struct ccl_program *ccl, int *source, int *destination, int src_size, int dst_size, Lisp_Object charset_list)
 {
+  ENTER_LISP_FRAME (charset_list);
+  LISP_LOCALS (slot, opl, map, content, attrib, value);
   register int *reg = ccl->reg;
   register int ic = ccl->ic;
   register int code = 0, field1, field2;
@@ -1053,7 +1055,6 @@ ccl_driver (struct ccl_program *ccl, int *source, int *destination, int src_size
 
 	case CCL_Call:		/* 1:CCCCCCCCCCCCCCCCCCCCFFFXXXXX */
 	  {
-	    Lisp_Object slot;
 	    int prog_id;
 
 	    /* If FFF is nonzero, the CCL program ID is in the
@@ -1305,7 +1306,6 @@ ccl_driver (struct ccl_program *ccl, int *source, int *destination, int src_size
 		eop = hash_lookup (h, make_number (reg[RRR]), NULL);
 		if (eop >= 0)
 		  {
-		    Lisp_Object opl;
 		    opl = HASH_VALUE (h, eop);
 		    if (! (IN_INT_RANGE (eop) && CHARACTERP (opl)))
 		      CCL_INVALID_CMD;
@@ -1332,7 +1332,6 @@ ccl_driver (struct ccl_program *ccl, int *source, int *destination, int src_size
 		eop = hash_lookup (h, make_number (i), NULL);
 		if (eop >= 0)
 		  {
-		    Lisp_Object opl;
 		    opl = HASH_VALUE (h, eop);
 		    if (! (INTEGERP (opl) && IN_INT_RANGE (XINT (opl))))
 		      CCL_INVALID_CMD;
@@ -1346,7 +1345,6 @@ ccl_driver (struct ccl_program *ccl, int *source, int *destination, int src_size
 
 	    case CCL_IterateMultipleMap:
 	      {
-		Lisp_Object map, content, attrib, value;
 		EMACS_INT point;
 		ptrdiff_t size;
 		int fin_ic;
@@ -1445,7 +1443,6 @@ ccl_driver (struct ccl_program *ccl, int *source, int *destination, int src_size
 
 	    case CCL_MapMultiple:
 	      {
-		Lisp_Object map, content, attrib, value;
 		EMACS_INT point;
 		ptrdiff_t size, map_vector_size;
 		int map_set_rest_length, fin_ic;
@@ -1651,7 +1648,6 @@ ccl_driver (struct ccl_program *ccl, int *source, int *destination, int src_size
 
 	    case CCL_MapSingle:
 	      {
-		Lisp_Object map, attrib, value, content;
 		int point;
 		j = XINT (xv_ref (ccl_prog, ic)); /* map_id */
                 ic++;
@@ -1800,6 +1796,7 @@ ccl_driver (struct ccl_program *ccl, int *source, int *destination, int src_size
     ccl->produced = dst - destination;
   else
     ccl->produced = 0;
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Resolve symbols in the specified CCL code (Lisp vector).  This
@@ -1813,11 +1810,12 @@ ccl_driver (struct ccl_program *ccl, int *source, int *destination, int src_size
 static Lisp_Object
 resolve_symbol_ccl_program (Lisp_Object ccl)
 {
+  ENTER_LISP_FRAME (ccl);
+  LISP_LOCALS (result, contents, val);
   int i, veclen, unresolved = 0;
-  Lisp_Object result, contents, val;
 
   if (! (CCL_HEADER_MAIN < ASIZE (ccl) && ASIZE (ccl) <= INT_MAX))
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
   result = Fcopy_sequence (ccl);
   veclen = ASIZE (result);
 
@@ -1864,15 +1862,15 @@ resolve_symbol_ccl_program (Lisp_Object ccl)
 	    }
 	  continue;
 	}
-      return Qnil;
+      EXIT_LISP_FRAME (Qnil);
     }
 
   if (! (0 <= XINT (AREF (result, CCL_HEADER_BUF_MAG))
 	 && ASCENDING_ORDER (0, XINT (AREF (result, CCL_HEADER_EOF)),
 			     ASIZE (ccl))))
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
 
-  return (unresolved ? Qt : result);
+  EXIT_LISP_FRAME ((unresolved ? Qt : result));
 }
 
 /* Return the compiled code (vector) of CCL program CCL_PROG.
@@ -1884,36 +1882,37 @@ resolve_symbol_ccl_program (Lisp_Object ccl)
 static Lisp_Object
 ccl_get_compiled_code (Lisp_Object ccl_prog, ptrdiff_t *idx)
 {
-  Lisp_Object val, slot;
+  ENTER_LISP_FRAME (ccl_prog);
+  LISP_LOCALS (val, slot);
 
   if (VECTORP (ccl_prog))
     {
       val = resolve_symbol_ccl_program (ccl_prog);
       *idx = -1;
-      return (VECTORP (val) ? val : Qnil);
+      EXIT_LISP_FRAME ((VECTORP (val) ? val : Qnil));
     }
   if (!SYMBOLP (ccl_prog))
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
 
   val = Fget (ccl_prog, Qccl_program_idx);
   if (! NATNUMP (val)
       || XINT (val) >= ASIZE (Vccl_program_table))
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
   slot = AREF (Vccl_program_table, XINT (val));
   if (! VECTORP (slot)
       || ASIZE (slot) != 4
       || ! VECTORP (AREF (slot, 1)))
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
   *idx = XINT (val);
   if (NILP (AREF (slot, 2)))
     {
       val = resolve_symbol_ccl_program (AREF (slot, 1));
       if (! VECTORP (val))
-	return Qnil;
+	EXIT_LISP_FRAME (Qnil);
       ASET (slot, 1, val);
       ASET (slot, 2, Qt);
     }
-  return AREF (slot, 1);
+  EXIT_LISP_FRAME (AREF (slot, 1));
 }
 
 /* Setup fields of the structure pointed by CCL appropriately for the
@@ -1925,11 +1924,13 @@ ccl_get_compiled_code (Lisp_Object ccl_prog, ptrdiff_t *idx)
 bool
 setup_ccl_program (struct ccl_program *ccl, Lisp_Object ccl_prog)
 {
+  ENTER_LISP_FRAME_T (bool, ccl_prog);
+  LISP_LOCALS (slot);
   if (! NILP (ccl_prog))
     {
       ccl_prog = ccl_get_compiled_code (ccl_prog, &ccl->idx);
       if (! VECTORP (ccl_prog))
-	return false;
+	EXIT_LISP_FRAME (false);
       struct Lisp_Vector *vp = XVECTOR (ccl_prog);
       ccl->size = xv_size (vp);
       ccl->prog = ccl_prog;
@@ -1937,7 +1938,6 @@ setup_ccl_program (struct ccl_program *ccl, Lisp_Object ccl_prog)
       ccl->buf_magnification = XINT (xv_ref (vp, CCL_HEADER_BUF_MAG));
       if (ccl->idx >= 0)
 	{
-	  Lisp_Object slot;
 
 	  slot = AREF (Vccl_program_table, ccl->idx);
 	  ASET (slot, 3, Qnil);
@@ -1949,7 +1949,7 @@ setup_ccl_program (struct ccl_program *ccl, Lisp_Object ccl_prog)
   ccl->status = 0;
   ccl->stack_idx = 0;
   ccl->quit_silently = false;
-  return true;
+  EXIT_LISP_FRAME (true);
 }
 
 
@@ -1958,20 +1958,21 @@ DEFUN ("ccl-program-p", Fccl_program_p, Sccl_program_p, 1, 1, 0,
 See the documentation of `define-ccl-program' for the detail of CCL program.  */)
   (Lisp_Object object)
 {
-  Lisp_Object val;
+  ENTER_LISP_FRAME (object);
+  LISP_LOCALS (val);
 
   if (VECTORP (object))
     {
       val = resolve_symbol_ccl_program (object);
-      return (VECTORP (val) ? Qt : Qnil);
+      EXIT_LISP_FRAME ((VECTORP (val) ? Qt : Qnil));
     }
   if (!SYMBOLP (object))
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
 
   val = Fget (object, Qccl_program_idx);
-  return ((! NATNUMP (val)
+  EXIT_LISP_FRAME (((! NATNUMP (val)
 	   || XINT (val) >= ASIZE (Vccl_program_table))
-	  ? Qnil : Qt);
+	  ? Qnil : Qt));
 }
 
 DEFUN ("ccl-execute", Fccl_execute, Sccl_execute, 2, 2, 0,
@@ -1992,6 +1993,7 @@ See the documentation of `define-ccl-program' for a definition of CCL
 programs.  */)
   (Lisp_Object ccl_prog, Lisp_Object reg)
 {
+  ENTER_LISP_FRAME (ccl_prog, reg);
   struct ccl_program ccl;
   int i;
 
@@ -2014,7 +2016,7 @@ programs.  */)
 
   for (i = 0; i < 8; i++)
     ASET (reg, i, make_number (ccl.reg[i]));
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 DEFUN ("ccl-execute-on-string", Fccl_execute_on_string, Sccl_execute_on_string,
@@ -2046,7 +2048,8 @@ See the documentation of `define-ccl-program' for the detail of CCL program.
 usage: (ccl-execute-on-string CCL-PROGRAM STATUS STRING &optional CONTINUE UNIBYTE-P)  */)
   (Lisp_Object ccl_prog, Lisp_Object status, Lisp_Object str, Lisp_Object contin, Lisp_Object unibyte_p)
 {
-  Lisp_Object val;
+  ENTER_LISP_FRAME (ccl_prog, status, str, contin, unibyte_p);
+  LISP_LOCALS (val);
   struct ccl_program ccl;
   int i;
   ptrdiff_t outbufsize;
@@ -2159,7 +2162,7 @@ usage: (ccl-execute-on-string CCL-PROGRAM STATUS STRING &optional CONTINUE UNIBY
 			       outp - outbuf, NILP (unibyte_p));
   xfree (outbuf);
 
-  return val;
+  EXIT_LISP_FRAME (val);
 }
 
 DEFUN ("register-ccl-program", Fregister_ccl_program, Sregister_ccl_program,
@@ -2170,9 +2173,10 @@ If it is nil, just reserve NAME as a CCL program name.
 Return index number of the registered CCL program.  */)
      (Lisp_Object name, Lisp_Object ccl_prog)
 {
+  ENTER_LISP_FRAME (name, ccl_prog);
+  LISP_LOCALS (resolved, slot, elt);
   ptrdiff_t len = ASIZE (Vccl_program_table);
   ptrdiff_t idx;
-  Lisp_Object resolved;
 
   CHECK_SYMBOL (name);
   resolved = Qnil;
@@ -2193,7 +2197,6 @@ Return index number of the registered CCL program.  */)
 
   for (idx = 0; idx < len; idx++)
     {
-      Lisp_Object slot;
 
       slot = AREF (Vccl_program_table, idx);
       if (!VECTORP (slot))
@@ -2206,7 +2209,7 @@ Return index number of the registered CCL program.  */)
 	  ASET (slot, 1, ccl_prog);
 	  ASET (slot, 2, resolved);
 	  ASET (slot, 3, Qt);
-	  return make_number (idx);
+	  EXIT_LISP_FRAME (make_number (idx));
 	}
     }
 
@@ -2215,7 +2218,8 @@ Return index number of the registered CCL program.  */)
     Vccl_program_table = larger_vector (Vccl_program_table, 1, -1);
 
   {
-    Lisp_Object elt = make_uninit_vector (4);
+    elt = make_uninit_vector (4);
+
 
     ASET (elt, 0, name);
     ASET (elt, 1, ccl_prog);
@@ -2225,7 +2229,7 @@ Return index number of the registered CCL program.  */)
   }
 
   Fput (name, Qccl_program_idx, make_number (idx));
-  return make_number (idx);
+  EXIT_LISP_FRAME (make_number (idx));
 }
 
 /* Register code conversion map.
@@ -2244,9 +2248,10 @@ DEFUN ("register-code-conversion-map", Fregister_code_conversion_map,
 Return index number of the registered map.  */)
   (Lisp_Object symbol, Lisp_Object map)
 {
+  ENTER_LISP_FRAME (symbol, map);
+  LISP_LOCALS (idx, slot);
   ptrdiff_t len;
   ptrdiff_t i;
-  Lisp_Object idx;
 
   CHECK_SYMBOL (symbol);
   CHECK_VECTOR (map);
@@ -2257,7 +2262,8 @@ Return index number of the registered map.  */)
 
   for (i = 0; i < len; i++)
     {
-      Lisp_Object slot = AREF (Vcode_conversion_map_vector, i);
+      slot = AREF (Vcode_conversion_map_vector, i);
+
 
       if (!CONSP (slot))
 	break;
@@ -2268,7 +2274,7 @@ Return index number of the registered map.  */)
 	  XSETCDR (slot, map);
 	  Fput (symbol, Qcode_conversion_map, map);
 	  Fput (symbol, Qcode_conversion_map_id, idx);
-	  return idx;
+	  EXIT_LISP_FRAME (idx);
 	}
     }
 
@@ -2280,7 +2286,7 @@ Return index number of the registered map.  */)
   Fput (symbol, Qcode_conversion_map, map);
   Fput (symbol, Qcode_conversion_map_id, idx);
   ASET (Vcode_conversion_map_vector, i, Fcons (symbol, map));
-  return idx;
+  EXIT_LISP_FRAME (idx);
 }
 
 

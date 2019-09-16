@@ -1069,18 +1069,19 @@ init_all_sys_modes (void)
 void
 init_sys_modes (struct tty_display_info *tty_out)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (terminal, tail, frame);
   struct emacs_tty tty;
 #ifndef DOS_NT
-  Lisp_Object terminal;
 #endif
 
   Vtty_erase_char = Qnil;
 
   if (noninteractive)
-    return;
+    EXIT_LISP_FRAME_VOID ();
 
   if (!tty_out->output)
-    return;                     /* The tty is suspended. */
+    EXIT_LISP_FRAME_VOID ();                     /* The tty is suspended. */
 
   narrow_foreground_group (fileno (tty_out->input));
 
@@ -1286,7 +1287,6 @@ init_sys_modes (struct tty_display_info *tty_out)
 
   if (!tty_out->term_initted)
     {
-      Lisp_Object tail, frame;
       FOR_EACH_FRAME (tail, frame)
         {
           /* XXX This needs to be revised. */
@@ -1303,7 +1303,6 @@ init_sys_modes (struct tty_display_info *tty_out)
     }
   else
     {
-      Lisp_Object tail, frame;
       frame_garbaged = 1;
       FOR_EACH_FRAME (tail, frame)
         {
@@ -1315,6 +1314,7 @@ init_sys_modes (struct tty_display_info *tty_out)
     }
 
   tty_out->term_initted = 1;
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Return true if safe to use tabs in output.
@@ -2769,6 +2769,7 @@ safe_strsignal (int code)
 int
 serial_open (Lisp_Object port)
 {
+  ENTER_LISP_FRAME_T (int, port);
   int fd = emacs_open (SSDATA (port), O_RDWR | O_NOCTTY | O_NONBLOCK, 0);
   if (fd < 0)
     report_file_error ("Opening serial port", port);
@@ -2776,7 +2777,7 @@ serial_open (Lisp_Object port)
   ioctl (fd, TIOCEXCL, (char *) 0);
 #endif
 
-  return fd;
+  EXIT_LISP_FRAME (fd);
 }
 
 #if !defined (HAVE_CFMAKERAW)
@@ -2808,8 +2809,12 @@ void
 serial_configure (struct Lisp_Process *p,
 		  Lisp_Object contact)
 {
-  Lisp_Object childp2 = Qnil;
-  Lisp_Object tem = Qnil;
+  ENTER_LISP_FRAME (contact);
+  LISP_LOCALS (childp2, tem);
+  childp2 = Qnil;
+
+  tem = Qnil;
+
   struct termios attr;
   int err;
   char summary[4] = "???"; /* This usually becomes "8N1".  */
@@ -2962,6 +2967,7 @@ serial_configure (struct Lisp_Process *p,
 
   childp2 = Fplist_put (childp2, QCsummary, build_string (summary));
   pset_childp (p, childp2);
+  EXIT_LISP_FRAME_VOID ();
 }
 #endif /* not DOS_NT  */
 
@@ -2974,8 +2980,8 @@ serial_configure (struct Lisp_Process *p,
 Lisp_Object
 list_system_processes (void)
 {
-  Lisp_Object procdir, match, proclist, next;
-  Lisp_Object tail;
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (procdir, match, proclist, next, tail);
 
   /* For every process on the system, there's a directory in the
      "/proc" pseudo-directory whose name is the numeric ID of that
@@ -2995,7 +3001,7 @@ list_system_processes (void)
   /* directory_files_internal returns the files in reverse order; undo
      that.  */
   proclist = Fnreverse (proclist);
-  return proclist;
+  EXIT_LISP_FRAME (proclist);
 }
 
 #elif defined DARWIN_OS || defined __FreeBSD__
@@ -3003,6 +3009,8 @@ list_system_processes (void)
 Lisp_Object
 list_system_processes (void)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (proclist);
 #ifdef DARWIN_OS
   int mib[] = {CTL_KERN, KERN_PROC, KERN_PROC_ALL};
 #else
@@ -3012,16 +3020,17 @@ list_system_processes (void)
   struct kinfo_proc *procs;
   size_t i;
 
-  Lisp_Object proclist = Qnil;
+  proclist = Qnil;
+
 
   if (sysctl (mib, 3, NULL, &len, NULL, 0) != 0)
-    return proclist;
+    EXIT_LISP_FRAME (proclist);
 
   procs = xmalloc (len);
   if (sysctl (mib, 3, procs, &len, NULL, 0) != 0)
     {
       xfree (procs);
-      return proclist;
+      EXIT_LISP_FRAME (proclist);
     }
 
   len /= sizeof (struct kinfo_proc);
@@ -3036,7 +3045,7 @@ list_system_processes (void)
 
   xfree (procs);
 
-  return  proclist;
+  EXIT_LISP_FRAME (proclist);
 }
 
 /* The WINDOWSNT implementation is in w32.c.
@@ -3216,6 +3225,8 @@ procfs_get_total_memory (void)
 Lisp_Object
 system_process_attributes (Lisp_Object pid)
 {
+  ENTER_LISP_FRAME (pid);
+  LISP_LOCALS (attrs, decoded_cmd);
   char procfn[PATH_MAX], fn[PATH_MAX];
   struct stat st;
   struct passwd *pw;
@@ -3240,15 +3251,15 @@ system_process_attributes (Lisp_Object pid)
   unsigned long minflt, majflt, cminflt, cmajflt, vsize;
   struct timespec tnow, tstart, tboot, telapsed, us_time;
   double pcpu, pmem;
-  Lisp_Object attrs = Qnil;
-  Lisp_Object decoded_cmd;
+  attrs = Qnil;
+
   ptrdiff_t count;
 
   CHECK_NUMBER_OR_FLOAT (pid);
   CONS_TO_INTEGER (pid, pid_t, proc_id);
   sprintf (procfn, "/proc/%"pMd, proc_id);
   if (stat (procfn, &st) < 0)
-    return attrs;
+    EXIT_LISP_FRAME (attrs);
 
   /* euid egid */
   uid = st.st_uid;
@@ -3438,7 +3449,7 @@ system_process_attributes (Lisp_Object pid)
       attrs = Fcons (Fcons (Qargs, decoded_cmd), attrs);
     }
 
-  return attrs;
+  EXIT_LISP_FRAME (attrs);
 }
 
 #elif defined (SOLARIS2) && defined (HAVE_PROCFS)
@@ -3463,6 +3474,8 @@ system_process_attributes (Lisp_Object pid)
 Lisp_Object
 system_process_attributes (Lisp_Object pid)
 {
+  ENTER_LISP_FRAME (pid);
+  LISP_LOCALS (attrs, decoded_cmd);
   char procfn[PATH_MAX], fn[PATH_MAX];
   struct stat st;
   struct passwd *pw;
@@ -3474,15 +3487,15 @@ system_process_attributes (Lisp_Object pid)
   printmax_t proc_id;
   uid_t uid;
   gid_t gid;
-  Lisp_Object attrs = Qnil;
-  Lisp_Object decoded_cmd;
+  attrs = Qnil;
+
   ptrdiff_t count;
 
   CHECK_NUMBER_OR_FLOAT (pid);
   CONS_TO_INTEGER (pid, pid_t, proc_id);
   sprintf (procfn, "/proc/%"pMd, proc_id);
   if (stat (procfn, &st) < 0)
-    return attrs;
+    EXIT_LISP_FRAME (attrs);
 
   /* euid egid */
   uid = st.st_uid;
@@ -3576,7 +3589,7 @@ system_process_attributes (Lisp_Object pid)
       attrs = Fcons (Fcons (Qargs, decoded_cmd), attrs);
     }
   unbind_to (count, Qnil);
-  return attrs;
+  EXIT_LISP_FRAME (attrs);
 }
 
 #elif defined __FreeBSD__
@@ -3596,6 +3609,8 @@ make_lisp_timeval (struct timeval t)
 Lisp_Object
 system_process_attributes (Lisp_Object pid)
 {
+  ENTER_LISP_FRAME (pid);
+  LISP_LOCALS (attrs, decoded_comm);
   int proc_id;
   int pagesize = getpagesize ();
   unsigned long npages;
@@ -3611,15 +3626,15 @@ system_process_attributes (Lisp_Object pid)
   struct kinfo_proc proc;
   size_t proclen = sizeof proc;
 
-  Lisp_Object attrs = Qnil;
-  Lisp_Object decoded_comm;
+  attrs = Qnil;
+
 
   CHECK_NUMBER_OR_FLOAT (pid);
   CONS_TO_INTEGER (pid, int, proc_id);
   mib[3] = proc_id;
 
   if (sysctl (mib, 4, &proc, &proclen, NULL, 0) != 0)
-    return attrs;
+    EXIT_LISP_FRAME (attrs);
 
   attrs = Fcons (Fcons (Qeuid, make_fixnum_or_float (proc.ki_uid)), attrs);
 
@@ -3756,7 +3771,7 @@ system_process_attributes (Lisp_Object pid)
       attrs = Fcons (Fcons (Qargs, decoded_comm), attrs);
     }
 
-  return attrs;
+  EXIT_LISP_FRAME (attrs);
 }
 
 #elif defined DARWIN_OS
@@ -3776,6 +3791,8 @@ make_lisp_timeval (struct timeval t)
 Lisp_Object
 system_process_attributes (Lisp_Object pid)
 {
+  ENTER_LISP_FRAME (pid);
+  LISP_LOCALS (attrs, decoded_comm);
   int proc_id;
   struct passwd *pw;
   struct group  *gr;
@@ -3791,15 +3808,15 @@ system_process_attributes (Lisp_Object pid)
   struct kinfo_proc proc;
   size_t proclen = sizeof proc;
 
-  Lisp_Object attrs = Qnil;
-  Lisp_Object decoded_comm;
+  attrs = Qnil;
+
 
   CHECK_NUMBER_OR_FLOAT (pid);
   CONS_TO_INTEGER (pid, int, proc_id);
   mib[3] = proc_id;
 
   if (sysctl (mib, 4, &proc, &proclen, NULL, 0) != 0)
-    return attrs;
+    EXIT_LISP_FRAME (attrs);
 
   uid = proc.kp_eproc.e_ucred.cr_uid;
   attrs = Fcons (Fcons (Qeuid, make_fixnum_or_float (uid)), attrs);
@@ -3891,7 +3908,7 @@ system_process_attributes (Lisp_Object pid)
   t = timespec_sub (now, timeval_to_timespec (starttime));
   attrs = Fcons (Fcons (Qetime, make_lisp_time (t)), attrs);
 
-  return attrs;
+  EXIT_LISP_FRAME (attrs);
 }
 
 /* The WINDOWSNT implementation is in w32.c.
@@ -4026,6 +4043,7 @@ int
 str_collate (Lisp_Object s1, Lisp_Object s2,
 	     Lisp_Object locale, Lisp_Object ignore_case)
 {
+  ENTER_LISP_FRAME_T (int, s1, s2, locale, ignore_case);
   int res, err;
   ptrdiff_t len, i, i_byte;
   wchar_t *p1, *p2;
@@ -4088,7 +4106,7 @@ str_collate (Lisp_Object s1, Lisp_Object s2,
 #  endif
 
   SAFE_FREE ();
-  return res;
+  EXIT_LISP_FRAME (res);
 }
 #endif  /* __STDC_ISO_10646__ */
 
@@ -4097,6 +4115,7 @@ int
 str_collate (Lisp_Object s1, Lisp_Object s2,
 	     Lisp_Object locale, Lisp_Object ignore_case)
 {
+  ENTER_LISP_FRAME_T (int, s1, s2, locale, ignore_case);
 
   char *loc = STRINGP (locale) ? SSDATA (locale) : NULL;
   int res, err = errno;
@@ -4107,6 +4126,6 @@ str_collate (Lisp_Object s1, Lisp_Object s2,
     error ("Invalid string for collation: %s", strerror (errno));
 
   errno = err;
-  return res;
+  EXIT_LISP_FRAME (res);
 }
 #endif	/* WINDOWSNT */

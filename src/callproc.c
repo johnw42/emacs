@@ -109,7 +109,8 @@ static Lisp_Object call_process (ptrdiff_t, Lisp_Object *, int, ptrdiff_t);
 Lisp_Object
 encode_current_directory (void)
 {
-  Lisp_Object dir;
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (dir);
 
   dir = BVAR (current_buffer, directory);
 
@@ -133,7 +134,7 @@ encode_current_directory (void)
     report_file_error ("Setting current directory",
 		       BVAR (current_buffer, directory));
 
-  return dir;
+  EXIT_LISP_FRAME (dir);
 }
 
 /* If P is reapable, record it as a deleted process and kill it.
@@ -143,6 +144,7 @@ encode_current_directory (void)
 void
 record_kill_process (struct Lisp_Process *p, Lisp_Object tempfile)
 {
+  ENTER_LISP_FRAME (tempfile);
 #ifndef MSDOS
   sigset_t oldset;
   block_child_signal (&oldset);
@@ -156,6 +158,7 @@ record_kill_process (struct Lisp_Process *p, Lisp_Object tempfile)
 
   unblock_child_signal (&oldset);
 #endif	/* !MSDOS */
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Clean up files, file descriptors and processes created by Fcall_process.  */
@@ -163,7 +166,9 @@ record_kill_process (struct Lisp_Process *p, Lisp_Object tempfile)
 static void
 delete_temp_file (Lisp_Object name)
 {
+  ENTER_LISP_FRAME (name);
   unlink (SSDATA (name));
+  EXIT_LISP_FRAME_VOID ();
 }
 
 static void
@@ -193,6 +198,7 @@ call_process_kill (void *ptr)
 static void
 call_process_cleanup (Lisp_Object buffer)
 {
+  ENTER_LISP_FRAME (buffer);
   Fset_buffer (buffer);
 
 #ifndef MSDOS
@@ -209,6 +215,7 @@ call_process_cleanup (Lisp_Object buffer)
 		: "Waiting for process to die...internal error");
     }
 #endif	/* !MSDOS */
+  EXIT_LISP_FRAME_VOID ();
 }
 
 #ifdef DOS_NT
@@ -255,7 +262,8 @@ you want to run a process in a remote directory use `process-file'.
 usage: (call-process PROGRAM &optional INFILE DESTINATION DISPLAY &rest ARGS)  */)
   (ptrdiff_t nargs, Lisp_Object *args)
 {
-  Lisp_Object infile, encoded_infile;
+  ENTER_LISP_FRAME_VA (nargs, args);
+  LISP_LOCALS (infile, encoded_infile);
   int filefd;
   ptrdiff_t count = SPECPDL_INDEX ();
 
@@ -273,7 +281,7 @@ usage: (call-process PROGRAM &optional INFILE DESTINATION DISPLAY &rest ARGS)  *
   if (filefd < 0)
     report_file_error ("Opening process input file", infile);
   record_unwind_protect_int (close_file_unwind, filefd);
-  return unbind_to (count, call_process (nargs, args, filefd, -1));
+  EXIT_LISP_FRAME (unbind_to (count, call_process (nargs, args, filefd, -1)));
 }
 
 /* Like Fcall_process (NARGS, ARGS), except use FILEFD as the input file.
@@ -288,7 +296,8 @@ static Lisp_Object
 call_process (ptrdiff_t nargs, Lisp_Object *args, int filefd,
 	      ptrdiff_t tempfile_index)
 {
-  Lisp_Object buffer, current_dir, path;
+  ENTER_LISP_FRAME_VA (nargs, args);
+  LISP_LOCALS (buffer, current_dir, path, error_file, output_file, coding_systems, val, coding_attrs, stderr_file, spec_buffer, curbuf);
   bool display_p;
   int fd0;
   int callproc_fd[CALLPROC_FDS];
@@ -300,8 +309,8 @@ call_process (ptrdiff_t nargs, Lisp_Object *args, int filefd,
   char **new_argv;
   /* File to use for stderr in the child.
      t means use same as standard output.  */
-  Lisp_Object error_file;
-  Lisp_Object output_file = Qnil;
+  output_file = Qnil;
+
 #ifdef MSDOS	/* Demacs 1.1.1 91/10/16 HIRANO Satoshi */
   char *tempfile = NULL;
 #else
@@ -313,7 +322,6 @@ call_process (ptrdiff_t nargs, Lisp_Object *args, int filefd,
   struct coding_system process_coding; /* coding-system of process output */
   struct coding_system argument_coding;	/* coding-system of arguments */
   /* Set to the return value of Ffind_operation_coding_system.  */
-  Lisp_Object coding_systems;
   bool discard_output;
 
   if (synch_process_pid)
@@ -335,13 +343,13 @@ call_process (ptrdiff_t nargs, Lisp_Object *args, int filefd,
 
   /* Decide the coding-system for giving arguments.  */
   {
-    Lisp_Object val, *args2;
+    Lisp_Object *args2;
+
 
     /* If arguments are supplied, we may have to encode them.  */
     if (nargs >= 5)
       {
 	bool must_encode = 0;
-	Lisp_Object coding_attrs;
 
 	for (i = 4; i < nargs; i++)
 	  CHECK_STRING (args[i]);
@@ -387,7 +395,6 @@ call_process (ptrdiff_t nargs, Lisp_Object *args, int filefd,
 	{
 	  if (CONSP (XCDR (buffer)))
 	    {
-	      Lisp_Object stderr_file;
 	      stderr_file = XCAR (XCDR (buffer));
 
 	      if (NILP (stderr_file) || EQ (Qt, stderr_file))
@@ -410,7 +417,6 @@ call_process (ptrdiff_t nargs, Lisp_Object *args, int filefd,
 
       if (! (NILP (buffer) || EQ (buffer, Qt) || INTEGERP (buffer)))
 	{
-	  Lisp_Object spec_buffer;
 	  spec_buffer = buffer;
 	  buffer = Fget_buffer_create (buffer);
 	  /* Mention the buffer name for a better error message.  */
@@ -555,9 +561,8 @@ call_process (ptrdiff_t nargs, Lisp_Object *args, int filefd,
       child_errno = errno;
       unbind_to (count, Qnil);
       synchronize_system_messages_locale ();
-      return
-	code_convert_string_norecord (build_string (strerror (child_errno)),
-				      Vlocale_coding_system, 0);
+      EXIT_LISP_FRAME (code_convert_string_norecord (build_string (strerror (child_errno)),
+				      Vlocale_coding_system, 0));
     }
 
   for (i = 0; i < CALLPROC_FDS; i++)
@@ -711,7 +716,7 @@ call_process (ptrdiff_t nargs, Lisp_Object *args, int filefd,
 #endif /* not MSDOS */
 
   if (INTEGERP (buffer))
-    return unbind_to (count, Qnil);
+    EXIT_LISP_FRAME (unbind_to (count, Qnil));
 
   if (BUFFERP (buffer))
     Fset_buffer (buffer);
@@ -720,7 +725,8 @@ call_process (ptrdiff_t nargs, Lisp_Object *args, int filefd,
 
   if (0 <= fd0)
     {
-      Lisp_Object val, *args2;
+      Lisp_Object *args2;
+
 
       val = Qnil;
       if (!NILP (Vcoding_system_for_read))
@@ -805,7 +811,6 @@ call_process (ptrdiff_t nargs, Lisp_Object *args, int filefd,
 	    insert_1_both (buf, nread, nread, 0, 1, 0);
 	  else
 	    {			/* We have to decode the input.  */
-	      Lisp_Object curbuf;
 	      ptrdiff_t count1 = SPECPDL_INDEX ();
 
 	      XSETBUFFER (curbuf, current_buffer);
@@ -894,7 +899,7 @@ call_process (ptrdiff_t nargs, Lisp_Object *args, int filefd,
   unbind_to (count, Qnil);
 
   if (!wait_ok)
-    return build_unibyte_string ("internal error");
+    EXIT_LISP_FRAME (build_unibyte_string ("internal error"));
 
   if (WIFSIGNALED (status))
     {
@@ -906,12 +911,12 @@ call_process (ptrdiff_t nargs, Lisp_Object *args, int filefd,
       if (signame == 0)
 	signame = "unknown";
 
-      return code_convert_string_norecord (build_string (signame),
-					   Vlocale_coding_system, 0);
+      EXIT_LISP_FRAME (code_convert_string_norecord (build_string (signame),
+					   Vlocale_coding_system, 0));
     }
 
   eassert (WIFEXITED (status));
-  return make_number (WEXITSTATUS (status));
+  EXIT_LISP_FRAME (make_number (WEXITSTATUS (status)));
 }
 
 /* Create a temporary file suitable for storing the input data of
@@ -925,10 +930,9 @@ static int
 create_temp_file (ptrdiff_t nargs, Lisp_Object *args,
 		  Lisp_Object *filename_string_ptr)
 {
+  ENTER_LISP_FRAME_VA_T (int, nargs, args);
+  LISP_LOCALS (filename_string, val, start, end, tmpdir, pattern, dirname, coding_systems);
   int fd;
-  Lisp_Object filename_string;
-  Lisp_Object val, start, end;
-  Lisp_Object tmpdir;
 
   if (STRINGP (Vtemporary_file_directory))
     tmpdir = Vtemporary_file_directory;
@@ -949,7 +953,8 @@ create_temp_file (ptrdiff_t nargs, Lisp_Object *args,
     }
 
   {
-    Lisp_Object pattern = Fexpand_file_name (Vtemp_file_name_pattern, tmpdir);
+    pattern = Fexpand_file_name (Vtemp_file_name_pattern, tmpdir);
+
     char *tempfile;
     ptrdiff_t count;
 
@@ -959,7 +964,8 @@ create_temp_file (ptrdiff_t nargs, Lisp_Object *args,
        doesn't recognize it.  */
     if (!NILP (Vw32_downcase_file_names))
       {
-	Lisp_Object dirname = Ffile_name_directory (pattern);
+	dirname = Ffile_name_directory (pattern);
+
 
 	if (NILP (dirname))
 	  pattern = Vtemp_file_name_pattern;
@@ -990,7 +996,6 @@ create_temp_file (ptrdiff_t nargs, Lisp_Object *args,
     val = Qraw_text;
   else
     {
-      Lisp_Object coding_systems;
       Lisp_Object *args2;
       USE_SAFE_ALLOCA;
       SAFE_NALLOCA (args2, 1, nargs + 1);
@@ -1021,7 +1026,7 @@ create_temp_file (ptrdiff_t nargs, Lisp_Object *args,
      coding-system-for-read.  */
 
   *filename_string_ptr = filename_string;
-  return fd;
+  EXIT_LISP_FRAME (fd);
 }
 
 DEFUN ("call-process-region", Fcall_process_region, Scall_process_region,
@@ -1059,10 +1064,13 @@ If you quit, the process is killed with SIGINT, or SIGKILL if you quit again.
 usage: (call-process-region START END PROGRAM &optional DELETE BUFFER DISPLAY &rest ARGS)  */)
   (ptrdiff_t nargs, Lisp_Object *args)
 {
-  Lisp_Object infile, val;
+  ENTER_LISP_FRAME_VA (nargs, args);
+  LISP_LOCALS (infile, val, start, end);
   ptrdiff_t count = SPECPDL_INDEX ();
-  Lisp_Object start = args[0];
-  Lisp_Object end = args[1];
+  start = args[0];
+
+  end = args[1];
+
   bool empty_input;
   int fd;
 
@@ -1105,7 +1113,7 @@ usage: (call-process-region START END PROGRAM &optional DELETE BUFFER DISPLAY &r
   args[1] = infile;
 
   val = call_process (nargs, args, fd, empty_input ? -1 : count);
-  return unbind_to (count, val);
+  EXIT_LISP_FRAME (unbind_to (count, val));
 }
 
 static char **
@@ -1196,6 +1204,8 @@ CHILD_SETUP_TYPE
 child_setup (int in, int out, int err, char **new_argv, bool set_pgrp,
 	     Lisp_Object current_dir)
 {
+  ENTER_LISP_FRAME_T (CHILD_SETUP_TYPE, current_dir);
+  LISP_LOCALS (tem, display, tmp);
   char **env;
   char *pwd_var;
 #ifdef WINDOWSNT
@@ -1254,11 +1264,11 @@ child_setup (int in, int out, int err, char **new_argv, bool set_pgrp,
 
   /* Set `env' to a vector of the strings in the environment.  */
   {
-    register Lisp_Object tem;
     register char **new_env;
     char **p, **q;
     register int new_length;
-    Lisp_Object display = Qnil;
+    display = Qnil;
+
 
     new_length = 0;
 
@@ -1277,7 +1287,8 @@ child_setup (int in, int out, int err, char **new_argv, bool set_pgrp,
     /* If not provided yet, use the frame's DISPLAY.  */
     if (NILP (display))
       {
-	Lisp_Object tmp = Fframe_parameter (selected_frame, Qdisplay);
+	tmp = Fframe_parameter (selected_frame, Qdisplay);
+
 	if (!STRINGP (tmp) && CONSP (Vinitial_environment))
 	  /* If still not found, Look for DISPLAY in Vinitial_environment.  */
 	  tmp = Fgetenv_internal (build_string ("DISPLAY"),
@@ -1337,7 +1348,7 @@ child_setup (int in, int out, int err, char **new_argv, bool set_pgrp,
   if (cpid == -1)
     /* An error occurred while trying to spawn the process.  */
     report_file_error ("Spawning child process", Qnil);
-  return cpid;
+  EXIT_LISP_FRAME (cpid);
 
 #else  /* not WINDOWSNT */
 
@@ -1364,7 +1375,7 @@ child_setup (int in, int out, int err, char **new_argv, bool set_pgrp,
   if (pid == -1)
     /* An error occurred while trying to run the subprocess.  */
     report_file_error ("Spawning child process", Qnil);
-  return pid;
+  EXIT_LISP_FRAME (pid);
 #endif  /* MSDOS */
 #endif  /* not WINDOWSNT */
 }
@@ -1373,9 +1384,12 @@ static bool
 getenv_internal_1 (const char *var, ptrdiff_t varlen, char **value,
 		   ptrdiff_t *valuelen, Lisp_Object env)
 {
+  ENTER_LISP_FRAME_T (bool, env);
+  LISP_LOCALS (entry);
   for (; CONSP (env); env = XCDR (env))
     {
-      Lisp_Object entry = XCAR (env);
+      entry = XCAR (env);
+
       if (STRINGP (entry)
 	  && SBYTES (entry) >= varlen
 #ifdef WINDOWSNT
@@ -1390,28 +1404,30 @@ getenv_internal_1 (const char *var, ptrdiff_t varlen, char **value,
 	    {
 	      *value = SSDATA (entry) + (varlen + 1);
 	      *valuelen = SBYTES (entry) - (varlen + 1);
-	      return 1;
+	      EXIT_LISP_FRAME (1);
 	    }
 	  else if (SBYTES (entry) == varlen)
 	    {
 	      /* Lone variable names in Vprocess_environment mean that
 		 variable should be removed from the environment. */
 	      *value = NULL;
-	      return 1;
+	      EXIT_LISP_FRAME (1);
 	    }
 	}
     }
-  return 0;
+  EXIT_LISP_FRAME (0);
 }
 
 static bool
 getenv_internal (const char *var, ptrdiff_t varlen, char **value,
 		 ptrdiff_t *valuelen, Lisp_Object frame)
 {
+  ENTER_LISP_FRAME_T (bool, frame);
+  LISP_LOCALS (display);
   /* Try to find VAR in Vprocess_environment first.  */
   if (getenv_internal_1 (var, varlen, value, valuelen,
 			 Vprocess_environment))
-    return *value ? 1 : 0;
+    EXIT_LISP_FRAME (*value ? 1 : 0);
 
   /* On Windows we make some modifications to Emacs' environment
      without recording them in Vprocess_environment.  */
@@ -1422,7 +1438,7 @@ getenv_internal (const char *var, ptrdiff_t varlen, char **value,
       {
         *value = tmpval;
         *valuelen = strlen (tmpval);
-        return 1;
+        EXIT_LISP_FRAME (1);
       }
   }
 #endif
@@ -1430,21 +1446,21 @@ getenv_internal (const char *var, ptrdiff_t varlen, char **value,
   /* For DISPLAY try to get the values from the frame or the initial env.  */
   if (strcmp (var, "DISPLAY") == 0)
     {
-      Lisp_Object display
-	= Fframe_parameter (NILP (frame) ? selected_frame : frame, Qdisplay);
+      display = Fframe_parameter (NILP (frame) ? selected_frame : frame, Qdisplay);
+
       if (STRINGP (display))
 	{
 	  *value    = SSDATA (display);
 	  *valuelen = SBYTES (display);
-	  return 1;
+	  EXIT_LISP_FRAME (1);
 	}
       /* If still not found, Look for DISPLAY in Vinitial_environment.  */
       if (getenv_internal_1 (var, varlen, value, valuelen,
 			     Vinitial_environment))
-	return *value ? 1 : 0;
+	EXIT_LISP_FRAME (*value ? 1 : 0);
     }
 
-  return 0;
+  EXIT_LISP_FRAME (0);
 }
 
 DEFUN ("getenv-internal", Fgetenv_internal, Sgetenv_internal, 1, 2, 0,
@@ -1459,6 +1475,7 @@ If optional parameter ENV is a list, then search this list instead of
 \(an entry for a variable with no value).  */)
   (Lisp_Object variable, Lisp_Object env)
 {
+  ENTER_LISP_FRAME (variable, env);
   char *value;
   ptrdiff_t valuelen;
 
@@ -1467,15 +1484,15 @@ If optional parameter ENV is a list, then search this list instead of
     {
       if (getenv_internal_1 (SSDATA (variable), SBYTES (variable),
 			     &value, &valuelen, env))
-	return value ? make_string (value, valuelen) : Qt;
+	EXIT_LISP_FRAME (value ? make_string (value, valuelen) : Qt);
       else
-	return Qnil;
+	EXIT_LISP_FRAME (Qnil);
     }
   else if (getenv_internal (SSDATA (variable), SBYTES (variable),
 			    &value, &valuelen, env))
-    return make_string (value, valuelen);
+    EXIT_LISP_FRAME (make_string (value, valuelen));
   else
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
 }
 
 /* A version of getenv that consults the Lisp environment lists,
@@ -1534,10 +1551,11 @@ init_callproc_1 (void)
 void
 init_callproc (void)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (tempdir, tem, tem1, srcdir, lispdir, newdir, gamedir, path_game);
   bool data_dir = egetenv ("EMACSDATA") != 0;
 
   char *sh;
-  Lisp_Object tempdir;
 #ifdef HAVE_NS
   if (data_dir == 0)
     data_dir = ns_etc_directory () != 0;
@@ -1546,7 +1564,6 @@ init_callproc (void)
   if (!NILP (Vinstallation_directory))
     {
       /* Add to the path the lib-src subdir of the installation dir.  */
-      Lisp_Object tem;
       tem = Fexpand_file_name (build_string ("lib-src"),
 			       Vinstallation_directory);
 #ifndef MSDOS
@@ -1586,8 +1603,8 @@ init_callproc (void)
      source directory.  */
   if (data_dir == 0)
     {
-      Lisp_Object tem, tem1, srcdir;
-      Lisp_Object lispdir = Fcar (decode_env_path (0, PATH_DUMPLOADSEARCH, 0));
+      lispdir = Fcar (decode_env_path (0, PATH_DUMPLOADSEARCH, 0));
+
 
       srcdir = Fexpand_file_name (build_string ("../src/"), lispdir);
 
@@ -1595,7 +1612,6 @@ init_callproc (void)
       tem1 = Ffile_exists_p (tem);
       if (!NILP (Fequal (srcdir, Vinvocation_directory)) || NILP (tem1))
 	{
-	  Lisp_Object newdir;
 	  newdir = Fexpand_file_name (build_string ("../etc/"), lispdir);
 	  tem = Fexpand_file_name (build_string ("NEWS"), newdir);
 	  tem1 = Ffile_exists_p (tem);
@@ -1620,14 +1636,17 @@ init_callproc (void)
   sh = getenv ("SHELL");
   Vshell_file_name = build_string (sh ? sh : "/bin/sh");
 
-  Lisp_Object gamedir = Qnil;
+  gamedir = Qnil;
+
   if (PATH_GAME)
     {
-      Lisp_Object path_game = build_unibyte_string (PATH_GAME);
+      path_game = build_unibyte_string (PATH_GAME);
+
       if (file_accessible_directory_p (path_game))
 	gamedir = path_game;
     }
   Vshared_game_score_directory = gamedir;
+  EXIT_LISP_FRAME_VOID ();
 }
 
 void

@@ -444,6 +444,8 @@ DEFUN ("w16-set-clipboard-data", Fw16_set_clipboard_data, Sw16_set_clipboard_dat
        doc: /* This sets the clipboard data to the given text.  */)
   (Lisp_Object string, Lisp_Object frame)
 {
+  ENTER_LISP_FRAME (string, frame);
+  LISP_LOCALS (coding_system);
   unsigned ok = 1, put_status = 0;
   int nbytes, no_crlf_conversion;
   unsigned char *src, *dst = NULL;
@@ -480,9 +482,9 @@ DEFUN ("w16-set-clipboard-data", Fw16_set_clipboard_data, Sw16_set_clipboard_dat
       /* We must encode contents of STRING according to what
 	 clipboard-coding-system specifies.  */
       struct coding_system coding;
-      Lisp_Object coding_system =
-	NILP (Vnext_selection_coding_system) ?
+      coding_system = NILP (Vnext_selection_coding_system) ?
 	Vselection_coding_system : Vnext_selection_coding_system;
+
 
       setup_coding_system (Fcheck_coding_system (coding_system), &coding);
       coding.dst_bytes = nbytes * 4;
@@ -540,16 +542,19 @@ DEFUN ("w16-set-clipboard-data", Fw16_set_clipboard_data, Sw16_set_clipboard_dat
 
  done:
 
-  return (ok && put_status == 0 ? string : Qnil);
+  EXIT_LISP_FRAME ((ok && put_status == 0 ? string : Qnil));
 }
 
 DEFUN ("w16-get-clipboard-data", Fw16_get_clipboard_data, Sw16_get_clipboard_data, 0, 1, 0,
        doc: /* This gets the clipboard data in text format.  */)
   (Lisp_Object frame)
 {
+  ENTER_LISP_FRAME (frame);
+  LISP_LOCALS (ret, coding_system);
   unsigned data_size, truelen;
   unsigned char *htext = NULL;
-  Lisp_Object ret = Qnil;
+  ret = Qnil;
+
   int require_decoding = 0;
 
   if (!FRAME_MSDOS_P (decode_live_frame (frame)))
@@ -588,7 +593,8 @@ DEFUN ("w16-get-clipboard-data", Fw16_get_clipboard_data, Sw16_get_clipboard_dat
   if (require_decoding)
     {
       struct coding_system coding;
-      Lisp_Object coding_system = Vnext_selection_coding_system;
+      coding_system = Vnext_selection_coding_system;
+
 
       truelen = get_clipboard_data (CF_OEMTEXT, htext, data_size, 1);
       if (NILP (coding_system))
@@ -620,7 +626,7 @@ DEFUN ("w16-get-clipboard-data", Fw16_get_clipboard_data, Sw16_get_clipboard_dat
 
  done:
 
-  return (ret);
+  EXIT_LISP_FRAME ((ret));
 }
 
 /* Support checking for a clipboard selection.  */
@@ -638,6 +644,8 @@ server to query.  If omitted or nil, that stands for the selected
 frame's display, or the first available X display.  */)
   (Lisp_Object selection, Lisp_Object terminal)
 {
+  ENTER_LISP_FRAME (selection, terminal);
+  LISP_LOCALS (val);
   CHECK_SYMBOL (selection);
 
   /* Return nil for SECONDARY selection.  For PRIMARY (or nil)
@@ -653,11 +661,12 @@ frame's display, or the first available X display.  */)
   if ((EQ (selection, Qnil) || EQ (selection, QPRIMARY))
       && ! NILP (Fsymbol_value (Fintern_soft (build_string ("kill-ring"),
 					      Qnil))))
-    return Qt;
+    EXIT_LISP_FRAME (Qt);
 
   if (EQ (selection, QCLIPBOARD))
     {
-      Lisp_Object val = Qnil;
+      val = Qnil;
+
 
       if (open_clipboard ())
 	{
@@ -665,9 +674,9 @@ frame's display, or the first available X display.  */)
 	    val = Qt;
 	  close_clipboard ();
 	}
-      return val;
+      EXIT_LISP_FRAME (val);
     }
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 void

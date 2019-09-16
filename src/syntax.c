@@ -219,7 +219,9 @@ enum { INTERVALS_AT_ONCE = 10 };	/* 1 + max-number of intervals
 static void
 SET_RAW_SYNTAX_ENTRY (Lisp_Object table, int c, Lisp_Object val)
 {
+  ENTER_LISP_FRAME (table, val);
   CHAR_TABLE_SET (table, c, val);
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Set the syntax entry VAL for char-range RANGE in table TABLE.
@@ -229,7 +231,9 @@ static void
 SET_RAW_SYNTAX_ENTRY_RANGE (Lisp_Object table, Lisp_Object range,
 			    Lisp_Object val)
 {
+  ENTER_LISP_FRAME (table, range, val);
   Fset_char_table_range (table, range, val);
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Extract the information from the entry for character C
@@ -238,8 +242,11 @@ SET_RAW_SYNTAX_ENTRY_RANGE (Lisp_Object table, Lisp_Object range,
 static Lisp_Object
 SYNTAX_MATCH (int c)
 {
-  Lisp_Object ent = SYNTAX_ENTRY (c);
-  return CONSP (ent) ? XCDR (ent) : Qnil;
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (ent);
+  ent = SYNTAX_ENTRY (c);
+
+  EXIT_LISP_FRAME (CONSP (ent) ? XCDR (ent) : Qnil);
 }
 
 /* This should be called with FROM at the start of forward
@@ -282,6 +289,7 @@ void
 SETUP_SYNTAX_TABLE_FOR_OBJECT (Lisp_Object object,
 			       ptrdiff_t from, ptrdiff_t count)
 {
+  ENTER_LISP_FRAME (object);
   SETUP_BUFFER_SYNTAX_TABLE ();
   gl_state.object = object;
   if (BUFFERP (gl_state.object))
@@ -312,6 +320,7 @@ SETUP_SYNTAX_TABLE_FOR_OBJECT (Lisp_Object object,
   if (parse_sexp_lookup_properties)
     update_syntax_table (from + gl_state.offset - (count <= 0),
 			 count, 1, gl_state.object);
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Update gl_state to an appropriate interval which contains CHARPOS.  The
@@ -331,7 +340,8 @@ void
 update_syntax_table (ptrdiff_t charpos, EMACS_INT count, bool init,
 		     Lisp_Object object)
 {
-  Lisp_Object tmp_table;
+  ENTER_LISP_FRAME (object);
+  LISP_LOCALS (tmp_table);
   int cnt = 0;
   bool invalidate = true;
   INTERVAL i;
@@ -345,7 +355,7 @@ update_syntax_table (ptrdiff_t charpos, EMACS_INT count, bool init,
       gl_state.backward_i = gl_state.forward_i = i;
       invalidate = false;
       if (!i)
-	return;
+	EXIT_LISP_FRAME_VOID ();
       /* interval_of updates only ->position of the return value, so
 	 update the parents manually to speed up update_interval.  */
       while (!NULL_PARENT (i))
@@ -454,7 +464,7 @@ update_syntax_table (ptrdiff_t charpos, EMACS_INT count, bool init,
 		= i->position + LENGTH (i) - gl_state.offset;
 	      gl_state.backward_i = i;
 	    }
-	  return;
+	  EXIT_LISP_FRAME_VOID ();
 	}
       else if (cnt == INTERVALS_AT_ONCE)
 	{
@@ -473,7 +483,7 @@ update_syntax_table (ptrdiff_t charpos, EMACS_INT count, bool init,
 	      gl_state.b_property = i->position - gl_state.offset;
 	      gl_state.backward_i = i;
 	    }
-	  return;
+	  EXIT_LISP_FRAME_VOID ();
 	}
       cnt++;
       i = count > 0 ? next_interval (i) : previous_interval (i);
@@ -486,6 +496,7 @@ update_syntax_table (ptrdiff_t charpos, EMACS_INT count, bool init,
     }
   else
     gl_state.b_property = gl_state.start;
+  EXIT_LISP_FRAME_VOID ();
 }
 
 static void
@@ -525,6 +536,7 @@ void
 update_syntax_table_forward (ptrdiff_t charpos, bool init,
 			     Lisp_Object object)
 {
+  ENTER_LISP_FRAME (object);
   if (gl_state.e_property_truncated)
     {
       eassert (NILP (object));
@@ -537,6 +549,7 @@ update_syntax_table_forward (ptrdiff_t charpos, bool init,
       if (NILP (object) && gl_state.e_property > syntax_propertize__done)
 	parse_sexp_propertize (charpos);
     }
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Returns true if char at CHARPOS is quoted.
@@ -980,17 +993,20 @@ DEFUN ("syntax-table-p", Fsyntax_table_p, Ssyntax_table_p, 1, 1, 0,
 Currently, any char-table counts as a syntax table.  */)
   (Lisp_Object object)
 {
+  ENTER_LISP_FRAME (object);
   if (CHAR_TABLE_P (object)
       && EQ (XCHAR_TABLE (object)->purpose, Qsyntax_table))
-    return Qt;
-  return Qnil;
+    EXIT_LISP_FRAME (Qt);
+  EXIT_LISP_FRAME (Qnil);
 }
 
 static void
 check_syntax_table (Lisp_Object obj)
 {
+  ENTER_LISP_FRAME (obj);
   CHECK_TYPE (CHAR_TABLE_P (obj) && EQ (XCHAR_TABLE (obj)->purpose, Qsyntax_table),
 	      Qsyntax_table_p, obj);
+  EXIT_LISP_FRAME_VOID ();
 }
 
 DEFUN ("syntax-table", Fsyntax_table, Ssyntax_table, 0, 0, 0,
@@ -1015,7 +1031,8 @@ DEFUN ("copy-syntax-table", Fcopy_syntax_table, Scopy_syntax_table, 0, 1, 0,
 It is a copy of the TABLE, which defaults to the standard syntax table.  */)
   (Lisp_Object table)
 {
-  Lisp_Object copy;
+  ENTER_LISP_FRAME (table);
+  LISP_LOCALS (copy);
 
   if (!NILP (table))
     check_syntax_table (table);
@@ -1033,7 +1050,7 @@ It is a copy of the TABLE, which defaults to the standard syntax table.  */)
      use the standard syntax table as the copy's parent.  */
   if (NILP (XCHAR_TABLE (copy)->parent))
     Fset_char_table_parent (copy, Vstandard_syntax_table);
-  return copy;
+  EXIT_LISP_FRAME (copy);
 }
 
 DEFUN ("set-syntax-table", Fset_syntax_table, Sset_syntax_table, 1, 1, 0,
@@ -1041,13 +1058,14 @@ DEFUN ("set-syntax-table", Fset_syntax_table, Sset_syntax_table, 1, 1, 0,
 One argument, a syntax table.  */)
   (Lisp_Object table)
 {
+  ENTER_LISP_FRAME (table);
   int idx;
   check_syntax_table (table);
   bset_syntax_table (current_buffer, table);
   /* Indicate that this buffer now has a specified syntax table.  */
   idx = PER_BUFFER_VAR_IDX (syntax_table);
   SET_PER_BUFFER_VALUE_P (current_buffer, idx, 1);
-  return table;
+  EXIT_LISP_FRAME (table);
 }
 
 /* Convert a letter which signifies a syntax code
@@ -1102,17 +1120,19 @@ this is probably the wrong function to use, because it can't take
 `syntax-after' instead.  */)
   (Lisp_Object character)
 {
+  ENTER_LISP_FRAME (character);
   int char_int;
   CHECK_CHARACTER (character);
   char_int = XINT (character);
   SETUP_BUFFER_SYNTAX_TABLE ();
-  return make_number (syntax_code_spec[SYNTAX (char_int)]);
+  EXIT_LISP_FRAME (make_number (syntax_code_spec[SYNTAX (char_int)]));
 }
 
 DEFUN ("matching-paren", Fmatching_paren, Smatching_paren, 1, 1, 0,
        doc: /* Return the matching parenthesis of CHARACTER, or nil if none.  */)
   (Lisp_Object character)
 {
+  ENTER_LISP_FRAME (character);
   int char_int;
   enum syntaxcode code;
   CHECK_CHARACTER (character);
@@ -1120,8 +1140,8 @@ DEFUN ("matching-paren", Fmatching_paren, Smatching_paren, 1, 1, 0,
   SETUP_BUFFER_SYNTAX_TABLE ();
   code = SYNTAX (char_int);
   if (code == Sopen || code == Sclose)
-    return SYNTAX_MATCH (char_int);
-  return Qnil;
+    EXIT_LISP_FRAME (SYNTAX_MATCH (char_int));
+  EXIT_LISP_FRAME (Qnil);
 }
 
 DEFUN ("string-to-syntax", Fstring_to_syntax, Sstring_to_syntax, 1, 1, 0,
@@ -1132,9 +1152,10 @@ cons cell (CODE . MATCHING-CHAR) which can be used, for example, as
 the value of a `syntax-table' text property.  */)
   (Lisp_Object string)
 {
+  ENTER_LISP_FRAME (string);
+  LISP_LOCALS (match);
   const unsigned char *p;
   int val;
-  Lisp_Object match;
 
   CHECK_STRING (string);
 
@@ -1144,7 +1165,7 @@ the value of a `syntax-table' text property.  */)
     error ("Invalid syntax description letter: %c", p[-1]);
 
   if (val == Sinherit)
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
 
   if (*p)
     {
@@ -1195,10 +1216,10 @@ the value of a `syntax-table' text property.  */)
       }
 
   if (val < ASIZE (Vsyntax_code_object) && NILP (match))
-    return AREF (Vsyntax_code_object, val);
+    EXIT_LISP_FRAME (AREF (Vsyntax_code_object, val));
   else
     /* Since we can't use a shared object, let's make a new one.  */
-    return Fcons (make_number (val), match);
+    EXIT_LISP_FRAME (Fcons (make_number (val), match));
 }
 
 /* I really don't know why this is interactive
@@ -1246,6 +1267,7 @@ c (on any of its chars) using this flag:
 usage: (modify-syntax-entry CHAR NEWENTRY &optional SYNTAX-TABLE)  */)
   (Lisp_Object c, Lisp_Object newentry, Lisp_Object syntax_table)
 {
+  ENTER_LISP_FRAME (c, newentry, syntax_table);
   if (CONSP (c))
     {
       CHECK_CHARACTER_CAR (c);
@@ -1269,7 +1291,7 @@ usage: (modify-syntax-entry CHAR NEWENTRY &optional SYNTAX-TABLE)  */)
      different values from those in the compiled regexps.*/
   clear_regexp_cache ();
 
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 /* Dump syntax table to buffer in human-readable format */
@@ -1279,27 +1301,30 @@ DEFUN ("internal-describe-syntax-value", Finternal_describe_syntax_value,
        doc: /* Insert a description of the internal syntax description SYNTAX at point.  */)
   (Lisp_Object syntax)
 {
+  ENTER_LISP_FRAME (syntax);
+  LISP_LOCALS (first, match_lisp, value);
   int code, syntax_code;
   bool start1, start2, end1, end2, prefix, comstyleb, comstylec, comnested;
   char str[2];
-  Lisp_Object first, match_lisp, value = syntax;
+  value = syntax;
+
 
   if (NILP (value))
     {
       insert_string ("default");
-      return syntax;
+      EXIT_LISP_FRAME (syntax);
     }
 
   if (CHAR_TABLE_P (value))
     {
       insert_string ("deeper char-table ...");
-      return syntax;
+      EXIT_LISP_FRAME (syntax);
     }
 
   if (!CONSP (value))
     {
       insert_string ("invalid");
-      return syntax;
+      EXIT_LISP_FRAME (syntax);
     }
 
   first = XCAR (value);
@@ -1308,7 +1333,7 @@ DEFUN ("internal-describe-syntax-value", Finternal_describe_syntax_value,
   if (!INTEGERP (first) || !(NILP (match_lisp) || CHARACTERP (match_lisp)))
     {
       insert_string ("invalid");
-      return syntax;
+      EXIT_LISP_FRAME (syntax);
     }
 
   syntax_code = XINT (first) & INT_MAX;
@@ -1325,7 +1350,7 @@ DEFUN ("internal-describe-syntax-value", Finternal_describe_syntax_value,
   if (Smax <= code)
     {
       insert_string ("invalid");
-      return syntax;
+      EXIT_LISP_FRAME (syntax);
     }
 
   str[0] = syntax_code_spec[code], str[1] = 0;
@@ -1393,7 +1418,7 @@ DEFUN ("internal-describe-syntax-value", Finternal_describe_syntax_value,
       insert_string ("string fence"); break;
     default:
       insert_string ("invalid");
-      return syntax;
+      EXIT_LISP_FRAME (syntax);
     }
 
   if (!NILP (match_lisp))
@@ -1425,7 +1450,7 @@ DEFUN ("internal-describe-syntax-value", Finternal_describe_syntax_value,
       insert1 (Fsubstitute_command_keys (prefixdoc));
     }
 
-  return syntax;
+  EXIT_LISP_FRAME (syntax);
 }
 
 /* Return the position across COUNT words from FROM.
@@ -1435,12 +1460,13 @@ DEFUN ("internal-describe-syntax-value", Finternal_describe_syntax_value,
 ptrdiff_t
 scan_words (ptrdiff_t from, EMACS_INT count)
 {
+  ENTER_LISP_FRAME_T (ptrdiff_t);
+  LISP_LOCALS (func, pos);
   ptrdiff_t beg = BEGV;
   ptrdiff_t end = ZV;
   ptrdiff_t from_byte = CHAR_TO_BYTE (from);
   enum syntaxcode code;
   int ch0, ch1;
-  Lisp_Object func, pos;
 
   SETUP_SYNTAX_TABLE (from, count);
 
@@ -1449,7 +1475,7 @@ scan_words (ptrdiff_t from, EMACS_INT count)
       while (true)
 	{
 	  if (from == end)
-	    return 0;
+	    EXIT_LISP_FRAME (0);
 	  UPDATE_SYNTAX_TABLE_FORWARD (from);
 	  ch0 = FETCH_CHAR_AS_MULTIBYTE (from_byte);
 	  code = SYNTAX (ch0);
@@ -1498,7 +1524,7 @@ scan_words (ptrdiff_t from, EMACS_INT count)
       while (true)
 	{
 	  if (from == beg)
-	    return 0;
+	    EXIT_LISP_FRAME (0);
 	  DEC_BOTH (from, from_byte);
 	  UPDATE_SYNTAX_TABLE_BACKWARD (from);
 	  ch1 = FETCH_CHAR_AS_MULTIBYTE (from_byte);
@@ -1547,7 +1573,7 @@ scan_words (ptrdiff_t from, EMACS_INT count)
       count++;
     }
 
-  return from;
+  EXIT_LISP_FRAME (from);
 }
 
 DEFUN ("forward-word", Fforward_word, Sforward_word, 0, 1, "^p",
@@ -1566,7 +1592,8 @@ strictly by the syntax table, it should use `forward-word-strictly'
 instead.  See Info node `(elisp) Word Motion' for details.  */)
   (Lisp_Object arg)
 {
-  Lisp_Object tmp;
+  ENTER_LISP_FRAME (arg);
+  LISP_LOCALS (tmp);
   ptrdiff_t orig_val, val;
 
   if (NILP (arg))
@@ -1584,7 +1611,7 @@ instead.  See Info node `(elisp) Word Motion' for details.  */)
   val = XFASTINT (tmp);
 
   SET_PT (val);
-  return val == orig_val ? Qt : Qnil;
+  EXIT_LISP_FRAME (val == orig_val ? Qt : Qnil);
 }
 
 DEFUN ("skip-chars-forward", Fskip_chars_forward, Sskip_chars_forward, 1, 2, 0,
@@ -1599,7 +1626,8 @@ Char classes, e.g. `[:alpha:]', are supported.
 Returns the distance traveled, either zero or positive.  */)
   (Lisp_Object string, Lisp_Object lim)
 {
-  return skip_chars (1, string, lim, 1);
+  ENTER_LISP_FRAME (string, lim);
+  EXIT_LISP_FRAME (skip_chars (1, string, lim, 1));
 }
 
 DEFUN ("skip-chars-backward", Fskip_chars_backward, Sskip_chars_backward, 1, 2, 0,
@@ -1608,7 +1636,8 @@ See `skip-chars-forward' for details.
 Returns the distance traveled, either zero or negative.  */)
   (Lisp_Object string, Lisp_Object lim)
 {
-  return skip_chars (0, string, lim, 1);
+  ENTER_LISP_FRAME (string, lim);
+  EXIT_LISP_FRAME (skip_chars (0, string, lim, 1));
 }
 
 DEFUN ("skip-syntax-forward", Fskip_syntax_forward, Sskip_syntax_forward, 1, 2, 0,
@@ -1619,7 +1648,8 @@ If SYNTAX starts with ^, skip characters whose syntax is NOT in SYNTAX.
 This function returns the distance traveled, either zero or positive.  */)
   (Lisp_Object syntax, Lisp_Object lim)
 {
-  return skip_syntaxes (1, syntax, lim);
+  ENTER_LISP_FRAME (syntax, lim);
+  EXIT_LISP_FRAME (skip_syntaxes (1, syntax, lim));
 }
 
 DEFUN ("skip-syntax-backward", Fskip_syntax_backward, Sskip_syntax_backward, 1, 2, 0,
@@ -1631,13 +1661,16 @@ This function returns either zero or a negative number, and the absolute value
 of this is the distance traveled.  */)
   (Lisp_Object syntax, Lisp_Object lim)
 {
-  return skip_syntaxes (0, syntax, lim);
+  ENTER_LISP_FRAME (syntax, lim);
+  EXIT_LISP_FRAME (skip_syntaxes (0, syntax, lim));
 }
 
 static Lisp_Object
 skip_chars (bool forwardp, Lisp_Object string, Lisp_Object lim,
 	    bool handle_iso_classes)
 {
+  ENTER_LISP_FRAME (string, lim);
+  LISP_LOCALS (iso_classes);
   int c;
   char fastmap[0400];
   /* Store the ranges of non-ASCII characters.  */
@@ -1653,7 +1686,6 @@ skip_chars (bool forwardp, Lisp_Object string, Lisp_Object lim,
   ptrdiff_t size_byte;
   const unsigned char *str;
   int len;
-  Lisp_Object iso_classes;
   USE_SAFE_ALLOCA;
 
   CHECK_STRING (string);
@@ -2080,7 +2112,7 @@ skip_chars (bool forwardp, Lisp_Object string, Lisp_Object lim,
     SET_PT_BOTH (pos, pos_byte);
 
     SAFE_FREE ();
-    return make_number (PT - start_point);
+    EXIT_LISP_FRAME (make_number (PT - start_point));
   }
 }
 
@@ -2088,6 +2120,7 @@ skip_chars (bool forwardp, Lisp_Object string, Lisp_Object lim,
 static Lisp_Object
 skip_syntaxes (bool forwardp, Lisp_Object string, Lisp_Object lim)
 {
+  ENTER_LISP_FRAME (string, lim);
   int c;
   unsigned char fastmap[0400];
   bool negate = 0;
@@ -2110,7 +2143,7 @@ skip_syntaxes (bool forwardp, Lisp_Object string, Lisp_Object lim)
     XSETFASTINT (lim, BEGV);
 
   if (forwardp ? (PT >= XFASTINT (lim)) : (PT <= XFASTINT (lim)))
-    return make_number (0);
+    EXIT_LISP_FRAME (make_number (0));
 
   multibyte = (!NILP (BVAR (current_buffer, enable_multibyte_characters))
 	       && (XINT (lim) - PT != CHAR_TO_BYTE (XINT (lim)) - PT_BYTE));
@@ -2242,7 +2275,7 @@ skip_syntaxes (bool forwardp, Lisp_Object string, Lisp_Object lim)
   done:
     SET_PT_BOTH (pos, pos_byte);
 
-    return make_number (PT - start_point);
+    EXIT_LISP_FRAME (make_number (PT - start_point));
   }
 }
 
@@ -2253,11 +2286,12 @@ skip_syntaxes (bool forwardp, Lisp_Object string, Lisp_Object lim)
 static bool
 in_classes (int c, Lisp_Object iso_classes)
 {
+  ENTER_LISP_FRAME_T (bool, iso_classes);
+  LISP_LOCALS (elt);
   bool fits_class = 0;
 
   while (CONSP (iso_classes))
     {
-      Lisp_Object elt;
       elt = XCAR (iso_classes);
       iso_classes = XCDR (iso_classes);
 
@@ -2265,7 +2299,7 @@ in_classes (int c, Lisp_Object iso_classes)
 	fits_class = 1;
     }
 
-  return fits_class;
+  EXIT_LISP_FRAME (fits_class);
 }
 
 /* Jump over a comment, assuming we are at the beginning of one.
@@ -2416,6 +2450,7 @@ If COUNT comments are found as expected, with nothing except whitespace
 between them, return t; otherwise return nil.  */)
   (Lisp_Object count)
 {
+  ENTER_LISP_FRAME (count);
   ptrdiff_t from, from_byte, stop;
   int c, c1;
   enum syntaxcode code;
@@ -2446,7 +2481,7 @@ between them, return t; otherwise return nil.  */)
 	  if (from == stop)
 	    {
 	      SET_PT_BOTH (from, from_byte);
-	      return Qnil;
+	      EXIT_LISP_FRAME (Qnil);
 	    }
 	  c = FETCH_CHAR_AS_MULTIBYTE (from_byte);
 	  syntax = SYNTAX_WITH_FLAGS (c);
@@ -2482,7 +2517,7 @@ between them, return t; otherwise return nil.  */)
 	{
 	  DEC_BOTH (from, from_byte);
 	  SET_PT_BOTH (from, from_byte);
-	  return Qnil;
+	  EXIT_LISP_FRAME (Qnil);
 	}
       /* We're at the start of a comment.  */
       found = forw_comment (from, from_byte, stop, comnested, comstyle, 0,
@@ -2491,7 +2526,7 @@ between them, return t; otherwise return nil.  */)
       if (!found)
 	{
 	  SET_PT_BOTH (from, from_byte);
-	  return Qnil;
+	  EXIT_LISP_FRAME (Qnil);
 	}
       INC_BOTH (from, from_byte);
       UPDATE_SYNTAX_TABLE_FORWARD (from);
@@ -2506,7 +2541,7 @@ between them, return t; otherwise return nil.  */)
 	  if (from <= stop)
 	    {
 	      SET_PT_BOTH (BEGV, BEGV_BYTE);
-	      return Qnil;
+	      EXIT_LISP_FRAME (Qnil);
 	    }
 
 	  DEC_BOTH (from, from_byte);
@@ -2601,7 +2636,7 @@ between them, return t; otherwise return nil.  */)
 	    leave:
 	      INC_BOTH (from, from_byte);
 	      SET_PT_BOTH (from, from_byte);
-	      return Qnil;
+	      EXIT_LISP_FRAME (Qnil);
 	    }
 
 	  rarely_quit (++quit_count);
@@ -2611,7 +2646,7 @@ between them, return t; otherwise return nil.  */)
     }
 
   SET_PT_BOTH (from, from_byte);
-  return Qt;
+  EXIT_LISP_FRAME (Qt);
 }
 
 /* Return syntax code of character C if C is an ASCII character
@@ -2626,7 +2661,8 @@ syntax_multibyte (int c, bool multibyte_symbol_p)
 static Lisp_Object
 scan_lists (EMACS_INT from, EMACS_INT count, EMACS_INT depth, bool sexpflag)
 {
-  Lisp_Object val;
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (val);
   ptrdiff_t stop = count > 0 ? ZV : BEGV;
   int c, c1;
   int stringterm;
@@ -2817,7 +2853,7 @@ scan_lists (EMACS_INT from, EMACS_INT count, EMACS_INT depth, bool sexpflag)
       if (depth)
 	goto lose;
 
-      return Qnil;
+      EXIT_LISP_FRAME (Qnil);
 
       /* End of object reached */
     done:
@@ -3002,7 +3038,7 @@ scan_lists (EMACS_INT from, EMACS_INT count, EMACS_INT depth, bool sexpflag)
       if (depth)
 	goto lose;
 
-      return Qnil;
+      EXIT_LISP_FRAME (Qnil);
 
     done2:
       count++;
@@ -3010,7 +3046,7 @@ scan_lists (EMACS_INT from, EMACS_INT count, EMACS_INT depth, bool sexpflag)
 
 
   XSETFASTINT (val, from);
-  return val;
+  EXIT_LISP_FRAME (val);
 
  lose:
   xsignal3 (Qscan_error,
@@ -3039,11 +3075,12 @@ before we have scanned over COUNT lists, return nil if the depth at
 that point is zero, and signal an error if the depth is nonzero.  */)
   (Lisp_Object from, Lisp_Object count, Lisp_Object depth)
 {
+  ENTER_LISP_FRAME (from, count, depth);
   CHECK_NUMBER (from);
   CHECK_NUMBER (count);
   CHECK_NUMBER (depth);
 
-  return scan_lists (XINT (from), XINT (count), XINT (depth), 0);
+  EXIT_LISP_FRAME (scan_lists (XINT (from), XINT (count), XINT (depth), 0));
 }
 
 DEFUN ("scan-sexps", Fscan_sexps, Sscan_sexps, 2, 2, 0,
@@ -3059,10 +3096,11 @@ If the beginning or end is reached between groupings
 but before count is used up, nil is returned.  */)
   (Lisp_Object from, Lisp_Object count)
 {
+  ENTER_LISP_FRAME (from, count);
   CHECK_NUMBER (from);
   CHECK_NUMBER (count);
 
-  return scan_lists (XINT (from), XINT (count), 0, 1);
+  EXIT_LISP_FRAME (scan_lists (XINT (from), XINT (count), 0, 1));
 }
 
 DEFUN ("backward-prefix-chars", Fbackward_prefix_chars, Sbackward_prefix_chars,
@@ -3153,6 +3191,8 @@ scan_sexps_forward (struct lisp_parse_state *state,
 		    EMACS_INT targetdepth, bool stopbefore,
 		    int commentstop)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (tem, temhd);
   enum syntaxcode code;
   struct level { ptrdiff_t last, prev; };
   struct level levelstart[100];
@@ -3163,7 +3203,6 @@ scan_sexps_forward (struct lisp_parse_state *state,
 			   when the depth becomes negative.  */
   EMACS_INT mindepth;		/* Lowest DEPTH value seen.  */
   bool start_quoted = 0;	/* True means starting after a char quote.  */
-  Lisp_Object tem;
   ptrdiff_t prev_from;		/* Keep one character before FROM.  */
   ptrdiff_t prev_from_byte;
   int prev_from_syntax, prev_prev_from_syntax;
@@ -3201,7 +3240,8 @@ do { prev_from = from;				\
   tem = state->levelstarts;
   while (!NILP (tem))		/* >= second enclosing sexps.  */
     {
-      Lisp_Object temhd = Fcar (tem);
+      temhd = Fcar (tem);
+
       if (RANGED_INTEGERP (PTRDIFF_MIN, temhd, PTRDIFF_MAX))
         curlevel->last = XINT (temhd);
       if (++curlevel == endlevel)
@@ -3452,6 +3492,7 @@ do { prev_from = from;				\
                                 state->levelstarts);
   state->prev_syntax = (SYNTAX_FLAGS_COMSTARTEND_FIRST (prev_from_syntax)
                         || state->quoted) ? prev_from_syntax : Smax;
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Convert a (lisp) parse state to the internal form used in
@@ -3459,7 +3500,8 @@ do { prev_from = from;				\
 static void
 internalize_parse_state (Lisp_Object external, struct lisp_parse_state *state)
 {
-  Lisp_Object tem;
+  ENTER_LISP_FRAME (external);
+  LISP_LOCALS (tem);
 
   if (NILP (external))
     {
@@ -3522,6 +3564,7 @@ internalize_parse_state (Lisp_Object external, struct lisp_parse_state *state)
       tem = Fcar (external);
       state->prev_syntax = NILP (tem) ? Smax : XINT (tem);
     }
+  EXIT_LISP_FRAME_VOID ();
 }
 
 DEFUN ("parse-partial-sexp", Fparse_partial_sexp, Sparse_partial_sexp, 2, 6, 0,
@@ -3564,6 +3607,7 @@ Sixth arg COMMENTSTOP non-nil means stop after the start of a comment.
   (Lisp_Object from, Lisp_Object to, Lisp_Object targetdepth,
    Lisp_Object stopbefore, Lisp_Object oldstate, Lisp_Object commentstop)
 {
+  ENTER_LISP_FRAME (from, to, targetdepth, stopbefore, oldstate, commentstop);
   struct lisp_parse_state state;
   EMACS_INT target;
 
@@ -3585,8 +3629,7 @@ Sixth arg COMMENTSTOP non-nil means stop after the start of a comment.
 
   SET_PT_BOTH (state.location, state.location_byte);
 
-  return
-    Fcons (make_number (state.depth),
+  EXIT_LISP_FRAME (Fcons (make_number (state.depth),
 	   Fcons (state.prevlevelstart < 0
 		  ? Qnil : make_number (state.prevlevelstart),
 	     Fcons (state.thislevelstart < 0
@@ -3612,7 +3655,7 @@ Sixth arg COMMENTSTOP non-nil means stop after the start of a comment.
                              Fcons (state.prev_syntax == Smax
                                     ? Qnil
                                     : make_number (state.prev_syntax),
-                                Qnil)))))))))));
+                                Qnil))))))))))));
 }
 
 void

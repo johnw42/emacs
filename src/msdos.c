@@ -221,6 +221,7 @@ e.g., if the number of buttons is reported as 3, but Emacs only sees 2 of
 them.  This happens with wheeled mice on Windows 9X, for example.  */)
   (Lisp_Object nbuttons)
 {
+  ENTER_LISP_FRAME (nbuttons);
   int n;
 
   CHECK_NUMBER (nbuttons);
@@ -230,7 +231,7 @@ them.  This happens with wheeled mice on Windows 9X, for example.  */)
 	      build_string ("only 2 or 3 mouse buttons are supported"),
 	      nbuttons);
   mouse_setup_buttons (n);
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 static void
@@ -311,8 +312,9 @@ mouse_get_pos (struct frame **f, int insist, Lisp_Object *bar_window,
 	       enum scroll_bar_part *part, Lisp_Object *x, Lisp_Object *y,
 	       Time *time)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (frame, tail);
   int ix, iy;
-  Lisp_Object frame, tail;
 
   /* Clear the mouse-moved flag for every frame on this display.  */
   FOR_EACH_FRAME (tail, frame)
@@ -324,6 +326,7 @@ mouse_get_pos (struct frame **f, int insist, Lisp_Object *bar_window,
   *time = event_timestamp ();
   *x = make_number (mouse_last_x = ix);
   *y = make_number (mouse_last_y = iy);
+  EXIT_LISP_FRAME_VOID ();
 }
 
 static void
@@ -520,14 +523,15 @@ vga_installed (void)
 void
 dos_set_window_size (int *rows, int *cols)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (video_mode, window);
   char video_name[30];
   union REGS regs;
-  Lisp_Object video_mode;
   int video_mode_value, have_vga = 0;
   int current_rows = ScreenRows (), current_cols = ScreenCols ();
 
   if (*rows == current_rows && *cols == current_cols)
-    return;
+    EXIT_LISP_FRAME_VOID ();
 
   mouse_off ();
   have_vga = vga_installed ();
@@ -606,7 +610,8 @@ dos_set_window_size (int *rows, int *cols)
     {
       struct frame *f = SELECTED_FRAME ();
       Mouse_HLInfo *hlinfo = MOUSE_HL_INFO (f);
-      Lisp_Object window = hlinfo->mouse_face_window;
+      window = hlinfo->mouse_face_window;
+
 
       if (! NILP (window) && XFRAME (XWINDOW (window)->frame) == f)
 	reset_mouse_highlight (hlinfo);
@@ -619,6 +624,7 @@ dos_set_window_size (int *rows, int *cols)
      be defensive anyway.  */
   if (screen_virtual_segment)
     dosv_refresh_virtual_screen (0, *cols * *rows);
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* If we write a character in the position where the mouse is,
@@ -730,6 +736,8 @@ msdos_set_cursor_shape (struct frame *f, int start_line, int width)
 static void
 IT_set_cursor_type (struct frame *f, Lisp_Object cursor_type)
 {
+  ENTER_LISP_FRAME (cursor_type);
+  LISP_LOCALS (bar_parms);
   if (EQ (cursor_type, Qbar) || EQ (cursor_type, Qhbar))
     {
       /* Just BAR means the normal EGA/VGA cursor.  */
@@ -739,7 +747,8 @@ IT_set_cursor_type (struct frame *f, Lisp_Object cursor_type)
 	   && (EQ (XCAR (cursor_type), Qbar)
 	       || EQ (XCAR (cursor_type), Qhbar)))
     {
-      Lisp_Object bar_parms = XCDR (cursor_type);
+      bar_parms = XCDR (cursor_type);
+
       int width;
 
       if (INTEGERP (bar_parms))
@@ -767,6 +776,7 @@ IT_set_cursor_type (struct frame *f, Lisp_Object cursor_type)
 	 which is the default in Emacs.  */
       msdos_set_cursor_shape (f, 0, BOX_CURSOR_WIDTH);
     }
+  EXIT_LISP_FRAME_VOID ();
 }
 
 static void
@@ -1296,7 +1306,8 @@ IT_update_end (struct frame *f)
 static void
 IT_frame_up_to_date (struct frame *f)
 {
-  Lisp_Object new_cursor, frame_desired_cursor;
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (new_cursor, frame_desired_cursor);
   struct window *sw;
 
   FRAME_MOUSE_UPDATE (f);
@@ -1329,6 +1340,7 @@ IT_frame_up_to_date (struct frame *f)
   IT_set_cursor_type (f, new_cursor);
 
   IT_cmgoto (f);  /* position cursor when update is done */
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Copy LEN glyphs displayed on a single line whose vertical position
@@ -1545,6 +1557,7 @@ DEFUN ("msdos-remember-default-colors", Fmsdos_remember_default_colors,
        doc: /* Remember the screen colors of the current frame.  */)
   (Lisp_Object frame)
 {
+  ENTER_LISP_FRAME (frame);
   struct frame *f;
 
   CHECK_FRAME (frame);
@@ -1557,13 +1570,14 @@ DEFUN ("msdos-remember-default-colors", Fmsdos_remember_default_colors,
   initial_screen_colors[0] = FRAME_FOREGROUND_PIXEL (f);
   initial_screen_colors[1] = FRAME_BACKGROUND_PIXEL (f);
 
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 void
 IT_set_frame_parameters (struct frame *f, Lisp_Object alist)
 {
-  Lisp_Object tail;
+  ENTER_LISP_FRAME (alist);
+  LISP_LOCALS (tail, elt, prop, val);
   int i, j, length = XINT (Flength (alist));
   Lisp_Object *parms
     = (Lisp_Object *) alloca (length * word_size);
@@ -1592,7 +1606,8 @@ IT_set_frame_parameters (struct frame *f, Lisp_Object alist)
   i = 0;
   for (tail = alist; CONSP (tail); tail = XCDR (tail))
     {
-      Lisp_Object elt = XCAR (tail);
+      elt = XCAR (tail);
+
       parms[i] = Fcar (elt);
       CHECK_SYMBOL (parms[i]);
       values[i] = Fcdr (elt);
@@ -1603,7 +1618,6 @@ IT_set_frame_parameters (struct frame *f, Lisp_Object alist)
 
   for (i = 0; i < j; i++)
     {
-      Lisp_Object prop, val;
 
       prop = parms[i];
       val  = values[i];
@@ -1618,7 +1632,6 @@ IT_set_frame_parameters (struct frame *f, Lisp_Object alist)
   /* Now process the alist elements in reverse of specified order.  */
   for (i--; i >= 0; i--)
     {
-      Lisp_Object prop, val;
 
       prop = parms[i];
       val  = values[i];
@@ -1736,6 +1749,7 @@ IT_set_frame_parameters (struct frame *f, Lisp_Object alist)
       if (f == SELECTED_FRAME ())
 	redraw_frame (f);
     }
+  EXIT_LISP_FRAME_VOID ();
 }
 
 extern void init_frame_faces (struct frame *);
@@ -2378,10 +2392,13 @@ Each input key receives two values in this vector: first the ASCII code,
 and then the scan code.  */)
   (void)
 {
-  Lisp_Object val, *keys = XVECTOR (recent_doskeys)->contents;
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (val);
+  Lisp_Object *keys = XVECTOR (recent_doskeys)->contents;
+
 
   if (total_doskeys < NUM_RECENT_DOSKEYS)
-    return Fvector (total_doskeys, keys);
+    EXIT_LISP_FRAME (Fvector (total_doskeys, keys));
   else
     {
       val = Fvector (NUM_RECENT_DOSKEYS, keys);
@@ -2389,7 +2406,7 @@ and then the scan code.  */)
 	     NUM_RECENT_DOSKEYS - recent_doskeys_index);
       vcopy (val, NUM_RECENT_DOSKEYS - recent_doskeys_index,
 	     keys, recent_doskeys_index);
-      return val;
+      EXIT_LISP_FRAME (val);
     }
 }
 
@@ -2397,6 +2414,8 @@ and then the scan code.  */)
 static int
 dos_rawgetc (void)
 {
+  ENTER_LISP_FRAME_T (int);
+  LISP_LOCALS (mouse_window);
   struct input_event event;
   union REGS regs;
   Mouse_HLInfo *hlinfo = MOUSE_HL_INFO (SELECTED_FRAME ());
@@ -2516,12 +2535,12 @@ dos_rawgetc (void)
 	{
 	case ModFct:
 	  if (c && !(mask & (SHIFT_P | ALT_P | CTRL_P | HYPER_P | SUPER_P)))
-	    return c;
+	    EXIT_LISP_FRAME (c);
 	  c = 0;		/* Special */
 
 	case FctKey:
 	  if (c != 0)
-	    return c;
+	    EXIT_LISP_FRAME (c);
 
 	case Special:
 	  code |= 0xff00;
@@ -2532,12 +2551,12 @@ dos_rawgetc (void)
 	    {
 	      if (c == 0)	/* ctrl-break */
 		continue;
-	      return c;		/* ALT-nnn */
+	      EXIT_LISP_FRAME (c);		/* ALT-nnn */
 	    }
 	  if (!keyboard_map_all)
 	    {
 	      if (c != ' ')
-		return c;
+		EXIT_LISP_FRAME (c);
 	      code = c;
 	      break;
 	    }
@@ -2545,7 +2564,7 @@ dos_rawgetc (void)
 	case Map:
 	  if (c && !(mask & ALT_P) && !((mask & SHIFT_P) && (mask & CTRL_P)))
 	    if (!keyboard_map_all)
-	      return c;
+	      EXIT_LISP_FRAME (c);
 
 	  code &= 0xff;
 	  if (mask & ALT_P && code <= 10 && code > 0 && dos_keypad_mode & 0x200)
@@ -2578,8 +2597,8 @@ dos_rawgetc (void)
 	    {
 	    case 0:
 	      if (code == 10 && dos_decimal_point)
-		return dos_decimal_point;
-	      return keypad_translate_map[code].char_code;
+		EXIT_LISP_FRAME (dos_decimal_point);
+	      EXIT_LISP_FRAME (keypad_translate_map[code].char_code);
 
 	    case 1:
 	      code = 0xff00 | keypad_translate_map[code].keypad_code;
@@ -2631,7 +2650,8 @@ dos_rawgetc (void)
     {
       int but, press, x, y, ok;
       int mouse_prev_x = mouse_last_x, mouse_prev_y = mouse_last_y;
-      Lisp_Object mouse_window = Qnil;
+      mouse_window = Qnil;
+
 
       /* Check for mouse movement *before* buttons.  */
       mouse_check_moved ();
@@ -2728,7 +2748,7 @@ dos_rawgetc (void)
 	  }
     }
 
-  return -1;
+  EXIT_LISP_FRAME (-1);
 }
 
 static int prev_get_char = -1;
@@ -3039,16 +3059,17 @@ XMenuActivate (Display *foo, XMenu *menu, int *pane, int *selidx,
 	       int x0, int y0, unsigned ButtonMask, char **txt,
 	       void (*help_callback)(char const *, int, int))
 {
+  ENTER_LISP_FRAME_T (int);
+  LISP_LOCALS (saved_echo_area_message, selectface);
   struct IT_menu_state *state;
   int statecount, x, y, i, b, screensize, leave, result, onepane;
   int title_faces[4];		/* face to display the menu title */
   int faces[4], buffers_num_deleted = 0;
   struct frame *sf = SELECTED_FRAME ();
-  Lisp_Object saved_echo_area_message, selectface;
 
   /* Just in case we got here without a mouse present...  */
   if (have_mouse <= 0)
-    return XM_IA_SELECT;
+    EXIT_LISP_FRAME (XM_IA_SELECT);
   /* Don't allow non-positive x0 and y0, lest the menu will wrap
      around the display.  */
   if (x0 <= 0)
@@ -3255,7 +3276,7 @@ XMenuActivate (Display *foo, XMenu *menu, int *pane, int *selidx,
     clear_input_pending ();
   /* Allow mouse events generation by dos_rawgetc.  */
   mouse_preempted--;
-  return result;
+  EXIT_LISP_FRAME (result);
 }
 
 /* Dispose of a menu.  */
@@ -3419,14 +3440,15 @@ If FILENAME is not a string, returns nil.
 The argument object is never altered--the value is a copy.  */)
   (Lisp_Object filename)
 {
-  Lisp_Object tem;
+  ENTER_LISP_FRAME (filename);
+  LISP_LOCALS (tem);
 
   if (! STRINGP (filename))
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
 
   tem = Fcopy_sequence (filename);
   msdos_downcase_filename (SDATA (tem));
-  return tem;
+  EXIT_LISP_FRAME (tem);
 }
 
 /* The Emacs root directory as determined by init_environment.  */
@@ -3712,10 +3734,11 @@ int
 run_msdos_command (char **argv, const char *working_dir,
 		   int tempin, int tempout, int temperr, char **envv)
 {
+  ENTER_LISP_FRAME_T (int);
+  LISP_LOCALS (cmd);
   char *saveargv1, *saveargv2, *lowcase_argv0, *pa, *pl;
   char oldwd[MAXPATHLEN + 1]; /* Fixed size is safe on MSDOS.  */
   int msshell, result = -1, inbak, outbak, errbak, x, y;
-  Lisp_Object cmd;
 
   /* Get current directory as MSDOS cwd is not per-process.  */
   getwd (oldwd);
@@ -3847,7 +3870,7 @@ run_msdos_command (char **argv, const char *working_dir,
       argv[1] = saveargv1;
       argv[2] = saveargv2;
     }
-  return result;
+  EXIT_LISP_FRAME (result);
 }
 
 void

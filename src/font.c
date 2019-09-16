@@ -134,17 +134,18 @@ static struct font_driver_list *font_driver_list;
 bool
 valid_font_driver (struct font_driver const *drv)
 {
-  Lisp_Object tail, frame;
+  ENTER_LISP_FRAME_T (bool);
+  LISP_LOCALS (tail, frame);
   struct font_driver_list *fdl;
 
   for (fdl = font_driver_list; fdl; fdl = fdl->next)
     if (fdl->driver == drv)
-      return true;
+      EXIT_LISP_FRAME (true);
   FOR_EACH_FRAME (tail, frame)
     for (fdl = XFRAME (frame)->font_driver_list; fdl; fdl = fdl->next)
       if (fdl->driver == drv)
-	return true;
-  return false;
+	EXIT_LISP_FRAME (true);
+  EXIT_LISP_FRAME (false);
 }
 
 #endif /* ENABLE_CHECKING */
@@ -154,25 +155,27 @@ valid_font_driver (struct font_driver const *drv)
 static Lisp_Object
 font_make_spec (void)
 {
-  Lisp_Object font_spec;
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (font_spec);
   struct font_spec *spec
     = ((struct font_spec *)
        allocate_pseudovector (VECSIZE (struct font_spec),
 			      FONT_SPEC_MAX, FONT_SPEC_MAX, PVEC_FONT));
   XSETFONT (font_spec, spec);
-  return font_spec;
+  EXIT_LISP_FRAME (font_spec);
 }
 
 Lisp_Object
 font_make_entity (void)
 {
-  Lisp_Object font_entity;
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (font_entity);
   struct font_entity *entity
     = ((struct font_entity *)
        allocate_pseudovector (VECSIZE (struct font_entity),
 			      FONT_ENTITY_MAX, FONT_ENTITY_MAX, PVEC_FONT));
   XSETFONT (font_entity, entity);
-  return font_entity;
+  EXIT_LISP_FRAME (font_entity);
 }
 
 /* Create a font-object whose structure size is SIZE.  If ENTITY is
@@ -181,7 +184,8 @@ font_make_entity (void)
 Lisp_Object
 font_make_object (int size, Lisp_Object entity, int pixelsize)
 {
-  Lisp_Object font_object;
+  ENTER_LISP_FRAME (entity);
+  LISP_LOCALS (font_object);
   struct font *font
     = (struct font *) allocate_pseudovector (size, FONT_OBJECT_MAX,
 					     FONT_OBJECT_MAX, PVEC_FONT);
@@ -202,7 +206,7 @@ font_make_object (int size, Lisp_Object entity, int pixelsize)
     }
   if (size > 0)
     font->props[FONT_SIZE_INDEX] = make_number (pixelsize);
-  return font_object;
+  EXIT_LISP_FRAME (font_object);
 }
 
 #if defined (HAVE_XFT) || defined (HAVE_FREETYPE) || defined (HAVE_NS)
@@ -216,9 +220,12 @@ Lisp_Object
 font_build_object (int vectorsize, Lisp_Object type,
 		   Lisp_Object entity, double pixelsize)
 {
+  ENTER_LISP_FRAME (type, entity);
+  LISP_LOCALS (font_object);
   int len;
   char name[256];
-  Lisp_Object font_object = font_make_object (vectorsize, entity, pixelsize);
+  font_object = font_make_object (vectorsize, entity, pixelsize);
+
 
   ASET (font_object, FONT_TYPE_INDEX, type);
   len = font_unparse_xlfd (entity, pixelsize, name, sizeof name);
@@ -230,7 +237,7 @@ font_build_object (int vectorsize, Lisp_Object type,
   else
     ASET (font_object, FONT_FULLNAME_INDEX,
 	  AREF (font_object, FONT_NAME_INDEX));
-  return font_object;
+  EXIT_LISP_FRAME (font_object);
 }
 
 #endif /* HAVE_XFT || HAVE_FREETYPE || HAVE_NS */
@@ -253,11 +260,12 @@ static int num_font_drivers;
 Lisp_Object
 font_intern_prop (const char *str, ptrdiff_t len, bool force_symbol)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (tem, name, obarray);
   ptrdiff_t i, nbytes, nchars;
-  Lisp_Object tem, name, obarray;
 
   if (len == 1 && *str == '*')
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
   if (!force_symbol && 0 < len && '0' <= *str && *str <= '9')
     {
       for (i = 1; i < len; i++)
@@ -270,7 +278,7 @@ font_intern_prop (const char *str, ptrdiff_t len, bool force_symbol)
 	       (n += str[i++] - '0') <= MOST_POSITIVE_FIXNUM; )
 	    {
 	      if (i == len)
-		return make_number (n);
+		EXIT_LISP_FRAME (make_number (n));
 	      if (INT_MULTIPLY_WRAPV (n, 10, &n))
 		break;
 	    }
@@ -284,7 +292,7 @@ font_intern_prop (const char *str, ptrdiff_t len, bool force_symbol)
   parse_str_as_multibyte ((unsigned char *) str, len, &nchars, &nbytes);
   name = make_specified_string (str, nchars, len,
 				len != nchars && len == nbytes);
-  return Fintern (name, Vobarray);
+  EXIT_LISP_FRAME (Fintern (name, Vobarray));
 #else /* not HAVE_CHEZ_SCHEME */
   /* This code is similar to intern function from lread.c.  */
   obarray = check_obarray (Vobarray);
@@ -292,10 +300,10 @@ font_intern_prop (const char *str, ptrdiff_t len, bool force_symbol)
   tem = oblookup (obarray, str,
 		  (len == nchars || len != nbytes) ? len : nchars, len);
   if (SYMBOLP (tem))
-    return tem;
+    EXIT_LISP_FRAME (tem);
   name = make_specified_string (str, nchars, len,
 				len != nchars && len == nbytes);
-  return intern_driver (name, obarray, tem);
+  EXIT_LISP_FRAME (intern_driver (name, obarray, tem));
 #endif /* not HAVE_CHEZ_SCHEME */
 }
 
@@ -304,16 +312,18 @@ font_intern_prop (const char *str, ptrdiff_t len, bool force_symbol)
 static int
 font_pixel_size (struct frame *f, Lisp_Object spec)
 {
+  ENTER_LISP_FRAME_T (int, spec);
+  LISP_LOCALS (size, val);
 #ifdef HAVE_WINDOW_SYSTEM
-  Lisp_Object size = AREF (spec, FONT_SIZE_INDEX);
+  size = AREF (spec, FONT_SIZE_INDEX);
+
   double point_size;
   int dpi, pixel_size;
-  Lisp_Object val;
 
   if (INTEGERP (size))
-    return XINT (size);
+    EXIT_LISP_FRAME (XINT (size));
   if (NILP (size))
-    return 0;
+    EXIT_LISP_FRAME (0);
   if (FRAME_WINDOW_P (f))
     {
       eassert (FLOATP (size));
@@ -324,10 +334,10 @@ font_pixel_size (struct frame *f, Lisp_Object spec)
       else
 	dpi = FRAME_RES_Y (f);
       pixel_size = POINT_TO_PIXEL (point_size, dpi);
-      return pixel_size;
+      EXIT_LISP_FRAME (pixel_size);
     }
 #endif
-  return 1;
+  EXIT_LISP_FRAME (1);
 }
 
 
@@ -342,7 +352,10 @@ int
 font_style_to_value (enum font_property_index prop, Lisp_Object val,
                      bool noerror)
 {
-  Lisp_Object table = AREF (font_style_table, prop - FONT_WEIGHT_INDEX);
+  ENTER_LISP_FRAME_T (int, val);
+  LISP_LOCALS (table, elt);
+  table = AREF (font_style_table, prop - FONT_WEIGHT_INDEX);
+
   int len;
 
   CHECK_VECTOR (table);
@@ -352,7 +365,6 @@ font_style_to_value (enum font_property_index prop, Lisp_Object val,
     {
       int i, j;
       char *s;
-      Lisp_Object elt;
 
       /* At first try exact match.  */
       for (i = 0; i < len; i++)
@@ -362,8 +374,8 @@ font_style_to_value (enum font_property_index prop, Lisp_Object val,
 	    if (EQ (val, AREF (AREF (table, i), j)))
 	      {
 		CHECK_NUMBER (AREF (AREF (table, i), 0));
-		return ((XINT (AREF (AREF (table, i), 0)) << 8)
-			| (i << 4) | (j - 1));
+		EXIT_LISP_FRAME (((XINT (AREF (AREF (table, i), 0)) << 8)
+			| (i << 4) | (j - 1)));
 	      }
 	}
       /* Try also with case-folding match.  */
@@ -375,18 +387,18 @@ font_style_to_value (enum font_property_index prop, Lisp_Object val,
 	    if (xstrcasecmp (s, SSDATA (SYMBOL_NAME (elt))) == 0)
 	      {
 		CHECK_NUMBER (AREF (AREF (table, i), 0));
-		return ((XINT (AREF (AREF (table, i), 0)) << 8)
-			| (i << 4) | (j - 1));
+		EXIT_LISP_FRAME (((XINT (AREF (AREF (table, i), 0)) << 8)
+			| (i << 4) | (j - 1)));
 	      }
 	  }
       if (! noerror)
-	return -1;
+	EXIT_LISP_FRAME (-1);
       eassert (len < 255);
       elt = Fmake_vector (make_number (2), make_number (100));
       ASET (elt, 1, val);
       ASET (font_style_table, prop - FONT_WEIGHT_INDEX,
 	    CALLN (Fvconcat, table, Fmake_vector (make_number (1), elt)));
-      return (100 << 8) | (i << 4);
+      EXIT_LISP_FRAME ((100 << 8) | (i << 4));
     }
   else
     {
@@ -401,19 +413,19 @@ font_style_to_value (enum font_property_index prop, Lisp_Object val,
 	  CHECK_NUMBER (AREF (AREF (table, i), 0));
 	  n = XINT (AREF (AREF (table, i), 0));
 	  if (numeric == n)
-	    return (n << 8) | (i << 4);
+	    EXIT_LISP_FRAME ((n << 8) | (i << 4));
 	  if (numeric < n)
 	    {
 	      if (! noerror)
-		return -1;
-	      return ((i == 0 || n - numeric < numeric - last_n)
-		      ? (n << 8) | (i << 4): (last_n << 8 | ((i - 1) << 4)));
+		EXIT_LISP_FRAME (-1);
+	      EXIT_LISP_FRAME (((i == 0 || n - numeric < numeric - last_n)
+		      ? (n << 8) | (i << 4): (last_n << 8 | ((i - 1) << 4))));
 	    }
 	  last_n = n;
 	}
       if (! noerror)
-	return -1;
-      return ((last_n << 8) | ((i - 1) << 4));
+	EXIT_LISP_FRAME (-1);
+      EXIT_LISP_FRAME (((last_n << 8) | ((i - 1) << 4)));
     }
 }
 
@@ -421,12 +433,14 @@ Lisp_Object
 font_style_symbolic (Lisp_Object font, enum font_property_index prop,
                      bool for_face)
 {
-  Lisp_Object val = AREF (font, prop);
-  Lisp_Object table, elt;
+  ENTER_LISP_FRAME (font);
+  LISP_LOCALS (val, table, elt);
+  val = AREF (font, prop);
+
   int i;
 
   if (NILP (val))
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
   table = AREF (font_style_table, prop - FONT_WEIGHT_INDEX);
   CHECK_VECTOR (table);
   i = XINT (val) & 0xFF;
@@ -436,7 +450,7 @@ font_style_symbolic (Lisp_Object font, enum font_property_index prop,
   eassert ((i & 0xF) + 1 < ASIZE (elt));
   elt = (for_face ? AREF (elt, 1) : AREF (elt, (i & 0xF) + 1));
   CHECK_SYMBOL (elt);
-  return elt;
+  EXIT_LISP_FRAME (elt);
 }
 
 /* Return ENCODING or a cons of ENCODING and REPERTORY of the font
@@ -446,7 +460,8 @@ font_style_symbolic (Lisp_Object font, enum font_property_index prop,
 Lisp_Object
 find_font_encoding (Lisp_Object fontname)
 {
-  Lisp_Object tail, elt;
+  ENTER_LISP_FRAME (fontname);
+  LISP_LOCALS (tail, elt);
 
   for (tail = Vfont_encoding_alist; CONSP (tail); tail = XCDR (tail))
     {
@@ -457,9 +472,9 @@ find_font_encoding (Lisp_Object fontname)
 	  && (SYMBOLP (XCDR (elt))
 	      ? CHARSETP (XCDR (elt))
 	      : CONSP (XCDR (elt)) && CHARSETP (XCAR (XCDR (elt)))))
-	return (XCDR (elt));
+	EXIT_LISP_FRAME ((XCDR (elt)));
     }
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 /* Return encoding charset and repertory charset for REGISTRY in
@@ -469,7 +484,8 @@ find_font_encoding (Lisp_Object fontname)
 int
 font_registry_charsets (Lisp_Object registry, struct charset **encoding, struct charset **repertory)
 {
-  Lisp_Object val;
+  ENTER_LISP_FRAME_T (int, registry);
+  LISP_LOCALS (val);
   int encoding_id, repertory_id;
 
   val = Fassoc_string (registry, font_charset_alist, Qt);
@@ -477,7 +493,7 @@ font_registry_charsets (Lisp_Object registry, struct charset **encoding, struct 
     {
       val = XCDR (val);
       if (NILP (val))
-	return -1;
+	EXIT_LISP_FRAME (-1);
       encoding_id = XINT (XCAR (val));
       repertory_id = XINT (XCDR (val));
     }
@@ -513,12 +529,12 @@ font_registry_charsets (Lisp_Object registry, struct charset **encoding, struct 
     *encoding = CHARSET_FROM_ID (encoding_id);
   if (repertory)
     *repertory = repertory_id >= 0 ? CHARSET_FROM_ID (repertory_id) : NULL;
-  return 0;
+  EXIT_LISP_FRAME (0);
 
  invalid_entry:
   font_charset_alist
     = nconc2 (font_charset_alist, list1 (Fcons (registry, Qnil)));
-  return -1;
+  EXIT_LISP_FRAME (-1);
 }
 
 
@@ -535,19 +551,22 @@ static int get_font_prop_index (Lisp_Object);
 static Lisp_Object
 font_prop_validate_symbol (Lisp_Object prop, Lisp_Object val)
 {
+  ENTER_LISP_FRAME (prop, val);
   if (STRINGP (val))
     val = Fintern (val, Qnil);
   if (! SYMBOLP (val))
     val = Qerror;
   else if (EQ (prop, QCregistry))
     val = Fintern (Fdowncase (SYMBOL_NAME (val)), Qnil);
-  return val;
+  EXIT_LISP_FRAME (val);
 }
 
 
 static Lisp_Object
 font_prop_validate_style (Lisp_Object style, Lisp_Object val)
 {
+  ENTER_LISP_FRAME (style, val);
+  LISP_LOCALS (elt);
   enum font_property_index prop = (EQ (style, QCweight) ? FONT_WEIGHT_INDEX
 				   : EQ (style, QCslant) ? FONT_SLANT_INDEX
 				   : FONT_WIDTH_INDEX);
@@ -560,7 +579,8 @@ font_prop_validate_style (Lisp_Object style, Lisp_Object val)
 	val = Qerror;
       else
 	{
-	  Lisp_Object elt = AREF (AREF (font_style_table, prop - FONT_WEIGHT_INDEX), (n >> 4) & 0xF);
+	  elt = AREF (AREF (font_style_table, prop - FONT_WEIGHT_INDEX), (n >> 4) & 0xF);
+
 
 	  CHECK_VECTOR (elt);
 	  if ((n & 0xF) + 1 >= ASIZE (elt))
@@ -581,69 +601,72 @@ font_prop_validate_style (Lisp_Object style, Lisp_Object val)
     }
   else
     val = Qerror;
-  return val;
+  EXIT_LISP_FRAME (val);
 }
 
 static Lisp_Object
 font_prop_validate_non_neg (Lisp_Object prop, Lisp_Object val)
 {
-  return (NATNUMP (val) || (FLOATP (val) && XFLOAT_DATA (val) >= 0)
-	  ? val : Qerror);
+  ENTER_LISP_FRAME (prop, val);
+  EXIT_LISP_FRAME ((NATNUMP (val) || (FLOATP (val) && XFLOAT_DATA (val) >= 0)
+	  ? val : Qerror));
 }
 
 static Lisp_Object
 font_prop_validate_spacing (Lisp_Object prop, Lisp_Object val)
 {
+  ENTER_LISP_FRAME (prop, val);
   if (NILP (val) || (NATNUMP (val) && XINT (val) <= FONT_SPACING_CHARCELL))
-    return val;
+    EXIT_LISP_FRAME (val);
   if (SYMBOLP (val) && SBYTES (SYMBOL_NAME (val)) == 1)
     {
       char spacing = SDATA (SYMBOL_NAME (val))[0];
 
       if (spacing == 'c' || spacing == 'C')
-	return make_number (FONT_SPACING_CHARCELL);
+	EXIT_LISP_FRAME (make_number (FONT_SPACING_CHARCELL));
       if (spacing == 'm' || spacing == 'M')
-	return make_number (FONT_SPACING_MONO);
+	EXIT_LISP_FRAME (make_number (FONT_SPACING_MONO));
       if (spacing == 'p' || spacing == 'P')
-	return make_number (FONT_SPACING_PROPORTIONAL);
+	EXIT_LISP_FRAME (make_number (FONT_SPACING_PROPORTIONAL));
       if (spacing == 'd' || spacing == 'D')
-	return make_number (FONT_SPACING_DUAL);
+	EXIT_LISP_FRAME (make_number (FONT_SPACING_DUAL));
     }
-  return Qerror;
+  EXIT_LISP_FRAME (Qerror);
 }
 
 static Lisp_Object
 font_prop_validate_otf (Lisp_Object prop, Lisp_Object val)
 {
-  Lisp_Object tail, tmp;
+  ENTER_LISP_FRAME (prop, val);
+  LISP_LOCALS (tail, tmp);
   int i;
 
   /* VAL = (SCRIPT [ LANGSYS [ GSUB-FEATURES [ GPOS-FEATURES ]]])
      GSUB-FEATURES = (FEATURE ... [ nil FEATURE ... ]) | nil
      GPOS-FEATURES = (FEATURE ... [ nil FEATURE ... ]) | nil  */
   if (! CONSP (val))
-    return Qerror;
+    EXIT_LISP_FRAME (Qerror);
   if (! SYMBOLP (XCAR (val)))
-    return Qerror;
+    EXIT_LISP_FRAME (Qerror);
   tail = XCDR (val);
   if (NILP (tail))
-    return val;
+    EXIT_LISP_FRAME (val);
   if (! CONSP (tail) || ! SYMBOLP (XCAR (val)))
-    return Qerror;
+    EXIT_LISP_FRAME (Qerror);
   for (i = 0; i < 2; i++)
     {
       tail = XCDR (tail);
       if (NILP (tail))
-	return val;
+	EXIT_LISP_FRAME (val);
       if (! CONSP (tail))
-	return Qerror;
+	EXIT_LISP_FRAME (Qerror);
       for (tmp = XCAR (tail); CONSP (tmp); tmp = XCDR (tmp))
 	if (! SYMBOLP (XCAR (tmp)))
-	  return Qerror;
+	  EXIT_LISP_FRAME (Qerror);
       if (! NILP (tmp))
-	return Qerror;
+	EXIT_LISP_FRAME (Qerror);
     }
-  return val;
+  EXIT_LISP_FRAME (val);
 }
 
 /* Structure of known font property keys and validator of the
@@ -682,12 +705,13 @@ static const struct
 static int
 get_font_prop_index (Lisp_Object key)
 {
+  ENTER_LISP_FRAME_T (int, key);
   int i;
 
   for (i = 0; i < ARRAYELTS (font_property_table); i++)
     if (EQ (key, builtin_lisp_symbol (font_property_table[i].key)))
-      return i;
-  return -1;
+      EXIT_LISP_FRAME (i);
+  EXIT_LISP_FRAME (-1);
 }
 
 /* Validate the font property.  The property key is specified by the
@@ -697,22 +721,23 @@ get_font_prop_index (Lisp_Object key)
 static Lisp_Object
 font_prop_validate (int idx, Lisp_Object prop, Lisp_Object val)
 {
-  Lisp_Object validated;
+  ENTER_LISP_FRAME (prop, val);
+  LISP_LOCALS (validated);
 
   if (NILP (val))
-    return val;
+    EXIT_LISP_FRAME (val);
   if (NILP (prop))
     prop = builtin_lisp_symbol (font_property_table[idx].key);
   else
     {
       idx = get_font_prop_index (prop);
       if (idx < 0)
-	return val;
+	EXIT_LISP_FRAME (val);
     }
   validated = (font_property_table[idx].validator) (prop, val);
   if (EQ (validated, Qerror))
     signal_error ("invalid font property", Fcons (prop, val));
-  return validated;
+  EXIT_LISP_FRAME (validated);
 }
 
 
@@ -722,12 +747,17 @@ font_prop_validate (int idx, Lisp_Object prop, Lisp_Object val)
 Lisp_Object
 font_put_extra (Lisp_Object font, Lisp_Object prop, Lisp_Object val)
 {
-  Lisp_Object extra = AREF (font, FONT_EXTRA_INDEX);
-  Lisp_Object slot = (NILP (extra) ? Qnil : assq_no_quit (prop, extra));
+  ENTER_LISP_FRAME (font, prop, val);
+  LISP_LOCALS (extra, slot, prev);
+  extra = AREF (font, FONT_EXTRA_INDEX);
+
+  slot = (NILP (extra) ? Qnil : assq_no_quit (prop, extra));
+
 
   if (NILP (slot))
     {
-      Lisp_Object prev = Qnil;
+      prev = Qnil;
+
 
       while (CONSP (extra)
 	     && NILP (Fstring_lessp (prop, XCAR (XCAR (extra)))))
@@ -738,12 +768,12 @@ font_put_extra (Lisp_Object font, Lisp_Object prop, Lisp_Object val)
       else
         XSETCDR (prev, Fcons (Fcons (prop, val), extra));
 
-      return val;
+      EXIT_LISP_FRAME (val);
     }
   XSETCDR (slot, val);
   if (NILP (val))
     ASET (font, FONT_EXTRA_INDEX, Fdelq (slot, extra));
-  return val;
+  EXIT_LISP_FRAME (val);
 }
 
 
@@ -832,6 +862,8 @@ parse_matrix (const char *p)
 static int
 font_expand_wildcards (Lisp_Object *field, int n)
 {
+  ENTER_LISP_FRAME_T (int);
+  LISP_LOCALS (val, name);
   /* Copy of FIELD.  */
   Lisp_Object tmp[XLFD_LAST_INDEX];
   /* Array of information about where this element can go.  Nth
@@ -866,7 +898,8 @@ font_expand_wildcards (Lisp_Object *field, int n)
   for (i = 0, range_from = 0, range_to = 14 - n; i < n;
        i++, range_from++, range_to++, range_mask <<= 1)
     {
-      Lisp_Object val = field[i];
+      val = field[i];
+
 
       tmp[i] = val;
       if (NILP (val))
@@ -907,7 +940,8 @@ font_expand_wildcards (Lisp_Object *field, int n)
 	    from = to = XLFD_FOUNDRY_INDEX, mask = XLFD_FOUNDRY_MASK;
 	  else if (i + 1 == n)
 	    {
-	      Lisp_Object name = SYMBOL_NAME (val);
+	      name = SYMBOL_NAME (val);
+
 
 	      if (SDATA (name)[SBYTES (name) - 1] == '*')
 		from = XLFD_REGISTRY_INDEX, to = XLFD_ENCODING_INDEX,
@@ -948,7 +982,7 @@ font_expand_wildcards (Lisp_Object *field, int n)
 	  while (to >= 0 && ! (mask & (1 << to)))
 	    to--;
 	  if (from > to)
-	    return -1;
+	    EXIT_LISP_FRAME (-1);
 	  range[i].from = from;
 	  range[i].to = to;
 	  range[i].mask = mask;
@@ -985,7 +1019,7 @@ font_expand_wildcards (Lisp_Object *field, int n)
 		  else
 		    to = range[j].to;
 		  if (from > to)
-		    return -1;
+		    EXIT_LISP_FRAME (-1);
 		}
 	    }
 	}
@@ -998,19 +1032,19 @@ font_expand_wildcards (Lisp_Object *field, int n)
 	{
 	  if (i == 0 || ! NILP (tmp[i - 1]))
 	    /* None of TMP[X] corresponds to Jth field.  */
-	    return -1;
+	    EXIT_LISP_FRAME (-1);
           xvc_clear(field, j, range[i].from - j);
 	  j = range[i].from;
 	}
       field[j++] = tmp[i];
     }
   if (! NILP (tmp[n - 1]) && j < XLFD_REGISTRY_INDEX)
-    return -1;
+    EXIT_LISP_FRAME (-1);
   xvc_clear (field, j, XLFD_LAST_INDEX - j);
   if (INTEGERP (field[XLFD_ENCODING_INDEX]))
     field[XLFD_ENCODING_INDEX] =
       Fintern (Fnumber_to_string (field[XLFD_ENCODING_INDEX]), Qnil);
-  return 0;
+  EXIT_LISP_FRAME (0);
 }
 
 
@@ -1032,14 +1066,15 @@ font_expand_wildcards (Lisp_Object *field, int n)
 int
 font_parse_xlfd (char *name, ptrdiff_t len, Lisp_Object font)
 {
+  ENTER_LISP_FRAME_T (int, font);
+  LISP_LOCALS (val);
   int i, j, n;
   char *f[XLFD_LAST_INDEX + 1];
-  Lisp_Object val;
   char *p;
 
   if (len > 255 || !len)
     /* Maximum XLFD name length is 255. */
-    return -1;
+    EXIT_LISP_FRAME (-1);
   /* Accept "*-.." as a fully specified XLFD. */
   if (name[0] == '*' && (len == 1 || name[1] == '-'))
     i = 1, f[XLFD_FOUNDRY_INDEX] = name;
@@ -1071,7 +1106,7 @@ font_parse_xlfd (char *name, ptrdiff_t len, Lisp_Object font)
 	  if (! NILP (val))
 	    {
 	      if ((n = font_style_to_value (j, INTERN_FIELD_SYM (i), 0)) < 0)
-		return -1;
+		EXIT_LISP_FRAME (-1);
 	      ASET (font, j, make_number (n));
 	    }
 	}
@@ -1092,7 +1127,7 @@ font_parse_xlfd (char *name, ptrdiff_t len, Lisp_Object font)
 	  if (INTEGERP (val))
 	    ASET (font, FONT_SIZE_INDEX, val);
 	  else if (FONT_ENTITY_P (font))
-	    return -1;
+	    EXIT_LISP_FRAME (-1);
 	  else
 	    {
 	      double point_size = -1;
@@ -1110,14 +1145,14 @@ font_parse_xlfd (char *name, ptrdiff_t len, Lisp_Object font)
 
       val = INTERN_FIELD (XLFD_RESY_INDEX);
       if (! NILP (val) && ! INTEGERP (val))
-	return -1;
+	EXIT_LISP_FRAME (-1);
       ASET (font, FONT_DPI_INDEX, val);
       val = INTERN_FIELD (XLFD_SPACING_INDEX);
       if (! NILP (val))
 	{
 	  val = font_prop_validate_spacing (QCspacing, val);
 	  if (! INTEGERP (val))
-	    return -1;
+	    EXIT_LISP_FRAME (-1);
 	  ASET (font, FONT_SPACING_INDEX, val);
 	}
       p = f[XLFD_AVGWIDTH_INDEX];
@@ -1125,7 +1160,7 @@ font_parse_xlfd (char *name, ptrdiff_t len, Lisp_Object font)
 	p++;
       val = font_intern_prop (p, f[XLFD_REGISTRY_INDEX] - 1 - p, 0);
       if (! NILP (val) && ! INTEGERP (val))
-	return -1;
+	EXIT_LISP_FRAME (-1);
       ASET (font, FONT_AVGWIDTH_INDEX, val);
     }
   else
@@ -1134,13 +1169,13 @@ font_parse_xlfd (char *name, ptrdiff_t len, Lisp_Object font)
       Lisp_Object prop[XLFD_LAST_INDEX];
 
       if (FONT_ENTITY_P (font))
-	return -1;
+	EXIT_LISP_FRAME (-1);
       for (j = 0; j < i; j++)
 	{
 	  if (*f[j] == '*')
 	    {
 	      if (f[j][1] && f[j][1] != '-')
-		return -1;
+		EXIT_LISP_FRAME (-1);
 	      prop[j] = Qnil;
 	      wild_card_found = 1;
 	    }
@@ -1150,9 +1185,9 @@ font_parse_xlfd (char *name, ptrdiff_t len, Lisp_Object font)
 	    prop[j] = font_intern_prop (f[j], f[i] - f[j], 0);
 	}
       if (! wild_card_found)
-	return -1;
+	EXIT_LISP_FRAME (-1);
       if (font_expand_wildcards (prop, i) < 0)
-	return -1;
+	EXIT_LISP_FRAME (-1);
 
       ASET (font, FONT_FOUNDRY_INDEX, prop[XLFD_FOUNDRY_INDEX]);
       ASET (font, FONT_FAMILY_INDEX, prop[XLFD_FAMILY_INDEX]);
@@ -1161,7 +1196,7 @@ font_parse_xlfd (char *name, ptrdiff_t len, Lisp_Object font)
 	if (! NILP (prop[i]))
 	  {
 	    if ((n = font_style_to_value (j, prop[i], 1)) < 0)
-	      return -1;
+	      EXIT_LISP_FRAME (-1);
 	    ASET (font, j, make_number (n));
 	  }
       ASET (font, FONT_ADSTYLE_INDEX, prop[XLFD_ADSTYLE_INDEX]);
@@ -1205,14 +1240,14 @@ font_parse_xlfd (char *name, ptrdiff_t len, Lisp_Object font)
 	  val = font_prop_validate_spacing (QCspacing,
 					    prop[XLFD_SPACING_INDEX]);
 	  if (! INTEGERP (val))
-	    return -1;
+	    EXIT_LISP_FRAME (-1);
 	  ASET (font, FONT_SPACING_INDEX, val);
 	}
       if (INTEGERP (prop[XLFD_AVGWIDTH_INDEX]))
 	ASET (font, FONT_AVGWIDTH_INDEX, prop[XLFD_AVGWIDTH_INDEX]);
     }
 
-  return 0;
+  EXIT_LISP_FRAME (0);
 }
 
 /* Store XLFD name of FONT (font-spec or font-entity) in NAME (NBYTES
@@ -1222,9 +1257,10 @@ font_parse_xlfd (char *name, ptrdiff_t len, Lisp_Object font)
 ptrdiff_t
 font_unparse_xlfd (Lisp_Object font, int pixel_size, char *name, int nbytes)
 {
+  ENTER_LISP_FRAME_T (ptrdiff_t, font);
+  LISP_LOCALS (val);
   char *p;
   const char *f[XLFD_REGISTRY_INDEX + 1];
-  Lisp_Object val;
   int i, j, len;
 
   eassert (FONTP (font));
@@ -1254,7 +1290,7 @@ font_unparse_xlfd (Lisp_Object font, int pixel_size, char *name, int nbytes)
 	      /* Change "jisx0208*" and "jisx0208" to "jisx0208*-*".  */
 	      ptrdiff_t alloc = SBYTES (val) + 4;
 	      if (nbytes <= alloc)
-		return -1;
+		EXIT_LISP_FRAME (-1);
 	      f[j] = p = alloca (alloc);
 	      sprintf (p, "%s%s-*", SDATA (val),
 		       &"*"[SDATA (val)[SBYTES (val) - 1] == '*']);
@@ -1278,7 +1314,7 @@ font_unparse_xlfd (Lisp_Object font, int pixel_size, char *name, int nbytes)
 	  val = SYMBOL_NAME (val);
 	  alloc = SBYTES (val) + 1;
 	  if (nbytes <= alloc)
-	    return -1;
+	    EXIT_LISP_FRAME (-1);
 	  f[j] = p = alloca (alloc);
 	  /* Copy the name while excluding '-', '?', ',', and '"'.  */
 	  for (k = l = 0; k < alloc; k++)
@@ -1355,7 +1391,7 @@ font_unparse_xlfd (Lisp_Object font, int pixel_size, char *name, int nbytes)
 		  f[XLFD_PIXEL_INDEX], f[XLFD_RESX_INDEX],
 		  f[XLFD_SPACING_INDEX], f[XLFD_AVGWIDTH_INDEX],
 		  f[XLFD_REGISTRY_INDEX]);
-  return len < nbytes ? len : -1;
+  EXIT_LISP_FRAME (len < nbytes ? len : -1);
 }
 
 /* Parse NAME (null terminated) and store information in FONT
@@ -1376,12 +1412,14 @@ font_unparse_xlfd (Lisp_Object font, int pixel_size, char *name, int nbytes)
 static int
 font_parse_fcname (char *name, ptrdiff_t len, Lisp_Object font)
 {
+  ENTER_LISP_FRAME_T (int, font);
+  LISP_LOCALS (extra_props, family, val, key, weight, slant, width, size);
   char *p, *q;
   char *size_beg = NULL, *size_end = NULL;
   char *props_beg = NULL, *family_end = NULL;
 
   if (len == 0)
-    return -1;
+    EXIT_LISP_FRAME (-1);
 
   for (p = name; *p; p++)
     {
@@ -1417,12 +1455,12 @@ font_parse_fcname (char *name, ptrdiff_t len, Lisp_Object font)
 
   if (family_end)
     {
-      Lisp_Object extra_props = Qnil;
+      extra_props = Qnil;
+
 
       /* A fontconfig name with size and/or property data.  */
       if (family_end > name)
 	{
-	  Lisp_Object family;
 	  family = font_intern_prop (name, family_end - name, 1);
 	  ASET (font, FONT_FAMILY_INDEX, family);
 	}
@@ -1436,7 +1474,6 @@ font_parse_fcname (char *name, ptrdiff_t len, Lisp_Object font)
       if (props_beg)
 	{
 	  /* Now parse ":KEY=VAL" patterns.  */
-	  Lisp_Object val;
 
 	  for (p = props_beg; *p; p = q)
 	    {
@@ -1476,7 +1513,8 @@ font_parse_fcname (char *name, ptrdiff_t len, Lisp_Object font)
 	      else
 		{
 		  /* KEY=VAL pairs  */
-		  Lisp_Object key = Qnil;
+		  key = Qnil;
+
 		  int prop;
 
 		  if (q - p == 10 && memcmp (p + 1, "pixelsize", 9) == 0)
@@ -1517,8 +1555,12 @@ font_parse_fcname (char *name, ptrdiff_t len, Lisp_Object font)
     {
       /* Either a fontconfig-style name with no size and property
 	 data, or a GTK-style name.  */
-      Lisp_Object weight = Qnil, slant = Qnil;
-      Lisp_Object width  = Qnil, size  = Qnil;
+      weight = Qnil;
+      slant = Qnil;
+
+      width = Qnil;
+      size = Qnil;
+
       char *word_start;
       ptrdiff_t word_len;
 
@@ -1597,7 +1639,7 @@ font_parse_fcname (char *name, ptrdiff_t len, Lisp_Object font)
 	FONT_SET_STYLE (font, FONT_WIDTH_INDEX, width);
     }
 
-  return 0;
+  EXIT_LISP_FRAME (0);
 }
 
 #if defined HAVE_XFT || defined HAVE_FREETYPE || defined HAVE_NS
@@ -1610,8 +1652,8 @@ font_parse_fcname (char *name, ptrdiff_t len, Lisp_Object font)
 static int
 font_unparse_fcname (Lisp_Object font, int pixel_size, char *name, int nbytes)
 {
-  Lisp_Object family, foundry;
-  Lisp_Object val;
+  ENTER_LISP_FRAME_T (int, font);
+  LISP_LOCALS (family, foundry, val);
   int point_size;
   int i;
   char *p;
@@ -1660,21 +1702,21 @@ font_unparse_fcname (Lisp_Object font, int pixel_size, char *name, int nbytes)
     {
       int len = snprintf (p, lim - p, "%s", SSDATA (family));
       if (! (0 <= len && len < lim - p))
-	return -1;
+	EXIT_LISP_FRAME (-1);
       p += len;
     }
   if (point_size > 0)
     {
       int len = snprintf (p, lim - p, &"-%d"[p == name], point_size);
       if (! (0 <= len && len < lim - p))
-	return -1;
+	EXIT_LISP_FRAME (-1);
       p += len;
     }
   else if (pixel_size > 0)
     {
       int len = snprintf (p, lim - p, ":pixelsize=%d", pixel_size);
       if (! (0 <= len && len < lim - p))
-	return -1;
+	EXIT_LISP_FRAME (-1);
       p += len;
     }
   if (! NILP (AREF (font, FONT_FOUNDRY_INDEX)))
@@ -1683,7 +1725,7 @@ font_unparse_fcname (Lisp_Object font, int pixel_size, char *name, int nbytes)
 			  SSDATA (SYMBOL_NAME (AREF (font,
 						     FONT_FOUNDRY_INDEX))));
       if (! (0 <= len && len < lim - p))
-	return -1;
+	EXIT_LISP_FRAME (-1);
       p += len;
     }
   for (i = 0; i < 3; i++)
@@ -1692,7 +1734,7 @@ font_unparse_fcname (Lisp_Object font, int pixel_size, char *name, int nbytes)
 	int len = snprintf (p, lim - p, ":%s=%s", style_names[i],
 			    SSDATA (SYMBOL_NAME (styles[i])));
 	if (! (0 <= len && len < lim - p))
-	  return -1;
+	  EXIT_LISP_FRAME (-1);
 	p += len;
       }
 
@@ -1701,7 +1743,7 @@ font_unparse_fcname (Lisp_Object font, int pixel_size, char *name, int nbytes)
       int len = snprintf (p, lim - p, ":dpi=%"pI"d",
 			  XINT (AREF (font, FONT_DPI_INDEX)));
       if (! (0 <= len && len < lim - p))
-	return -1;
+	EXIT_LISP_FRAME (-1);
       p += len;
     }
 
@@ -1710,7 +1752,7 @@ font_unparse_fcname (Lisp_Object font, int pixel_size, char *name, int nbytes)
       int len = snprintf (p, lim - p, ":spacing=%"pI"d",
 			  XINT (AREF (font, FONT_SPACING_INDEX)));
       if (! (0 <= len && len < lim - p))
-	return -1;
+	EXIT_LISP_FRAME (-1);
       p += len;
     }
 
@@ -1721,11 +1763,11 @@ font_unparse_fcname (Lisp_Object font, int pixel_size, char *name, int nbytes)
 			   ? ":scalable=true"
 			   : ":scalable=false"));
       if (! (0 <= len && len < lim - p))
-	return -1;
+	EXIT_LISP_FRAME (-1);
       p += len;
     }
 
-  return (p - name);
+  EXIT_LISP_FRAME ((p - name));
 }
 
 #endif
@@ -1737,9 +1779,10 @@ font_unparse_fcname (Lisp_Object font, int pixel_size, char *name, int nbytes)
 static int
 font_parse_name (char *name, ptrdiff_t namelen, Lisp_Object font)
 {
+  ENTER_LISP_FRAME_T (int, font);
   if (name[0] == '-' || strchr (name, '*') || strchr (name, '?'))
-    return font_parse_xlfd (name, namelen, font);
-  return font_parse_fcname (name, namelen, font);
+    EXIT_LISP_FRAME (font_parse_xlfd (name, namelen, font));
+  EXIT_LISP_FRAME (font_parse_fcname (name, namelen, font));
 }
 
 
@@ -1750,6 +1793,7 @@ font_parse_name (char *name, ptrdiff_t namelen, Lisp_Object font)
 void
 font_parse_family_registry (Lisp_Object family, Lisp_Object registry, Lisp_Object font_spec)
 {
+  ENTER_LISP_FRAME (family, registry, font_spec);
   ptrdiff_t len;
   char *p0, *p1;
 
@@ -1788,6 +1832,7 @@ font_parse_family_registry (Lisp_Object family, Lisp_Object registry, Lisp_Objec
       registry = Fdowncase (registry);
       ASET (font_spec, FONT_REGISTRY_INDEX, Fintern (registry, Qnil));
     }
+  EXIT_LISP_FRAME_VOID ();
 }
 
 
@@ -1804,7 +1849,8 @@ font_parse_family_registry (Lisp_Object family, Lisp_Object registry, Lisp_Objec
 static int
 check_gstring (Lisp_Object gstring)
 {
-  Lisp_Object val;
+  ENTER_LISP_FRAME_T (int, gstring);
+  LISP_LOCALS (val);
   ptrdiff_t i;
   int j;
 
@@ -1850,16 +1896,17 @@ check_gstring (Lisp_Object gstring)
 	    CHECK_NUMBER (AREF (val, j));
 	}
     }
-  return i;
+  EXIT_LISP_FRAME (i);
  err:
   error ("Invalid glyph-string format");
-  return -1;
+  EXIT_LISP_FRAME (-1);
 }
 
 static void
 check_otf_features (Lisp_Object otf_features)
 {
-  Lisp_Object val;
+  ENTER_LISP_FRAME (otf_features);
+  LISP_LOCALS (val);
 
   CHECK_CONS (otf_features);
   CHECK_SYMBOL (XCAR (otf_features));
@@ -1882,6 +1929,7 @@ check_otf_features (Lisp_Object otf_features)
 	error ("Invalid OTF GPOS feature: %s",
 	       SDATA (SYMBOL_NAME (XCAR (val))));
     }
+  EXIT_LISP_FRAME_VOID ();
 }
 
 #ifdef HAVE_LIBOTF
@@ -1901,7 +1949,10 @@ otf_tag_symbol (OTF_Tag tag)
 static OTF *
 otf_open (Lisp_Object file)
 {
-  Lisp_Object val = Fassoc (file, otf_list, Qnil);
+  ENTER_LISP_FRAME_T (OTF *, file);
+  LISP_LOCALS (val);
+  val = Fassoc (file, otf_list, Qnil);
+
   OTF *otf;
 
   if (! NILP (val))
@@ -1912,7 +1963,7 @@ otf_open (Lisp_Object file)
       val = make_save_ptr (otf);
       otf_list = Fcons (Fcons (file, val), otf_list);
     }
-  return otf;
+  EXIT_LISP_FRAME (otf);
 }
 
 
@@ -1923,17 +1974,21 @@ otf_open (Lisp_Object file)
 Lisp_Object
 font_otf_capability (struct font *font)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (capability, script_list, langsys_list, script_tag, feature_list, langsys_tag, feature_tag);
   OTF *otf;
-  Lisp_Object capability = Fcons (Qnil, Qnil);
+  capability = Fcons (Qnil, Qnil);
+
   int i;
 
   otf = otf_open (font->props[FONT_FILE_INDEX]);
   if (! otf)
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
   for (i = 0; i < 2; i++)
     {
       OTF_GSUB_GPOS *gsub_gpos;
-      Lisp_Object script_list = Qnil;
+      script_list = Qnil;
+
       int j;
 
       if (OTF_get_features (otf, i == 0) < 0)
@@ -1942,15 +1997,17 @@ font_otf_capability (struct font *font)
       for (j = gsub_gpos->ScriptList.ScriptCount - 1; j >= 0; j--)
 	{
 	  OTF_Script *script = gsub_gpos->ScriptList.Script + j;
-	  Lisp_Object langsys_list = Qnil;
-	  Lisp_Object script_tag = otf_tag_symbol (script->ScriptTag);
+	  langsys_list = Qnil;
+
+	  script_tag = otf_tag_symbol (script->ScriptTag);
+
 	  int k;
 
 	  for (k = script->LangSysCount; k >= 0; k--)
 	    {
 	      OTF_LangSys *langsys;
-	      Lisp_Object feature_list = Qnil;
-	      Lisp_Object langsys_tag;
+	      feature_list = Qnil;
+
 	      int l;
 
 	      if (k == script->LangSysCount)
@@ -1968,8 +2025,8 @@ font_otf_capability (struct font *font)
 		{
 		  OTF_Feature *feature
 		    = gsub_gpos->FeatureList.Feature + langsys->FeatureIndex[l];
-		  Lisp_Object feature_tag
-		    = otf_tag_symbol (feature->FeatureTag);
+		  feature_tag = otf_tag_symbol (feature->FeatureTag);
+
 
 		  feature_list = Fcons (feature_tag, feature_list);
 		}
@@ -1986,7 +2043,7 @@ font_otf_capability (struct font *font)
 	XSETCDR (capability, script_list);
     }
 
-  return capability;
+  EXIT_LISP_FRAME (capability);
 }
 
 /* Parse OTF features in SPEC and write a proper features spec string
@@ -1997,7 +2054,8 @@ font_otf_capability (struct font *font)
 static void
 generate_otf_features (Lisp_Object spec, char *features)
 {
-  Lisp_Object val;
+  ENTER_LISP_FRAME (spec);
+  LISP_LOCALS (val);
   char *p;
   bool asterisk;
 
@@ -2027,6 +2085,7 @@ generate_otf_features (Lisp_Object spec, char *features)
     }
   if (CONSP (spec))
     error ("OTF spec too long");
+  EXIT_LISP_FRAME_VOID ();
 }
 
 Lisp_Object
@@ -2041,7 +2100,10 @@ font_otf_DeviceTable (OTF_DeviceTable *device_table)
 Lisp_Object
 font_otf_ValueRecord (int value_format, OTF_ValueRecord *value_record)
 {
-  Lisp_Object val = Fmake_vector (make_number (8), Qnil);
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (val);
+  val = Fmake_vector (make_number (8), Qnil);
+
 
   if (value_format & OTF_XPlacement)
     ASET (val, 0, make_number (value_record->XPlacement));
@@ -2059,13 +2121,14 @@ font_otf_ValueRecord (int value_format, OTF_ValueRecord *value_record)
     ASET (val, 4, font_otf_DeviceTable (&value_record->XAdvDevice));
   if (value_format & OTF_YAdvDevice)
     ASET (val, 4, font_otf_DeviceTable (&value_record->YAdvDevice));
-  return val;
+  EXIT_LISP_FRAME (val);
 }
 
 Lisp_Object
 font_otf_Anchor (OTF_Anchor *anchor)
 {
-  Lisp_Object val;
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (val);
 
   val = Fmake_vector (make_number (anchor->AnchorFormat + 1), Qnil);
   ASET (val, 0, make_number (anchor->XCoordinate));
@@ -2077,7 +2140,7 @@ font_otf_Anchor (OTF_Anchor *anchor)
       ASET (val, 3, font_otf_DeviceTable (&anchor->f.f2.XDeviceTable));
       ASET (val, 4, font_otf_DeviceTable (&anchor->f.f2.YDeviceTable));
     }
-  return val;
+  EXIT_LISP_FRAME (val);
 }
 #endif	/* HAVE_LIBOTF */
 #endif	/* 0 */
@@ -2088,8 +2151,10 @@ font_otf_Anchor (OTF_Anchor *anchor)
 static double
 font_rescale_ratio (Lisp_Object font_entity)
 {
-  Lisp_Object tail, elt;
-  Lisp_Object name = Qnil;
+  ENTER_LISP_FRAME_T (double, font_entity);
+  LISP_LOCALS (tail, elt, name);
+  name = Qnil;
+
 
   for (tail = Vface_font_rescale_alist; CONSP (tail); tail = XCDR (tail))
     {
@@ -2101,16 +2166,16 @@ font_rescale_ratio (Lisp_Object font_entity)
 	      if (NILP (name))
 		name = Ffont_xlfd_name (font_entity, Qnil);
 	      if (fast_string_match_ignore_case (XCAR (elt), name) >= 0)
-		return XFLOAT_DATA (XCDR (elt));
+		EXIT_LISP_FRAME (XFLOAT_DATA (XCDR (elt)));
 	    }
 	  else if (FONT_SPEC_P (XCAR (elt)))
 	    {
 	      if (font_match_p (XCAR (elt), font_entity))
-		return XFLOAT_DATA (XCDR (elt));
+		EXIT_LISP_FRAME (XFLOAT_DATA (XCDR (elt)));
 	    }
 	}
     }
-  return 1.0;
+  EXIT_LISP_FRAME (1.0);
 }
 
 /* We sort fonts by scoring each of them against a specified
@@ -2135,6 +2200,7 @@ static int sort_shift_bits[FONT_SIZE_INDEX + 1];
 static unsigned
 font_score (Lisp_Object entity, Lisp_Object *spec_prop)
 {
+  ENTER_LISP_FRAME_T (unsigned, entity);
   unsigned score = 0;
   int i;
 
@@ -2161,7 +2227,7 @@ font_score (Lisp_Object entity, Lisp_Object *spec_prop)
 	pixel_size *= font_rescale_ratio (entity);
       if (pixel_size * 2 < entity_size || entity_size * 2 < pixel_size)
 	/* This size is wrong by more than a factor 2: reject it!  */
-	return 0xFFFFFFFF;
+	EXIT_LISP_FRAME (0xFFFFFFFF);
       diff = eabs (pixel_size - entity_size) << 1;
       if (! NILP (spec_prop[FONT_DPI_INDEX])
 	  && ! EQ (spec_prop[FONT_DPI_INDEX], AREF (entity, FONT_DPI_INDEX)))
@@ -2172,7 +2238,7 @@ font_score (Lisp_Object entity, Lisp_Object *spec_prop)
       score |= min (diff, 127) << sort_shift_bits[FONT_SIZE_INDEX];
     }
 
-  return score;
+  EXIT_LISP_FRAME (score);
 }
 
 
@@ -2182,6 +2248,8 @@ font_score (Lisp_Object entity, Lisp_Object *spec_prop)
 static Lisp_Object
 font_vconcat_entity_vectors (Lisp_Object list)
 {
+  ENTER_LISP_FRAME (list);
+  LISP_LOCALS (result);
   EMACS_INT nargs = XFASTINT (Flength (list));
   Lisp_Object *args;
   USE_SAFE_ALLOCA;
@@ -2190,9 +2258,10 @@ font_vconcat_entity_vectors (Lisp_Object list)
 
   for (i = 0; i < nargs; i++, list = XCDR (list))
     args[i] = XCAR (list);
-  Lisp_Object result = Fvconcat (nargs, args);
+  result = Fvconcat (nargs, args);
+
   SAFE_FREE ();
-  return result;
+  EXIT_LISP_FRAME (result);
 }
 
 
@@ -2239,12 +2308,12 @@ static Lisp_Object
 font_sort_entities (Lisp_Object list, Lisp_Object prefer,
 		    struct frame *f, int best_only)
 {
+  ENTER_LISP_FRAME (list, prefer);
+  LISP_LOCALS (best_entity, tail, current_font_driver);
   Lisp_Object prefer_prop[FONT_SPEC_MAX];
   int len, maxlen, i;
   struct font_sort_data *data;
   unsigned best_score;
-  Lisp_Object best_entity;
-  Lisp_Object tail;
   Lisp_Object vec UNINIT;
   USE_SAFE_ALLOCA;
 
@@ -2284,7 +2353,6 @@ font_sort_entities (Lisp_Object list, Lisp_Object prefer,
   for (tail = list; CONSP (tail); tail = XCDR (tail))
     {
       int font_driver_preference = 0;
-      Lisp_Object current_font_driver;
 
       if (best_only)
 	vec = XCAR (tail);
@@ -2331,7 +2399,7 @@ font_sort_entities (Lisp_Object list, Lisp_Object prefer,
   SAFE_FREE ();
 
   FONT_ADD_LOG ("sort-by", prefer, vec);
-  return vec;
+  EXIT_LISP_FRAME (vec);
 }
 
 
@@ -2365,18 +2433,19 @@ static bool
 font_check_otf_features (Lisp_Object script, Lisp_Object langsys,
                          Lisp_Object features, Lisp_Object table)
 {
-  Lisp_Object val;
+  ENTER_LISP_FRAME_T (bool, script, langsys, features, table);
+  LISP_LOCALS (val);
   bool negative;
 
   table = assq_no_quit (script, table);
   if (NILP (table))
-    return 0;
+    EXIT_LISP_FRAME (0);
   table = XCDR (table);
   if (! NILP (langsys))
     {
       table = assq_no_quit (langsys, table);
       if (NILP (table))
-	return 0;
+	EXIT_LISP_FRAME (0);
     }
   else
     {
@@ -2395,9 +2464,9 @@ font_check_otf_features (Lisp_Object script, Lisp_Object langsys,
 	  continue;
 	}
       if (NILP (Fmemq (XCAR (features), table)) != negative)
-	return 0;
+	EXIT_LISP_FRAME (0);
     }
-  return 1;
+  EXIT_LISP_FRAME (1);
 }
 
 /* Check if OTF_CAPABILITY satisfies SPEC (otf-spec).  */
@@ -2405,7 +2474,12 @@ font_check_otf_features (Lisp_Object script, Lisp_Object langsys,
 static bool
 font_check_otf (Lisp_Object spec, Lisp_Object otf_capability)
 {
-  Lisp_Object script, langsys = Qnil, gsub = Qnil, gpos = Qnil;
+  ENTER_LISP_FRAME_T (bool, spec, otf_capability);
+  LISP_LOCALS (script, langsys, gsub, gpos);
+  langsys = Qnil;
+  gsub = Qnil;
+  gpos = Qnil;
+
 
   script = XCAR (spec);
   spec = XCDR (spec);
@@ -2424,11 +2498,11 @@ font_check_otf (Lisp_Object spec, Lisp_Object otf_capability)
 
   if (! NILP (gsub) && ! font_check_otf_features (script, langsys, gsub,
 						  XCAR (otf_capability)))
-    return 0;
+    EXIT_LISP_FRAME (0);
   if (! NILP (gpos) && ! font_check_otf_features (script, langsys, gpos,
 						  XCDR (otf_capability)))
-    return 0;
-  return 1;
+    EXIT_LISP_FRAME (0);
+  EXIT_LISP_FRAME (1);
 }
 
 
@@ -2439,16 +2513,17 @@ font_check_otf (Lisp_Object spec, Lisp_Object otf_capability)
 bool
 font_match_p (Lisp_Object spec, Lisp_Object font)
 {
+  ENTER_LISP_FRAME_T (bool, spec, font);
+  LISP_LOCALS (extra, font_extra, key, val, val2);
   Lisp_Object prop[FONT_SPEC_MAX];
   Lisp_Object *props;
-  Lisp_Object extra, font_extra;
   int i;
 
   for (i = FONT_FOUNDRY_INDEX; i <= FONT_REGISTRY_INDEX; i++)
     if (! NILP (AREF (spec, i))
 	&& ! NILP (AREF (font, i))
 	&& ! EQ (AREF (spec, i), AREF (font, i)))
-      return 0;
+      EXIT_LISP_FRAME (0);
   props = XFONT_SPEC (spec)->props;
   if (FLOATP (props[FONT_SIZE_INDEX]))
     {
@@ -2460,33 +2535,35 @@ font_match_p (Lisp_Object spec, Lisp_Object font)
     }
 
   if (font_score (font, props) > 0)
-    return 0;
+    EXIT_LISP_FRAME (0);
   extra = AREF (spec, FONT_EXTRA_INDEX);
   font_extra = AREF (font, FONT_EXTRA_INDEX);
   for (; CONSP (extra); extra = XCDR (extra))
     {
-      Lisp_Object key = XCAR (XCAR (extra));
-      Lisp_Object val = XCDR (XCAR (extra)), val2;
+      key = XCAR (XCAR (extra));
+
+      val = XCDR (XCAR (extra));
+
 
       if (EQ (key, QClang))
 	{
 	  val2 = assq_no_quit (key, font_extra);
 	  if (NILP (val2))
-	    return 0;
+	    EXIT_LISP_FRAME (0);
 	  val2 = XCDR (val2);
 	  if (CONSP (val))
 	    {
 	      if (! CONSP (val2))
-		return 0;
+		EXIT_LISP_FRAME (0);
 	      while (CONSP (val))
 		if (NILP (Fmemq (val, val2)))
-		  return 0;
+		  EXIT_LISP_FRAME (0);
 	    }
 	  else
 	    if (CONSP (val2)
 		? NILP (Fmemq (val, XCDR (val2)))
 		: ! EQ (val, val2))
-	      return 0;
+	      EXIT_LISP_FRAME (0);
 	}
       else if (EQ (key, QCscript))
 	{
@@ -2503,7 +2580,7 @@ font_match_p (Lisp_Object spec, Lisp_Object font)
 			continue;
 		      if (font_encode_char (font, XFASTINT (XCAR (val2)))
 			  == FONT_INVALID_CODE)
-			return 0;
+			EXIT_LISP_FRAME (0);
 		    }
 		}
 	      else if (VECTORP (val2))
@@ -2518,7 +2595,7 @@ font_match_p (Lisp_Object spec, Lisp_Object font)
 			break;
 		    }
 		  if (i == ASIZE (val2))
-		    return 0;
+		    EXIT_LISP_FRAME (0);
 		}
 	    }
 	}
@@ -2527,17 +2604,17 @@ font_match_p (Lisp_Object spec, Lisp_Object font)
 	  struct font *fontp;
 
 	  if (! FONT_OBJECT_P (font))
-	    return 0;
+	    EXIT_LISP_FRAME (0);
 	  fontp = XFONT_OBJECT (font);
 	  if (! fontp->driver->otf_capability)
-	    return 0;
+	    EXIT_LISP_FRAME (0);
 	  val2 = fontp->driver->otf_capability (fontp);
 	  if (NILP (val2) || ! font_check_otf (val, val2))
-	    return 0;
+	    EXIT_LISP_FRAME (0);
 	}
     }
 
-  return 1;
+  EXIT_LISP_FRAME (1);
 }
 
 
@@ -2560,7 +2637,8 @@ static void font_clear_cache (struct frame *, Lisp_Object,
 static void
 font_prepare_cache (struct frame *f, struct font_driver const *driver)
 {
-  Lisp_Object cache, val;
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (cache, val);
 
   cache = driver->get_cache (f);
   val = XCDR (cache);
@@ -2576,13 +2654,15 @@ font_prepare_cache (struct frame *f, struct font_driver const *driver)
       val = XCDR (XCAR (val));
       XSETCAR (val, make_number (XINT (XCAR (val)) + 1));
     }
+  EXIT_LISP_FRAME_VOID ();
 }
 
 
 static void
 font_finish_cache (struct frame *f, struct font_driver const *driver)
 {
-  Lisp_Object cache, val, tmp;
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (cache, val, tmp);
 
 
   cache = driver->get_cache (f);
@@ -2597,21 +2677,26 @@ font_finish_cache (struct frame *f, struct font_driver const *driver)
       font_clear_cache (f, XCAR (val), driver);
       XSETCDR (cache, XCDR (val));
     }
+  EXIT_LISP_FRAME_VOID ();
 }
 
 
 static Lisp_Object
 font_get_cache (struct frame *f, struct font_driver const *driver)
 {
-  Lisp_Object val = driver->get_cache (f);
-  Lisp_Object type = driver->type;
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (val, type);
+  val = driver->get_cache (f);
+
+  type = driver->type;
+
 
   eassert (CONSP (val));
   for (val = XCDR (val); ! EQ (XCAR (XCAR (val)), type); val = XCDR (val));
   eassert (CONSP (val));
   /* VAL = ((DRIVER-TYPE NUM-FRAMES FONT-CACHE-DATA ...) ...) */
   val = XCDR (XCAR (val));
-  return val;
+  EXIT_LISP_FRAME (val);
 }
 
 
@@ -2619,8 +2704,8 @@ static void
 font_clear_cache (struct frame *f, Lisp_Object cache,
 		  struct font_driver const *driver)
 {
-  Lisp_Object tail, elt;
-  Lisp_Object entity;
+  ENTER_LISP_FRAME (cache);
+  LISP_LOCALS (tail, elt, entity, objlist, val);
   ptrdiff_t i;
 
   /* CACHE = (DRIVER-TYPE NUM-FRAMES FONT-CACHE-DATA ...) */
@@ -2639,11 +2724,13 @@ font_clear_cache (struct frame *f, Lisp_Object cache,
 	      if (FONT_ENTITY_P (entity)
 		  && EQ (driver->type, AREF (entity, FONT_TYPE_INDEX)))
 		{
-		  Lisp_Object objlist = AREF (entity, FONT_OBJLIST_INDEX);
+		  objlist = AREF (entity, FONT_OBJLIST_INDEX);
+
 
 		  for (; CONSP (objlist); objlist = XCDR (objlist))
 		    {
-		      Lisp_Object val = XCAR (objlist);
+		      val = XCAR (objlist);
+
 		      struct font *font = XFONT_OBJECT (val);
 
 		      if (! NILP (AREF (val, FONT_TYPE_INDEX)))
@@ -2659,6 +2746,7 @@ font_clear_cache (struct frame *f, Lisp_Object cache,
 	}
     }
   XSETCDR (cache, Qnil);
+  EXIT_LISP_FRAME_VOID ();
 }
 
 
@@ -2673,7 +2761,8 @@ static Lisp_Object scratch_font_spec = NIL_INIT, scratch_font_prefer = NIL_INIT;
 static Lisp_Object
 font_delete_unmatched (Lisp_Object vec, Lisp_Object spec, int size)
 {
-  Lisp_Object entity, val;
+  ENTER_LISP_FRAME (vec, spec);
+  LISP_LOCALS (entity, val, tail, regexp);
   enum font_property_index prop;
   ptrdiff_t i;
 
@@ -2684,7 +2773,6 @@ font_delete_unmatched (Lisp_Object vec, Lisp_Object spec, int size)
 	{
 	  char name[256];
 	  ptrdiff_t namelen;
-	  Lisp_Object tail, regexp;
 
 	  namelen = font_unparse_xlfd (entity, 0, name, 256);
 	  if (namelen >= 0)
@@ -2736,7 +2824,7 @@ font_delete_unmatched (Lisp_Object vec, Lisp_Object spec, int size)
       if (prop < FONT_SPEC_MAX)
 	val = Fcons (entity, val);
     }
-  return (Fvconcat (1, &val));
+  EXIT_LISP_FRAME ((Fvconcat (1, &val)));
 }
 
 
@@ -2747,9 +2835,11 @@ font_delete_unmatched (Lisp_Object vec, Lisp_Object spec, int size)
 Lisp_Object
 font_list_entities (struct frame *f, Lisp_Object spec)
 {
+  ENTER_LISP_FRAME (spec);
+  LISP_LOCALS (ftype, val, list, cache, copy);
   struct font_driver_list *driver_list = f->font_driver_list;
-  Lisp_Object ftype, val;
-  Lisp_Object list = Qnil;
+  list = Qnil;
+
   int size;
   bool need_filtering = 0;
   int i;
@@ -2780,7 +2870,8 @@ font_list_entities (struct frame *f, Lisp_Object spec)
     if (driver_list->on
 	&& (NILP (ftype) || EQ (driver_list->driver->type, ftype)))
       {
-	Lisp_Object cache = font_get_cache (f, driver_list->driver);
+	cache = font_get_cache (f, driver_list->driver);
+
 
 	ASET (scratch_font_spec, FONT_TYPE_INDEX, driver_list->driver->type);
 	val = assoc_no_quit (scratch_font_spec, XCDR (cache));
@@ -2788,7 +2879,6 @@ font_list_entities (struct frame *f, Lisp_Object spec)
 	  val = XCDR (val);
 	else
 	  {
-	    Lisp_Object copy;
 
 	    val = driver_list->driver->list (f, scratch_font_spec);
 	    /* We put zero_vector in the font-cache to indicate that
@@ -2814,7 +2904,7 @@ font_list_entities (struct frame *f, Lisp_Object spec)
 
   list = Fnreverse (list);
   FONT_ADD_LOG ("list", spec, list);
-  return list;
+  EXIT_LISP_FRAME (list);
 }
 
 
@@ -2825,9 +2915,11 @@ font_list_entities (struct frame *f, Lisp_Object spec)
 static Lisp_Object
 font_matching_entity (struct frame *f, Lisp_Object *attrs, Lisp_Object spec)
 {
+  ENTER_LISP_FRAME (spec);
+  LISP_LOCALS (ftype, size, entity, work, cache, copy, match);
   struct font_driver_list *driver_list = f->font_driver_list;
-  Lisp_Object ftype, size, entity;
-  Lisp_Object work = copy_font_spec (spec);
+  work = copy_font_spec (spec);
+
 
   ftype = AREF (spec, FONT_TYPE_INDEX);
   size = AREF (spec, FONT_SIZE_INDEX);
@@ -2843,7 +2935,8 @@ font_matching_entity (struct frame *f, Lisp_Object *attrs, Lisp_Object spec)
     if (driver_list->on
 	&& (NILP (ftype) || EQ (driver_list->driver->type, ftype)))
       {
-	Lisp_Object cache = font_get_cache (f, driver_list->driver);
+	cache = font_get_cache (f, driver_list->driver);
+
 
 	ASET (work, FONT_TYPE_INDEX, driver_list->driver->type);
 	entity = assoc_no_quit (work, XCDR (cache));
@@ -2854,8 +2947,10 @@ font_matching_entity (struct frame *f, Lisp_Object *attrs, Lisp_Object spec)
 	    entity = driver_list->driver->match (f, work);
 	    if (!NILP (entity))
 	      {
-		Lisp_Object copy = copy_font_spec (work);
-		Lisp_Object match = Fvector (1, &entity);
+		copy = copy_font_spec (work);
+
+		match = Fvector (1, &entity);
+
 
 		ASET (copy, FONT_TYPE_INDEX, driver_list->driver->type);
 		XSETCDR (cache, Fcons (Fcons (copy, match), XCDR (cache)));
@@ -2865,7 +2960,7 @@ font_matching_entity (struct frame *f, Lisp_Object *attrs, Lisp_Object spec)
 	  break;
       }
   FONT_ADD_LOG ("match", work, entity);
-  return entity;
+  EXIT_LISP_FRAME (entity);
 }
 
 
@@ -2875,8 +2970,9 @@ font_matching_entity (struct frame *f, Lisp_Object *attrs, Lisp_Object spec)
 static Lisp_Object
 font_open_entity (struct frame *f, Lisp_Object entity, int pixel_size)
 {
+  ENTER_LISP_FRAME (entity);
+  LISP_LOCALS (objlist, size, val, font_object, fn);
   struct font_driver_list *driver_list;
-  Lisp_Object objlist, size, val, font_object;
   struct font *font;
   int height, psize;
 
@@ -2890,18 +2986,19 @@ font_open_entity (struct frame *f, Lisp_Object entity, int pixel_size)
        driver_list && ! EQ (driver_list->driver->type, val);
        driver_list = driver_list->next);
   if (! driver_list)
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
 
   for (objlist = AREF (entity, FONT_OBJLIST_INDEX); CONSP (objlist);
        objlist = XCDR (objlist))
     {
-      Lisp_Object fn = XCAR (objlist);
+      fn = XCAR (objlist);
+
       if (! NILP (AREF (fn, FONT_TYPE_INDEX))
           && XFONT_OBJECT (fn)->pixel_size == pixel_size)
         {
           if (driver_list->driver->cached_font_ok == NULL
               || driver_list->driver->cached_font_ok (f, fn, entity))
-            return fn;
+            EXIT_LISP_FRAME (fn);
         }
     }
 
@@ -2911,13 +3008,13 @@ font_open_entity (struct frame *f, Lisp_Object entity, int pixel_size)
     {
       font_object = driver_list->driver->open (f, entity, psize);
       if (NILP (font_object))
-	return Qnil;
+	EXIT_LISP_FRAME (Qnil);
       font = XFONT_OBJECT (font_object);
       if (font->average_width > 0 && font->height > 0)
 	break;
       /* Avoid an infinite loop.  */
       if (psize > pixel_size + 15)
-	return Qnil;
+	EXIT_LISP_FRAME (Qnil);
     }
   ASET (font_object, FONT_SIZE_INDEX, make_number (pixel_size));
   FONT_ADD_LOG ("open", entity, font_object);
@@ -2954,7 +3051,7 @@ font_open_entity (struct frame *f, Lisp_Object entity, int pixel_size)
     }
 #endif
 
-  return font_object;
+  EXIT_LISP_FRAME (font_object);
 }
 
 
@@ -2963,17 +3060,19 @@ font_open_entity (struct frame *f, Lisp_Object entity, int pixel_size)
 static void
 font_close_object (struct frame *f, Lisp_Object font_object)
 {
+  ENTER_LISP_FRAME (font_object);
   struct font *font = XFONT_OBJECT (font_object);
 
   if (NILP (AREF (font_object, FONT_TYPE_INDEX)))
     /* Already closed.  */
-    return;
+    EXIT_LISP_FRAME_VOID ();
   FONT_ADD_LOG ("close", font_object, Qnil);
   font->driver->close (font);
 #ifdef HAVE_WINDOW_SYSTEM
   eassert (FRAME_DISPLAY_INFO (f)->n_fonts);
   FRAME_DISPLAY_INFO (f)->n_fonts--;
 #endif
+  EXIT_LISP_FRAME_VOID ();
 }
 
 
@@ -2983,21 +3082,24 @@ font_close_object (struct frame *f, Lisp_Object font_object)
 int
 font_has_char (struct frame *f, Lisp_Object font, int c)
 {
+  ENTER_LISP_FRAME_T (int, font);
+  LISP_LOCALS (type);
   struct font *fontp;
 
   if (FONT_ENTITY_P (font))
     {
-      Lisp_Object type = AREF (font, FONT_TYPE_INDEX);
+      type = AREF (font, FONT_TYPE_INDEX);
+
       struct font_driver_list *driver_list;
 
       for (driver_list = f->font_driver_list;
 	   driver_list && ! EQ (driver_list->driver->type, type);
 	   driver_list = driver_list->next);
       if (! driver_list)
-	return 0;
+	EXIT_LISP_FRAME (0);
       if (! driver_list->driver->has_char)
-	return -1;
-      return driver_list->driver->has_char (font, c);
+	EXIT_LISP_FRAME (-1);
+      EXIT_LISP_FRAME (driver_list->driver->has_char (font, c));
     }
 
   eassert (FONT_OBJECT_P (font));
@@ -3007,9 +3109,9 @@ font_has_char (struct frame *f, Lisp_Object font, int c)
       int result = fontp->driver->has_char (font, c);
 
       if (result >= 0)
-	return result;
+	EXIT_LISP_FRAME (result);
     }
-  return (fontp->driver->encode_char (fontp, c) != FONT_INVALID_CODE);
+  EXIT_LISP_FRAME ((fontp->driver->encode_char (fontp, c) != FONT_INVALID_CODE));
 }
 
 
@@ -3018,11 +3120,12 @@ font_has_char (struct frame *f, Lisp_Object font, int c)
 static unsigned
 font_encode_char (Lisp_Object font_object, int c)
 {
+  ENTER_LISP_FRAME_T (unsigned, font_object);
   struct font *font;
 
   eassert (FONT_OBJECT_P (font_object));
   font = XFONT_OBJECT (font_object);
-  return font->driver->encode_char (font, c);
+  EXIT_LISP_FRAME (font->driver->encode_char (font, c));
 }
 
 
@@ -3031,8 +3134,9 @@ font_encode_char (Lisp_Object font_object, int c)
 Lisp_Object
 font_get_name (Lisp_Object font_object)
 {
+  ENTER_LISP_FRAME (font_object);
   eassert (FONT_OBJECT_P (font_object));
-  return AREF (font_object, FONT_NAME_INDEX);
+  EXIT_LISP_FRAME (AREF (font_object, FONT_NAME_INDEX));
 }
 
 
@@ -3042,24 +3146,30 @@ font_get_name (Lisp_Object font_object)
 Lisp_Object
 font_spec_from_name (Lisp_Object font_name)
 {
-  Lisp_Object spec = Ffont_spec (0, NULL);
+  ENTER_LISP_FRAME (font_name);
+  LISP_LOCALS (spec);
+  spec = Ffont_spec (0, NULL);
+
 
   CHECK_STRING (font_name);
   if (font_parse_name (SSDATA (font_name), SBYTES (font_name), spec) == -1)
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
   font_put_extra (spec, QCname, font_name);
   font_put_extra (spec, QCuser_spec, font_name);
-  return spec;
+  EXIT_LISP_FRAME (spec);
 }
 
 
 void
 font_clear_prop (Lisp_Object *attrs, enum font_property_index prop)
 {
-  Lisp_Object font = attrs[LFACE_FONT_INDEX];
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (font);
+  font = attrs[LFACE_FONT_INDEX];
+
 
   if (! FONTP (font))
-    return;
+    EXIT_LISP_FRAME_VOID ();
 
   if (! NILP (Ffont_get (font, QCname)))
     {
@@ -3072,7 +3182,7 @@ font_clear_prop (Lisp_Object *attrs, enum font_property_index prop)
       && prop != FONT_FOUNDRY_INDEX
       && prop != FONT_WIDTH_INDEX
       && prop != FONT_SIZE_INDEX)
-    return;
+    EXIT_LISP_FRAME_VOID ();
   if (EQ (font, attrs[LFACE_FONT_INDEX]))
     font = copy_font_spec (font);
   ASET (font, prop, Qnil);
@@ -3102,6 +3212,7 @@ font_clear_prop (Lisp_Object *attrs, enum font_property_index prop)
   else if (prop == FONT_WIDTH_INDEX)
     ASET (font, FONT_AVGWIDTH_INDEX, Qnil);
   attrs[LFACE_FONT_INDEX] = font;
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Select a font from ENTITIES (list of font-entity vectors) that
@@ -3111,8 +3222,8 @@ static Lisp_Object
 font_select_entity (struct frame *f, Lisp_Object entities,
 		    Lisp_Object *attrs, int pixel_size, int c)
 {
-  Lisp_Object font_entity;
-  Lisp_Object prefer;
+  ENTER_LISP_FRAME (entities);
+  LISP_LOCALS (font_entity, prefer, face_font);
   int i;
 
   if (NILP (XCDR (entities))
@@ -3120,8 +3231,8 @@ font_select_entity (struct frame *f, Lisp_Object entities,
     {
       font_entity = AREF (XCAR (entities), 0);
       if (c < 0 || font_has_char (f, font_entity, c) > 0)
-	return font_entity;
-      return Qnil;
+	EXIT_LISP_FRAME (font_entity);
+      EXIT_LISP_FRAME (Qnil);
     }
 
   /* Sort fonts by properties specified in ATTRS.  */
@@ -3131,7 +3242,8 @@ font_select_entity (struct frame *f, Lisp_Object entities,
     ASET (prefer, i, Qnil);
   if (FONTP (attrs[LFACE_FONT_INDEX]))
     {
-      Lisp_Object face_font = attrs[LFACE_FONT_INDEX];
+      face_font = attrs[LFACE_FONT_INDEX];
+
 
       for (i = FONT_WEIGHT_INDEX; i <= FONT_SIZE_INDEX; i++)
 	ASET (prefer, i, AREF (face_font, i));
@@ -3144,7 +3256,7 @@ font_select_entity (struct frame *f, Lisp_Object entities,
     FONT_SET_STYLE (prefer, FONT_WIDTH_INDEX, attrs[LFACE_SWIDTH_INDEX]);
   ASET (prefer, FONT_SIZE_INDEX, make_number (pixel_size));
 
-  return font_sort_entities (entities, prefer, f, c);
+  EXIT_LISP_FRAME (font_sort_entities (entities, prefer, f, c));
 }
 
 /* Return a font-entity that satisfies SPEC and is the best match for
@@ -3154,8 +3266,8 @@ font_select_entity (struct frame *f, Lisp_Object entities,
 Lisp_Object
 font_find_for_lface (struct frame *f, Lisp_Object *attrs, Lisp_Object spec, int c)
 {
-  Lisp_Object work;
-  Lisp_Object entities, val;
+  ENTER_LISP_FRAME (spec);
+  LISP_LOCALS (work, entities, val, face_font, alters);
   Lisp_Object foundry[3], *family, registry[3], adstyle[3];
   int pixel_size;
   int i, j, k, l;
@@ -3177,12 +3289,12 @@ font_find_for_lface (struct frame *f, Lisp_Object *attrs, Lisp_Object spec, int 
 
       if (font_registry_charsets (AREF (spec, FONT_REGISTRY_INDEX),
 				  &encoding, &repertory) < 0)
-	return Qnil;
+	EXIT_LISP_FRAME (Qnil);
       if (repertory
 	  && ENCODE_CHAR (repertory, c) == CHARSET_INVALID_CODE (repertory))
-	return Qnil;
+	EXIT_LISP_FRAME (Qnil);
       else if (c > encoding->max_char)
-	return Qnil;
+	EXIT_LISP_FRAME (Qnil);
     }
 
   work = copy_font_spec (spec);
@@ -3215,7 +3327,8 @@ font_find_for_lface (struct frame *f, Lisp_Object *attrs, Lisp_Object spec, int 
     adstyle[1] = zero_vector;
   else if (FONTP (attrs[LFACE_FONT_INDEX]))
     {
-      Lisp_Object face_font = attrs[LFACE_FONT_INDEX];
+      face_font = attrs[LFACE_FONT_INDEX];
+
 
       if (! NILP (AREF (face_font, FONT_ADSTYLE_INDEX)))
 	{
@@ -3245,8 +3358,8 @@ font_find_for_lface (struct frame *f, Lisp_Object *attrs, Lisp_Object spec, int 
     }
   else
     {
-      Lisp_Object alters
-	= Fassoc_string (val, Vface_alternative_font_family_alist, Qt);
+      alters = Fassoc_string (val, Vface_alternative_font_family_alist, Qt);
+
 
       if (! NILP (alters))
 	{
@@ -3289,7 +3402,7 @@ font_find_for_lface (struct frame *f, Lisp_Object *attrs, Lisp_Object spec, int 
 		      if (! NILP (val))
 			{
 			  SAFE_FREE ();
-			  return val;
+			  EXIT_LISP_FRAME (val);
 			}
 		    }
 		}
@@ -3298,13 +3411,15 @@ font_find_for_lface (struct frame *f, Lisp_Object *attrs, Lisp_Object spec, int 
     }
 
   SAFE_FREE ();
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 
 Lisp_Object
 font_open_for_lface (struct frame *f, Lisp_Object entity, Lisp_Object *attrs, Lisp_Object spec)
 {
+  ENTER_LISP_FRAME (entity, spec);
+  LISP_LOCALS (height, ffsize);
   int size;
 
   if (INTEGERP (AREF (entity, FONT_SIZE_INDEX))
@@ -3322,7 +3437,8 @@ font_open_for_lface (struct frame *f, Lisp_Object entity, Lisp_Object *attrs, Li
 	  else
 	    {
 	      struct face *def = FACE_FROM_ID (f, DEFAULT_FACE_ID);
-	      Lisp_Object height = def->lface[LFACE_HEIGHT_INDEX];
+	      height = def->lface[LFACE_HEIGHT_INDEX];
+
 	      eassert (INTEGERP (height));
 	      pt = XINT (height);
 	    }
@@ -3332,7 +3448,8 @@ font_open_for_lface (struct frame *f, Lisp_Object entity, Lisp_Object *attrs, Li
 #ifdef HAVE_NS
 	  if (size == 0)
 	    {
-	      Lisp_Object ffsize = get_frame_param (f, Qfontsize);
+	      ffsize = get_frame_param (f, Qfontsize);
+
 	      size = (NUMBERP (ffsize)
 		      ? POINT_TO_PIXEL (XINT (ffsize), FRAME_RES_Y (f)) : 0);
 	    }
@@ -3341,7 +3458,7 @@ font_open_for_lface (struct frame *f, Lisp_Object entity, Lisp_Object *attrs, Li
       size *= font_rescale_ratio (entity);
     }
 
-  return font_open_entity (f, entity, size);
+  EXIT_LISP_FRAME (font_open_entity (f, entity, size));
 }
 
 
@@ -3352,7 +3469,8 @@ font_open_for_lface (struct frame *f, Lisp_Object entity, Lisp_Object *attrs, Li
 Lisp_Object
 font_load_for_lface (struct frame *f, Lisp_Object *attrs, Lisp_Object spec)
 {
-  Lisp_Object entity, name;
+  ENTER_LISP_FRAME (spec);
+  LISP_LOCALS (entity, name, lsize);
 
   entity = font_find_for_lface (f, attrs, spec, -1);
   if (NILP (entity))
@@ -3378,7 +3496,8 @@ font_load_for_lface (struct frame *f, Lisp_Object *attrs, Lisp_Object spec)
 
 		  if (font_size > 0 && tail != q + 1)
 		    {
-		      Lisp_Object lsize = Ffont_get (spec, QCsize);
+		      lsize = Ffont_get (spec, QCsize);
+
 
 		      if ((FLOATP (lsize) && XFLOAT_DATA (lsize) == font_size)
 			  || (INTEGERP (lsize) && XINT (lsize) == font_size))
@@ -3393,7 +3512,7 @@ font_load_for_lface (struct frame *f, Lisp_Object *attrs, Lisp_Object spec)
 	    }
 	}
       if (NILP (entity))
-	return Qnil;
+	EXIT_LISP_FRAME (Qnil);
     }
   /* Don't lose the original name that was put in initially.  We need
      it to re-apply the font when font parameters (like hinting or dpi) have
@@ -3404,7 +3523,7 @@ font_load_for_lface (struct frame *f, Lisp_Object *attrs, Lisp_Object spec)
       name = Ffont_get (spec, QCuser_spec);
       if (STRINGP (name)) font_put_extra (entity, QCuser_spec, name);
     }
-  return entity;
+  EXIT_LISP_FRAME (entity);
 }
 
 
@@ -3434,6 +3553,7 @@ font_done_for_face (struct frame *f, struct face *face)
 Lisp_Object
 font_open_by_spec (struct frame *f, Lisp_Object spec)
 {
+  ENTER_LISP_FRAME (spec);
   Lisp_Object attrs[LFACE_VECTOR_SIZE];
 
   /* We set up the default font-related attributes of a face to prefer
@@ -3450,7 +3570,7 @@ font_open_by_spec (struct frame *f, Lisp_Object spec)
 #endif
   attrs[LFACE_FONT_INDEX] = Qnil;
 
-  return font_load_for_lface (f, attrs, spec);
+  EXIT_LISP_FRAME (font_load_for_lface (f, attrs, spec));
 }
 
 
@@ -3460,13 +3580,17 @@ font_open_by_spec (struct frame *f, Lisp_Object spec)
 Lisp_Object
 font_open_by_name (struct frame *f, Lisp_Object name)
 {
-  Lisp_Object spec = CALLN (Ffont_spec, QCname, name);
-  Lisp_Object ret = font_open_by_spec (f, spec);
+  ENTER_LISP_FRAME (name);
+  LISP_LOCALS (spec, ret);
+  spec = CALLN (Ffont_spec, QCname, name);
+
+  ret = font_open_by_spec (f, spec);
+
   /* Do not lose name originally put in.  */
   if (!NILP (ret))
     font_put_extra (ret, QCuser_spec, name);
 
-  return ret;
+  EXIT_LISP_FRAME (ret);
 }
 
 
@@ -3539,7 +3663,10 @@ free_font_driver_list (struct frame *f)
 Lisp_Object
 font_update_drivers (struct frame *f, Lisp_Object new_drivers)
 {
-  Lisp_Object active_drivers = Qnil;
+  ENTER_LISP_FRAME (new_drivers);
+  LISP_LOCALS (active_drivers, tail);
+  active_drivers = Qnil;
+
   struct font_driver_list *list;
 
   /* At first, turn off non-requested drivers, and turn on requested
@@ -3570,13 +3697,12 @@ font_update_drivers (struct frame *f, Lisp_Object new_drivers)
     }
 
   if (NILP (new_drivers))
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
 
   if (! EQ (new_drivers, Qt))
     {
       /* Re-order the driver list according to new_drivers.  */
       struct font_driver_list **list_table, **next;
-      Lisp_Object tail;
       int i;
       USE_SAFE_ALLOCA;
 
@@ -3624,7 +3750,7 @@ font_update_drivers (struct frame *f, Lisp_Object new_drivers)
   for (list = f->font_driver_list; list; list = list->next)
     if (list->on)
       active_drivers = nconc2 (active_drivers, list1 (list->driver->type));
-  return active_drivers;
+  EXIT_LISP_FRAME (active_drivers);
 }
 
 #if defined (HAVE_XFT) || defined (HAVE_FREETYPE)
@@ -3638,7 +3764,10 @@ fset_font_data (struct frame *f, Lisp_Object val)
 void
 font_put_frame_data (struct frame *f, Lisp_Object driver, void *data)
 {
-  Lisp_Object val = assq_no_quit (driver, f->font_data);
+  ENTER_LISP_FRAME (driver);
+  LISP_LOCALS (val);
+  val = assq_no_quit (driver, f->font_data);
+
 
   if (!data)
     fset_font_data (f, Fdelq (val, f->font_data));
@@ -3650,14 +3779,18 @@ font_put_frame_data (struct frame *f, Lisp_Object driver, void *data)
       else
 	XSETCDR (val, make_save_ptr (data));
     }
+  EXIT_LISP_FRAME_VOID ();
 }
 
 void *
 font_get_frame_data (struct frame *f, Lisp_Object driver)
 {
-  Lisp_Object val = assq_no_quit (driver, f->font_data);
+  ENTER_LISP_FRAME_T (void *, driver);
+  LISP_LOCALS (val);
+  val = assq_no_quit (driver, f->font_data);
 
-  return NILP (val) ? NULL : XSAVE_POINTER (XCDR (val), 0);
+
+  EXIT_LISP_FRAME (NILP (val) ? NULL : XSAVE_POINTER (XCDR (val), 0));
 }
 
 #endif /* HAVE_XFT || HAVE_FREETYPE */
@@ -3673,15 +3806,18 @@ font_filter_properties (Lisp_Object font,
 			const char *const boolean_properties[],
 			const char *const non_boolean_properties[])
 {
-  Lisp_Object it;
+  ENTER_LISP_FRAME (font, alist);
+  LISP_LOCALS (it, key, val);
   int i;
 
   /* Set boolean values to Qt or Qnil.  */
   for (i = 0; boolean_properties[i] != NULL; ++i)
     for (it = alist; ! NILP (it); it = XCDR (it))
       {
-        Lisp_Object key = XCAR (XCAR (it));
-        Lisp_Object val = XCDR (XCAR (it));
+        key = XCAR (XCAR (it));
+
+        val = XCDR (XCAR (it));
+
         char *keystr = SSDATA (SYMBOL_NAME (key));
 
         if (strcmp (boolean_properties[i], keystr) == 0)
@@ -3705,12 +3841,15 @@ font_filter_properties (Lisp_Object font,
   for (i = 0; non_boolean_properties[i] != NULL; ++i)
     for (it = alist; ! NILP (it); it = XCDR (it))
       {
-        Lisp_Object key = XCAR (XCAR (it));
-        Lisp_Object val = XCDR (XCAR (it));
+        key = XCAR (XCAR (it));
+
+        val = XCDR (XCAR (it));
+
         char *keystr = SSDATA (SYMBOL_NAME (key));
         if (strcmp (non_boolean_properties[i], keystr) == 0)
           Ffont_put (font, key, val);
       }
+  EXIT_LISP_FRAME_VOID ();
 }
 
 
@@ -3723,9 +3862,10 @@ static Lisp_Object
 font_at (int c, ptrdiff_t pos, struct face *face, struct window *w,
 	 Lisp_Object string)
 {
+  ENTER_LISP_FRAME (string);
+  LISP_LOCALS (font_object);
   struct frame *f;
   bool multibyte;
-  Lisp_Object font_object;
 
   multibyte = (NILP (string)
 	       ? ! NILP (BVAR (current_buffer, enable_multibyte_characters))
@@ -3762,7 +3902,7 @@ font_at (int c, ptrdiff_t pos, struct face *face, struct window *w,
 
   f = XFRAME (w->frame);
   if (! FRAME_WINDOW_P (f))
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
   if (! face)
     {
       int face_id;
@@ -3782,10 +3922,10 @@ font_at (int c, ptrdiff_t pos, struct face *face, struct window *w,
       face = FACE_FROM_ID (f, face_id);
     }
   if (! face->font)
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
 
   XSETFONT (font_object, face->font);
-  return font_object;
+  EXIT_LISP_FRAME (font_object);
 }
 
 
@@ -3806,9 +3946,12 @@ Lisp_Object
 font_range (ptrdiff_t pos, ptrdiff_t pos_byte, ptrdiff_t *limit,
 	    struct window *w, struct face *face, Lisp_Object string)
 {
+  ENTER_LISP_FRAME (string);
+  LISP_LOCALS (font_object, category);
   ptrdiff_t ignore;
   int c;
-  Lisp_Object font_object = Qnil;
+  font_object = Qnil;
+
 
   if (!face)
     {
@@ -3833,7 +3976,6 @@ font_range (ptrdiff_t pos, ptrdiff_t pos_byte, ptrdiff_t *limit,
 
   while (pos < *limit)
     {
-      Lisp_Object category;
 
       if (NILP (string))
 	FETCH_CHAR_ADVANCE_NO_CHECK (c, pos, pos_byte);
@@ -3848,13 +3990,13 @@ font_range (ptrdiff_t pos, ptrdiff_t pos_byte, ptrdiff_t *limit,
 	{
 	  font_object = font_for_char (face, c, pos - 1, string);
 	  if (NILP (font_object))
-	    return Qnil;
+	    EXIT_LISP_FRAME (Qnil);
 	  continue;
 	}
       if (font_encode_char (font_object, c) == FONT_INVALID_CODE)
 	*limit = pos - 1;
     }
-  return font_object;
+  EXIT_LISP_FRAME (font_object);
 }
 #endif
 
@@ -3869,14 +4011,15 @@ which kind of font it is.  It must be one of `font-spec', `font-entity',
 `font-object'.  */)
   (Lisp_Object object, Lisp_Object extra_type)
 {
+  ENTER_LISP_FRAME (object, extra_type);
   if (NILP (extra_type))
-    return (FONTP (object) ? Qt : Qnil);
+    EXIT_LISP_FRAME ((FONTP (object) ? Qt : Qnil));
   if (EQ (extra_type, Qfont_spec))
-    return (FONT_SPEC_P (object) ? Qt : Qnil);
+    EXIT_LISP_FRAME ((FONT_SPEC_P (object) ? Qt : Qnil));
   if (EQ (extra_type, Qfont_entity))
-    return (FONT_ENTITY_P (object) ? Qt : Qnil);
+    EXIT_LISP_FRAME ((FONT_ENTITY_P (object) ? Qt : Qnil));
   if (EQ (extra_type, Qfont_object))
-    return (FONT_OBJECT_P (object) ? Qt : Qnil);
+    EXIT_LISP_FRAME ((FONT_OBJECT_P (object) ? Qt : Qnil));
   wrong_type_argument (intern ("font-extra-type"), extra_type);
 }
 
@@ -3949,12 +4092,16 @@ language system must contain `mark' feature.
 usage: (font-spec ARGS...)  */)
   (ptrdiff_t nargs, Lisp_Object *args)
 {
-  Lisp_Object spec = font_make_spec ();
+  ENTER_LISP_FRAME_VA (nargs, args);
+  LISP_LOCALS (spec, key, val);
+  spec = font_make_spec ();
+
   ptrdiff_t i;
 
   for (i = 0; i < nargs; i += 2)
     {
-      Lisp_Object key = args[i], val;
+      key = args[i];
+
 
       CHECK_SYMBOL (key);
       if (i + 1 >= nargs)
@@ -3984,7 +4131,7 @@ usage: (font-spec ARGS...)  */)
 	    font_put_extra (spec, key, font_prop_validate (0, key, val));
 	}
     }
-  return spec;
+  EXIT_LISP_FRAME (spec);
 }
 
 /* Return a copy of FONT as a font-spec.  For the sake of speed, this code
@@ -3994,8 +4141,11 @@ usage: (font-spec ARGS...)  */)
 Lisp_Object
 copy_font_spec (Lisp_Object font)
 {
+  ENTER_LISP_FRAME (font);
+  LISP_LOCALS (new_spec, tail, cell);
   enum { font_spec_size = VECSIZE (struct font_spec) };
-  Lisp_Object new_spec, tail, *pcdr;
+  Lisp_Object *pcdr;
+
   struct font_spec *spec;
 
   CHECK_FONT (font);
@@ -4015,7 +4165,8 @@ copy_font_spec (Lisp_Object font)
   /* Copy an alist of extra information but discard :font-entity property.  */
   pcdr = spec->props + FONT_EXTRA_INDEX;
 #ifdef HAVE_CHEZ_SCHEME
-  Lisp_Object cell = Qnil;
+  cell = Qnil;
+
 #endif /* HAVE_CHEZ_SCHEME */
   for (tail = AREF (font, FONT_EXTRA_INDEX); CONSP (tail); tail = XCDR (tail))
     if (!EQ (XCAR (XCAR (tail)), QCfont_entity))
@@ -4034,7 +4185,7 @@ copy_font_spec (Lisp_Object font)
       }
 
   XSETFONT (new_spec, spec);
-  return new_spec;
+  EXIT_LISP_FRAME (new_spec);
 }
 
 /* Merge font-specs FROM and TO, and return a new font-spec.
@@ -4043,7 +4194,8 @@ copy_font_spec (Lisp_Object font)
 Lisp_Object
 merge_font_spec (Lisp_Object from, Lisp_Object to)
 {
-  Lisp_Object extra, tail;
+  ENTER_LISP_FRAME (from, to);
+  LISP_LOCALS (extra, tail, slot);
   int i;
 
   CHECK_FONT (from);
@@ -4055,7 +4207,8 @@ merge_font_spec (Lisp_Object from, Lisp_Object to)
   for (tail = AREF (from, FONT_EXTRA_INDEX); CONSP (tail); tail = XCDR (tail))
     if (! EQ (XCAR (XCAR (tail)), Qfont_entity))
       {
-	Lisp_Object slot = assq_no_quit (XCAR (XCAR (tail)), extra);
+	slot = assq_no_quit (XCAR (XCAR (tail)), extra);
+
 
 	if (! NILP (slot))
 	  XSETCDR (slot, XCDR (XCAR (tail)));
@@ -4063,7 +4216,7 @@ merge_font_spec (Lisp_Object from, Lisp_Object to)
 	  extra = Fcons (Fcons (XCAR (XCAR (tail)), XCDR (XCAR (tail))), extra);
       }
   ASET (to, FONT_EXTRA_INDEX, extra);
-  return to;
+  EXIT_LISP_FRAME (to);
 }
 
 DEFUN ("font-get", Ffont_get, Sfont_get, 2, 2, 0,
@@ -4091,17 +4244,18 @@ The value of :combining-capability is non-nil if the font-backend of
 FONT supports rendering of combining characters for non-OTF fonts.  */)
   (Lisp_Object font, Lisp_Object key)
 {
+  ENTER_LISP_FRAME (font, key);
+  LISP_LOCALS (val);
   int idx;
-  Lisp_Object val;
 
   CHECK_FONT (font);
   CHECK_SYMBOL (key);
 
   idx = get_font_prop_index (key);
   if (idx >= FONT_WEIGHT_INDEX && idx <= FONT_WIDTH_INDEX)
-    return font_style_symbolic (font, idx, 0);
+    EXIT_LISP_FRAME (font_style_symbolic (font, idx, 0));
   if (idx >= 0 && idx < FONT_EXTRA_INDEX)
-    return AREF (font, idx);
+    EXIT_LISP_FRAME (AREF (font, idx));
   val = Fassq (key, AREF (font, FONT_EXTRA_INDEX));
   if (NILP (val) && FONT_OBJECT_P (font))
     {
@@ -4122,7 +4276,7 @@ FONT supports rendering of combining characters for non-OTF fonts.  */)
     }
   else
     val = Fcdr (val);
-  return val;
+  EXIT_LISP_FRAME (val);
 }
 
 #ifdef HAVE_WINDOW_SYSTEM
@@ -4142,15 +4296,17 @@ The optional argument FRAME specifies the frame that the face attributes
 are to be displayed on.  If omitted, the selected frame is used.  */)
   (Lisp_Object font, Lisp_Object frame)
 {
+  ENTER_LISP_FRAME (font, frame);
+  LISP_LOCALS (val, name, font_dpi);
   struct frame *f = decode_live_frame (frame);
   Lisp_Object plist[10];
-  Lisp_Object val;
   int n = 0;
 
   if (STRINGP (font))
     {
       int fontset = fs_query_fontset (font, 0);
-      Lisp_Object name = font;
+      name = font;
+
       if (fontset >= 0)
 	font = fontset_ascii (fontset);
       font = font_spec_from_name (name);
@@ -4170,7 +4326,8 @@ are to be displayed on.  If omitted, the selected frame is used.  */)
   val = AREF (font, FONT_SIZE_INDEX);
   if (INTEGERP (val))
     {
-      Lisp_Object font_dpi = AREF (font, FONT_DPI_INDEX);
+      font_dpi = AREF (font, FONT_DPI_INDEX);
+
       int dpi = INTEGERP (font_dpi) ? XINT (font_dpi) : FRAME_RES_Y (f);
       plist[n++] = QCheight;
       plist[n++] = make_number (PIXEL_TO_POINT (XINT (val) * 10, dpi));
@@ -4202,7 +4359,7 @@ are to be displayed on.  If omitted, the selected frame is used.  */)
       plist[n++] = val;
     }
 
-  return Flist (n, plist);
+  EXIT_LISP_FRAME (Flist (n, plist));
 }
 
 #endif
@@ -4219,6 +4376,7 @@ If FONT is a font-entity or a font-object, KEY must not be the one
 accepted by `font-spec'.  */)
   (Lisp_Object font, Lisp_Object prop, Lisp_Object val)
 {
+  ENTER_LISP_FRAME (font, prop, val);
   int idx;
 
   idx = get_font_prop_index (prop);
@@ -4238,7 +4396,7 @@ accepted by `font-spec'.  */)
 	CHECK_FONT (font);
       font_put_extra (font, prop, font_prop_validate (0, prop, val));
     }
-  return val;
+  EXIT_LISP_FRAME (val);
 }
 
 DEFUN ("list-fonts", Flist_fonts, Slist_fonts, 1, 4, 0,
@@ -4250,8 +4408,9 @@ control the order of the returned list.  Fonts are sorted by
 how close they are to PREFER.  */)
   (Lisp_Object font_spec, Lisp_Object frame, Lisp_Object num, Lisp_Object prefer)
 {
+  ENTER_LISP_FRAME (font_spec, frame, num, prefer);
+  LISP_LOCALS (vec, list);
   struct frame *f = decode_live_frame (frame);
-  Lisp_Object vec, list;
   EMACS_INT n = 0;
 
   CHECK_FONT_SPEC (font_spec);
@@ -4260,17 +4419,17 @@ how close they are to PREFER.  */)
       CHECK_NUMBER (num);
       n = XINT (num);
       if (n <= 0)
-	return Qnil;
+	EXIT_LISP_FRAME (Qnil);
     }
   if (! NILP (prefer))
     CHECK_FONT_SPEC (prefer);
 
   list = font_list_entities (f, font_spec);
   if (NILP (list))
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
   if (NILP (XCDR (list))
       && ASIZE (XCAR (list)) == 1)
-    return list1 (AREF (XCAR (list), 0));
+    EXIT_LISP_FRAME (list1 (AREF (XCAR (list), 0)));
 
   if (! NILP (prefer))
     vec = font_sort_entities (list, prefer, f, 0);
@@ -4283,7 +4442,7 @@ how close they are to PREFER.  */)
       for (list = Qnil, n--; n >= 0; n--)
 	list = Fcons (AREF (vec, n), list);
     }
-  return list;
+  EXIT_LISP_FRAME (list);
 }
 
 DEFUN ("font-family-list", Ffont_family_list, Sfont_family_list, 0, 1, 0,
@@ -4291,23 +4450,28 @@ DEFUN ("font-family-list", Ffont_family_list, Sfont_family_list, 0, 1, 0,
 If FRAME is omitted or nil, the selected frame is used.  */)
   (Lisp_Object frame)
 {
+  ENTER_LISP_FRAME (frame);
+  LISP_LOCALS (list, val, tail);
   struct frame *f = decode_live_frame (frame);
   struct font_driver_list *driver_list;
-  Lisp_Object list = Qnil;
+  list = Qnil;
+
 
   for (driver_list = f->font_driver_list; driver_list;
        driver_list = driver_list->next)
     if (driver_list->driver->list_family)
       {
-	Lisp_Object val = driver_list->driver->list_family (f);
-	Lisp_Object tail = list;
+	val = driver_list->driver->list_family (f);
+
+	tail = list;
+
 
 	for (; CONSP (val); val = XCDR (val))
 	  if (NILP (Fmemq (XCAR (val), tail))
 	      && SYMBOLP (XCAR (val)))
 	    list = Fcons (SYMBOL_NAME (XCAR (val)), list);
       }
-  return list;
+  EXIT_LISP_FRAME (list);
 }
 
 DEFUN ("find-font", Ffind_font, Sfind_font, 1, 2, 0,
@@ -4315,11 +4479,14 @@ DEFUN ("find-font", Ffind_font, Sfind_font, 1, 2, 0,
 Optional 2nd argument FRAME, if non-nil, specifies the target frame.  */)
   (Lisp_Object font_spec, Lisp_Object frame)
 {
-  Lisp_Object val = Flist_fonts (font_spec, frame, make_number (1), Qnil);
+  ENTER_LISP_FRAME (font_spec, frame);
+  LISP_LOCALS (val);
+  val = Flist_fonts (font_spec, frame, make_number (1), Qnil);
+
 
   if (CONSP (val))
     val = XCAR (val);
-  return val;
+  EXIT_LISP_FRAME (val);
 }
 
 DEFUN ("font-xlfd-name", Ffont_xlfd_name, Sfont_xlfd_name, 1, 2, 0,
@@ -4330,6 +4497,8 @@ If the 2nd optional arg FOLD-WILDCARDS is non-nil,
 the consecutive wildcards are folded into one.  */)
   (Lisp_Object font, Lisp_Object fold_wildcards)
 {
+  ENTER_LISP_FRAME (font, fold_wildcards);
+  LISP_LOCALS (font_name);
   char name[256];
   int namelen, pixel_size = 0;
 
@@ -4337,13 +4506,14 @@ the consecutive wildcards are folded into one.  */)
 
   if (FONT_OBJECT_P (font))
     {
-      Lisp_Object font_name = AREF (font, FONT_NAME_INDEX);
+      font_name = AREF (font, FONT_NAME_INDEX);
+
 
       if (STRINGP (font_name)
 	  && SDATA (font_name)[0] == '-')
 	{
 	  if (NILP (fold_wildcards))
-	    return font_name;
+	    EXIT_LISP_FRAME (font_name);
 	  lispstpcpy (name, font_name);
 	  namelen = SBYTES (font_name);
 	  goto done;
@@ -4352,7 +4522,7 @@ the consecutive wildcards are folded into one.  */)
     }
   namelen = font_unparse_xlfd (font, pixel_size, name, 256);
   if (namelen < 0)
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
  done:
   if (! NILP (fold_wildcards))
     {
@@ -4366,18 +4536,21 @@ the consecutive wildcards are folded into one.  */)
 	}
     }
 
-  return make_string (name, namelen);
+  EXIT_LISP_FRAME (make_string (name, namelen));
 }
 
 void
 clear_font_cache (struct frame *f)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (val, tmp, cache);
   struct font_driver_list *driver_list = f->font_driver_list;
 
   for (; driver_list; driver_list = driver_list->next)
     if (driver_list->on)
       {
-	Lisp_Object val, tmp, cache = driver_list->driver->get_cache (f);
+	cache = driver_list->driver->get_cache (f);
+
 
 	val = XCDR (cache);
 	while (! NILP (val)
@@ -4391,24 +4564,27 @@ clear_font_cache (struct frame *f)
 	    XSETCDR (cache, XCDR (val));
 	  }
       }
+  EXIT_LISP_FRAME_VOID ();
 }
 
 DEFUN ("clear-font-cache", Fclear_font_cache, Sclear_font_cache, 0, 0, 0,
        doc: /* Clear font cache of each frame.  */)
   (void)
 {
-  Lisp_Object list, frame;
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (list, frame);
 
   FOR_EACH_FRAME (list, frame)
     clear_font_cache (XFRAME (frame));
 
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 
 void
 font_fill_lglyph_metrics (Lisp_Object glyph, Lisp_Object font_object)
 {
+  ENTER_LISP_FRAME (glyph, font_object);
   struct font *font = XFONT_OBJECT (font_object);
   unsigned code = font->driver->encode_char (font, LGLYPH_CHAR (glyph));
   struct font_metrics metrics;
@@ -4420,6 +4596,7 @@ font_fill_lglyph_metrics (Lisp_Object glyph, Lisp_Object font_object)
   LGLYPH_SET_WIDTH (glyph, metrics.width);
   LGLYPH_SET_ASCENT (glyph, metrics.ascent);
   LGLYPH_SET_DESCENT (glyph, metrics.descent);
+  EXIT_LISP_FRAME_VOID ();
 }
 
 
@@ -4436,19 +4613,20 @@ See the documentation of `composition-get-gstring' for the format of
 GSTRING.  */)
   (Lisp_Object gstring)
 {
+  ENTER_LISP_FRAME (gstring);
+  LISP_LOCALS (font_object, n, glyph);
   struct font *font;
-  Lisp_Object font_object, n, glyph;
   ptrdiff_t i, from, to;
 
   if (! composition_gstring_p (gstring))
     signal_error ("Invalid glyph-string: ", gstring);
   if (! NILP (LGSTRING_ID (gstring)))
-    return gstring;
+    EXIT_LISP_FRAME (gstring);
   font_object = LGSTRING_FONT (gstring);
   CHECK_FONT_OBJECT (font_object);
   font = XFONT_OBJECT (font_object);
   if (! font->driver->shape)
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
 
   /* Try at most three times with larger gstring each time.  */
   for (i = 0; i < 3; i++)
@@ -4460,7 +4638,7 @@ GSTRING.  */)
 			       LGSTRING_GLYPH_LEN (gstring), -1);
     }
   if (i == 3 || XINT (n) == 0)
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
   if (XINT (n) < LGSTRING_GLYPH_LEN (gstring))
     LGSTRING_SET_GLYPH (gstring, XINT (n), Qnil);
 
@@ -4496,10 +4674,10 @@ GSTRING.  */)
       from = LGLYPH_FROM (glyph);
       to = LGLYPH_TO (glyph);
     }
-  return composition_gstring_put_cache (gstring, XINT (n));
+  EXIT_LISP_FRAME (composition_gstring_put_cache (gstring, XINT (n)));
 
  shaper_error:
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 DEFUN ("font-variation-glyphs", Ffont_variation_glyphs, Sfont_variation_glyphs,
@@ -4512,28 +4690,30 @@ where
   GLYPH-ID is a glyph code of the corresponding variation glyph.  */)
   (Lisp_Object font_object, Lisp_Object character)
 {
+  ENTER_LISP_FRAME (font_object, character);
+  LISP_LOCALS (val, code);
   unsigned variations[256];
   struct font *font;
   int i, n;
-  Lisp_Object val;
 
   CHECK_FONT_OBJECT (font_object);
   CHECK_CHARACTER (character);
   font = XFONT_OBJECT (font_object);
   if (! font->driver->get_variation_glyphs)
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
   n = font->driver->get_variation_glyphs (font, XINT (character), variations);
   if (! n)
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
   val = Qnil;
   for (i = 0; i < 255; i++)
     if (variations[i])
       {
 	int vs = (i < 16 ? 0xFE00 + i : 0xE0100 + (i - 16));
-	Lisp_Object code = INTEGER_TO_CONS (variations[i]);
+	code = INTEGER_TO_CONS (variations[i]);
+
 	val = Fcons (Fcons (make_number (vs), code), val);
       }
-  return val;
+  EXIT_LISP_FRAME (val);
 }
 
 /* Return a description of the font at POSITION in the current buffer.
@@ -4575,6 +4755,8 @@ DEFUN ("internal-char-font", Finternal_char_font, Sinternal_char_font, 1, 2, 0,
        doc: /* For internal use only.  */)
   (Lisp_Object position, Lisp_Object ch)
 {
+  ENTER_LISP_FRAME (position, ch);
+  LISP_LOCALS (window, font_object);
   ptrdiff_t pos, pos_byte, dummy;
   int face_id;
   int c;
@@ -4590,7 +4772,6 @@ DEFUN ("internal-char-font", Finternal_char_font, Sinternal_char_font, 1, 2, 0,
     }
   else
     {
-      Lisp_Object window;
       struct window *w;
 
       CHECK_NUMBER_COERCE_MARKER (position);
@@ -4607,17 +4788,17 @@ DEFUN ("internal-char-font", Finternal_char_font, Sinternal_char_font, 1, 2, 0,
 	}
       window = Fget_buffer_window (Fcurrent_buffer (), Qnil);
       if (NILP (window))
-	return Qnil;
+	EXIT_LISP_FRAME (Qnil);
       w = XWINDOW (window);
       f = XFRAME (w->frame);
       face_id = face_at_buffer_position (w, pos, &dummy,
 					 pos + 100, false, -1);
     }
   if (! CHAR_VALID_P (c))
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
 
   if (! FRAME_WINDOW_P (f))
-    return terminal_glyph_code (FRAME_TERMINAL (f), c);
+    EXIT_LISP_FRAME (terminal_glyph_code (FRAME_TERMINAL (f), c));
 
   /* We need the basic faces to be valid below, so recompute them if
      some code just happened to clear the face cache.  */
@@ -4627,13 +4808,12 @@ DEFUN ("internal-char-font", Finternal_char_font, Sinternal_char_font, 1, 2, 0,
   face_id = FACE_FOR_CHAR (f, FACE_FROM_ID (f, face_id), c, pos, Qnil);
   struct face *face = FACE_FROM_ID (f, face_id);
   if (! face->font)
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
   unsigned code = face->font->driver->encode_char (face->font, c);
   if (code == FONT_INVALID_CODE)
-    return Qnil;
-  Lisp_Object font_object;
+    EXIT_LISP_FRAME (Qnil);
   XSETFONT (font_object, face->font);
-  return Fcons (font_object, INTEGER_TO_CONS (code));
+  EXIT_LISP_FRAME (Fcons (font_object, INTEGER_TO_CONS (code)));
 }
 
 #if 0
@@ -4672,8 +4852,10 @@ See the documentation of `composition-get-gstring' for the format of
 glyph-string.  */)
   (Lisp_Object otf_features, Lisp_Object gstring_in, Lisp_Object from, Lisp_Object to, Lisp_Object gstring_out, Lisp_Object index)
 {
-  Lisp_Object font_object = LGSTRING_FONT (gstring_in);
-  Lisp_Object val;
+  ENTER_LISP_FRAME (otf_features, gstring_in, from, to, gstring_out, index);
+  LISP_LOCALS (font_object, val);
+  font_object = LGSTRING_FONT (gstring_in);
+
   struct font *font;
   int len, num;
 
@@ -4704,8 +4886,8 @@ glyph-string.  */)
 				 gstring_in, XINT (from), XINT (to),
 				 gstring_out, XINT (index), 0);
   if (num < 0)
-    return Qnil;
-  return make_number (num);
+    EXIT_LISP_FRAME (Qnil);
+  EXIT_LISP_FRAME (make_number (num));
 }
 
 DEFUN ("font-otf-alternates", Ffont_otf_alternates, Sfont_otf_alternates,
@@ -4722,9 +4904,9 @@ character code corresponding to the glyph or nil if there's no
 corresponding character.  */)
   (Lisp_Object font_object, Lisp_Object character, Lisp_Object otf_features)
 {
+  ENTER_LISP_FRAME (font_object, character, otf_features);
+  LISP_LOCALS (gstring_in, gstring_out, g, alternates);
   struct font *font = CHECK_FONT_GET_OBJECT (font_object);
-  Lisp_Object gstring_in, gstring_out, g;
-  Lisp_Object alternates;
   int i, num;
 
   if (! font->driver->otf_drive)
@@ -4744,7 +4926,8 @@ corresponding character.  */)
   alternates = Qnil;
   for (i = 0; i < num; i++)
     {
-      Lisp_Object g = LGSTRING_GLYPH (gstring_out, i);
+      g = LGSTRING_GLYPH (gstring_out, i);
+
       int c = LGLYPH_CHAR (g);
       unsigned code = LGLYPH_CODE (g);
 
@@ -4752,7 +4935,7 @@ corresponding character.  */)
 				 c > 0 ? make_number (c) : Qnil),
 			  alternates);
     }
-  return Fnreverse (alternates);
+  EXIT_LISP_FRAME (Fnreverse (alternates));
 }
 #endif	/* 0 */
 
@@ -4762,6 +4945,7 @@ DEFUN ("open-font", Fopen_font, Sopen_font, 1, 3, 0,
        doc: /* Open FONT-ENTITY.  */)
   (Lisp_Object font_entity, Lisp_Object size, Lisp_Object frame)
 {
+  ENTER_LISP_FRAME (font_entity, size, frame);
   EMACS_INT isize;
   struct frame *f = decode_live_frame (frame);
 
@@ -4781,16 +4965,17 @@ DEFUN ("open-font", Fopen_font, Sopen_font, 1, 3, 0,
       if (isize == 0)
 	isize = 120;
     }
-  return font_open_entity (f, font_entity, isize);
+  EXIT_LISP_FRAME (font_open_entity (f, font_entity, isize));
 }
 
 DEFUN ("close-font", Fclose_font, Sclose_font, 1, 2, 0,
        doc: /* Close FONT-OBJECT.  */)
   (Lisp_Object font_object, Lisp_Object frame)
 {
+  ENTER_LISP_FRAME (font_object, frame);
   CHECK_FONT_OBJECT (font_object);
   font_close_object (decode_live_frame (frame), font_object);
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 DEFUN ("query-font", Fquery_font, Squery_font, 1, 1, 0,
@@ -4836,8 +5021,11 @@ FEATURE is a symbol representing OpenType feature tag.
 If the font is not OpenType font, CAPABILITY is nil.  */)
   (Lisp_Object font_object)
 {
+  ENTER_LISP_FRAME (font_object);
+  LISP_LOCALS (val);
   struct font *font = CHECK_FONT_GET_OBJECT (font_object);
-  Lisp_Object val = make_uninit_vector (9);
+  val = make_uninit_vector (9);
+
 
   ASET (val, 0, AREF (font_object, FONT_NAME_INDEX));
   ASET (val, 1, AREF (font_object, FONT_FILE_INDEX));
@@ -4851,7 +5039,7 @@ If the font is not OpenType font, CAPABILITY is nil.  */)
     ASET (val, 8, Fcons (Qopentype, font->driver->otf_capability (font)));
   else
     ASET (val, 8, Qnil);
-  return val;
+  EXIT_LISP_FRAME (val);
 }
 
 DEFUN ("font-get-glyphs", Ffont_get_glyphs, Sfont_get_glyphs, 3, 4, 0,
@@ -4877,9 +5065,12 @@ the corresponding element is nil.  */)
   (Lisp_Object font_object, Lisp_Object from, Lisp_Object to,
    Lisp_Object object)
 {
+  ENTER_LISP_FRAME (font_object, from, to, object);
+  LISP_LOCALS (vec, elt, g);
   struct font *font = CHECK_FONT_GET_OBJECT (font_object);
   ptrdiff_t i, len;
-  Lisp_Object *chars, vec;
+  Lisp_Object *chars;
+
   USE_SAFE_ALLOCA;
 
   if (NILP (object))
@@ -4888,7 +5079,7 @@ the corresponding element is nil.  */)
 
       validate_region (&from, &to);
       if (EQ (from, to))
-	return Qnil;
+	EXIT_LISP_FRAME (Qnil);
       len = XFASTINT (to) - XFASTINT (from);
       SAFE_ALLOCA_LISP (chars, len);
       charpos = XFASTINT (from);
@@ -4907,7 +5098,7 @@ the corresponding element is nil.  */)
 
       validate_subarray (object, from, to, SCHARS (object), &ifrom, &ito);
       if (ifrom == ito)
-	return Qnil;
+	EXIT_LISP_FRAME (Qnil);
       len = ito - ifrom;
       SAFE_ALLOCA_LISP (chars, len);
       p = SDATA (object);
@@ -4936,11 +5127,12 @@ the corresponding element is nil.  */)
 
       validate_subarray (object, from, to, ASIZE (object), &ifrom, &ito);
       if (ifrom == ito)
-	return Qnil;
+	EXIT_LISP_FRAME (Qnil);
       len = ito - ifrom;
       for (i = 0; i < len; i++)
 	{
-	  Lisp_Object elt = AREF (object, ifrom + i);
+	  elt = AREF (object, ifrom + i);
+
 	  CHECK_CHARACTER (elt);
 	}
       chars = aref_addr (object, ifrom);
@@ -4951,7 +5143,6 @@ the corresponding element is nil.  */)
   vec = make_uninit_vector (len);
   for (i = 0; i < len; i++)
     {
-      Lisp_Object g;
       int c = XFASTINT (chars[i]);
       unsigned code;
       struct font_metrics metrics;
@@ -4977,7 +5168,7 @@ the corresponding element is nil.  */)
     }
   if (! VECTORP (object))
     SAFE_FREE ();
-  return vec;
+  EXIT_LISP_FRAME (vec);
 }
 
 DEFUN ("font-match-p", Ffont_match_p, Sfont_match_p, 2, 2, 0,
@@ -4985,10 +5176,11 @@ DEFUN ("font-match-p", Ffont_match_p, Sfont_match_p, 2, 2, 0,
 FONT is a font-spec, font-entity, or font-object. */)
   (Lisp_Object spec, Lisp_Object font)
 {
+  ENTER_LISP_FRAME (spec, font);
   CHECK_FONT_SPEC (spec);
   CHECK_FONT (font);
 
-  return (font_match_p (spec, font) ? Qt : Qnil);
+  EXIT_LISP_FRAME ((font_match_p (spec, font) ? Qt : Qnil));
 }
 
 DEFUN ("font-at", Ffont_at, Sfont_at, 1, 3, 0,
@@ -4999,6 +5191,7 @@ Optional third arg STRING, if non-nil, is a string containing the target
 character at index specified by POSITION.  */)
   (Lisp_Object position, Lisp_Object window, Lisp_Object string)
 {
+  ENTER_LISP_FRAME (position, window, string);
   struct window *w = decode_live_window (window);
 
   if (NILP (string))
@@ -5017,7 +5210,7 @@ character at index specified by POSITION.  */)
 	args_out_of_range (string, position);
     }
 
-  return font_at (-1, XINT (position), NULL, w, string);
+  EXIT_LISP_FRAME (font_at (-1, XINT (position), NULL, w, string));
 }
 
 #if 0
@@ -5027,7 +5220,10 @@ The value is a number of glyphs drawn.
 Type C-l to recover what previously shown.  */)
   (Lisp_Object font_object, Lisp_Object string)
 {
-  Lisp_Object frame = selected_frame;
+  ENTER_LISP_FRAME (font_object, string);
+  LISP_LOCALS (frame, ch, val);
+  frame = selected_frame;
+
   struct frame *f = XFRAME (frame);
   struct font *font;
   struct face *face;
@@ -5040,8 +5236,8 @@ Type C-l to recover what previously shown.  */)
   code = alloca (sizeof (unsigned) * len);
   for (i = 0; i < len; i++)
     {
-      Lisp_Object ch = Faref (string, make_number (i));
-      Lisp_Object val;
+      ch = Faref (string, make_number (i));
+
       int c = XINT (ch);
 
       code[i] = font->driver->encode_char (font, c);
@@ -5057,7 +5253,7 @@ Type C-l to recover what previously shown.  */)
   if (font->driver->done_face)
     font->driver->done_face (f, face);
   face->fontp = NULL;
-  return make_number (len);
+  EXIT_LISP_FRAME (make_number (len));
 }
 #endif
 
@@ -5066,14 +5262,15 @@ DEFUN ("frame-font-cache", Fframe_font_cache, Sframe_font_cache, 0, 1, 0,
 If FRAME is omitted or nil, use the selected frame.  */)
   (Lisp_Object frame)
 {
+  ENTER_LISP_FRAME (frame);
 #ifdef HAVE_WINDOW_SYSTEM
   struct frame *f = decode_live_frame (frame);
 
   if (FRAME_WINDOW_P (f))
-    return FRAME_DISPLAY_INFO (f)->name_list_element;
+    EXIT_LISP_FRAME (FRAME_DISPLAY_INFO (f)->name_list_element);
   else
 #endif
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
 }
 
 #endif	/* FONT_DEBUG */
@@ -5125,10 +5322,10 @@ where
 If the named font is not yet loaded, return nil.  */)
   (Lisp_Object name, Lisp_Object frame)
 {
+  ENTER_LISP_FRAME (name, frame);
+  LISP_LOCALS (info, font_object, entity);
   struct frame *f;
   struct font *font;
-  Lisp_Object info;
-  Lisp_Object font_object;
 
   if (! FONTP (name))
     CHECK_STRING (name);
@@ -5149,12 +5346,13 @@ If the named font is not yet loaded, return nil.  */)
   else
     {
       struct face *face = FACE_FROM_ID (f, DEFAULT_FACE_ID);
-      Lisp_Object entity = font_matching_entity (f, face->lface, name);
+      entity = font_matching_entity (f, face->lface, name);
+
 
       font_object = ! NILP (entity) ? font_open_entity (f, entity, 0) : Qnil;
     }
   if (NILP (font_object))
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
   font = XFONT_OBJECT (font_object);
 
   info = make_uninit_vector (14);
@@ -5182,7 +5380,7 @@ If the named font is not yet loaded, return nil.  */)
      by `reference-count'.  */
   font_close_object (f, font_object);
 #endif
-  return info;
+  EXIT_LISP_FRAME (info);
 }
 #endif
 
@@ -5192,8 +5390,9 @@ If the named font is not yet loaded, return nil.  */)
 static Lisp_Object
 build_style_table (const struct table_entry *entry, int nelement)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (table, elt);
   int i, j;
-  Lisp_Object table, elt;
 
   table = make_uninit_vector (nelement);
   for (i = 0; i < nelement; i++)
@@ -5205,7 +5404,7 @@ build_style_table (const struct table_entry *entry, int nelement)
 	ASET (elt, j + 1, intern_c_string (entry[i].names[j]));
       ASET (table, i, elt);
     }
-  return table;
+  EXIT_LISP_FRAME (table);
 }
 
 /* The deferred font-log data of the form [ACTION ARG RESULT].
@@ -5220,11 +5419,12 @@ static Lisp_Object Vfont_log_deferred = NIL_INIT;
 void
 font_add_log (const char *action, Lisp_Object arg, Lisp_Object result)
 {
-  Lisp_Object val;
+  ENTER_LISP_FRAME (arg, result);
+  LISP_LOCALS (val, tail, elt);
   int i;
 
   if (EQ (Vfont_log, Qt))
-    return;
+    EXIT_LISP_FRAME_VOID ();
   if (STRINGP (AREF (Vfont_log_deferred, 0)))
     {
       char *str = SSDATA (AREF (Vfont_log_deferred, 0));
@@ -5236,7 +5436,6 @@ font_add_log (const char *action, Lisp_Object arg, Lisp_Object result)
 
   if (FONTP (arg))
     {
-      Lisp_Object tail, elt;
       AUTO_STRING (equal, "=");
 
       val = Ffont_xlfd_name (arg, Qt);
@@ -5278,7 +5477,6 @@ font_add_log (const char *action, Lisp_Object arg, Lisp_Object result)
     }
   else if (CONSP (result))
     {
-      Lisp_Object tail;
       result = Fcopy_sequence (result);
       for (tail = result; CONSP (tail); tail = XCDR (tail))
 	{
@@ -5300,6 +5498,7 @@ font_add_log (const char *action, Lisp_Object arg, Lisp_Object result)
 	}
     }
   Vfont_log = Fcons (list3 (intern (action), arg, result), Vfont_log);
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Record a font-related logging data to be added to Vfont_log when
@@ -5309,11 +5508,13 @@ font_add_log (const char *action, Lisp_Object arg, Lisp_Object result)
 void
 font_deferred_log (const char *action, Lisp_Object arg, Lisp_Object result)
 {
+  ENTER_LISP_FRAME (arg, result);
   if (EQ (Vfont_log, Qt))
-    return;
+    EXIT_LISP_FRAME_VOID ();
   ASET (Vfont_log_deferred, 0, build_string (action));
   ASET (Vfont_log_deferred, 1, arg);
   ASET (Vfont_log_deferred, 2, result);
+  EXIT_LISP_FRAME_VOID ();
 }
 
 void

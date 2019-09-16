@@ -1728,7 +1728,8 @@ merge_and_sort_env (char **envp1, char **envp2, char **new_envp)
 int
 sys_spawnve (int mode, char *cmdname, char **argv, char **envp)
 {
-  Lisp_Object program, full;
+  ENTER_LISP_FRAME_T (int);
+  LISP_LOCALS (program, full);
   char *cmdline, *env, *parg, **targ;
   int arglen, numenv;
   pid_t pid;
@@ -1755,7 +1756,7 @@ sys_spawnve (int mode, char *cmdname, char **argv, char **envp)
   if (mode != _P_NOWAIT)
     {
       errno = EINVAL;
-      return -1;
+      EXIT_LISP_FRAME (-1);
     }
 
   /* Handle executable names without an executable suffix.  The caller
@@ -1770,7 +1771,7 @@ sys_spawnve (int mode, char *cmdname, char **argv, char **envp)
       if (NILP (full))
 	{
 	  errno = EINVAL;
-	  return -1;
+	  EXIT_LISP_FRAME (-1);
 	}
       program = ENCODE_FILE (full);
       cmdname = SSDATA (program);
@@ -1798,7 +1799,7 @@ sys_spawnve (int mode, char *cmdname, char **argv, char **envp)
   if (_mbspbrk ((unsigned char *)cmdname_a, (const unsigned char *)"?"))
     {
       errno = ENOENT;
-      return -1;
+      EXIT_LISP_FRAME (-1);
     }
   /* From here on, CMDNAME is an ANSI-encoded string.  */
   cmdname = cmdname_a;
@@ -2066,7 +2067,7 @@ sys_spawnve (int mode, char *cmdname, char **argv, char **envp)
   if (cp == NULL)
     {
       errno = EAGAIN;
-      return -1;
+      EXIT_LISP_FRAME (-1);
     }
 
   /* Now create the process.  */
@@ -2074,10 +2075,10 @@ sys_spawnve (int mode, char *cmdname, char **argv, char **envp)
     {
       delete_child (cp);
       errno = ENOEXEC;
-      return -1;
+      EXIT_LISP_FRAME (-1);
     }
 
-  return pid;
+  EXIT_LISP_FRAME (pid);
 }
 
 /* Emulate the select call.
@@ -2898,6 +2899,8 @@ the value of `system-name' and should supplant it), otherwise t is
 returned to indicate winsock support is present.  */)
   (Lisp_Object load_now)
 {
+  ENTER_LISP_FRAME (load_now);
+  LISP_LOCALS (orig_hostname, hostname);
   int have_winsock;
 
   have_winsock = init_winsock (!NILP (load_now));
@@ -2908,17 +2911,17 @@ returned to indicate winsock support is present.  */)
 	  /* Return new value for system-name.  The best way to do this
 	     is to call init_system_name, saving and restoring the
 	     original value to avoid side-effects.  */
-	  Lisp_Object orig_hostname = Vsystem_name;
-	  Lisp_Object hostname;
+	  orig_hostname = Vsystem_name;
+
 
 	  init_system_name ();
 	  hostname = Vsystem_name;
 	  Vsystem_name = orig_hostname;
-	  return hostname;
+	  EXIT_LISP_FRAME (hostname);
 	}
-      return Qt;
+      EXIT_LISP_FRAME (Qt);
     }
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 DEFUN ("w32-unload-winsock", Fw32_unload_winsock, Sw32_unload_winsock,
@@ -2942,6 +2945,7 @@ If FILENAME does not exist, return nil.
 All path elements in FILENAME are converted to their short names.  */)
   (Lisp_Object filename)
 {
+  ENTER_LISP_FRAME (filename);
   char shortname[MAX_PATH];
 
   CHECK_STRING (filename);
@@ -2952,12 +2956,12 @@ All path elements in FILENAME are converted to their short names.  */)
   /* luckily, this returns the short version of each element in the path.  */
   if (w32_get_short_filename (SSDATA (ENCODE_FILE (filename)),
 			      shortname, MAX_PATH) == 0)
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
 
   dostounix_filename (shortname);
 
   /* No need to DECODE_FILE, because 8.3 names are pure ASCII.   */
-  return build_string (shortname);
+  EXIT_LISP_FRAME (build_string (shortname));
 }
 
 
@@ -2968,6 +2972,7 @@ If FILENAME does not exist, return nil.
 All path elements in FILENAME are converted to their long names.  */)
   (Lisp_Object filename)
 {
+  ENTER_LISP_FRAME (filename);
   char longname[ MAX_UTF8_PATH ];
   int drive_only = 0;
 
@@ -2982,7 +2987,7 @@ All path elements in FILENAME are converted to their long names.  */)
 
   if (!w32_get_long_filename (SSDATA (ENCODE_FILE (filename)), longname,
 			      MAX_UTF8_PATH))
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
 
   dostounix_filename (longname);
 
@@ -2992,7 +2997,7 @@ All path elements in FILENAME are converted to their long names.  */)
   if (drive_only && longname[1] == ':' && longname[2] == '/' && !longname[3])
     longname[2] = '\0';
 
-  return DECODE_FILE (build_unibyte_string (longname));
+  EXIT_LISP_FRAME (DECODE_FILE (build_unibyte_string (longname)));
 }
 
 DEFUN ("w32-set-process-priority", Fw32_set_process_priority,
@@ -3006,9 +3011,12 @@ any other symbol will be interpreted as normal.
 If successful, the return value is t, otherwise nil.  */)
   (Lisp_Object process, Lisp_Object priority)
 {
+  ENTER_LISP_FRAME (process, priority);
+  LISP_LOCALS (result);
   HANDLE proc_handle = GetCurrentProcess ();
   DWORD  priority_class = NORMAL_PRIORITY_CLASS;
-  Lisp_Object result = Qnil;
+  result = Qnil;
+
 
   CHECK_SYMBOL (priority);
 
@@ -3044,7 +3052,7 @@ If successful, the return value is t, otherwise nil.  */)
 	CloseHandle (proc_handle);
     }
 
-  return result;
+  EXIT_LISP_FRAME (result);
 }
 
 DEFUN ("w32-application-type", Fw32_application_type,
@@ -3074,8 +3082,9 @@ include characters not supported by the current ANSI codepage, as
 such programs cannot be invoked by Emacs anyway.  */)
      (Lisp_Object program)
 {
+  ENTER_LISP_FRAME (program);
+  LISP_LOCALS (encoded_progname);
   int is_dos_app, is_cygwin_app, is_msys_app, dummy;
-  Lisp_Object encoded_progname;
   char *progname, progname_a[MAX_PATH];
 
   program = Fexpand_file_name (program, Qnil);
@@ -3086,18 +3095,18 @@ such programs cannot be invoked by Emacs anyway.  */)
   /* Reject file names that cannot be encoded in the current ANSI
      codepage.  */
   if (_mbspbrk ((unsigned char *)progname_a, (const unsigned char *)"?"))
-    return Qunknown;
+    EXIT_LISP_FRAME (Qunknown);
 
   if (w32_executable_type (progname_a, &is_dos_app, &is_cygwin_app,
 			   &is_msys_app, &dummy) != 0)
-    return Qunknown;
+    EXIT_LISP_FRAME (Qunknown);
   if (is_dos_app)
-    return Qdos;
+    EXIT_LISP_FRAME (Qdos);
   if (is_cygwin_app)
-    return Qcygwin;
+    EXIT_LISP_FRAME (Qcygwin);
   if (is_msys_app)
-    return Qmsys;
-  return Qw32_native;
+    EXIT_LISP_FRAME (Qmsys);
+  EXIT_LISP_FRAME (Qw32_native);
 }
 
 #ifdef HAVE_LANGINFO_CODESET
@@ -3181,6 +3190,7 @@ locale information is returned.
 If LCID (a 16-bit number) is not a valid locale, the result is nil.  */)
   (Lisp_Object lcid, Lisp_Object longform)
 {
+  ENTER_LISP_FRAME (lcid, longform);
   int got_abbrev;
   int got_full;
   char abbrev_name[32] = { 0 };
@@ -3189,7 +3199,7 @@ If LCID (a 16-bit number) is not a valid locale, the result is nil.  */)
   CHECK_NUMBER (lcid);
 
   if (!IsValidLocale (XINT (lcid), LCID_SUPPORTED))
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
 
   if (NILP (longform))
     {
@@ -3197,7 +3207,7 @@ If LCID (a 16-bit number) is not a valid locale, the result is nil.  */)
 				  LOCALE_SABBREVLANGNAME | LOCALE_USE_CP_ACP,
 				  abbrev_name, sizeof (abbrev_name));
       if (got_abbrev)
-	return build_string (abbrev_name);
+	EXIT_LISP_FRAME (build_string (abbrev_name));
     }
   else if (EQ (longform, Qt))
     {
@@ -3205,7 +3215,7 @@ If LCID (a 16-bit number) is not a valid locale, the result is nil.  */)
 				LOCALE_SLANGUAGE | LOCALE_USE_CP_ACP,
 				full_name, sizeof (full_name));
       if (got_full)
-	return DECODE_SYSTEM (build_string (full_name));
+	EXIT_LISP_FRAME (DECODE_SYSTEM (build_string (full_name)));
     }
   else if (NUMBERP (longform))
     {
@@ -3217,10 +3227,10 @@ If LCID (a 16-bit number) is not a valid locale, the result is nil.  */)
 	 make_unibyte_string needs the string length without the
 	 terminating null.  */
       if (got_full)
-	return make_unibyte_string (full_name, got_full - 1);
+	EXIT_LISP_FRAME (make_unibyte_string (full_name, got_full - 1));
     }
 
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 
@@ -3288,9 +3298,10 @@ This is a numerical value; use `w32-get-locale-info' to convert to a
 human-readable form.  */)
   (Lisp_Object userp)
 {
+  ENTER_LISP_FRAME (userp);
   if (NILP (userp))
-    return make_number (GetSystemDefaultLCID ());
-  return make_number (GetUserDefaultLCID ());
+    EXIT_LISP_FRAME (make_number (GetSystemDefaultLCID ()));
+  EXIT_LISP_FRAME (make_number (GetUserDefaultLCID ()));
 }
 
 
@@ -3299,20 +3310,21 @@ DEFUN ("w32-set-current-locale", Fw32_set_current_locale, Sw32_set_current_local
 If successful, the new locale id is returned, otherwise nil.  */)
   (Lisp_Object lcid)
 {
+  ENTER_LISP_FRAME (lcid);
   CHECK_NUMBER (lcid);
 
   if (!IsValidLocale (XINT (lcid), LCID_SUPPORTED))
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
 
   if (!SetThreadLocale (XINT (lcid)))
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
 
   /* Need to set input thread locale if present.  */
   if (dwWindowsThreadId)
     /* Reply is not needed.  */
     PostThreadMessage (dwWindowsThreadId, WM_EMACS_SETLOCALE, XINT (lcid), 0);
 
-  return make_number (GetThreadLocale ());
+  EXIT_LISP_FRAME (make_number (GetThreadLocale ()));
 }
 
 
@@ -3358,15 +3370,16 @@ This codepage setting affects keyboard input in tty mode.
 If successful, the new CP is returned, otherwise nil.  */)
   (Lisp_Object cp)
 {
+  ENTER_LISP_FRAME (cp);
   CHECK_NUMBER (cp);
 
   if (!IsValidCodePage (XINT (cp)))
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
 
   if (!SetConsoleCP (XINT (cp)))
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
 
-  return make_number (GetConsoleCP ());
+  EXIT_LISP_FRAME (make_number (GetConsoleCP ()));
 }
 
 
@@ -3386,15 +3399,16 @@ This codepage setting affects display in tty mode.
 If successful, the new CP is returned, otherwise nil.  */)
   (Lisp_Object cp)
 {
+  ENTER_LISP_FRAME (cp);
   CHECK_NUMBER (cp);
 
   if (!IsValidCodePage (XINT (cp)))
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
 
   if (!SetConsoleOutputCP (XINT (cp)))
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
 
-  return make_number (GetConsoleOutputCP ());
+  EXIT_LISP_FRAME (make_number (GetConsoleOutputCP ()));
 }
 
 
@@ -3409,22 +3423,23 @@ codepages; most console codepages are not supported and will
 yield nil.  */)
   (Lisp_Object cp)
 {
+  ENTER_LISP_FRAME (cp);
   CHARSETINFO info;
   DWORD_PTR dwcp;
 
   CHECK_NUMBER (cp);
 
   if (!IsValidCodePage (XINT (cp)))
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
 
   /* Going through a temporary DWORD_PTR variable avoids compiler warning
      about cast to pointer from integer of different size, when
      building --with-wide-int or building for 64bit.  */
   dwcp = XINT (cp);
   if (TranslateCharsetInfo ((DWORD *) dwcp, &info, TCI_SRCCODEPAGE))
-    return make_number (info.ciCharset);
+    EXIT_LISP_FRAME (make_number (info.ciCharset));
 
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 
@@ -3434,9 +3449,12 @@ DEFUN ("w32-get-valid-keyboard-layouts", Fw32_get_valid_keyboard_layouts,
 The return value is a list of pairs of language id and layout id.  */)
   (void)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (obj);
   int num_layouts = GetKeyboardLayoutList (0, NULL);
   HKL * layouts = (HKL *) alloca (num_layouts * sizeof (HKL));
-  Lisp_Object obj = Qnil;
+  obj = Qnil;
+
 
   if (GetKeyboardLayoutList (num_layouts, layouts) == num_layouts)
     {
@@ -3450,7 +3468,7 @@ The return value is a list of pairs of language id and layout id.  */)
 	}
     }
 
-  return obj;
+  EXIT_LISP_FRAME (obj);
 }
 
 
@@ -3474,6 +3492,7 @@ The keyboard layout setting affects interpretation of keyboard input.
 If successful, the new layout id is returned, otherwise nil.  */)
   (Lisp_Object layout)
 {
+  ENTER_LISP_FRAME (layout);
   HKL kl;
 
   CHECK_CONS (layout);
@@ -3493,13 +3512,13 @@ If successful, the new layout id is returned, otherwise nil.  */)
 	  GetMessage (&msg, NULL, WM_EMACS_DONE, WM_EMACS_DONE);
 
 	  if (msg.wParam == 0)
-	    return Qnil;
+	    EXIT_LISP_FRAME (Qnil);
 	}
     }
   else if (!ActivateKeyboardLayout (kl, 0))
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
 
-  return Fw32_get_keyboard_layout ();
+  EXIT_LISP_FRAME (Fw32_get_keyboard_layout ());
 }
 
 /* Two variables to interface between get_lcid and the EnumLocales

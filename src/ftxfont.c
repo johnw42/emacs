@@ -208,32 +208,41 @@ ftxfont_draw_background (struct frame *f, struct font *font, GC gc, int x, int y
 static Lisp_Object
 ftxfont_list (struct frame *f, Lisp_Object spec)
 {
-  Lisp_Object list = ftfont_list (f, spec), tail;
+  ENTER_LISP_FRAME (spec);
+  LISP_LOCALS (list, tail);
+  list = ftfont_list (f, spec);
+
 
   for (tail = list; CONSP (tail); tail = XCDR (tail))
     ASET (XCAR (tail), FONT_TYPE_INDEX, Qftx);
-  return list;
+  EXIT_LISP_FRAME (list);
 }
 
 static Lisp_Object
 ftxfont_match (struct frame *f, Lisp_Object spec)
 {
-  Lisp_Object entity = ftfont_match (f, spec);
+  ENTER_LISP_FRAME (spec);
+  LISP_LOCALS (entity);
+  entity = ftfont_match (f, spec);
+
 
   if (VECTORP (entity))
     ASET (entity, FONT_TYPE_INDEX, Qftx);
-  return entity;
+  EXIT_LISP_FRAME (entity);
 }
 
 static Lisp_Object
 ftxfont_open (struct frame *f, Lisp_Object entity, int pixel_size)
 {
-  Lisp_Object font_object = ftfont_open (f, entity, pixel_size);
+  ENTER_LISP_FRAME (entity);
+  LISP_LOCALS (font_object);
+  font_object = ftfont_open (f, entity, pixel_size);
+
   if (NILP (font_object))
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
   struct font *font = XFONT_OBJECT (font_object);
   font->driver = &ftxfont_driver;
-  return font_object;
+  EXIT_LISP_FRAME (font_object);
 }
 
 static void

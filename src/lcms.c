@@ -91,6 +91,7 @@ init_lcms_functions (void)
 static bool
 parse_lab_list (Lisp_Object lab_list, cmsCIELab *color)
 {
+  ENTER_LISP_FRAME_T (bool, lab_list);
 #define PARSE_LAB_LIST_FIELD(field)					\
   if (CONSP (lab_list) && NUMBERP (XCAR (lab_list)))			\
     {									\
@@ -104,7 +105,7 @@ parse_lab_list (Lisp_Object lab_list, cmsCIELab *color)
   PARSE_LAB_LIST_FIELD (a);
   PARSE_LAB_LIST_FIELD (b);
 
-  return true;
+  EXIT_LISP_FRAME (true);
 }
 
 /* http://www.ece.rochester.edu/~gsharma/ciede2000/ciede2000noteCRNA.pdf> */
@@ -118,6 +119,7 @@ chroma, and hue, respectively. The parameters each default to 1.  */)
   (Lisp_Object color1, Lisp_Object color2,
    Lisp_Object kL, Lisp_Object kC, Lisp_Object kH)
 {
+  ENTER_LISP_FRAME (color1, color2, kL, kC, kH);
   cmsCIELab Lab1, Lab2;
   cmsFloat64Number Kl, Kc, Kh;
 
@@ -127,7 +129,7 @@ chroma, and hue, respectively. The parameters each default to 1.  */)
   if (!lcms_initialized)
     {
       message1 ("lcms2 library not found");
-      return Qnil;
+      EXIT_LISP_FRAME (Qnil);
     }
 #endif
 
@@ -148,7 +150,7 @@ chroma, and hue, respectively. The parameters each default to 1.  */)
   else if (!(NUMBERP (kH) && (Kh = XFLOATINT(kH))))
     wrong_type_argument(Qnumberp, kH);
 
-  return make_float (cmsCIE2000DeltaE (&Lab1, &Lab2, Kl, Kc, Kh));
+  EXIT_LISP_FRAME (make_float (cmsCIE2000DeltaE (&Lab1, &Lab2, Kl, Kc, Kh)));
 }
 
 static double
@@ -182,6 +184,7 @@ default_viewing_conditions (const cmsCIEXYZ *wp, cmsViewingConditions *vc)
 static bool
 parse_xyz_list (Lisp_Object xyz_list, cmsCIEXYZ *color)
 {
+  ENTER_LISP_FRAME_T (bool, xyz_list);
 #define PARSE_XYZ_LIST_FIELD(field)					\
   if (CONSP (xyz_list) && NUMBERP (XCAR (xyz_list)))			\
     {									\
@@ -195,12 +198,13 @@ parse_xyz_list (Lisp_Object xyz_list, cmsCIEXYZ *color)
   PARSE_XYZ_LIST_FIELD (Y);
   PARSE_XYZ_LIST_FIELD (Z);
 
-  return true;
+  EXIT_LISP_FRAME (true);
 }
 
 static bool
 parse_jch_list (Lisp_Object jch_list, cmsJCh *color)
 {
+  ENTER_LISP_FRAME_T (bool, jch_list);
 #define PARSE_JCH_LIST_FIELD(field)					\
   if (CONSP (jch_list) && NUMBERP (XCAR (jch_list)))			\
     {									\
@@ -215,13 +219,14 @@ parse_jch_list (Lisp_Object jch_list, cmsJCh *color)
   PARSE_JCH_LIST_FIELD (h);
 
   if (! NILP (jch_list))
-    return false;
-  return true;
+    EXIT_LISP_FRAME (false);
+  EXIT_LISP_FRAME (true);
 }
 
 static bool
 parse_jab_list (Lisp_Object jab_list, lcmsJab_t *color)
 {
+  ENTER_LISP_FRAME_T (bool, jab_list);
 #define PARSE_JAB_LIST_FIELD(field)					\
   if (CONSP (jab_list) && NUMBERP (XCAR (jab_list)))			\
     {									\
@@ -235,13 +240,14 @@ parse_jab_list (Lisp_Object jab_list, lcmsJab_t *color)
   PARSE_JAB_LIST_FIELD (a);
   PARSE_JAB_LIST_FIELD (b);
 
-  return true;
+  EXIT_LISP_FRAME (true);
 }
 
 static bool
 parse_viewing_conditions (Lisp_Object view, const cmsCIEXYZ *wp,
                           cmsViewingConditions *vc)
 {
+  ENTER_LISP_FRAME_T (bool, view);
 #define PARSE_VIEW_CONDITION_FLOAT(field)				\
   if (CONSP (view) && NUMBERP (XCAR (view)))				\
     {									\
@@ -266,12 +272,12 @@ parse_viewing_conditions (Lisp_Object view, const cmsCIEXYZ *wp,
   PARSE_VIEW_CONDITION_FLOAT (D_value);
 
   if (! NILP (view))
-    return false;
+    EXIT_LISP_FRAME (false);
 
   vc->whitePoint.X = wp->X;
   vc->whitePoint.Y = wp->Y;
   vc->whitePoint.Z = wp->Z;
-  return true;
+  EXIT_LISP_FRAME (true);
 }
 
 static void
@@ -322,6 +328,7 @@ Optional arguments WHITEPOINT and VIEW are the same as in `lcms-cam02-ucs',
 which see.  */)
   (Lisp_Object color, Lisp_Object whitepoint, Lisp_Object view)
 {
+  ENTER_LISP_FRAME (color, whitepoint, view);
   cmsViewingConditions vc;
   cmsJCh jch;
   cmsCIEXYZ xyz, xyzw;
@@ -332,7 +339,7 @@ which see.  */)
   if (!lcms_initialized)
     {
       message1 ("lcms2 library not found");
-      return Qnil;
+      EXIT_LISP_FRAME (Qnil);
     }
 #endif
 
@@ -348,7 +355,7 @@ which see.  */)
     signal_error ("Invalid viewing conditions", view);
 
   xyz_to_jch(&xyz, &jch, &vc);
-  return list3 (make_float (jch.J), make_float (jch.C), make_float (jch.h));
+  EXIT_LISP_FRAME (list3 (make_float (jch.J), make_float (jch.C), make_float (jch.h)));
 }
 
 DEFUN ("lcms-jch->xyz", Flcms_jch_to_xyz, Slcms_jch_to_xyz, 1, 3, 0,
@@ -359,6 +366,7 @@ Optional arguments WHITEPOINT and VIEW are the same as in `lcms-cam02-ucs',
 which see.  */)
   (Lisp_Object color, Lisp_Object whitepoint, Lisp_Object view)
 {
+  ENTER_LISP_FRAME (color, whitepoint, view);
   cmsViewingConditions vc;
   cmsJCh jch;
   cmsCIEXYZ xyz, xyzw;
@@ -369,7 +377,7 @@ which see.  */)
   if (!lcms_initialized)
     {
       message1 ("lcms2 library not found");
-      return Qnil;
+      EXIT_LISP_FRAME (Qnil);
     }
 #endif
 
@@ -385,9 +393,9 @@ which see.  */)
     signal_error ("Invalid viewing conditions", view);
 
   jch_to_xyz(&jch, &xyz, &vc);
-  return list3 (make_float (xyz.X / 100.0),
+  EXIT_LISP_FRAME (list3 (make_float (xyz.X / 100.0),
                 make_float (xyz.Y / 100.0),
-                make_float (xyz.Z / 100.0));
+                make_float (xyz.Z / 100.0)));
 }
 
 DEFUN ("lcms-jch->jab", Flcms_jch_to_jab, Slcms_jch_to_jab, 1, 3, 0,
@@ -397,6 +405,7 @@ Optional arguments WHITEPOINT and VIEW are the same as in `lcms-cam02-ucs',
 which see.  */)
   (Lisp_Object color, Lisp_Object whitepoint, Lisp_Object view)
 {
+  ENTER_LISP_FRAME (color, whitepoint, view);
   cmsViewingConditions vc;
   lcmsJab_t jab;
   cmsJCh jch;
@@ -409,7 +418,7 @@ which see.  */)
   if (!lcms_initialized)
     {
       message1 ("lcms2 library not found");
-      return Qnil;
+      EXIT_LISP_FRAME (Qnil);
     }
 #endif
 
@@ -428,7 +437,7 @@ which see.  */)
   k4 = k * k * k * k;
   FL = vc.La * k4 + 0.1 * (1 - k4) * (1 - k4) * cbrt (5.0 * vc.La);
   jch_to_jab (&jch, &jab, FL, 0.007, 0.0228);
-  return list3 (make_float (jab.J), make_float (jab.a), make_float (jab.b));
+  EXIT_LISP_FRAME (list3 (make_float (jab.J), make_float (jab.a), make_float (jab.b)));
 }
 
 DEFUN ("lcms-jab->jch", Flcms_jab_to_jch, Slcms_jab_to_jch, 1, 3, 0,
@@ -438,6 +447,7 @@ Optional arguments WHITEPOINT and VIEW are the same as in `lcms-cam02-ucs',
 which see.  */)
   (Lisp_Object color, Lisp_Object whitepoint, Lisp_Object view)
 {
+  ENTER_LISP_FRAME (color, whitepoint, view);
   cmsViewingConditions vc;
   cmsJCh jch;
   lcmsJab_t jab;
@@ -450,7 +460,7 @@ which see.  */)
   if (!lcms_initialized)
     {
       message1 ("lcms2 library not found");
-      return Qnil;
+      EXIT_LISP_FRAME (Qnil);
     }
 #endif
 
@@ -469,7 +479,7 @@ which see.  */)
   k4 = k * k * k * k;
   FL = vc.La * k4 + 0.1 * (1 - k4) * (1 - k4) * cbrt (5.0 * vc.La);
   jab_to_jch (&jab, &jch, FL, 0.007, 0.0228);
-  return list3 (make_float (jch.J), make_float (jch.C), make_float (jch.h));
+  EXIT_LISP_FRAME (list3 (make_float (jch.J), make_float (jch.C), make_float (jch.h)));
 }
 
 /* References:
@@ -493,6 +503,7 @@ The default viewing conditions are (20 100 1 1).  */)
   (Lisp_Object color1, Lisp_Object color2, Lisp_Object whitepoint,
    Lisp_Object view)
 {
+  ENTER_LISP_FRAME (color1, color2, whitepoint, view);
   cmsViewingConditions vc;
   cmsJCh jch1, jch2;
   cmsCIEXYZ xyz1, xyz2, xyzw;
@@ -505,7 +516,7 @@ The default viewing conditions are (20 100 1 1).  */)
   if (!lcms_initialized)
     {
       message1 ("lcms2 library not found");
-      return Qnil;
+      EXIT_LISP_FRAME (Qnil);
     }
 #endif
 
@@ -531,8 +542,8 @@ The default viewing conditions are (20 100 1 1).  */)
   jch_to_jab (&jch1, &jab1, FL, 0.007, 0.0228);
   jch_to_jab (&jch2, &jab2, FL, 0.007, 0.0228);
 
-  return make_float (hypot (jab2.J - jab1.J,
-                            hypot (jab2.a - jab1.a, jab2.b - jab1.b)));
+  EXIT_LISP_FRAME (make_float (hypot (jab2.J - jab1.J,
+                            hypot (jab2.a - jab1.a, jab2.b - jab1.b))));
 }
 
 DEFUN ("lcms-temp->white-point", Flcms_temp_to_white_point, Slcms_temp_to_white_point, 1, 1, 0,
@@ -540,6 +551,7 @@ DEFUN ("lcms-temp->white-point", Flcms_temp_to_white_point, Slcms_temp_to_white_
 Valid range of TEMPERATURE is from 4000K to 25000K.  */)
   (Lisp_Object temperature)
 {
+  ENTER_LISP_FRAME (temperature);
   cmsFloat64Number tempK;
   cmsCIExyY whitepoint;
   cmsCIEXYZ wp;
@@ -550,7 +562,7 @@ Valid range of TEMPERATURE is from 4000K to 25000K.  */)
   if (!lcms_initialized)
     {
       message1 ("lcms2 library not found");
-      return Qnil;
+      EXIT_LISP_FRAME (Qnil);
     }
 #endif
 
@@ -560,27 +572,29 @@ Valid range of TEMPERATURE is from 4000K to 25000K.  */)
   if (!(cmsWhitePointFromTemp (&whitepoint, tempK)))
     signal_error("Invalid temperature", temperature);
   cmsxyY2XYZ (&wp, &whitepoint);
-  return list3 (make_float (wp.X), make_float (wp.Y), make_float (wp.Z));
+  EXIT_LISP_FRAME (list3 (make_float (wp.X), make_float (wp.Y), make_float (wp.Z)));
 }
 
 DEFUN ("lcms2-available-p", Flcms2_available_p, Slcms2_available_p, 0, 0, 0,
        doc: /* Return t if lcms2 color calculations are available in this instance of Emacs.  */)
      (void)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (found, status);
 #ifdef WINDOWSNT
-  Lisp_Object found = Fassq (Qlcms2, Vlibrary_cache);
+  found = Fassq (Qlcms2, Vlibrary_cache);
+
   if (CONSP (found))
-    return XCDR (found);
+    EXIT_LISP_FRAME (XCDR (found));
   else
     {
-      Lisp_Object status;
       lcms_initialized = init_lcms_functions ();
       status = lcms_initialized ? Qt : Qnil;
       Vlibrary_cache = Fcons (Fcons (Qlcms2, status), Vlibrary_cache);
-      return status;
+      EXIT_LISP_FRAME (status);
     }
 #else  /* !WINDOWSNT */
-  return Qt;
+  EXIT_LISP_FRAME (Qt);
 #endif
 }
 

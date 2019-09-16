@@ -134,12 +134,14 @@ static void get_boot_time_1 (const char *, bool);
 static time_t
 get_boot_time (void)
 {
+  ENTER_LISP_FRAME_T (time_t);
+  LISP_LOCALS (filename);
 #if defined (BOOT_TIME)
   int counter;
 #endif
 
   if (boot_time_initialized)
-    return boot_time;
+    EXIT_LISP_FRAME (boot_time);
   boot_time_initialized = 1;
 
 #if defined (CTL_KERN) && defined (KERN_BOOTTIME)
@@ -155,7 +157,7 @@ get_boot_time (void)
     if (sysctl (mib, 2, &boottime_val, &size, NULL, 0) >= 0)
       {
 	boot_time = boottime_val.tv_sec;
-	return boot_time;
+	EXIT_LISP_FRAME (boot_time);
       }
   }
 #endif /* defined (CTL_KERN) && defined (KERN_BOOTTIME) */
@@ -166,7 +168,7 @@ get_boot_time (void)
       if (stat (BOOT_TIME_FILE, &st) == 0)
 	{
 	  boot_time = st.st_mtime;
-	  return boot_time;
+	  EXIT_LISP_FRAME (boot_time);
 	}
     }
 
@@ -176,7 +178,7 @@ get_boot_time (void)
      Don't touch that state unless we are initialized,
      since it might not survive dumping.  */
   if (! initialized)
-    return boot_time;
+    EXIT_LISP_FRAME (boot_time);
 #endif /* not CANNOT_DUMP */
 
   /* Try to get boot time from utmp before wtmp,
@@ -185,7 +187,7 @@ get_boot_time (void)
      to inspect the default file, namely utmp.  */
   get_boot_time_1 (0, 0);
   if (boot_time)
-    return boot_time;
+    EXIT_LISP_FRAME (boot_time);
 
   /* Try to get boot time from the current wtmp file.  */
   get_boot_time_1 (WTMP_FILE, 1);
@@ -193,7 +195,8 @@ get_boot_time (void)
   /* If we did not find a boot time in wtmp, look at wtmp, and so on.  */
   for (counter = 0; counter < 20 && ! boot_time; counter++)
     {
-      Lisp_Object filename = Qnil;
+      filename = Qnil;
+
       bool delete_flag = false;
       char cmd_string[sizeof WTMP_FILE ".19.gz"];
       AUTO_STRING_WITH_LEN (tempname, cmd_string,
@@ -226,9 +229,9 @@ get_boot_time (void)
 	}
     }
 
-  return boot_time;
+  EXIT_LISP_FRAME (boot_time);
 #else
-  return 0;
+  EXIT_LISP_FRAME (0);
 #endif
 }
 
@@ -307,6 +310,7 @@ typedef struct
 static void
 fill_in_lock_file_name (char *lockfile, Lisp_Object fn)
 {
+  ENTER_LISP_FRAME (fn);
   char *last_slash = memrchr (SSDATA (fn), '/', SBYTES (fn));
   char *base = last_slash + 1;
   ptrdiff_t dirlen = base - SSDATA (fn);
@@ -314,6 +318,7 @@ fill_in_lock_file_name (char *lockfile, Lisp_Object fn)
   lockfile[dirlen] = '.';
   lockfile[dirlen + 1] = '#';
   strcpy (lockfile + dirlen + 2, base);
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* For some reason Linux kernels return EPERM on file systems that do
@@ -431,12 +436,16 @@ create_lock_file (char *lfname, char *lock_info_str, bool force)
 static int
 lock_file_1 (char *lfname, bool force)
 {
+  ENTER_LISP_FRAME_T (int);
+  LISP_LOCALS (luser_name, lhost_name);
   /* Call this first because it can GC.  */
   printmax_t boot = get_boot_time ();
 
-  Lisp_Object luser_name = Fuser_login_name (Qnil);
+  luser_name = Fuser_login_name (Qnil);
+
   char const *user_name = STRINGP (luser_name) ? SSDATA (luser_name) : "";
-  Lisp_Object lhost_name = Fsystem_name ();
+  lhost_name = Fsystem_name ();
+
   char const *host_name = STRINGP (lhost_name) ? SSDATA (lhost_name) : "";
   char lock_info_str[MAX_LFINFO + 1];
   printmax_t pid = getpid ();
@@ -447,15 +456,15 @@ lock_file_1 (char *lfname, bool force)
           <= snprintf (lock_info_str, sizeof lock_info_str,
                        "%s@%s.%"pMd":%"pMd,
                        user_name, host_name, pid, boot))
-        return ENAMETOOLONG;
+        EXIT_LISP_FRAME (ENAMETOOLONG);
     }
   else if (sizeof lock_info_str
            <= snprintf (lock_info_str, sizeof lock_info_str,
                         "%s@%s.%"pMd,
                         user_name, host_name, pid))
-    return ENAMETOOLONG;
+    EXIT_LISP_FRAME (ENAMETOOLONG);
 
-  return create_lock_file (lfname, lock_info_str, force);
+  EXIT_LISP_FRAME (create_lock_file (lfname, lock_info_str, force));
 }
 
 /* Return true if times A and B are no more than one second apart.  */
@@ -514,6 +523,8 @@ read_lock_data (char *lfname, char lfinfo[MAX_LFINFO + 1])
 static int
 current_lock_owner (lock_info_type *owner, char *lfname)
 {
+  ENTER_LISP_FRAME_T (int);
+  LISP_LOCALS (system_name);
   int ret;
   lock_info_type local_owner;
   ptrdiff_t lfinfolen;
@@ -528,23 +539,23 @@ current_lock_owner (lock_info_type *owner, char *lfname)
   /* If nonexistent lock file, all is well; otherwise, got strange error. */
   lfinfolen = read_lock_data (lfname, owner->user);
   if (lfinfolen < 0)
-    return errno == ENOENT ? 0 : -1;
+    EXIT_LISP_FRAME (errno == ENOENT ? 0 : -1);
   if (MAX_LFINFO < lfinfolen)
-    return -1;
+    EXIT_LISP_FRAME (-1);
   owner->user[lfinfolen] = 0;
 
   /* Parse USER@HOST.PID:BOOT_TIME.  If can't parse, return -1.  */
   /* The USER is everything before the last @.  */
   owner->at = at = memrchr (owner->user, '@', lfinfolen);
   if (!at)
-    return -1;
+    EXIT_LISP_FRAME (-1);
   owner->dot = dot = strrchr (at, '.');
   if (!dot)
-    return -1;
+    EXIT_LISP_FRAME (-1);
 
   /* The PID is everything from the last '.' to the ':' or equivalent.  */
   if (! c_isdigit (dot[1]))
-    return -1;
+    EXIT_LISP_FRAME (-1);
   errno = 0;
   pid = strtoimax (dot + 1, &owner->colon, 10);
   if (errno == ERANGE)
@@ -565,23 +576,24 @@ current_lock_owner (lock_info_type *owner, char *lfname)
 	 mistakenly transliterate ':' to U+F022 in symlink contents.
 	 See <https://bugzilla.redhat.com/show_bug.cgi?id=1384153>.  */
       if (! (boot[0] == '\200' && boot[1] == '\242'))
-	return -1;
+	EXIT_LISP_FRAME (-1);
       boot += 2;
       FALLTHROUGH;
     case ':':
       if (! c_isdigit (boot[0]))
-	return -1;
+	EXIT_LISP_FRAME (-1);
       boot_time = strtoimax (boot, &lfinfo_end, 10);
       break;
 
     default:
-      return -1;
+      EXIT_LISP_FRAME (-1);
     }
   if (lfinfo_end != owner->user + lfinfolen)
-    return -1;
+    EXIT_LISP_FRAME (-1);
 
   /* On current host?  */
-  Lisp_Object system_name = Fsystem_name ();
+  system_name = Fsystem_name ();
+
   if (STRINGP (system_name)
       && dot - (at + 1) == SBYTES (system_name)
       && memcmp (at + 1, SSDATA (system_name), SBYTES (system_name)) == 0)
@@ -597,7 +609,7 @@ current_lock_owner (lock_info_type *owner, char *lfname)
       /* The owner process is dead or has a strange pid, so try to
          zap the lockfile.  */
       else
-        return unlink (lfname);
+        EXIT_LISP_FRAME (unlink (lfname));
     }
   else
     { /* If we wanted to support the check for stale locks on remote machines,
@@ -605,7 +617,7 @@ current_lock_owner (lock_info_type *owner, char *lfname)
       ret = 1;
     }
 
-  return ret;
+  EXIT_LISP_FRAME (ret);
 }
 
 
@@ -658,7 +670,8 @@ lock_if_free (lock_info_type *clasher, char *lfname)
 void
 lock_file (Lisp_Object fn)
 {
-  Lisp_Object orig_fn, encoded_fn;
+  ENTER_LISP_FRAME (fn);
+  LISP_LOCALS (orig_fn, encoded_fn, subject_buf, attack);
   char *lfname;
   lock_info_type lock_info;
   USE_SAFE_ALLOCA;
@@ -667,7 +680,7 @@ lock_file (Lisp_Object fn)
      Uncompressing wtmp files uses call-process, which does not work
      in an uninitialized Emacs.  */
   if (! NILP (Vpurify_flag))
-    return;
+    EXIT_LISP_FRAME_VOID ();
 
   orig_fn = fn;
   fn = Fexpand_file_name (fn, Qnil);
@@ -682,7 +695,6 @@ lock_file (Lisp_Object fn)
   /* See if this file is visited and has changed on disk since it was
      visited.  */
   {
-    register Lisp_Object subject_buf;
 
     subject_buf = get_truename_buffer (orig_fn);
 
@@ -704,7 +716,6 @@ lock_file (Lisp_Object fn)
       if (0 < lock_if_free (&lock_info, lfname))
 	{
 	  /* Someone else has the lock.  Consider breaking it.  */
-	  Lisp_Object attack;
 	  char *dot = lock_info.dot;
 	  ptrdiff_t pidlen = lock_info.colon - (dot + 1);
 	  static char const replacement[] = " (pid ";
@@ -720,11 +731,13 @@ lock_file (Lisp_Object fn)
 	}
       SAFE_FREE ();
     }
+  EXIT_LISP_FRAME_VOID ();
 }
 
 void
 unlock_file (Lisp_Object fn)
 {
+  ENTER_LISP_FRAME (fn);
   char *lfname;
   USE_SAFE_ALLOCA;
 
@@ -737,6 +750,7 @@ unlock_file (Lisp_Object fn)
     unlink (lfname);
 
   SAFE_FREE ();
+  EXIT_LISP_FRAME_VOID ();
 }
 
 #else  /* MSDOS */
@@ -755,7 +769,8 @@ unlock_file (Lisp_Object fn)
 void
 unlock_all_files (void)
 {
-  register Lisp_Object tail, buf;
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (tail, buf);
   register struct buffer *b;
 
   FOR_EACH_LIVE_BUFFER (tail, buf)
@@ -765,6 +780,7 @@ unlock_all_files (void)
 	  && BUF_SAVE_MODIFF (b) < BUF_MODIFF (b))
 	unlock_file (BVAR (b, file_truename));
     }
+  EXIT_LISP_FRAME_VOID ();
 }
 
 DEFUN ("lock-buffer", Flock_buffer, Slock_buffer,
@@ -776,6 +792,7 @@ or else nothing is done if current buffer isn't visiting a file.
 If the option `create-lockfiles' is nil, this does nothing.  */)
   (Lisp_Object file)
 {
+  ENTER_LISP_FRAME (file);
   if (NILP (file))
     file = BVAR (current_buffer, file_truename);
   else
@@ -783,7 +800,7 @@ If the option `create-lockfiles' is nil, this does nothing.  */)
   if (SAVE_MODIFF < MODIFF
       && !NILP (file))
     lock_file (file);
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 DEFUN ("unlock-buffer", Funlock_buffer, Sunlock_buffer,
@@ -815,10 +832,11 @@ The value is nil if the FILENAME is not locked,
 t if it is locked by you, else a string saying which user has locked it.  */)
   (Lisp_Object filename)
 {
+  ENTER_LISP_FRAME (filename);
+  LISP_LOCALS (ret);
 #ifdef MSDOS
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 #else
-  Lisp_Object ret;
   char *lfname;
   int owner;
   lock_info_type locker;
@@ -837,7 +855,7 @@ t if it is locked by you, else a string saying which user has locked it.  */)
     ret = make_string (locker.user, locker.at - locker.user);
 
   SAFE_FREE ();
-  return ret;
+  EXIT_LISP_FRAME (ret);
 #endif
 }
 

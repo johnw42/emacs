@@ -279,13 +279,15 @@ DEF_DLL_FN (const char *, gnutls_ext_get_name, (unsigned int));
 static bool
 init_gnutls_functions (void)
 {
+  ENTER_LISP_FRAME_T (bool);
+  LISP_LOCALS (name);
   HMODULE library;
   int max_log_level = 1;
 
   if (!(library = w32_delayed_load (Qgnutls)))
     {
       GNUTLS_LOG (1, max_log_level, "GnuTLS library not found");
-      return 0;
+      EXIT_LISP_FRAME (0);
     }
 
   LOAD_DLL_FN (library, gnutls_alert_get);
@@ -408,12 +410,13 @@ init_gnutls_functions (void)
   max_log_level = global_gnutls_log_level;
 
   {
-    Lisp_Object name = CAR_SAFE (Fget (Qgnutls, QCloaded_from));
+    name = CAR_SAFE (Fget (Qgnutls, QCloaded_from));
+
     GNUTLS_LOG2 (1, max_log_level, "GnuTLS library loaded:",
                  STRINGP (name) ? (const char *) SDATA (name) : "unknown");
   }
 
-  return 1;
+  EXIT_LISP_FRAME (1);
 }
 
 #  define gnutls_alert_get fn_gnutls_alert_get
@@ -863,12 +866,13 @@ gnutls_make_error (int err)
 Lisp_Object
 emacs_gnutls_deinit (Lisp_Object proc)
 {
+  ENTER_LISP_FRAME (proc);
   int log_level;
 
   CHECK_PROCESS (proc);
 
   if (! XPROCESS (proc)->gnutls_p)
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
 
   log_level = XPROCESS (proc)->gnutls_log_level;
 
@@ -895,7 +899,7 @@ emacs_gnutls_deinit (Lisp_Object proc)
     }
 
   XPROCESS (proc)->gnutls_p = false;
-  return Qt;
+  EXIT_LISP_FRAME (Qt);
 }
 
 DEFUN ("gnutls-asynchronous-parameters", Fgnutls_asynchronous_parameters,
@@ -905,10 +909,11 @@ The second parameter is the list of parameters to feed to gnutls-boot
 to finish setting up the connection. */)
   (Lisp_Object proc, Lisp_Object params)
 {
+  ENTER_LISP_FRAME (proc, params);
   CHECK_PROCESS (proc);
 
   XPROCESS (proc)->gnutls_boot_parameters = params;
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 DEFUN ("gnutls-get-initstage", Fgnutls_get_initstage, Sgnutls_get_initstage, 1, 1, 0,
@@ -916,9 +921,10 @@ DEFUN ("gnutls-get-initstage", Fgnutls_get_initstage, Sgnutls_get_initstage, 1, 
 See also `gnutls-boot'.  */)
   (Lisp_Object proc)
 {
+  ENTER_LISP_FRAME (proc);
   CHECK_PROCESS (proc);
 
-  return make_number (GNUTLS_INITSTAGE (proc));
+  EXIT_LISP_FRAME (make_number (GNUTLS_INITSTAGE (proc)));
 }
 
 DEFUN ("gnutls-errorp", Fgnutls_errorp, Sgnutls_errorp, 1, 1, 0,
@@ -928,11 +934,12 @@ usage: (gnutls-errorp ERROR)  */
        attributes: const)
   (Lisp_Object err)
 {
+  ENTER_LISP_FRAME (err);
   if (EQ (err, Qt)
       || EQ (err, Qgnutls_e_again))
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
 
-  return Qt;
+  EXIT_LISP_FRAME (Qt);
 }
 
 DEFUN ("gnutls-error-fatalp", Fgnutls_error_fatalp, Sgnutls_error_fatalp, 1, 1, 0,
@@ -941,9 +948,10 @@ ERROR is an integer or a symbol with an integer `gnutls-code' property.
 Usage: (gnutls-error-fatalp ERROR)  */)
   (Lisp_Object err)
 {
-  Lisp_Object code;
+  ENTER_LISP_FRAME (err);
+  LISP_LOCALS (code);
 
-  if (EQ (err, Qt)) return Qnil;
+  if (EQ (err, Qt)) EXIT_LISP_FRAME (Qnil);
 
   if (SYMBOLP (err))
     {
@@ -962,9 +970,9 @@ Usage: (gnutls-error-fatalp ERROR)  */)
     error ("Not an error symbol or code");
 
   if (0 == gnutls_error_is_fatal (XINT (err)))
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
 
-  return Qt;
+  EXIT_LISP_FRAME (Qt);
 }
 
 DEFUN ("gnutls-error-string", Fgnutls_error_string, Sgnutls_error_string, 1, 1, 0,
@@ -973,9 +981,10 @@ ERROR is an integer or a symbol with an integer `gnutls-code' property.
 usage: (gnutls-error-string ERROR)  */)
   (Lisp_Object err)
 {
-  Lisp_Object code;
+  ENTER_LISP_FRAME (err);
+  LISP_LOCALS (code);
 
-  if (EQ (err, Qt)) return build_string ("Not an error");
+  if (EQ (err, Qt)) EXIT_LISP_FRAME (build_string ("Not an error"));
 
   if (SYMBOLP (err))
     {
@@ -986,14 +995,14 @@ usage: (gnutls-error-string ERROR)  */)
 	}
       else
 	{
-	  return build_string ("Symbol has no numeric gnutls-code property");
+	  EXIT_LISP_FRAME (build_string ("Symbol has no numeric gnutls-code property"));
 	}
     }
 
   if (! TYPE_RANGED_INTEGERP (int, err))
-    return build_string ("Not an error symbol or code");
+    EXIT_LISP_FRAME (build_string ("Not an error symbol or code"));
 
-  return build_string (emacs_gnutls_strerror (XINT (err)));
+  EXIT_LISP_FRAME (build_string (emacs_gnutls_strerror (XINT (err))));
 }
 
 DEFUN ("gnutls-deinit", Fgnutls_deinit, Sgnutls_deinit, 1, 1, 0,
@@ -1001,18 +1010,22 @@ DEFUN ("gnutls-deinit", Fgnutls_deinit, Sgnutls_deinit, 1, 1, 0,
 See also `gnutls-init'.  */)
   (Lisp_Object proc)
 {
-  return emacs_gnutls_deinit (proc);
+  ENTER_LISP_FRAME (proc);
+  EXIT_LISP_FRAME (emacs_gnutls_deinit (proc));
 }
 
 static Lisp_Object
 gnutls_hex_string (unsigned char *buf, ptrdiff_t buf_size, const char *prefix)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (ret);
   ptrdiff_t prefix_length = strlen (prefix);
   ptrdiff_t retlen;
   if (INT_MULTIPLY_WRAPV (buf_size, 3, &retlen)
       || INT_ADD_WRAPV (prefix_length - (buf_size != 0), retlen, &retlen))
     string_overflow ();
-  Lisp_Object ret = make_uninit_string (retlen);
+  ret = make_uninit_string (retlen);
+
   char *string = SSDATA (ret);
   strcpy (string, prefix);
 
@@ -1021,13 +1034,16 @@ gnutls_hex_string (unsigned char *buf, ptrdiff_t buf_size, const char *prefix)
 	     i == buf_size - 1 ? "%02x" : "%02x:",
 	     buf[i]);
 
-  return ret;
+  EXIT_LISP_FRAME (ret);
 }
 
 static Lisp_Object
 gnutls_certificate_details (gnutls_x509_crt_t cert)
 {
-  Lisp_Object res = Qnil;
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (res);
+  res = Qnil;
+
   int err;
   size_t buf_size;
 
@@ -1193,44 +1209,45 @@ gnutls_certificate_details (gnutls_x509_crt_t cert)
       xfree (buf);
     }
 
-  return res;
+  EXIT_LISP_FRAME (res);
 }
 
 DEFUN ("gnutls-peer-status-warning-describe", Fgnutls_peer_status_warning_describe, Sgnutls_peer_status_warning_describe, 1, 1, 0,
        doc: /* Describe the warning of a GnuTLS peer status from `gnutls-peer-status'.  */)
   (Lisp_Object status_symbol)
 {
+  ENTER_LISP_FRAME (status_symbol);
   CHECK_SYMBOL (status_symbol);
 
   if (EQ (status_symbol, intern (":invalid")))
-    return build_string ("certificate could not be verified");
+    EXIT_LISP_FRAME (build_string ("certificate could not be verified"));
 
   if (EQ (status_symbol, intern (":revoked")))
-    return build_string ("certificate was revoked (CRL)");
+    EXIT_LISP_FRAME (build_string ("certificate was revoked (CRL)"));
 
   if (EQ (status_symbol, intern (":self-signed")))
-    return build_string ("certificate signer was not found (self-signed)");
+    EXIT_LISP_FRAME (build_string ("certificate signer was not found (self-signed)"));
 
   if (EQ (status_symbol, intern (":unknown-ca")))
-    return build_string ("the certificate was signed by an unknown "
-                         "and therefore untrusted authority");
+    EXIT_LISP_FRAME (build_string ("the certificate was signed by an unknown "
+                         "and therefore untrusted authority"));
 
   if (EQ (status_symbol, intern (":not-ca")))
-    return build_string ("certificate signer is not a CA");
+    EXIT_LISP_FRAME (build_string ("certificate signer is not a CA"));
 
   if (EQ (status_symbol, intern (":insecure")))
-    return build_string ("certificate was signed with an insecure algorithm");
+    EXIT_LISP_FRAME (build_string ("certificate was signed with an insecure algorithm"));
 
   if (EQ (status_symbol, intern (":not-activated")))
-    return build_string ("certificate is not yet activated");
+    EXIT_LISP_FRAME (build_string ("certificate is not yet activated"));
 
   if (EQ (status_symbol, intern (":expired")))
-    return build_string ("certificate has expired");
+    EXIT_LISP_FRAME (build_string ("certificate has expired"));
 
   if (EQ (status_symbol, intern (":no-host-match")))
-    return build_string ("certificate host does not match hostname");
+    EXIT_LISP_FRAME (build_string ("certificate host does not match hostname"));
 
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 DEFUN ("gnutls-peer-status", Fgnutls_peer_status, Sgnutls_peer_status, 1, 1, 0,
@@ -1240,14 +1257,18 @@ The return value is a property list with top-level keys :warnings and
 `gnutls-peer-status-warning-describe'. */)
   (Lisp_Object proc)
 {
-  Lisp_Object warnings = Qnil, result = Qnil;
+  ENTER_LISP_FRAME (proc);
+  LISP_LOCALS (warnings, result);
+  warnings = Qnil;
+  result = Qnil;
+
   unsigned int verification;
   gnutls_session_t state;
 
   CHECK_PROCESS (proc);
 
   if (GNUTLS_INITSTAGE (proc) != GNUTLS_STAGE_READY)
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
 
   /* Then collect any warnings already computed by the handshake. */
   verification = XPROCESS (proc)->gnutls_peer_verification;
@@ -1330,7 +1351,7 @@ The return value is a property list with top-level keys :warnings and
 				  (gnutls_mac_get (state)))));
 
 
-  return result;
+  EXIT_LISP_FRAME (result);
 }
 
 /* Initialize global GnuTLS state to defaults.
@@ -1393,13 +1414,13 @@ boot_error (struct Lisp_Process *p, const char *m, ...)
 Lisp_Object
 gnutls_verify_boot (Lisp_Object proc, Lisp_Object proplist)
 {
+  ENTER_LISP_FRAME (proc, proplist);
+  LISP_LOCALS (warnings, hostname, verify_error, tail, warning, message);
   int ret;
   struct Lisp_Process *p = XPROCESS (proc);
   gnutls_session_t state = p->gnutls_state;
   unsigned int peer_verification;
-  Lisp_Object warnings;
   int max_log_level = p->gnutls_log_level;
-  Lisp_Object hostname, verify_error;
   bool verify_error_all = false;
   char *c_hostname;
 
@@ -1415,13 +1436,13 @@ gnutls_verify_boot (Lisp_Object proc, Lisp_Object proplist)
     {
       boot_error (p,
 		  "gnutls-boot: invalid :verify_error parameter (not a list)");
-      return Qnil;
+      EXIT_LISP_FRAME (Qnil);
     }
 
   if (!STRINGP (hostname))
     {
       boot_error (p, "gnutls-boot: invalid :hostname parameter (not a string)");
-      return Qnil;
+      EXIT_LISP_FRAME (Qnil);
     }
   c_hostname = SSDATA (hostname);
 
@@ -1433,17 +1454,20 @@ gnutls_verify_boot (Lisp_Object proc, Lisp_Object proplist)
 
   ret = gnutls_certificate_verify_peers2 (state, &peer_verification);
   if (ret < GNUTLS_E_SUCCESS)
-    return gnutls_make_error (ret);
+    EXIT_LISP_FRAME (gnutls_make_error (ret));
 
   XPROCESS (proc)->gnutls_peer_verification = peer_verification;
 
   warnings = Fplist_get (Fgnutls_peer_status (proc), intern (":warnings"));
   if (!NILP (warnings))
     {
-      for (Lisp_Object tail = warnings; CONSP (tail); tail = XCDR (tail))
+      for (tail = warnings;
+ CONSP (tail); tail = XCDR (tail))
         {
-          Lisp_Object warning = XCAR (tail);
-          Lisp_Object message = Fgnutls_peer_status_warning_describe (warning);
+          warning = XCAR (tail);
+
+          message = Fgnutls_peer_status_warning_describe (warning);
+
           if (!NILP (message))
             GNUTLS_LOG2 (1, max_log_level, "verification:", SSDATA (message));
         }
@@ -1458,7 +1482,7 @@ gnutls_verify_boot (Lisp_Object proc, Lisp_Object proplist)
 	  boot_error (p,
 		      "Certificate validation failed %s, verification code %x",
 		      c_hostname, peer_verification);
-	  return Qnil;
+	  EXIT_LISP_FRAME (Qnil);
         }
       else
 	{
@@ -1478,7 +1502,7 @@ gnutls_verify_boot (Lisp_Object proc, Lisp_Object proplist)
 
       ret = gnutls_x509_crt_init (&gnutls_verify_cert);
       if (ret < GNUTLS_E_SUCCESS)
-	return gnutls_make_error (ret);
+	EXIT_LISP_FRAME (gnutls_make_error (ret));
 
       gnutls_verify_cert_list
 	= gnutls_certificate_get_peers (state, &gnutls_verify_cert_list_size);
@@ -1488,7 +1512,7 @@ gnutls_verify_boot (Lisp_Object proc, Lisp_Object proplist)
 	  gnutls_x509_crt_deinit (gnutls_verify_cert);
 	  emacs_gnutls_deinit (proc);
 	  boot_error (p, "No x509 certificate was found\n");
-	  return Qnil;
+	  EXIT_LISP_FRAME (Qnil);
 	}
 
       /* Check only the first certificate in the given chain.  */
@@ -1499,7 +1523,7 @@ gnutls_verify_boot (Lisp_Object proc, Lisp_Object proplist)
       if (ret < GNUTLS_E_SUCCESS)
 	{
 	  gnutls_x509_crt_deinit (gnutls_verify_cert);
-	  return gnutls_make_error (ret);
+	  EXIT_LISP_FRAME (gnutls_make_error (ret));
 	}
 
       XPROCESS (proc)->gnutls_certificate = gnutls_verify_cert;
@@ -1518,7 +1542,7 @@ gnutls_verify_boot (Lisp_Object proc, Lisp_Object proplist)
 	      emacs_gnutls_deinit (proc);
 	      boot_error (p, "The x509 certificate does not match \"%s\"",
 			  c_hostname);
-	      return Qnil;
+	      EXIT_LISP_FRAME (Qnil);
             }
 	  else
 	    GNUTLS_LOG2 (1, max_log_level, "x509 certificate does not match:",
@@ -1529,7 +1553,7 @@ gnutls_verify_boot (Lisp_Object proc, Lisp_Object proplist)
   /* Set this flag only if the whole initialization succeeded.  */
   XPROCESS (proc)->gnutls_p = true;
 
-  return gnutls_make_error (ret);
+  EXIT_LISP_FRAME (gnutls_make_error (ret));
 }
 
 DEFUN ("gnutls-boot", Fgnutls_boot, Sgnutls_boot, 3, 3, 0,
@@ -1591,25 +1615,19 @@ work.  For X.509 PKI (`gnutls-x509pki'), you probably need at least
 one trustfile (usually a CA bundle).  */)
   (Lisp_Object proc, Lisp_Object type, Lisp_Object proplist)
 {
+  ENTER_LISP_FRAME (proc, type, proplist);
+  LISP_LOCALS (global_init, priority_string, trustfiles, crlfiles, keylist, loglevel, hostname, prime_bits, verify_flags, tail, trustfile, crlfile, keyfile, certfile);
   int ret = GNUTLS_E_SUCCESS;
   int max_log_level = 0;
 
   gnutls_session_t state;
   gnutls_certificate_credentials_t x509_cred = NULL;
   gnutls_anon_client_credentials_t anon_cred = NULL;
-  Lisp_Object global_init;
   char const *priority_string_ptr = "NORMAL"; /* default priority string.  */
   char *c_hostname;
 
   /* Placeholders for the property list elements.  */
-  Lisp_Object priority_string;
-  Lisp_Object trustfiles;
-  Lisp_Object crlfiles;
-  Lisp_Object keylist;
   /* Lisp_Object callbacks; */
-  Lisp_Object loglevel;
-  Lisp_Object hostname;
-  Lisp_Object prime_bits;
   struct Lisp_Process *p = XPROCESS (proc);
 
   CHECK_PROCESS (proc);
@@ -1619,13 +1637,13 @@ one trustfile (usually a CA bundle).  */)
   if (NILP (Fgnutls_available_p ()))
     {
       boot_error (p, "GnuTLS not available");
-      return Qnil;
+      EXIT_LISP_FRAME (Qnil);
     }
 
   if (!EQ (type, Qgnutls_x509pki) && !EQ (type, Qgnutls_anon))
     {
       boot_error (p, "Invalid GnuTLS credential type");
-      return Qnil;
+      EXIT_LISP_FRAME (Qnil);
     }
 
   hostname              = Fplist_get (proplist, QChostname);
@@ -1639,7 +1657,7 @@ one trustfile (usually a CA bundle).  */)
   if (!STRINGP (hostname))
     {
       boot_error (p, "gnutls-boot: invalid :hostname parameter (not a string)");
-      return Qnil;
+      EXIT_LISP_FRAME (Qnil);
     }
   c_hostname = SSDATA (hostname);
 
@@ -1661,7 +1679,7 @@ one trustfile (usually a CA bundle).  */)
   /* Always initialize globals.  */
   global_init = emacs_gnutls_global_init ();
   if (! NILP (Fgnutls_errorp (global_init)))
-    return global_init;
+    EXIT_LISP_FRAME (global_init);
 
   /* Before allocating new credentials, deallocate any credentials
      that PROC might already have.  */
@@ -1677,7 +1695,6 @@ one trustfile (usually a CA bundle).  */)
   GNUTLS_LOG (1, max_log_level, "allocating credentials");
   if (EQ (type, Qgnutls_x509pki))
     {
-      Lisp_Object verify_flags;
       unsigned int gnutls_verify_flags = GNUTLS_VERIFY_ALLOW_X509_V1_CA_CRT;
 
       GNUTLS_LOG (2, max_log_level, "allocating x509 credentials");
@@ -1710,7 +1727,6 @@ one trustfile (usually a CA bundle).  */)
     {
       /* TODO: GNUTLS_X509_FMT_DER is also an option.  */
       int file_format = GNUTLS_X509_FMT_PEM;
-      Lisp_Object tail;
 
 # ifdef HAVE_GNUTLS_X509_SYSTEM_TRUST
       ret = gnutls_certificate_set_x509_system_trust (x509_cred);
@@ -1724,7 +1740,8 @@ one trustfile (usually a CA bundle).  */)
 
       for (tail = trustfiles; CONSP (tail); tail = XCDR (tail))
 	{
-	  Lisp_Object trustfile = XCAR (tail);
+	  trustfile = XCAR (tail);
+
 	  if (STRINGP (trustfile))
 	    {
 	      GNUTLS_LOG2 (1, max_log_level, "setting the trustfile: ",
@@ -1742,19 +1759,20 @@ one trustfile (usually a CA bundle).  */)
 		 file_format);
 
 	      if (ret < GNUTLS_E_SUCCESS)
-		return gnutls_make_error (ret);
+		EXIT_LISP_FRAME (gnutls_make_error (ret));
 	    }
 	  else
 	    {
 	      emacs_gnutls_deinit (proc);
 	      boot_error (p, "Invalid trustfile");
-	      return Qnil;
+	      EXIT_LISP_FRAME (Qnil);
 	    }
 	}
 
       for (tail = crlfiles; CONSP (tail); tail = XCDR (tail))
 	{
-	  Lisp_Object crlfile = XCAR (tail);
+	  crlfile = XCAR (tail);
+
 	  if (STRINGP (crlfile))
 	    {
 	      GNUTLS_LOG2 (1, max_log_level, "setting the CRL file: ",
@@ -1767,20 +1785,22 @@ one trustfile (usually a CA bundle).  */)
 		(x509_cred, SSDATA (crlfile), file_format);
 
 	      if (ret < GNUTLS_E_SUCCESS)
-		return gnutls_make_error (ret);
+		EXIT_LISP_FRAME (gnutls_make_error (ret));
 	    }
 	  else
 	    {
 	      emacs_gnutls_deinit (proc);
 	      boot_error (p, "Invalid CRL file");
-	      return Qnil;
+	      EXIT_LISP_FRAME (Qnil);
 	    }
 	}
 
       for (tail = keylist; CONSP (tail); tail = XCDR (tail))
 	{
-	  Lisp_Object keyfile = Fcar (XCAR (tail));
-	  Lisp_Object certfile = Fcar (Fcdr (XCAR (tail)));
+	  keyfile = Fcar (XCAR (tail));
+
+	  certfile = Fcar (Fcdr (XCAR (tail)));
+
 	  if (STRINGP (keyfile) && STRINGP (certfile))
 	    {
 	      GNUTLS_LOG2 (1, max_log_level, "setting the client key file: ",
@@ -1797,14 +1817,14 @@ one trustfile (usually a CA bundle).  */)
 		(x509_cred, SSDATA (certfile), SSDATA (keyfile), file_format);
 
 	      if (ret < GNUTLS_E_SUCCESS)
-		return gnutls_make_error (ret);
+		EXIT_LISP_FRAME (gnutls_make_error (ret));
 	    }
 	  else
 	    {
 	      emacs_gnutls_deinit (proc);
 	      boot_error (p, STRINGP (keyfile) ? "Invalid client cert file"
 			  : "Invalid client key file");
-	      return Qnil;
+	      EXIT_LISP_FRAME (Qnil);
 	    }
 	}
     }
@@ -1824,7 +1844,7 @@ one trustfile (usually a CA bundle).  */)
   ret = gnutls_init (&state, gnutls_flags);
   XPROCESS (proc)->gnutls_state = state;
   if (ret < GNUTLS_E_SUCCESS)
-    return gnutls_make_error (ret);
+    EXIT_LISP_FRAME (gnutls_make_error (ret));
   GNUTLS_INITSTAGE (proc) = GNUTLS_STAGE_INIT;
 
   if (STRINGP (priority_string))
@@ -1842,7 +1862,7 @@ one trustfile (usually a CA bundle).  */)
   GNUTLS_LOG (1, max_log_level, "setting the priority string");
   ret = gnutls_priority_set_direct (state, priority_string_ptr, NULL);
   if (ret < GNUTLS_E_SUCCESS)
-    return gnutls_make_error (ret);
+    EXIT_LISP_FRAME (gnutls_make_error (ret));
 
   GNUTLS_INITSTAGE (proc) = GNUTLS_STAGE_PRIORITY;
 
@@ -1853,14 +1873,14 @@ one trustfile (usually a CA bundle).  */)
     ? gnutls_credentials_set (state, GNUTLS_CRD_CERTIFICATE, x509_cred)
     : gnutls_credentials_set (state, GNUTLS_CRD_ANON, anon_cred);
   if (ret < GNUTLS_E_SUCCESS)
-    return gnutls_make_error (ret);
+    EXIT_LISP_FRAME (gnutls_make_error (ret));
 
   if (!gnutls_ip_address_p (c_hostname))
     {
       ret = gnutls_server_name_set (state, GNUTLS_NAME_DNS, c_hostname,
 				    strlen (c_hostname));
       if (ret < GNUTLS_E_SUCCESS)
-	return gnutls_make_error (ret);
+	EXIT_LISP_FRAME (gnutls_make_error (ret));
     }
 
   XPROCESS (proc)->gnutls_complete_negotiation_p =
@@ -1868,9 +1888,9 @@ one trustfile (usually a CA bundle).  */)
   GNUTLS_INITSTAGE (proc) = GNUTLS_STAGE_CRED_SET;
   ret = emacs_gnutls_handshake (XPROCESS (proc));
   if (ret < GNUTLS_E_SUCCESS)
-    return gnutls_make_error (ret);
+    EXIT_LISP_FRAME (gnutls_make_error (ret));
 
-  return gnutls_verify_boot (proc, proplist);
+  EXIT_LISP_FRAME (gnutls_verify_boot (proc, proplist));
 }
 
 DEFUN ("gnutls-bye", Fgnutls_bye,
@@ -1889,6 +1909,7 @@ This function may also return `gnutls-e-again', or
 `gnutls-e-interrupted'.  */)
     (Lisp_Object proc, Lisp_Object cont)
 {
+  ENTER_LISP_FRAME (proc, cont);
   gnutls_session_t state;
   int ret;
 
@@ -1900,7 +1921,7 @@ This function may also return `gnutls-e-again', or
 
   ret = gnutls_bye (state, NILP (cont) ? GNUTLS_SHUT_RDWR : GNUTLS_SHUT_WR);
 
-  return gnutls_make_error (ret);
+  EXIT_LISP_FRAME (gnutls_make_error (ret));
 }
 
 #endif	/* HAVE_GNUTLS */
@@ -1912,7 +1933,10 @@ DEFUN ("gnutls-ciphers", Fgnutls_ciphers, Sgnutls_ciphers, 0, 0, 0,
 The alist key is the cipher name. */)
   (void)
 {
-  Lisp_Object ciphers = Qnil;
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (ciphers, cipher_symbol, cp);
+  ciphers = Qnil;
+
 
   const gnutls_cipher_algorithm_t *gciphers = gnutls_cipher_list ();
   for (ptrdiff_t pos = 0; gciphers[pos] != 0; pos++)
@@ -1925,12 +1949,12 @@ The alist key is the cipher name. */)
 	continue;
 
       /* A symbol representing the GnuTLS cipher.  */
-      Lisp_Object cipher_symbol = intern (cipher_name);
+      cipher_symbol = intern (cipher_name);
+
 
       ptrdiff_t cipher_tag_size = gnutls_cipher_get_tag_size (gca);
 
-      Lisp_Object cp
-	= listn (CONSTYPE_HEAP, 15, cipher_symbol,
+      cp = listn (CONSTYPE_HEAP, 15, cipher_symbol,
 		 QCcipher_id, make_number (gca),
 		 QCtype, Qgnutls_type_cipher,
 		 QCcipher_aead_capable, cipher_tag_size == 0 ? Qnil : Qt,
@@ -1945,10 +1969,11 @@ The alist key is the cipher name. */)
 		 QCcipher_ivsize,
 		 make_number (gnutls_cipher_get_iv_size (gca)));
 
+
       ciphers = Fcons (cp, ciphers);
     }
 
-  return ciphers;
+  EXIT_LISP_FRAME (ciphers);
 }
 
 static Lisp_Object
@@ -1959,10 +1984,13 @@ gnutls_symmetric_aead (bool encrypting, gnutls_cipher_algorithm_t gca,
 		       const char *idata, ptrdiff_t isize,
                        Lisp_Object aead_auth)
 {
+  ENTER_LISP_FRAME (cipher, aead_auth);
+  LISP_LOCALS (actual_iv, output);
 # ifdef HAVE_GNUTLS_AEAD
 
   const char *desc = encrypting ? "encrypt" : "decrypt";
-  Lisp_Object actual_iv = make_unibyte_string (vdata, vsize);
+  actual_iv = make_unibyte_string (vdata, vsize);
+
 
   gnutls_aead_cipher_hd_t acipher;
   gnutls_datum_t key_datum = { (unsigned char *) kdata, ksize };
@@ -2015,7 +2043,6 @@ gnutls_symmetric_aead (bool encrypting, gnutls_cipher_algorithm_t gca,
 	 (acipher, vdata, vsize, aead_auth_data, aead_auth_size,
 	  cipher_tag_size, idata, isize, storage, &storage_length));
 
-  Lisp_Object output;
   if (GNUTLS_E_SUCCESS <= ret)
     output = make_unibyte_string (storage, storage_length);
   explicit_bzero (storage, storage_length);
@@ -2028,7 +2055,7 @@ gnutls_symmetric_aead (bool encrypting, gnutls_cipher_algorithm_t gca,
 	   gnutls_cipher_get_name (gca), emacs_gnutls_strerror (ret));
 
   SAFE_FREE ();
-  return list2 (output, actual_iv);
+  EXIT_LISP_FRAME (list2 (output, actual_iv));
 # else
   printmax_t print_gca = gca;
   error ("GnuTLS AEAD cipher %"pMd" is invalid or not found", print_gca);
@@ -2040,6 +2067,8 @@ gnutls_symmetric (bool encrypting, Lisp_Object cipher,
                   Lisp_Object key, Lisp_Object iv,
                   Lisp_Object input, Lisp_Object aead_auth)
 {
+  ENTER_LISP_FRAME (cipher, key, iv, input, aead_auth);
+  LISP_LOCALS (info, v, actual_iv, aead_output, storage);
   if (BUFFERP (key) || STRINGP (key))
     key = list1 (key);
 
@@ -2060,7 +2089,8 @@ gnutls_symmetric (bool encrypting, Lisp_Object cipher,
 
   gnutls_cipher_algorithm_t gca = GNUTLS_CIPHER_UNKNOWN;
 
-  Lisp_Object info = Qnil;
+  info = Qnil;
+
   if (STRINGP (cipher))
     cipher = intern (SSDATA (cipher));
 
@@ -2080,7 +2110,8 @@ gnutls_symmetric (bool encrypting, Lisp_Object cipher,
 
   if (!NILP (info) && CONSP (info))
     {
-      Lisp_Object v = Fplist_get (info, QCcipher_id);
+      v = Fplist_get (info, QCcipher_id);
+
       if (TYPE_RANGED_INTEGERP (gnutls_cipher_algorithm_t, v))
         gca = XINT (v);
     }
@@ -2115,7 +2146,8 @@ gnutls_symmetric (bool encrypting, Lisp_Object cipher,
            gnutls_cipher_get_name (gca), desc,
 	   vend_byte - vstart_byte, iv_size);
 
-  Lisp_Object actual_iv = make_unibyte_string (vdata, vend_byte - vstart_byte);
+  actual_iv = make_unibyte_string (vdata, vend_byte - vstart_byte);
+
 
   ptrdiff_t istart_byte, iend_byte;
   const char *idata
@@ -2127,15 +2159,15 @@ gnutls_symmetric (bool encrypting, Lisp_Object cipher,
   /* Is this an AEAD cipher? */
   if (gnutls_cipher_get_tag_size (gca) > 0)
     {
-      Lisp_Object aead_output =
-        gnutls_symmetric_aead (encrypting, gca, cipher,
+      aead_output = gnutls_symmetric_aead (encrypting, gca, cipher,
                                kdata, kend_byte - kstart_byte,
                                vdata, vend_byte - vstart_byte,
                                idata, iend_byte - istart_byte,
                                aead_auth);
+
       if (STRINGP (XCAR (key)))
         Fclear_string (XCAR (key));
-      return aead_output;
+      EXIT_LISP_FRAME (aead_output);
     }
 
   ptrdiff_t cipher_block_size = gnutls_cipher_get_block_size (gca);
@@ -2161,7 +2193,8 @@ gnutls_symmetric (bool encrypting, Lisp_Object cipher,
   /* GnuTLS docs: "For the supported ciphers the encrypted data length
      will equal the plaintext size."  */
   ptrdiff_t storage_length = iend_byte - istart_byte;
-  Lisp_Object storage = make_uninit_string (storage_length);
+  storage = make_uninit_string (storage_length);
+
 
   ret = ((encrypting ? gnutls_cipher_encrypt2 : gnutls_cipher_decrypt2)
 	 (hcipher, idata, iend_byte - istart_byte,
@@ -2183,7 +2216,7 @@ gnutls_symmetric (bool encrypting, Lisp_Object cipher,
 
   gnutls_cipher_deinit (hcipher);
 
-  return list2 (storage, actual_iv);
+  EXIT_LISP_FRAME (list2 (storage, actual_iv));
 }
 
 DEFUN ("gnutls-symmetric-encrypt", Fgnutls_symmetric_encrypt,
@@ -2210,7 +2243,8 @@ these AEAD ciphers, but it may still be omitted (nil) as well. */)
   (Lisp_Object cipher, Lisp_Object key, Lisp_Object iv,
    Lisp_Object input, Lisp_Object aead_auth)
 {
-  return gnutls_symmetric (true, cipher, key, iv, input, aead_auth);
+  ENTER_LISP_FRAME (cipher, key, iv, input, aead_auth);
+  EXIT_LISP_FRAME (gnutls_symmetric (true, cipher, key, iv, input, aead_auth));
 }
 
 DEFUN ("gnutls-symmetric-decrypt", Fgnutls_symmetric_decrypt,
@@ -2237,7 +2271,8 @@ these AEAD ciphers, but it may still be omitted (nil) as well. */)
   (Lisp_Object cipher, Lisp_Object key, Lisp_Object iv,
    Lisp_Object input, Lisp_Object aead_auth)
 {
-  return gnutls_symmetric (false, cipher, key, iv, input, aead_auth);
+  ENTER_LISP_FRAME (cipher, key, iv, input, aead_auth);
+  EXIT_LISP_FRAME (gnutls_symmetric (false, cipher, key, iv, input, aead_auth));
 }
 
 DEFUN ("gnutls-macs", Fgnutls_macs, Sgnutls_macs, 0, 0, 0,
@@ -2248,20 +2283,24 @@ with `gnutls-hash-mac'.  The alist key is the mac-algorithm method
 name. */)
   (void)
 {
-  Lisp_Object mac_algorithms = Qnil;
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (mac_algorithms, gma_symbol, mp);
+  mac_algorithms = Qnil;
+
   const gnutls_mac_algorithm_t *macs = gnutls_mac_list ();
   for (ptrdiff_t pos = 0; macs[pos] != 0; pos++)
     {
       const gnutls_mac_algorithm_t gma = macs[pos];
 
       /* A symbol representing the GnuTLS MAC algorithm.  */
-      Lisp_Object gma_symbol = intern (gnutls_mac_get_name (gma));
+      gma_symbol = intern (gnutls_mac_get_name (gma));
+
 
       size_t nonce_size = 0;
 #ifdef HAVE_GNUTLS_MAC_GET_NONCE_SIZE
       nonce_size = gnutls_mac_get_nonce_size (gma);
 #endif
-      Lisp_Object mp = listn (CONSTYPE_HEAP, 11, gma_symbol,
+      mp = listn (CONSTYPE_HEAP, 11, gma_symbol,
 			      QCmac_algorithm_id, make_number (gma),
 			      QCtype, Qgnutls_type_mac_algorithm,
 
@@ -2273,10 +2312,11 @@ name. */)
 
                               QCmac_algorithm_noncesize,
 			      make_number (nonce_size));
+
       mac_algorithms = Fcons (mp, mac_algorithms);
     }
 
-  return mac_algorithms;
+  EXIT_LISP_FRAME (mac_algorithms);
 }
 
 DEFUN ("gnutls-digests", Fgnutls_digests, Sgnutls_digests, 0, 0, 0,
@@ -2287,26 +2327,31 @@ with `gnutls-hash-digest'.  The alist key is the digest-algorithm
 method name. */)
   (void)
 {
-  Lisp_Object digest_algorithms = Qnil;
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (digest_algorithms, gda_symbol, mp);
+  digest_algorithms = Qnil;
+
   const gnutls_digest_algorithm_t *digests = gnutls_digest_list ();
   for (ptrdiff_t pos = 0; digests[pos] != 0; pos++)
     {
       const gnutls_digest_algorithm_t gda = digests[pos];
 
       /* A symbol representing the GnuTLS digest algorithm.  */
-      Lisp_Object gda_symbol = intern (gnutls_digest_get_name (gda));
+      gda_symbol = intern (gnutls_digest_get_name (gda));
 
-      Lisp_Object mp = listn (CONSTYPE_HEAP, 7, gda_symbol,
+
+      mp = listn (CONSTYPE_HEAP, 7, gda_symbol,
 			      QCdigest_algorithm_id, make_number (gda),
 			      QCtype, Qgnutls_type_digest_algorithm,
 
                               QCdigest_algorithm_length,
                               make_number (gnutls_hash_get_len (gda)));
 
+
       digest_algorithms = Fcons (mp, digest_algorithms);
     }
 
-  return digest_algorithms;
+  EXIT_LISP_FRAME (digest_algorithms);
 }
 
 DEFUN ("gnutls-hash-mac", Fgnutls_hash_mac, Sgnutls_hash_mac, 3, 3, 0,
@@ -2327,6 +2372,8 @@ a plist with the `:mac-algorithm-id' numeric property, or the number
 itself. */)
   (Lisp_Object hash_method, Lisp_Object key, Lisp_Object input)
 {
+  ENTER_LISP_FRAME (hash_method, key, input);
+  LISP_LOCALS (info, v, digest);
   if (BUFFERP (input) || STRINGP (input))
     input = list1 (input);
 
@@ -2339,7 +2386,8 @@ itself. */)
 
   gnutls_mac_algorithm_t gma = GNUTLS_MAC_UNKNOWN;
 
-  Lisp_Object info = Qnil;
+  info = Qnil;
+
   if (STRINGP (hash_method))
     hash_method = intern (SSDATA (hash_method));
 
@@ -2359,7 +2407,8 @@ itself. */)
 
   if (!NILP (info) && CONSP (info))
     {
-      Lisp_Object v = Fplist_get (info, QCmac_algorithm_id);
+      v = Fplist_get (info, QCmac_algorithm_id);
+
       if (TYPE_RANGED_INTEGERP (gnutls_mac_algorithm_t, v))
         gma = XINT (v);
     }
@@ -2388,7 +2437,8 @@ itself. */)
   if (idata == NULL)
     error ("GnuTLS MAC input extraction failed");
 
-  Lisp_Object digest = make_uninit_string (digest_length);
+  digest = make_uninit_string (digest_length);
+
 
   ret = gnutls_hmac (hmac, idata + istart_byte, iend_byte - istart_byte);
 
@@ -2405,7 +2455,7 @@ itself. */)
   gnutls_hmac_output (hmac, SSDATA (digest));
   gnutls_hmac_deinit (hmac, NULL);
 
-  return digest;
+  EXIT_LISP_FRAME (digest);
 }
 
 DEFUN ("gnutls-hash-digest", Fgnutls_hash_digest, Sgnutls_hash_digest, 2, 2, 0,
@@ -2422,6 +2472,8 @@ alist, or a plist with the `:digest-algorithm-id' numeric property, or
 the number itself. */)
   (Lisp_Object digest_method, Lisp_Object input)
 {
+  ENTER_LISP_FRAME (digest_method, input);
+  LISP_LOCALS (info, v, digest);
   if (BUFFERP (input) || STRINGP (input))
     input = list1 (input);
 
@@ -2429,7 +2481,8 @@ the number itself. */)
 
   gnutls_digest_algorithm_t gda = GNUTLS_DIG_UNKNOWN;
 
-  Lisp_Object info = Qnil;
+  info = Qnil;
+
   if (STRINGP (digest_method))
     digest_method = intern (SSDATA (digest_method));
 
@@ -2449,7 +2502,8 @@ the number itself. */)
 
   if (!NILP (info) && CONSP (info))
     {
-      Lisp_Object v = Fplist_get (info, QCdigest_algorithm_id);
+      v = Fplist_get (info, QCdigest_algorithm_id);
+
       if (TYPE_RANGED_INTEGERP (gnutls_digest_algorithm_t, v))
         gda = XINT (v);
     }
@@ -2467,7 +2521,8 @@ the number itself. */)
     error ("GnuTLS digest initialization failed: %s",
 	   emacs_gnutls_strerror (ret));
 
-  Lisp_Object digest = make_uninit_string (digest_length);
+  digest = make_uninit_string (digest_length);
+
 
   ptrdiff_t istart_byte, iend_byte;
   const char *idata
@@ -2487,7 +2542,7 @@ the number itself. */)
   gnutls_hash_output (hash, SSDATA (digest));
   gnutls_hash_deinit (hash, NULL);
 
-  return digest;
+  EXIT_LISP_FRAME (digest);
 }
 
 #endif	/* HAVE_GNUTLS3 */
@@ -2506,20 +2561,24 @@ Any GnuTLS extension with ID up to 100
                         : the list will contain its name.  */)
   (void)
 {
-  Lisp_Object capabilities = Qnil;
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (capabilities, found);
+  capabilities = Qnil;
+
 
 #ifdef HAVE_GNUTLS
 
 # ifdef WINDOWSNT
-  Lisp_Object found = Fassq (Qgnutls, Vlibrary_cache);
+  found = Fassq (Qgnutls, Vlibrary_cache);
+
   if (CONSP (found))
-    return XCDR (found);
+    EXIT_LISP_FRAME (XCDR (found));
 
   /* Load the GnuTLS DLL and find exported functions.  The external
      library cache is updated after the capabilities have been
      determined.  */
   if (!init_gnutls_functions ())
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
 # endif /* WINDOWSNT */
 
   capabilities = Fcons (intern("gnutls"), capabilities);
@@ -2556,7 +2615,7 @@ Any GnuTLS extension with ID up to 100
 # endif /* WINDOWSNT */
 #endif	/* HAVE_GNUTLS */
 
-  return capabilities;
+  EXIT_LISP_FRAME (capabilities);
 }
 
 void

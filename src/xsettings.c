@@ -58,12 +58,14 @@ static Lisp_Object current_tool_bar_style = NIL_INIT;
 static void
 store_config_changed_event (Lisp_Object arg, Lisp_Object display_name)
 {
+  ENTER_LISP_FRAME (arg, display_name);
   struct input_event event;
   EVENT_INIT (event);
   event.kind = CONFIG_CHANGED_EVENT;
   event.frame_or_window = display_name;
   event.arg = arg;
   kbd_buffer_store_event (&event);
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Return true if DPYINFO is still valid.  */
@@ -124,7 +126,10 @@ store_font_name_changed (const char *newfont)
 static Lisp_Object
 map_tool_bar_style (const char *tool_bar_style)
 {
-  Lisp_Object style = Qnil;
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (style);
+  style = Qnil;
+
   if (tool_bar_style)
     {
       if (strcmp (tool_bar_style, "both") == 0)
@@ -137,7 +142,7 @@ map_tool_bar_style (const char *tool_bar_style)
         style = Qtext;
     }
 
-  return style;
+  EXIT_LISP_FRAME (style);
 }
 
 /* Store a tool bar style change event if the tool bar style changed.  */
@@ -146,14 +151,18 @@ static void
 store_tool_bar_style_changed (const char *newstyle,
                               struct x_display_info *dpyinfo)
 {
-  Lisp_Object style = map_tool_bar_style (newstyle);
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (style);
+  style = map_tool_bar_style (newstyle);
+
   if (EQ (current_tool_bar_style, style))
-    return; /* No change. */
+    EXIT_LISP_FRAME_VOID (); /* No change. */
 
   current_tool_bar_style = style;
   if (dpyinfo_valid (dpyinfo))
     store_config_changed_event (Qtool_bar_style,
                                 XCAR (dpyinfo->name_list_element));
+  EXIT_LISP_FRAME_VOID ();
 }
 
 #ifdef HAVE_XFT
@@ -392,7 +401,10 @@ parse_settings (unsigned char *prop,
                 unsigned long bytes,
                 struct xsettings *settings)
 {
-  Lisp_Object byteorder = Fbyteorder ();
+  ENTER_LISP_FRAME_T (int);
+  LISP_LOCALS (byteorder);
+  byteorder = Fbyteorder ();
+
   int my_bo = XFASTINT (byteorder) == 'B' ? MSBFirst : LSBFirst;
   int that_bo = prop[0];
   CARD32 n_settings;
@@ -402,7 +414,7 @@ parse_settings (unsigned char *prop,
 
   /* First 4 bytes is a serial number, skip that.  */
 
-  if (bytes < 12) return settings_seen;
+  if (bytes < 12) EXIT_LISP_FRAME (settings_seen);
   memcpy (&n_settings, prop+8, 4);
   if (my_bo != that_bo) n_settings = bswap_32 (n_settings);
   bytes_parsed = 12;
@@ -427,7 +439,7 @@ parse_settings (unsigned char *prop,
       memcpy (&nlen, prop+bytes_parsed, 2);
       bytes_parsed += 2;
       if (my_bo != that_bo) nlen = bswap_16 (nlen);
-      if (bytes_parsed + nlen > bytes) return settings_seen;
+      if (bytes_parsed + nlen > bytes) EXIT_LISP_FRAME (settings_seen);
       to_cpy = min (nlen, sizeof name - 1);
       memcpy (name, prop+bytes_parsed, to_cpy);
       name[to_cpy] = '\0';
@@ -436,7 +448,7 @@ parse_settings (unsigned char *prop,
       bytes_parsed = PAD (bytes_parsed);
 
       bytes_parsed += 4; /* Skip serial for this value */
-      if (bytes_parsed > bytes) return settings_seen;
+      if (bytes_parsed > bytes) EXIT_LISP_FRAME (settings_seen);
 
       want_this = strcmp (XSETTINGS_TOOL_BAR_STYLE, name) == 0;
 #ifdef HAVE_XFT
@@ -448,7 +460,7 @@ parse_settings (unsigned char *prop,
       switch (type)
         {
         case 0: /* Integer */
-          if (bytes_parsed + 4 > bytes) return settings_seen;
+          if (bytes_parsed + 4 > bytes) EXIT_LISP_FRAME (settings_seen);
           if (want_this)
             {
               memcpy (&ival, prop+bytes_parsed, 4);
@@ -458,7 +470,7 @@ parse_settings (unsigned char *prop,
           break;
 
         case 1: /* String */
-          if (bytes_parsed + 4 > bytes) return settings_seen;
+          if (bytes_parsed + 4 > bytes) EXIT_LISP_FRAME (settings_seen);
           memcpy (&vlen, prop+bytes_parsed, 4);
           bytes_parsed += 4;
           if (my_bo != that_bo) vlen = bswap_32 (vlen);
@@ -474,12 +486,12 @@ parse_settings (unsigned char *prop,
 
         case 2: /* RGB value */
           /* No need to parse this */
-          if (bytes_parsed + 8 > bytes) return settings_seen;
+          if (bytes_parsed + 8 > bytes) EXIT_LISP_FRAME (settings_seen);
           bytes_parsed += 8; /* 4 values (r, b, g, alpha), 2 bytes each.  */
           break;
 
         default: /* Parse Error */
-          return settings_seen;
+          EXIT_LISP_FRAME (settings_seen);
         }
 
       if (want_this)
@@ -559,7 +571,7 @@ parse_settings (unsigned char *prop,
         }
     }
 
-  return settings_seen;
+  EXIT_LISP_FRAME (settings_seen);
 }
 
 /* Read settings from the XSettings property window on display for DPYINFO.

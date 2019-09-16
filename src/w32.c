@@ -1527,12 +1527,13 @@ w32_init_file_name_codepage (void)
 int
 codepage_for_filenames (CPINFO *cp_info)
 {
+  ENTER_LISP_FRAME_T (int);
+  LISP_LOCALS (current_encoding);
   /* A simple cache to avoid calling GetCPInfo every time we need to
      encode/decode a file name.  The file-name encoding is not
      supposed to be changed too frequently, if ever.  */
   static Lisp_Object last_file_name_encoding;
   static CPINFO cp;
-  Lisp_Object current_encoding;
 
   current_encoding = Vfile_name_coding_system;
   if (NILP (current_encoding))
@@ -1580,7 +1581,7 @@ codepage_for_filenames (CPINFO *cp_info)
   if (cp_info)
     *cp_info = cp;
 
-  return file_name_codepage;
+  EXIT_LISP_FRAME (file_name_codepage);
 }
 
 int
@@ -2465,7 +2466,8 @@ w32_get_short_filename (const char * name, char * buf, int size)
 Lisp_Object
 ansi_encode_filename (Lisp_Object filename)
 {
-  Lisp_Object encoded_filename;
+  ENTER_LISP_FRAME (filename);
+  LISP_LOCALS (encoded_filename);
   char fname[MAX_PATH];
 
   filename_to_ansi (SSDATA (filename), fname);
@@ -2483,7 +2485,7 @@ ansi_encode_filename (Lisp_Object filename)
     }
   else
     encoded_filename = build_unibyte_string (fname);
-  return encoded_filename;
+  EXIT_LISP_FRAME (encoded_filename);
 }
 
 static int
@@ -2627,6 +2629,8 @@ w32_get_resource (const char *key, LPDWORD lpdwtype)
 void
 init_environment (char ** argv)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (env, entry);
   static const char * const tempdirs[] = {
     "$TMPDIR", "$TEMP", "$TMP", "c:/"
   };
@@ -2916,9 +2920,11 @@ init_environment (char ** argv)
 
     /* Make the same modification to `process-environment' which has
        already been initialized in set_initial_environment.  */
-    for (Lisp_Object env = Vprocess_environment; CONSP (env); env = XCDR (env))
+    for (env = Vprocess_environment;
+ CONSP (env); env = XCDR (env))
     {
-      Lisp_Object entry = XCAR (env);
+      entry = XCAR (env);
+
       if (_strnicmp (SDATA (entry), path, path_len) == 0)
         for (int i = 0; i < path_len; i++)
           SSET (entry, i, path[i]);
@@ -2962,6 +2968,7 @@ init_environment (char ** argv)
   w32_num_mouse_buttons = GetSystemMetrics (SM_CMOUSEBUTTONS);
 
   init_user_info ();
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Called from expand-file-name when default-directory is not a string.  */
@@ -6789,7 +6796,10 @@ global_memory_status_ex (MEMORY_STATUS_EX *buf)
 Lisp_Object
 list_system_processes (void)
 {
-  Lisp_Object proclist = Qnil;
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (proclist);
+  proclist = Qnil;
+
   HANDLE h_snapshot;
 
   h_snapshot = create_toolhelp32_snapshot (TH32CS_SNAPPROCESS, 0);
@@ -6812,7 +6822,7 @@ list_system_processes (void)
       proclist = Fnreverse (proclist);
     }
 
-  return proclist;
+  EXIT_LISP_FRAME (proclist);
 }
 
 static int
@@ -6937,8 +6947,10 @@ process_times (HANDLE h_proc, Lisp_Object *ctime, Lisp_Object *etime,
 Lisp_Object
 system_process_attributes (Lisp_Object pid)
 {
-  Lisp_Object attrs = Qnil;
-  Lisp_Object cmd_str, decoded_cmd, tem;
+  ENTER_LISP_FRAME (pid);
+  LISP_LOCALS (attrs, cmd_str, decoded_cmd, tem, ctime, stime, utime, etime, ttime);
+  attrs = Qnil;
+
   HANDLE h_snapshot, h_proc;
   DWORD proc_id;
   int found_proc = 0;
@@ -6959,7 +6971,6 @@ system_process_attributes (Lisp_Object pid)
   MEMORYSTATUS memst;
   MEMORY_STATUS_EX memstex;
   double totphys = 0.0;
-  Lisp_Object ctime, stime, utime, etime, ttime;
   double pcpu;
   BOOL result = FALSE;
 
@@ -7009,7 +7020,7 @@ system_process_attributes (Lisp_Object pid)
     }
 
   if (!found_proc)
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
 
   h_proc = OpenProcess (PROCESS_QUERY_INFORMATION | PROCESS_VM_READ,
 			FALSE, proc_id);
@@ -7227,7 +7238,7 @@ system_process_attributes (Lisp_Object pid)
 
   if (h_proc)
     CloseHandle (h_proc);
-  return attrs;
+  EXIT_LISP_FRAME (attrs);
 }
 
 int
@@ -9016,10 +9027,13 @@ sys_write (int fd, const void * buffer, unsigned int count)
 static Lisp_Object
 network_interface_get_info (Lisp_Object ifname)
 {
+  ENTER_LISP_FRAME (ifname);
+  LISP_LOCALS (res, hwaddr, flags);
   ULONG ainfo_len = sizeof (IP_ADAPTER_INFO);
   IP_ADAPTER_INFO *adapter, *ainfo = xmalloc (ainfo_len);
   DWORD retval = get_adapters_info (ainfo, &ainfo_len);
-  Lisp_Object res = Qnil;
+  res = Qnil;
+
 
   if (retval == ERROR_BUFFER_OVERFLOW)
     {
@@ -9135,9 +9149,11 @@ network_interface_get_info (Lisp_Object ifname)
 			 res);
 	  else if (strcmp (namebuf, SSDATA (ifname)) == 0)
 	    {
-	      Lisp_Object hwaddr = Fmake_vector (make_number (6), Qnil);
+	      hwaddr = Fmake_vector (make_number (6), Qnil);
+
 	      register struct Lisp_Vector *p = XVECTOR (hwaddr);
-	      Lisp_Object flags = Qnil;
+	      flags = Qnil;
+
 	      int n;
 	      u_long net_mask;
 
@@ -9253,7 +9269,7 @@ network_interface_get_info (Lisp_Object ifname)
 
  done:
   xfree (ainfo);
-  return res;
+  EXIT_LISP_FRAME (res);
 }
 
 Lisp_Object
@@ -9265,8 +9281,9 @@ network_interface_list (void)
 Lisp_Object
 network_interface_info (Lisp_Object ifname)
 {
+  ENTER_LISP_FRAME (ifname);
   CHECK_STRING (ifname);
-  return network_interface_get_info (ifname);
+  EXIT_LISP_FRAME (network_interface_get_info (ifname));
 }
 
 
@@ -9297,6 +9314,8 @@ sys_localtime (const time_t *t)
 HMODULE
 w32_delayed_load (Lisp_Object library_id)
 {
+  ENTER_LISP_FRAME_T (HMODULE, library_id);
+  LISP_LOCALS (found, dlls, dll);
   HMODULE dll_handle = NULL;
 
   CHECK_SYMBOL (library_id);
@@ -9304,13 +9323,16 @@ w32_delayed_load (Lisp_Object library_id)
   if (CONSP (Vdynamic_library_alist)
       && NILP (Fassq (library_id, Vlibrary_cache)))
     {
-      Lisp_Object found = Qnil;
-      Lisp_Object dlls = Fassq (library_id, Vdynamic_library_alist);
+      found = Qnil;
+
+      dlls = Fassq (library_id, Vdynamic_library_alist);
+
 
       if (CONSP (dlls))
         for (dlls = XCDR (dlls); CONSP (dlls); dlls = XCDR (dlls))
           {
-	    Lisp_Object dll = XCAR (dlls);
+	    dll = XCAR (dlls);
+
 	    char name[MAX_UTF8_PATH];
 	    DWORD res = -1;
 
@@ -9366,13 +9388,15 @@ w32_delayed_load (Lisp_Object library_id)
       Fput (library_id, QCloaded_from, found);
     }
 
-  return dll_handle;
+  EXIT_LISP_FRAME (dll_handle);
 }
 
 
 void
 check_windows_init_file (void)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (init_file, load_path_print);
   /* A common indication that Emacs is not installed properly is when
      it cannot find the Windows installation file.  If this file does
      not exist in the expected place, tell the user.  */
@@ -9382,7 +9406,6 @@ check_windows_init_file (void)
 	 loadup.el.  */
       && NILP (Vpurify_flag))
     {
-      Lisp_Object init_file;
       int fd;
 
       /* Implementation note: this function runs early during Emacs
@@ -9395,7 +9418,8 @@ check_windows_init_file (void)
       fd = openp (Vload_path, init_file, Fget_load_suffixes (), NULL, Qnil, 0);
       if (fd < 0)
 	{
-	  Lisp_Object load_path_print = Fprin1_to_string (Vload_path, Qnil);
+	  load_path_print = Fprin1_to_string (Vload_path, Qnil);
+
 	  char *init_file_name = SSDATA (init_file);
 	  char *load_path = SSDATA (load_path_print);
 	  char *buffer = alloca (1024
@@ -9445,6 +9469,7 @@ check_windows_init_file (void)
 	  _close (fd);
 	}
     }
+  EXIT_LISP_FRAME_VOID ();
 }
 
 void
@@ -9734,6 +9759,7 @@ globals_of_w32 (void)
 int
 serial_open (Lisp_Object port_obj)
 {
+  ENTER_LISP_FRAME_T (int, port_obj);
   char *port = SSDATA (port_obj);
   HANDLE hnd;
   child_process *cp;
@@ -9767,15 +9793,19 @@ serial_open (Lisp_Object port_obj)
   if (cp->ovl_write.hEvent == NULL)
       error ("Could not create write event");
 
-  return fd;
+  EXIT_LISP_FRAME (fd);
 }
 
 /* For serial-process-configure  */
 void
 serial_configure (struct Lisp_Process *p, Lisp_Object contact)
 {
-  Lisp_Object childp2 = Qnil;
-  Lisp_Object tem = Qnil;
+  ENTER_LISP_FRAME (contact);
+  LISP_LOCALS (childp2, tem);
+  childp2 = Qnil;
+
+  tem = Qnil;
+
   HANDLE hnd;
   DCB dcb;
   COMMTIMEOUTS ct;
@@ -9919,6 +9949,7 @@ serial_configure (struct Lisp_Process *p, Lisp_Object contact)
 
   childp2 = Fplist_put (childp2, QCsummary, build_string (summary));
   pset_childp (p, childp2);
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* For make-pipe-process */

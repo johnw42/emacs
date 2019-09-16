@@ -111,27 +111,34 @@ ftcrfont_glyph_extents (struct font *font,
 static Lisp_Object
 ftcrfont_list (struct frame *f, Lisp_Object spec)
 {
-  Lisp_Object list = ftfont_list (f, spec), tail;
+  ENTER_LISP_FRAME (spec);
+  LISP_LOCALS (list, tail);
+  list = ftfont_list (f, spec);
+
 
   for (tail = list; CONSP (tail); tail = XCDR (tail))
     ASET (XCAR (tail), FONT_TYPE_INDEX, Qftcr);
-  return list;
+  EXIT_LISP_FRAME (list);
 }
 
 static Lisp_Object
 ftcrfont_match (struct frame *f, Lisp_Object spec)
 {
-  Lisp_Object entity = ftfont_match (f, spec);
+  ENTER_LISP_FRAME (spec);
+  LISP_LOCALS (entity);
+  entity = ftfont_match (f, spec);
+
 
   if (VECTORP (entity))
     ASET (entity, FONT_TYPE_INDEX, Qftcr);
-  return entity;
+  EXIT_LISP_FRAME (entity);
 }
 
 static Lisp_Object
 ftcrfont_open (struct frame *f, Lisp_Object entity, int pixel_size)
 {
-  Lisp_Object font_object;
+  ENTER_LISP_FRAME (entity);
+  LISP_LOCALS (font_object);
   struct font *font;
   struct ftcrfont_info *ftcrfont_info;
   FT_Face ft_face;
@@ -144,7 +151,7 @@ ftcrfont_open (struct frame *f, Lisp_Object entity, int pixel_size)
   font_object = font_build_object (VECSIZE (struct ftcrfont_info),
 				   Qftcr, entity, size);
   font_object = ftfont_open2 (f, entity, pixel_size, font_object);
-  if (NILP (font_object)) return Qnil;
+  if (NILP (font_object)) EXIT_LISP_FRAME (Qnil);
 
   font = XFONT_OBJECT (font_object);
   font->driver = &ftcrfont_driver;
@@ -159,7 +166,7 @@ ftcrfont_open (struct frame *f, Lisp_Object entity, int pixel_size)
   ftcrfont_info->metrics_nrows = 0;
   unblock_input ();
 
-  return font_object;
+  EXIT_LISP_FRAME (font_object);
 }
 
 static void

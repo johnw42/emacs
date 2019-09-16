@@ -87,6 +87,7 @@ copy_interval_parent (INTERVAL d, INTERVAL s)
 INTERVAL
 create_root_interval (Lisp_Object parent)
 {
+  ENTER_LISP_FRAME_T (INTERVAL, parent);
   INTERVAL new;
 
   new = make_interval ();
@@ -111,7 +112,7 @@ create_root_interval (Lisp_Object parent)
 
   set_interval_object (new, parent);
 
-  return new;
+  EXIT_LISP_FRAME (new);
 }
 
 /* Make the interval TARGET have exactly the properties of SOURCE.  */
@@ -133,10 +134,11 @@ copy_properties (register INTERVAL source, register INTERVAL target)
 static void
 merge_properties (register INTERVAL source, register INTERVAL target)
 {
-  register Lisp_Object o, sym, val;
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (o, sym, val);
 
   if (DEFAULT_INTERVAL_P (source) && DEFAULT_INTERVAL_P (target))
-    return;
+    EXIT_LISP_FRAME_VOID ();
 
   MERGE_INTERVAL_CACHE (source, target);
 
@@ -163,6 +165,7 @@ merge_properties (register INTERVAL source, register INTERVAL target)
 	}
       o = XCDR (o);
     }
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Return true if the two intervals have the same properties.  */
@@ -170,14 +173,14 @@ merge_properties (register INTERVAL source, register INTERVAL target)
 bool
 intervals_equal (INTERVAL i0, INTERVAL i1)
 {
-  Lisp_Object i0_cdr, i0_sym;
-  Lisp_Object i1_cdr, i1_val;
+  ENTER_LISP_FRAME_T (bool);
+  LISP_LOCALS (i0_cdr, i0_sym, i1_cdr, i1_val);
 
   if (DEFAULT_INTERVAL_P (i0) && DEFAULT_INTERVAL_P (i1))
-    return true;
+    EXIT_LISP_FRAME (true);
 
   if (DEFAULT_INTERVAL_P (i0) || DEFAULT_INTERVAL_P (i1))
-    return false;
+    EXIT_LISP_FRAME (false);
 
   i0_cdr = i0->plist;
   i1_cdr = i1->plist;
@@ -186,36 +189,36 @@ intervals_equal (INTERVAL i0, INTERVAL i1)
       i0_sym = XCAR (i0_cdr);
       i0_cdr = XCDR (i0_cdr);
       if (!CONSP (i0_cdr))
-	return false;
+	EXIT_LISP_FRAME (false);
       i1_val = i1->plist;
       while (CONSP (i1_val) && !EQ (XCAR (i1_val), i0_sym))
 	{
 	  i1_val = XCDR (i1_val);
 	  if (!CONSP (i1_val))
-	    return false;
+	    EXIT_LISP_FRAME (false);
 	  i1_val = XCDR (i1_val);
 	}
 
       /* i0 has something i1 doesn't.  */
       if (EQ (i1_val, Qnil))
-	return false;
+	EXIT_LISP_FRAME (false);
 
       /* i0 and i1 both have sym, but it has different values in each.  */
       if (!CONSP (i1_val)
 	  || (i1_val = XCDR (i1_val), !CONSP (i1_val))
 	  || !EQ (XCAR (i1_val), XCAR (i0_cdr)))
-	return false;
+	EXIT_LISP_FRAME (false);
 
       i0_cdr = XCDR (i0_cdr);
 
       i1_cdr = XCDR (i1_cdr);
       if (!CONSP (i1_cdr))
-	return false;
+	EXIT_LISP_FRAME (false);
       i1_cdr = XCDR (i1_cdr);
     }
 
   /* Lengths of the two plists were equal.  */
-  return (NILP (i0_cdr) && NILP (i1_cdr));
+  EXIT_LISP_FRAME ((NILP (i0_cdr) && NILP (i1_cdr)));
 }
 
 
@@ -248,6 +251,7 @@ void
 traverse_intervals (INTERVAL tree, ptrdiff_t position,
 		    void (*function) (INTERVAL, Lisp_Object), Lisp_Object arg)
 {
+  ENTER_LISP_FRAME (arg);
   while (tree)
     {
       traverse_intervals (tree->left, position, function, arg);
@@ -256,6 +260,7 @@ traverse_intervals (INTERVAL tree, ptrdiff_t position,
       (*function) (tree, arg);
       position += LENGTH (tree); tree = tree->right;
     }
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Assuming that a left child exists, perform the following operation:
@@ -406,7 +411,8 @@ balance_an_interval (INTERVAL i)
 static INTERVAL
 balance_possible_root_interval (INTERVAL interval)
 {
-  Lisp_Object parent;
+  ENTER_LISP_FRAME_T (INTERVAL);
+  LISP_LOCALS (parent);
   bool have_parent = false;
 
   if (INTERVAL_HAS_OBJECT (interval))
@@ -415,7 +421,7 @@ balance_possible_root_interval (INTERVAL interval)
       GET_INTERVAL_OBJECT (parent, interval);
     }
   else if (!INTERVAL_HAS_PARENT (interval))
-    return interval;
+    EXIT_LISP_FRAME (interval);
 
   interval = balance_an_interval (interval);
 
@@ -427,7 +433,7 @@ balance_possible_root_interval (INTERVAL interval)
 	set_string_intervals (parent, interval);
     }
 
-  return interval;
+  EXIT_LISP_FRAME (interval);
 }
 
 /* Balance the interval tree TREE.  Balancing is by weight
@@ -564,17 +570,18 @@ split_interval_left (INTERVAL interval, ptrdiff_t offset)
 static int
 interval_start_pos (INTERVAL source)
 {
-  Lisp_Object parent;
+  ENTER_LISP_FRAME_T (int);
+  LISP_LOCALS (parent);
 
   if (!source)
-    return 0;
+    EXIT_LISP_FRAME (0);
 
   if (! INTERVAL_HAS_OBJECT (source))
-    return 0;
+    EXIT_LISP_FRAME (0);
   GET_INTERVAL_OBJECT (parent, source);
   if (BUFFERP (parent))
-    return BUF_BEG (XBUFFER (parent));
-  return 0;
+    EXIT_LISP_FRAME (BUF_BEG (XBUFFER (parent)));
+  EXIT_LISP_FRAME (0);
 }
 
 /* Find the interval containing text position POSITION in the text
@@ -590,17 +597,18 @@ interval_start_pos (INTERVAL source)
 INTERVAL
 find_interval (register INTERVAL tree, register ptrdiff_t position)
 {
+  ENTER_LISP_FRAME_T (INTERVAL);
+  LISP_LOCALS (parent);
   /* The distance from the left edge of the subtree at TREE
                     to POSITION.  */
   register ptrdiff_t relative_position;
 
   if (!tree)
-    return NULL;
+    EXIT_LISP_FRAME (NULL);
 
   relative_position = position;
   if (INTERVAL_HAS_OBJECT (tree))
     {
-      Lisp_Object parent;
       GET_INTERVAL_OBJECT (parent, tree);
       if (BUFFERP (parent))
 	relative_position -= BUF_BEG (XBUFFER (parent));
@@ -631,7 +639,7 @@ find_interval (register INTERVAL tree, register ptrdiff_t position)
 	    = (position - relative_position /* left edge of *tree.  */
 	       + LEFT_TOTAL_LENGTH (tree)); /* left edge of this interval.  */
 
-	  return tree;
+	  EXIT_LISP_FRAME (tree);
 	}
     }
 }
@@ -778,10 +786,11 @@ static INTERVAL
 adjust_intervals_for_insertion (INTERVAL tree,
 				ptrdiff_t position, ptrdiff_t length)
 {
+  ENTER_LISP_FRAME_T (INTERVAL);
+  LISP_LOCALS (parent, tail, front, rear, prop, tmp, pleft, pright);
   INTERVAL i;
   INTERVAL temp;
   bool eobp = 0;
-  Lisp_Object parent;
   ptrdiff_t offset;
 
   eassert (TOTAL_LENGTH (tree) > 0);
@@ -812,8 +821,6 @@ adjust_intervals_for_insertion (INTERVAL tree,
      one by one if POSITION is in middle of an interval.  */
   if (! (position == i->position || eobp))
     {
-      Lisp_Object tail;
-      Lisp_Object front, rear;
 
       tail = i->plist;
 
@@ -838,7 +845,6 @@ adjust_intervals_for_insertion (INTERVAL tree,
          the loop if we find a nonsticky property.  */
       for (; CONSP (tail); tail = Fcdr (XCDR (tail)))
 	{
-	  Lisp_Object prop, tmp;
 	  prop = XCAR (tail);
 
 	  /* Is this particular property front-sticky?  */
@@ -910,7 +916,6 @@ adjust_intervals_for_insertion (INTERVAL tree,
 	 use those macros again.  */
       if (1)
 	{
-	  Lisp_Object pleft, pright;
 	  struct interval newi;
 
 	  RESET_INTERVAL (&newi);
@@ -954,7 +959,7 @@ adjust_intervals_for_insertion (INTERVAL tree,
 	}
     }
 
-  return tree;
+  EXIT_LISP_FRAME (tree);
 }
 
 /* Any property might be front-sticky on the left, rear-sticky on the left,
@@ -999,9 +1004,8 @@ FR     8  9  A  B
 static Lisp_Object
 merge_properties_sticky (Lisp_Object pleft, Lisp_Object pright)
 {
-  Lisp_Object props, front, rear;
-  Lisp_Object lfront, lrear, rfront, rrear;
-  Lisp_Object tail1, tail2, sym, lval, rval, cat;
+  ENTER_LISP_FRAME (pleft, pright);
+  LISP_LOCALS (props, front, rear, lfront, lrear, rfront, rrear, tail1, tail2, sym, lval, rval, cat, tmp);
   bool use_left, use_right, lpresent;
 
   props = Qnil;
@@ -1015,7 +1019,6 @@ merge_properties_sticky (Lisp_Object pleft, Lisp_Object pright)
   /* Go through each element of PRIGHT.  */
   for (tail1 = pright; CONSP (tail1); tail1 = Fcdr (XCDR (tail1)))
     {
-      Lisp_Object tmp;
 
       sym = XCAR (tail1);
 
@@ -1073,7 +1076,6 @@ merge_properties_sticky (Lisp_Object pleft, Lisp_Object pright)
   /* Now go through each element of PLEFT.  */
   for (tail2 = pleft; CONSP (tail2); tail2 = Fcdr (XCDR (tail2)))
     {
-      Lisp_Object tmp;
 
       sym = XCAR (tail2);
 
@@ -1123,7 +1125,7 @@ merge_properties_sticky (Lisp_Object pleft, Lisp_Object pright)
       ! (! NILP (cat) && SYMBOLP (cat)
 	 && EQ (Fget (cat, Qfront_sticky), Qt)))
     props = Fcons (Qfront_sticky, Fcons (Fnreverse (front), props));
-  return props;
+  EXIT_LISP_FRAME (props);
 }
 
 
@@ -1168,6 +1170,8 @@ delete_node (register INTERVAL i)
 static void
 delete_interval (register INTERVAL i)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (owner);
   register INTERVAL parent;
   ptrdiff_t amt = LENGTH (i);
 
@@ -1175,7 +1179,6 @@ delete_interval (register INTERVAL i)
 
   if (ROOT_INTERVAL_P (i))
     {
-      Lisp_Object owner;
       GET_INTERVAL_OBJECT (owner, i);
       parent = delete_node (i);
       if (parent)
@@ -1188,7 +1191,7 @@ delete_interval (register INTERVAL i)
       else
 	emacs_abort ();
 
-      return;
+      EXIT_LISP_FRAME_VOID ();
     }
 
   parent = INTERVAL_PARENT (i);
@@ -1204,6 +1207,7 @@ delete_interval (register INTERVAL i)
       if (parent->right)
 	set_interval_parent (parent->right, parent);
     }
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Find the interval in TREE corresponding to the relative position
@@ -1283,16 +1287,17 @@ static void
 adjust_intervals_for_deletion (struct buffer *buffer,
 			       ptrdiff_t start, ptrdiff_t length)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (parent);
   ptrdiff_t left_to_delete = length;
   INTERVAL tree = buffer_intervals (buffer);
-  Lisp_Object parent;
   ptrdiff_t offset;
 
   GET_INTERVAL_OBJECT (parent, tree);
   offset = (BUFFERP (parent) ? BUF_BEG (XBUFFER (parent)) : 0);
 
   if (!tree)
-    return;
+    EXIT_LISP_FRAME_VOID ();
 
   eassert (start <= offset + TOTAL_LENGTH (tree)
 	   && start + length <= offset + TOTAL_LENGTH (tree));
@@ -1300,14 +1305,14 @@ adjust_intervals_for_deletion (struct buffer *buffer,
   if (length == TOTAL_LENGTH (tree))
     {
       set_buffer_intervals (buffer, NULL);
-      return;
+      EXIT_LISP_FRAME_VOID ();
     }
 
   if (ONLY_INTERVAL_P (tree))
     {
       tree->total_length -= length;
       eassert (LENGTH (tree) > 0);
-      return;
+      EXIT_LISP_FRAME_VOID ();
     }
 
   if (start > offset + TOTAL_LENGTH (tree))
@@ -1320,9 +1325,10 @@ adjust_intervals_for_deletion (struct buffer *buffer,
       if (left_to_delete == tree->total_length)
 	{
 	  set_buffer_intervals (buffer, NULL);
-	  return;
+	  EXIT_LISP_FRAME_VOID ();
 	}
     }
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Make the adjustments necessary to the interval tree of BUFFER to
@@ -1497,9 +1503,10 @@ reproduce_tree (INTERVAL source, INTERVAL parent)
 static INTERVAL
 reproduce_tree_obj (INTERVAL source, Lisp_Object parent)
 {
+  ENTER_LISP_FRAME_T (INTERVAL, parent);
   INTERVAL target = reproduce_interval (source);
   set_interval_object (target, parent);
-  return target;
+  EXIT_LISP_FRAME (target);
 }
 
 /* Insert the intervals of SOURCE into BUFFER at POSITION.
@@ -1544,6 +1551,8 @@ graft_intervals_into_buffer (INTERVAL source, ptrdiff_t position,
 			     ptrdiff_t length, struct buffer *buffer,
 			     bool inherit)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (buf);
   INTERVAL tree = buffer_intervals (buffer);
   INTERVAL under, over, this;
   ptrdiff_t over_used;
@@ -1554,7 +1563,6 @@ graft_intervals_into_buffer (INTERVAL source, ptrdiff_t position,
      of the newly inserted text.  */
   if (!source)
     {
-      Lisp_Object buf;
       if (!inherit && tree && length > 0)
 	{
 	  XSETBUFFER (buf, buffer);
@@ -1565,7 +1573,7 @@ graft_intervals_into_buffer (INTERVAL source, ptrdiff_t position,
 	}
       /* Shouldn't be necessary.  --Stef  */
       buffer_balance_intervals (buffer);
-      return;
+      EXIT_LISP_FRAME_VOID ();
     }
 
   eassert (length == TOTAL_LENGTH (source));
@@ -1574,19 +1582,17 @@ graft_intervals_into_buffer (INTERVAL source, ptrdiff_t position,
     {
       /* The inserted text constitutes the whole buffer, so
 	 simply copy over the interval structure.  */
-      Lisp_Object buf;
 
       XSETBUFFER (buf, buffer);
       set_buffer_intervals (buffer, reproduce_tree_obj (source, buf));
       buffer_intervals (buffer)->position = BUF_BEG (buffer);
       eassert (buffer_intervals (buffer)->up_obj == 1);
-      return;
+      EXIT_LISP_FRAME_VOID ();
     }
   else if (!tree)
     {
       /* Create an interval tree in which to place a copy
 	 of the intervals of the inserted string.  */
-	Lisp_Object buf;
 
 	XSETBUFFER (buf, buffer);
 	tree = create_root_interval (buf);
@@ -1672,6 +1678,7 @@ graft_intervals_into_buffer (INTERVAL source, ptrdiff_t position,
     }
 
   buffer_balance_intervals (buffer);
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Get the value of property PROP from PLIST,
@@ -1680,22 +1687,25 @@ graft_intervals_into_buffer (INTERVAL source, ptrdiff_t position,
    and for PROP appearing on the default-text-properties list.  */
 
 Lisp_Object
-textget (Lisp_Object plist, register Lisp_Object prop)
+textget (Lisp_Object plist, Lisp_Object prop)
 {
-  return lookup_char_property (plist, prop, 1);
+  ENTER_LISP_FRAME (plist, prop);
+  EXIT_LISP_FRAME (lookup_char_property (plist, prop, 1));
 }
 
 Lisp_Object
 lookup_char_property (Lisp_Object plist, Lisp_Object prop, bool textprop)
 {
-  Lisp_Object tail, fallback = Qnil;
+  ENTER_LISP_FRAME (plist, prop);
+  LISP_LOCALS (tail, fallback, tem);
+  fallback = Qnil;
+
 
   for (tail = plist; CONSP (tail); tail = Fcdr (XCDR (tail)))
     {
-      register Lisp_Object tem;
       tem = XCAR (tail);
       if (EQ (prop, tem))
-	return Fcar (XCDR (tail));
+	EXIT_LISP_FRAME (Fcar (XCDR (tail)));
       if (EQ (tem, Qcategory))
 	{
 	  tem = Fcar (XCDR (tail));
@@ -1705,7 +1715,7 @@ lookup_char_property (Lisp_Object plist, Lisp_Object prop, bool textprop)
     }
 
   if (! NILP (fallback))
-    return fallback;
+    EXIT_LISP_FRAME (fallback);
   /* Check for alternative properties.  */
   tail = Fassq (prop, Vchar_property_alias_alist);
   if (! NILP (tail))
@@ -1717,7 +1727,7 @@ lookup_char_property (Lisp_Object plist, Lisp_Object prop, bool textprop)
 
   if (textprop && NILP (fallback) && CONSP (Vdefault_text_properties))
     fallback = Fplist_get (Vdefault_text_properties, prop);
-  return fallback;
+  EXIT_LISP_FRAME (fallback);
 }
 
 
@@ -1760,6 +1770,7 @@ set_point (ptrdiff_t charpos)
 void
 set_point_from_marker (Lisp_Object marker)
 {
+  ENTER_LISP_FRAME (marker);
   ptrdiff_t charpos = clip_to_bounds (BEGV, marker_position (marker), ZV);
   ptrdiff_t bytepos = marker_byte_position (marker);
 
@@ -1770,6 +1781,7 @@ set_point_from_marker (Lisp_Object marker)
   else
     bytepos = clip_to_bounds (BEGV_BYTE, bytepos, ZV_BYTE);
   set_point_both (charpos, bytepos);
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* If there's an invisible character at position POS + TEST_OFFS in the
@@ -1787,12 +1799,12 @@ static ptrdiff_t
 adjust_for_invis_intang (ptrdiff_t pos, ptrdiff_t test_offs, ptrdiff_t adj,
 			 bool test_intang)
 {
-  Lisp_Object invis_propval, invis_overlay;
-  Lisp_Object test_pos;
+  ENTER_LISP_FRAME_T (ptrdiff_t);
+  LISP_LOCALS (invis_propval, invis_overlay, test_pos);
 
   if ((adj < 0 && pos + adj < BEGV) || (adj > 0 && pos + adj > ZV))
     /* POS + ADJ would be beyond the buffer bounds, so do no adjustment.  */
-    return pos;
+    EXIT_LISP_FRAME (pos);
 
   test_pos = make_number (pos + test_offs);
 
@@ -1815,7 +1827,7 @@ adjust_for_invis_intang (ptrdiff_t pos, ptrdiff_t test_offs, ptrdiff_t adj,
 	     : XMARKER (OVERLAY_END (invis_overlay))->insertion_type == 1)))
     pos += adj;
 
-  return pos;
+  EXIT_LISP_FRAME (pos);
 }
 
 /* Set point in BUFFER to CHARPOS, which corresponds to byte
@@ -1825,6 +1837,8 @@ adjust_for_invis_intang (ptrdiff_t pos, ptrdiff_t test_offs, ptrdiff_t adj,
 void
 set_point_both (ptrdiff_t charpos, ptrdiff_t bytepos)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (pos, intangible_propval, leave_after, leave_before, enter_after, enter_before);
   register INTERVAL to, from, toprev, fromprev;
   ptrdiff_t buffer_point;
   ptrdiff_t old_position = PT;
@@ -1839,7 +1853,7 @@ set_point_both (ptrdiff_t charpos, ptrdiff_t bytepos)
   bset_point_before_scroll (current_buffer, Qnil);
 
   if (charpos == PT)
-    return;
+    EXIT_LISP_FRAME_VOID ();
 
   /* In a single-byte buffer, the two positions must be equal.  */
   eassert (ZV != ZV_BYTE || charpos == bytepos);
@@ -1856,7 +1870,7 @@ set_point_both (ptrdiff_t charpos, ptrdiff_t bytepos)
   if (!buffer_intervals (current_buffer) && ! have_overlays)
     {
       temp_set_point_both (current_buffer, charpos, bytepos);
-      return;
+      EXIT_LISP_FRAME_VOID ();
     }
 
   /* Set TO to the interval containing the char after CHARPOS,
@@ -1891,7 +1905,7 @@ set_point_both (ptrdiff_t charpos, ptrdiff_t bytepos)
       && ! have_overlays)
     {
       temp_set_point_both (current_buffer, charpos, bytepos);
-      return;
+      EXIT_LISP_FRAME_VOID ();
     }
 
   original_position = charpos;
@@ -1906,8 +1920,6 @@ set_point_both (ptrdiff_t charpos, ptrdiff_t bytepos)
 	 or end of the buffer, so don't bother checking in that case.  */
       && charpos != BEGV && charpos != ZV)
     {
-      Lisp_Object pos;
-      Lisp_Object intangible_propval;
 
       if (backwards)
 	{
@@ -2004,7 +2016,6 @@ set_point_both (ptrdiff_t charpos, ptrdiff_t bytepos)
       && (! intervals_equal (from, to)
 	  || ! intervals_equal (fromprev, toprev)))
     {
-      Lisp_Object leave_after, leave_before, enter_after, enter_before;
 
       if (fromprev)
 	leave_before = textget (fromprev->plist, Qpoint_left);
@@ -2040,6 +2051,7 @@ set_point_both (ptrdiff_t charpos, ptrdiff_t bytepos)
       	call2 (enter_after, make_number (old_position),
       	       make_number (charpos));
     }
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Move point to POSITION, unless POSITION is inside an intangible
@@ -2048,8 +2060,8 @@ set_point_both (ptrdiff_t charpos, ptrdiff_t bytepos)
 void
 move_if_not_intangible (ptrdiff_t position)
 {
-  Lisp_Object pos;
-  Lisp_Object intangible_propval;
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (pos, intangible_propval);
 
   XSETINT (pos, position);
 
@@ -2099,6 +2111,7 @@ move_if_not_intangible (ptrdiff_t position)
 
   if (XINT (pos) != PT)
     SET_PT (position);
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* If text at position POS has property PROP, set *VAL to the property
@@ -2112,6 +2125,7 @@ bool
 get_property_and_range (ptrdiff_t pos, Lisp_Object prop, Lisp_Object *val,
 			ptrdiff_t *start, ptrdiff_t *end, Lisp_Object object)
 {
+  ENTER_LISP_FRAME_T (bool, prop, object);
   INTERVAL i, prev, next;
 
   if (NILP (object))
@@ -2124,10 +2138,10 @@ get_property_and_range (ptrdiff_t pos, Lisp_Object prop, Lisp_Object *val,
     emacs_abort ();
 
   if (!i || (i->position + LENGTH (i) <= pos))
-    return 0;
+    EXIT_LISP_FRAME (0);
   *val = textget (i->plist, prop);
   if (NILP (*val))
-    return 0;
+    EXIT_LISP_FRAME (0);
 
   next = i;			/* remember it in advance */
   prev = previous_interval (i);
@@ -2141,7 +2155,7 @@ get_property_and_range (ptrdiff_t pos, Lisp_Object prop, Lisp_Object *val,
     i = next, next = next_interval (next);
   *end = i->position + LENGTH (i);
 
-  return 1;
+  EXIT_LISP_FRAME (1);
 }
 
 /* Return the proper local keymap TYPE for position POSITION in
@@ -2152,7 +2166,8 @@ get_property_and_range (ptrdiff_t pos, Lisp_Object prop, Lisp_Object *val,
 Lisp_Object
 get_local_map (ptrdiff_t position, struct buffer *buffer, Lisp_Object type)
 {
-  Lisp_Object prop, lispy_position, lispy_buffer;
+  ENTER_LISP_FRAME (type);
+  LISP_LOCALS (prop, lispy_position, lispy_buffer);
   ptrdiff_t old_begv, old_zv, old_begv_byte, old_zv_byte;
   ptrdiff_t count = SPECPDL_INDEX ();
 
@@ -2188,12 +2203,12 @@ get_local_map (ptrdiff_t position, struct buffer *buffer, Lisp_Object type)
   /* Use the local map only if it is valid.  */
   prop = get_keymap (prop, 0, 0);
   if (CONSP (prop))
-    return prop;
+    EXIT_LISP_FRAME (prop);
 
   if (EQ (type, Qkeymap))
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
   else
-    return BVAR (buffer, keymap);
+    EXIT_LISP_FRAME (BVAR (buffer, keymap));
 }
 
 /* Produce an interval tree reflecting the intervals in
@@ -2244,13 +2259,15 @@ void
 copy_intervals_to_string (Lisp_Object string, struct buffer *buffer,
 			  ptrdiff_t position, ptrdiff_t length)
 {
+  ENTER_LISP_FRAME (string);
   INTERVAL interval_copy = copy_intervals (buffer_intervals (buffer),
 					   position, length);
   if (!interval_copy)
-    return;
+    EXIT_LISP_FRAME_VOID ();
 
   set_interval_object (interval_copy, string);
   set_string_intervals (string, interval_copy);
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Return true if strings S1 and S2 have identical properties.
@@ -2259,6 +2276,7 @@ copy_intervals_to_string (Lisp_Object string, struct buffer *buffer,
 bool
 compare_string_intervals (Lisp_Object s1, Lisp_Object s2)
 {
+  ENTER_LISP_FRAME_T (bool, s1, s2);
   INTERVAL i1, i2;
   ptrdiff_t pos = 0;
   ptrdiff_t end = SCHARS (s1);
@@ -2276,7 +2294,7 @@ compare_string_intervals (Lisp_Object s1, Lisp_Object s2)
       /* If we ever find a mismatch between the strings,
 	 they differ.  */
       if (! intervals_equal (i1, i2))
-	return 0;
+	EXIT_LISP_FRAME (0);
 
       /* Advance POS till the end of the shorter interval,
 	 and advance one or both interval pointers for the new position.  */
@@ -2286,7 +2304,7 @@ compare_string_intervals (Lisp_Object s1, Lisp_Object s2)
       if (len2 == distance)
 	i2 = next_interval (i2);
     }
-  return 1;
+  EXIT_LISP_FRAME (1);
 }
 
 /* Recursively adjust interval I in the current buffer

@@ -103,6 +103,8 @@ void w32_free_menu_strings (HWND);
 Lisp_Object
 w32_popup_dialog (struct frame *f, Lisp_Object header, Lisp_Object contents)
 {
+  ENTER_LISP_FRAME (header, contents);
+  LISP_LOCALS (title, selection);
 
   check_window_system (f);
 
@@ -110,14 +112,12 @@ w32_popup_dialog (struct frame *f, Lisp_Object header, Lisp_Object contents)
 
   /* Handle simple Yes/No choices as MessageBox popups.  */
   if (is_simple_dialog (contents))
-    return simple_dialog_show (f, contents, header);
+    EXIT_LISP_FRAME (simple_dialog_show (f, contents, header));
   else
-    return Qunsupported__w32_dialog;
+    EXIT_LISP_FRAME (Qunsupported__w32_dialog);
 #else  /* HAVE_DIALOGS */
     {
-      Lisp_Object title;
       char *error_name;
-      Lisp_Object selection;
 
       /* Decode the dialog items from what was specified.  */
       title = Fcar (contents);
@@ -134,7 +134,7 @@ w32_popup_dialog (struct frame *f, Lisp_Object header, Lisp_Object contents)
       FRAME_DISPLAY_INFO (f)->grabbed = 0;
 
       if (error_name) error (error_name);
-      return selection;
+      EXIT_LISP_FRAME (selection);
     }
 #endif /* HAVE_DIALOGS */
 }
@@ -172,14 +172,14 @@ void menubar_selection_callback (struct frame *, void *);
 void
 menubar_selection_callback (struct frame *f, void * client_data)
 {
-  Lisp_Object prefix, entry;
-  Lisp_Object vector;
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (prefix, entry, vector, frame);
   Lisp_Object *subprefix_stack;
   int submenu_depth = 0;
   int i;
 
   if (!f)
-    return;
+    EXIT_LISP_FRAME_VOID ();
   entry = Qnil;
   subprefix_stack = (Lisp_Object *) alloca (f->menu_bar_items_used * word_size);
   vector = f->menu_bar_vector;
@@ -212,7 +212,6 @@ menubar_selection_callback (struct frame *f, void * client_data)
 	    {
 	      int j;
 	      struct input_event buf;
-	      Lisp_Object frame;
 	      EVENT_INIT (buf);
 
 	      XSETFRAME (frame, f);
@@ -246,7 +245,7 @@ menubar_selection_callback (struct frame *f, void * client_data)
 	      kbd_buffer_store_event (&buf);
 
 	      f->output_data.w32->menubar_active = 0;
-	      return;
+	      EXIT_LISP_FRAME_VOID ();
 	    }
 	  i += MENU_ITEMS_ITEM_LENGTH;
 	}
@@ -254,6 +253,7 @@ menubar_selection_callback (struct frame *f, void * client_data)
   /* Free memory used by owner-drawn and help-echo strings.  */
   w32_free_menu_strings (FRAME_W32_WINDOW (f));
   f->output_data.w32->menubar_active = 0;
+  EXIT_LISP_FRAME_VOID ();
 }
 
 
@@ -264,8 +264,9 @@ menubar_selection_callback (struct frame *f, void * client_data)
 void
 set_frame_menubar (struct frame *f, bool first_time, bool deep_p)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (items, buffer, key, string, maps);
   HMENU menubar_widget = f->output_data.w32->menubar_widget;
-  Lisp_Object items;
   widget_value *wv, *first_wv, *prev_wv = 0;
   int i, last_i = 0;
   int *submenu_start, *submenu_end;
@@ -273,7 +274,7 @@ set_frame_menubar (struct frame *f, bool first_time, bool deep_p)
 
   /* We must not change the menubar when actually in use.  */
   if (f->output_data.w32->menubar_active)
-    return;
+    EXIT_LISP_FRAME_VOID ();
 
   XSETFRAME (Vmenu_updating_frame, f);
 
@@ -285,7 +286,6 @@ set_frame_menubar (struct frame *f, bool first_time, bool deep_p)
       /* Make a widget-value tree representing the entire menu trees.  */
 
       struct buffer *prev = current_buffer;
-      Lisp_Object buffer;
       ptrdiff_t specpdl_count = SPECPDL_INDEX ();
       int previous_menu_items_used = f->menu_bar_items_used;
       Lisp_Object *previous_items
@@ -338,7 +338,6 @@ set_frame_menubar (struct frame *f, bool first_time, bool deep_p)
       init_menu_items ();
       for (i = 0; i < ASIZE (items); i += 4)
 	{
-	  Lisp_Object key, string, maps;
 
 	  last_i = i;
 
@@ -396,7 +395,7 @@ set_frame_menubar (struct frame *f, bool first_time, bool deep_p)
 	  free_menubar_widget_value_tree (first_wv);
 	  discard_menu_items ();
           unbind_to (specpdl_count, Qnil);
-	  return;
+	  EXIT_LISP_FRAME_VOID ();
 	}
 
       fset_menu_bar_vector (f, menu_items);
@@ -413,7 +412,6 @@ set_frame_menubar (struct frame *f, bool first_time, bool deep_p)
       wv = first_wv->contents;
       for (i = 0; i < ASIZE (items); i += 4)
 	{
-	  Lisp_Object string;
 	  string = AREF (items, i + 1);
 	  if (NILP (string))
 	    break;
@@ -434,7 +432,6 @@ set_frame_menubar (struct frame *f, bool first_time, bool deep_p)
       items = FRAME_MENU_BAR_ITEMS (f);
       for (i = 0; i < ASIZE (items); i += 4)
 	{
-	  Lisp_Object string;
 
 	  string = AREF (items, i + 1);
 	  if (NILP (string))
@@ -497,6 +494,7 @@ set_frame_menubar (struct frame *f, bool first_time, bool deep_p)
   }
 
   unblock_input ();
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Called from Fx_create_frame to create the initial menubar of a frame
@@ -552,6 +550,8 @@ Lisp_Object
 w32_menu_show (struct frame *f, int x, int y, int menuflags,
 	       Lisp_Object title, const char **error)
 {
+  ENTER_LISP_FRAME (title);
+  LISP_LOCALS (pane_name, prefix, item_name, enable, descrip, def, type, selected, help, entry);
   int i;
   int menu_item_selection;
   HMENU menu;
@@ -567,12 +567,12 @@ w32_menu_show (struct frame *f, int x, int y, int menuflags,
   *error = NULL;
 
   if (menu_items_n_panes == 0)
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
 
   if (menu_items_used <= MENU_ITEMS_PANE_LENGTH)
     {
       *error = "Empty menu";
-      return Qnil;
+      EXIT_LISP_FRAME (Qnil);
     }
 
   block_input ();
@@ -613,7 +613,6 @@ w32_menu_show (struct frame *f, int x, int y, int menuflags,
       else if (EQ (AREF (menu_items, i), Qt))
 	{
 	  /* Create a new pane.  */
-	  Lisp_Object pane_name, prefix;
 	  const char *pane_string;
 	  pane_name = AREF (menu_items, i + MENU_ITEMS_PANE_NAME);
 	  prefix = AREF (menu_items, i + MENU_ITEMS_PANE_PREFIX);
@@ -662,7 +661,6 @@ w32_menu_show (struct frame *f, int x, int y, int menuflags,
       else
 	{
 	  /* Create a new item within current pane.  */
-	  Lisp_Object item_name, enable, descrip, def, type, selected, help;
 
 	  item_name = AREF (menu_items, i + MENU_ITEMS_ITEM_NAME);
 	  enable = AREF (menu_items, i + MENU_ITEMS_ITEM_ENABLE);
@@ -774,7 +772,6 @@ w32_menu_show (struct frame *f, int x, int y, int menuflags,
      the proper value.  */
   if (menu_item_selection != 0)
     {
-      Lisp_Object prefix, entry;
 
       prefix = entry = Qnil;
       i = 0;
@@ -817,7 +814,7 @@ w32_menu_show (struct frame *f, int x, int y, int menuflags,
 			  entry = Fcons (subprefix_stack[j], entry);
 		    }
 		  unblock_input ();
-		  return entry;
+		  EXIT_LISP_FRAME (entry);
 		}
 	      i += MENU_ITEMS_ITEM_LENGTH;
 	    }
@@ -831,7 +828,7 @@ w32_menu_show (struct frame *f, int x, int y, int menuflags,
     }
 
   unblock_input ();
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 
@@ -867,6 +864,8 @@ static Lisp_Object
 w32_dialog_show (struct frame *f, Lisp_Object title,
 		 Lisp_Object header, char **error)
 {
+  ENTER_LISP_FRAME (title, header);
+  LISP_LOCALS (pane_name, item_name, enable, descrip, help, entry);
   int i, nb_buttons = 0;
   char dialog_name[6];
   int menu_item_selection;
@@ -884,13 +883,12 @@ w32_dialog_show (struct frame *f, Lisp_Object title,
   if (menu_items_n_panes > 1)
     {
       *error = "Multiple panes in dialog box";
-      return Qnil;
+      EXIT_LISP_FRAME (Qnil);
     }
 
   /* Create a tree of widget_value objects
      representing the text label and buttons.  */
   {
-    Lisp_Object pane_name;
     char *pane_string;
     pane_name = AREF (menu_items, MENU_ITEMS_PANE_NAME);
     pane_string = (NILP (pane_name)
@@ -904,7 +902,6 @@ w32_dialog_show (struct frame *f, Lisp_Object title,
       {
 
 	/* Create a new item within current pane.  */
-	Lisp_Object item_name, enable, descrip, help;
 
 	item_name = AREF (menu_items, i + MENU_ITEMS_ITEM_NAME);
 	enable = AREF (menu_items, i + MENU_ITEMS_ITEM_ENABLE);
@@ -915,7 +912,7 @@ w32_dialog_show (struct frame *f, Lisp_Object title,
 	  {
 	    free_menubar_widget_value_tree (first_wv);
 	    *error = "Submenu in dialog items";
-	    return Qnil;
+	    EXIT_LISP_FRAME (Qnil);
 	  }
 	if (EQ (item_name, Qquote))
 	  {
@@ -929,7 +926,7 @@ w32_dialog_show (struct frame *f, Lisp_Object title,
 	  {
 	    free_menubar_widget_value_tree (first_wv);
 	    *error = "Too many dialog items";
-	    return Qnil;
+	    EXIT_LISP_FRAME (Qnil);
 	  }
 
 	wv = make_widget_value (button_names[nb_buttons],
@@ -1004,7 +1001,6 @@ w32_dialog_show (struct frame *f, Lisp_Object title,
       i = 0;
       while (i < menu_items_used)
 	{
-	  Lisp_Object entry;
 
 	  if (EQ (AREF (menu_items, i), Qt))
 	    i += MENU_ITEMS_PANE_LENGTH;
@@ -1012,7 +1008,7 @@ w32_dialog_show (struct frame *f, Lisp_Object title,
 	    {
 	      entry = AREF (menu_items, i + MENU_ITEMS_ITEM_VALUE);
 	      if (menu_item_selection == i)
-		return entry;
+		EXIT_LISP_FRAME (entry);
 	      i += MENU_ITEMS_ITEM_LENGTH;
 	    }
 	}
@@ -1021,7 +1017,7 @@ w32_dialog_show (struct frame *f, Lisp_Object title,
     /* Make "Cancel" equivalent to C-g.  */
     quit ();
 
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 #else /* !HAVE_DIALOGS  */
 
@@ -1033,22 +1029,22 @@ w32_dialog_show (struct frame *f, Lisp_Object title,
 static bool
 is_simple_dialog (Lisp_Object contents)
 {
-  Lisp_Object options;
-  Lisp_Object name, yes, no, other;
+  ENTER_LISP_FRAME_T (bool, contents);
+  LISP_LOCALS (options, name, yes, no, other);
 
   if (!CONSP (contents))
-    return false;
+    EXIT_LISP_FRAME (false);
   options = XCDR (contents);
 
   yes = build_string ("Yes");
   no = build_string ("No");
 
   if (!CONSP (options))
-    return false;
+    EXIT_LISP_FRAME (false);
 
   name = XCAR (options);
   if (!CONSP (name))
-    return false;
+    EXIT_LISP_FRAME (false);
   name = XCAR (name);
 
   if (!NILP (Fstring_equal (name, yes)))
@@ -1056,30 +1052,34 @@ is_simple_dialog (Lisp_Object contents)
   else if (!NILP (Fstring_equal (name, no)))
     other = yes;
   else
-    return false;
+    EXIT_LISP_FRAME (false);
 
   options = XCDR (options);
   if (!CONSP (options))
-    return false;
+    EXIT_LISP_FRAME (false);
 
   name = XCAR (options);
   if (!CONSP (name))
-    return false;
+    EXIT_LISP_FRAME (false);
   name = XCAR (name);
   if (NILP (Fstring_equal (name, other)))
-    return false;
+    EXIT_LISP_FRAME (false);
 
   /* Check there are no more options.  */
   options = XCDR (options);
-  return !(CONSP (options));
+  EXIT_LISP_FRAME (!(CONSP (options)));
 }
 
 static Lisp_Object
 simple_dialog_show (struct frame *f, Lisp_Object contents, Lisp_Object header)
 {
+  ENTER_LISP_FRAME (contents, header);
+  LISP_LOCALS (lispy_answer, temp, item, name, value);
   int answer;
   UINT type;
-  Lisp_Object lispy_answer = Qnil, temp = XCAR (contents);
+  lispy_answer = Qnil;
+  temp = XCAR (contents);
+
 
   type = MB_YESNO;
 
@@ -1159,7 +1159,6 @@ simple_dialog_show (struct frame *f, Lisp_Object contents, Lisp_Object header)
 
   for (temp = XCDR (contents); CONSP (temp); temp = XCDR (temp))
     {
-      Lisp_Object item, name, value;
       item = XCAR (temp);
       if (CONSP (item))
 	{
@@ -1174,10 +1173,10 @@ simple_dialog_show (struct frame *f, Lisp_Object contents, Lisp_Object header)
 
       if (!NILP (Fstring_equal (name, lispy_answer)))
 	{
-	  return value;
+	  EXIT_LISP_FRAME (value);
 	}
     }
-  return quit ();
+  EXIT_LISP_FRAME (quit ());
 }
 #endif  /* !HAVE_DIALOGS  */
 
@@ -1465,10 +1464,11 @@ void w32_menu_display_help (HWND, HMENU, UINT, UINT);
 void
 w32_menu_display_help (HWND owner, HMENU menu, UINT item, UINT flags)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (frame, help);
   if (get_menu_item_info)
     {
       struct frame *f = x_window_to_frame (&one_w32_display_info, owner);
-      Lisp_Object frame, help;
 
       /* No help echo on owner-draw menu items, or when the keyboard
 	 is used to navigate the menus, since tooltips are distracting
@@ -1518,6 +1518,7 @@ w32_menu_display_help (HWND owner, HMENU menu, UINT item, UINT flags)
 	   appear to do anything, unless it has some side effect.  */
 	show_help_echo (help, Qnil, Qnil, Qnil);
     }
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Free memory used by owner-drawn strings.  */

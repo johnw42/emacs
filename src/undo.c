@@ -86,10 +86,11 @@ record_point (ptrdiff_t beg)
 void
 record_insert (ptrdiff_t beg, ptrdiff_t length)
 {
-  Lisp_Object lbeg, lend;
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (lbeg, lend, elt);
 
   if (EQ (BVAR (current_buffer, undo_list), Qt))
-    return;
+    EXIT_LISP_FRAME_VOID ();
 
   prepare_record ();
 
@@ -99,7 +100,6 @@ record_insert (ptrdiff_t beg, ptrdiff_t length)
      in the buffer, combine the two.  */
   if (CONSP (BVAR (current_buffer, undo_list)))
     {
-      Lisp_Object elt;
       elt = XCAR (BVAR (current_buffer, undo_list));
       if (CONSP (elt)
 	  && INTEGERP (XCAR (elt))
@@ -107,7 +107,7 @@ record_insert (ptrdiff_t beg, ptrdiff_t length)
 	  && XINT (XCDR (elt)) == beg)
 	{
 	  XSETCDR (elt, make_number (beg + length));
-	  return;
+	  EXIT_LISP_FRAME_VOID ();
 	}
     }
 
@@ -115,6 +115,7 @@ record_insert (ptrdiff_t beg, ptrdiff_t length)
   XSETINT (lend, beg + length);
   bset_undo_list (current_buffer,
 		  Fcons (Fcons (lbeg, lend), BVAR (current_buffer, undo_list)));
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Record the fact that markers in the region of FROM, TO are about to
@@ -126,7 +127,8 @@ record_insert (ptrdiff_t beg, ptrdiff_t length)
 static void
 record_marker_adjustments (ptrdiff_t from, ptrdiff_t to)
 {
-  Lisp_Object marker;
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (marker);
   register struct Lisp_Marker *m;
   register ptrdiff_t charpos, adjustment;
 
@@ -158,6 +160,7 @@ record_marker_adjustments (ptrdiff_t from, ptrdiff_t to)
             }
         }
     }
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Record that a deletion is about to take place, of the characters in
@@ -166,10 +169,11 @@ record_marker_adjustments (ptrdiff_t from, ptrdiff_t to)
 void
 record_delete (ptrdiff_t beg, Lisp_Object string, bool record_markers)
 {
-  Lisp_Object sbeg;
+  ENTER_LISP_FRAME (string);
+  LISP_LOCALS (sbeg);
 
   if (EQ (BVAR (current_buffer, undo_list), Qt))
-    return;
+    EXIT_LISP_FRAME_VOID ();
 
   prepare_record ();
 
@@ -193,6 +197,7 @@ record_delete (ptrdiff_t beg, Lisp_Object string, bool record_markers)
   bset_undo_list
     (current_buffer,
      Fcons (Fcons (string, sbeg), BVAR (current_buffer, undo_list)));
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Record that a replacement is about to take place,
@@ -234,11 +239,12 @@ record_property_change (ptrdiff_t beg, ptrdiff_t length,
 			Lisp_Object prop, Lisp_Object value,
 			Lisp_Object buffer)
 {
-  Lisp_Object lbeg, lend, entry;
+  ENTER_LISP_FRAME (prop, value, buffer);
+  LISP_LOCALS (lbeg, lend, entry);
   struct buffer *buf = XBUFFER (buffer);
 
   if (EQ (BVAR (buf, undo_list), Qt))
-    return;
+    EXIT_LISP_FRAME_VOID ();
 
   prepare_record();
 
@@ -250,6 +256,7 @@ record_property_change (ptrdiff_t beg, ptrdiff_t length,
   entry = Fcons (Qnil, Fcons (prop, Fcons (value, Fcons (lbeg, lend))));
   bset_undo_list (current_buffer,
 		  Fcons (entry, BVAR (current_buffer, undo_list)));
+  EXIT_LISP_FRAME_VOID ();
 }
 
 DEFUN ("undo-boundary", Fundo_boundary, Sundo_boundary, 0, 0, 0,
@@ -258,9 +265,10 @@ An undo command will stop at this point,
 but another undo command will undo to the previous boundary.  */)
   (void)
 {
-  Lisp_Object tem;
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (tem);
   if (EQ (BVAR (current_buffer, undo_list), Qt))
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
   tem = Fcar (BVAR (current_buffer, undo_list));
   if (!NILP (tem))
     {
@@ -282,7 +290,7 @@ but another undo command will undo to the previous boundary.  */)
   point_before_last_command_or_undo = PT;
   buffer_before_last_command_or_undo = current_buffer;
 
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 /* At garbage collection time, make an undo list shorter at the end,
@@ -293,9 +301,9 @@ but another undo command will undo to the previous boundary.  */)
 void
 truncate_undo_list (struct buffer *b)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (list, prev, next, last_boundary, elt, tem);
 #ifndef HAVE_CHEZ_SCHEME
-  Lisp_Object list;
-  Lisp_Object prev, next, last_boundary;
   EMACS_INT size_so_far = 0;
 
   /* Make sure that calling undo-outer-limit-function
@@ -333,7 +341,6 @@ truncate_undo_list (struct buffer *b)
 
   while (CONSP (next) && ! NILP (XCAR (next)))
     {
-      Lisp_Object elt;
       elt = XCAR (next);
 
       /* Add in the space occupied by this element and its chain link.  */
@@ -357,7 +364,6 @@ truncate_undo_list (struct buffer *b)
       && size_so_far > XINT (Vundo_outer_limit)
       && !NILP (Vundo_outer_limit_function))
     {
-      Lisp_Object tem;
 
       /* Normally the function this calls is undo-outer-limit-truncate.  */
       tem = call1 (Vundo_outer_limit_function, make_number (size_so_far));
@@ -366,7 +372,7 @@ truncate_undo_list (struct buffer *b)
 	  /* The function is responsible for making
 	     any desired changes in buffer-undo-list.  */
 	  unbind_to (count, Qnil);
-	  return;
+	  EXIT_LISP_FRAME_VOID ();
 	}
     }
 
@@ -376,7 +382,6 @@ truncate_undo_list (struct buffer *b)
   /* Keep additional undo data, if it fits in the limits.  */
   while (CONSP (next))
     {
-      Lisp_Object elt;
       elt = XCAR (next);
 
       /* When we get to a boundary, decide whether to truncate
@@ -419,6 +424,7 @@ truncate_undo_list (struct buffer *b)
 
   unbind_to (count, Qnil);
 #endif /* not HAVE_CHEZ_SCHEME */
+  EXIT_LISP_FRAME_VOID ();
 }
 
 

@@ -608,139 +608,188 @@ struct frame
 INLINE void
 fset_buffer_list (struct frame *f, Lisp_Object val)
 {
+  ENTER_LISP_FRAME (val);
   PV_LISP_FIELD_SET(f, buffer_list, val);
+  EXIT_LISP_FRAME_VOID ();
 }
 INLINE void
 fset_buried_buffer_list (struct frame *f, Lisp_Object val)
 {
+  ENTER_LISP_FRAME (val);
   PV_LISP_FIELD_SET(f, buried_buffer_list, val);
+  EXIT_LISP_FRAME_VOID ();
 }
 INLINE void
 fset_condemned_scroll_bars (struct frame *f, Lisp_Object val)
 {
+  ENTER_LISP_FRAME (val);
   PV_LISP_FIELD_SET(f, condemned_scroll_bars, val);
+  EXIT_LISP_FRAME_VOID ();
 }
 INLINE void
 fset_face_alist (struct frame *f, Lisp_Object val)
 {
+  ENTER_LISP_FRAME (val);
   PV_LISP_FIELD_SET(f, face_alist, val);
+  EXIT_LISP_FRAME_VOID ();
 }
 #if defined (HAVE_WINDOW_SYSTEM)
 INLINE void
 fset_parent_frame (struct frame *f, Lisp_Object val)
 {
+  ENTER_LISP_FRAME (val);
   PV_LISP_FIELD_SET(f, parent_frame, val);
+  EXIT_LISP_FRAME_VOID ();
 }
 #endif
 INLINE void
 fset_focus_frame (struct frame *f, Lisp_Object val)
 {
+  ENTER_LISP_FRAME (val);
   PV_LISP_FIELD_SET(f, focus_frame, val);
+  EXIT_LISP_FRAME_VOID ();
 }
 INLINE void
 fset_icon_name (struct frame *f, Lisp_Object val)
 {
+  ENTER_LISP_FRAME (val);
   PV_LISP_FIELD_SET(f, icon_name, val);
+  EXIT_LISP_FRAME_VOID ();
 }
 INLINE void
 fset_menu_bar_items (struct frame *f, Lisp_Object val)
 {
+  ENTER_LISP_FRAME (val);
   PV_LISP_FIELD_SET(f, menu_bar_items, val);
+  EXIT_LISP_FRAME_VOID ();
 }
 INLINE void
 fset_menu_bar_vector (struct frame *f, Lisp_Object val)
 {
+  ENTER_LISP_FRAME (val);
   PV_LISP_FIELD_SET(f, menu_bar_vector, val);
+  EXIT_LISP_FRAME_VOID ();
 }
 #if defined (HAVE_X_WINDOWS) && ! defined (USE_X_TOOLKIT) && ! defined (USE_GTK)
 INLINE void
 fset_menu_bar_window (struct frame *f, Lisp_Object val)
 {
+  ENTER_LISP_FRAME (val);
   PV_LISP_FIELD_SET(f, menu_bar_window, val);
+  EXIT_LISP_FRAME_VOID ();
 }
 #endif
 INLINE void
 fset_name (struct frame *f, Lisp_Object val)
 {
+  ENTER_LISP_FRAME (val);
   PV_LISP_FIELD_SET(f, name, val);
+  EXIT_LISP_FRAME_VOID ();
 }
 INLINE void
 fset_param_alist (struct frame *f, Lisp_Object val)
 {
+  ENTER_LISP_FRAME (val);
   PV_LISP_FIELD_SET(f, param_alist, val);
+  EXIT_LISP_FRAME_VOID ();
 }
 INLINE void
 fset_root_window (struct frame *f, Lisp_Object val)
 {
+  ENTER_LISP_FRAME (val);
   PV_LISP_FIELD_SET(f, root_window, val);
+  EXIT_LISP_FRAME_VOID ();
 }
 INLINE void
 fset_scroll_bars (struct frame *f, Lisp_Object val)
 {
+  ENTER_LISP_FRAME (val);
   PV_LISP_FIELD_SET(f, scroll_bars, val);
+  EXIT_LISP_FRAME_VOID ();
 }
 INLINE void
 fset_selected_window (struct frame *f, Lisp_Object val)
 {
+  ENTER_LISP_FRAME (val);
   PV_LISP_FIELD_SET(f, selected_window, val);
+  EXIT_LISP_FRAME_VOID ();
 }
 INLINE void
 fset_title (struct frame *f, Lisp_Object val)
 {
+  ENTER_LISP_FRAME (val);
   PV_LISP_FIELD_SET(f, title, val);
+  EXIT_LISP_FRAME_VOID ();
 }
 INLINE void
 fset_tool_bar_items (struct frame *f, Lisp_Object val)
 {
+  ENTER_LISP_FRAME (val);
   PV_LISP_FIELD_SET(f, tool_bar_items, val);
+  EXIT_LISP_FRAME_VOID ();
 }
 #ifdef USE_GTK
 INLINE void
 fset_tool_bar_position (struct frame *f, Lisp_Object val)
 {
+  ENTER_LISP_FRAME (val);
   PV_LISP_FIELD_SET(f, tool_bar_position, val);
+  EXIT_LISP_FRAME_VOID ();
 }
 #endif /* USE_GTK */
 #if defined (HAVE_WINDOW_SYSTEM) && ! defined (USE_GTK) && ! defined (HAVE_NS)
 INLINE void
 fset_tool_bar_window (struct frame *f, Lisp_Object val)
 {
+  ENTER_LISP_FRAME (val);
   PV_LISP_FIELD_SET(f, tool_bar_window, val);
+  EXIT_LISP_FRAME_VOID ();
 }
 INLINE void
 fset_current_tool_bar_string (struct frame *f, Lisp_Object val)
 {
+  ENTER_LISP_FRAME (val);
   PV_LISP_FIELD_SET(f, current_tool_bar_string, val);
+  EXIT_LISP_FRAME_VOID ();
 }
 INLINE void
 fset_desired_tool_bar_string (struct frame *f, Lisp_Object val)
 {
+  ENTER_LISP_FRAME (val);
   PV_LISP_FIELD_SET(f, desired_tool_bar_string, val);
+  EXIT_LISP_FRAME_VOID ();
 }
 #endif /* HAVE_WINDOW_SYSTEM && !USE_GTK && !HAVE_NS */
 
 INLINE double
 NUMVAL (Lisp_Object x)
 {
-  return NUMBERP (x) ? XFLOATINT (x) : -1;
+  ENTER_LISP_FRAME_T (double, x);
+  EXIT_LISP_FRAME (NUMBERP (x) ? XFLOATINT (x) : -1);
 }
 
 INLINE double
 default_pixels_per_inch_x (void)
 {
-  Lisp_Object v = (CONSP (Vdisplay_pixels_per_inch)
+  ENTER_LISP_FRAME_T (double);
+  LISP_LOCALS (v);
+  v = (CONSP (Vdisplay_pixels_per_inch)
 		   ? XCAR (Vdisplay_pixels_per_inch)
 		   : Vdisplay_pixels_per_inch);
-  return NUMVAL (v) > 0 ? NUMVAL (v) : 72.0;
+
+  EXIT_LISP_FRAME (NUMVAL (v) > 0 ? NUMVAL (v) : 72.0);
 }
 
 INLINE double
 default_pixels_per_inch_y (void)
 {
-  Lisp_Object v = (CONSP (Vdisplay_pixels_per_inch)
+  ENTER_LISP_FRAME_T (double);
+  LISP_LOCALS (v);
+  v = (CONSP (Vdisplay_pixels_per_inch)
 		   ? XCDR (Vdisplay_pixels_per_inch)
 		   : Vdisplay_pixels_per_inch);
-  return NUMVAL (v) > 0 ? NUMVAL (v) : 72.0;
+
+  EXIT_LISP_FRAME (NUMVAL (v) > 0 ? NUMVAL (v) : 72.0);
 }
 
 #define FRAME_KBOARD(f) ((f)->terminal->kboard)
@@ -1606,10 +1655,14 @@ extern bool x_bitmap_icon (struct frame *, Lisp_Object);
 INLINE void
 x_set_bitmap_icon (struct frame *f)
 {
-  Lisp_Object obj = assq_no_quit (Qicon_type, PV_LISP_FIELD_REF(f, param_alist));
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (obj);
+  obj = assq_no_quit (Qicon_type, PV_LISP_FIELD_REF(f, param_alist));
+
 
   if (CONSP (obj) && !NILP (XCDR (obj)))
     x_bitmap_icon (f, XCDR (obj));
+  EXIT_LISP_FRAME_VOID ();
 }
 
 #endif /* !HAVE_NS */

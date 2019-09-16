@@ -102,8 +102,9 @@ static int
 case_character_impl (struct casing_str_buf *buf,
 		     struct casing_context *ctx, int ch)
 {
+  ENTER_LISP_FRAME_T (int);
+  LISP_LOCALS (prop);
   enum case_action flag;
-  Lisp_Object prop;
   int cased;
 
   /* Update inword state */
@@ -136,7 +137,7 @@ case_character_impl (struct casing_str_buf *buf,
 	      buf->len_chars = str->u.s.size;
 	      buf->len_bytes = STRING_BYTES (str);
 	      memcpy (buf->data, str->u.s.data, buf->len_bytes);
-	      return 1;
+	      EXIT_LISP_FRAME (1);
 	    }
         }
     }
@@ -163,10 +164,10 @@ case_character_impl (struct casing_str_buf *buf,
   /* And we’re done.  */
  done:
   if (!buf)
-    return cased;
+    EXIT_LISP_FRAME (cased);
   buf->len_chars = 1;
   buf->len_bytes = CHAR_STRING (cased, buf->data);
-  return cased != ch;
+  EXIT_LISP_FRAME (cased != ch);
 }
 
 /* In Greek, lower case sigma has two forms: one when used in the middle and one
@@ -223,6 +224,7 @@ case_character (struct casing_str_buf *buf, struct casing_context *ctx,
 static Lisp_Object
 do_casify_natnum (struct casing_context *ctx, Lisp_Object obj)
 {
+  ENTER_LISP_FRAME (obj);
   int flagbits = (CHAR_ALT | CHAR_SUPER | CHAR_HYPER
 		  | CHAR_SHIFT | CHAR_CTL | CHAR_META);
   int ch = XFASTINT (obj);
@@ -230,7 +232,7 @@ do_casify_natnum (struct casing_context *ctx, Lisp_Object obj)
   /* If the character has higher bits set above the flags, return it unchanged.
      It is not a real character.  */
   if (UNSIGNED_CMP (ch, >, flagbits))
-    return obj;
+    EXIT_LISP_FRAME (obj);
 
   int flags = ch & flagbits;
   ch = ch & ~flagbits;
@@ -246,16 +248,17 @@ do_casify_natnum (struct casing_context *ctx, Lisp_Object obj)
     MAKE_CHAR_MULTIBYTE (ch);
   int cased = case_single_character (ctx, ch);
   if (cased == ch)
-    return obj;
+    EXIT_LISP_FRAME (obj);
 
   if (! multibyte)
     MAKE_CHAR_UNIBYTE (cased);
-  return make_natnum (cased | flags);
+  EXIT_LISP_FRAME (make_natnum (cased | flags));
 }
 
 static Lisp_Object
 do_casify_multibyte_string (struct casing_context *ctx, Lisp_Object obj)
 {
+  ENTER_LISP_FRAME (obj);
   /* Verify that ‘data’ is the first member of struct casing_str_buf
      so that when casting char * to struct casing_str_buf *, the
      representation of the character is at the beginning of the
@@ -287,12 +290,13 @@ do_casify_multibyte_string (struct casing_context *ctx, Lisp_Object obj)
   eassert (o <= dst_end);
   obj = make_multibyte_string ((char *) dst, n, o - dst);
   SAFE_FREE ();
-  return obj;
+  EXIT_LISP_FRAME (obj);
 }
 
 static Lisp_Object
 do_casify_unibyte_string (struct casing_context *ctx, Lisp_Object obj)
 {
+  ENTER_LISP_FRAME (obj);
   ptrdiff_t i, size = SCHARS (obj);
   int ch, cased;
 
@@ -310,25 +314,26 @@ do_casify_unibyte_string (struct casing_context *ctx, Lisp_Object obj)
       if (cased >= 0 && cased < 256)
 	SSET (obj, i, cased);
     }
-  return obj;
+  EXIT_LISP_FRAME (obj);
 }
 
 static Lisp_Object
 casify_object (enum case_action flag, Lisp_Object obj)
 {
+  ENTER_LISP_FRAME (obj);
   struct casing_context ctx;
   prepare_casing_context (&ctx, flag, false);
 
   if (NATNUMP (obj))
-    return do_casify_natnum (&ctx, obj);
+    EXIT_LISP_FRAME (do_casify_natnum (&ctx, obj));
   else if (!STRINGP (obj))
     wrong_type_argument (Qchar_or_string_p, obj);
   else if (!SCHARS (obj))
-    return obj;
+    EXIT_LISP_FRAME (obj);
   else if (STRING_MULTIBYTE (obj))
-    return do_casify_multibyte_string (&ctx, obj);
+    EXIT_LISP_FRAME (do_casify_multibyte_string (&ctx, obj));
   else
-    return do_casify_unibyte_string (&ctx, obj);
+    EXIT_LISP_FRAME (do_casify_unibyte_string (&ctx, obj));
 }
 
 DEFUN ("upcase", Fupcase, Supcase, 1, 1, 0,
@@ -340,7 +345,8 @@ cased, e.g. ﬁ, are returned unchanged.
 See also `capitalize', `downcase' and `upcase-initials'.  */)
   (Lisp_Object obj)
 {
-  return casify_object (CASE_UP, obj);
+  ENTER_LISP_FRAME (obj);
+  EXIT_LISP_FRAME (casify_object (CASE_UP, obj));
 }
 
 DEFUN ("downcase", Fdowncase, Sdowncase, 1, 1, 0,
@@ -349,7 +355,8 @@ The argument may be a character or string.  The result has the same type.
 The argument object is not altered--the value is a copy.  */)
   (Lisp_Object obj)
 {
-  return casify_object (CASE_DOWN, obj);
+  ENTER_LISP_FRAME (obj);
+  EXIT_LISP_FRAME (casify_object (CASE_DOWN, obj));
 }
 
 DEFUN ("capitalize", Fcapitalize, Scapitalize, 1, 1, 0,
@@ -362,7 +369,8 @@ is a character, characters which map to multiple code points when
 cased, e.g. ﬁ, are returned unchanged.  */)
   (Lisp_Object obj)
 {
-  return casify_object (CASE_CAPITALIZE, obj);
+  ENTER_LISP_FRAME (obj);
+  EXIT_LISP_FRAME (casify_object (CASE_CAPITALIZE, obj));
 }
 
 /* Like Fcapitalize but change only the initials.  */
@@ -377,7 +385,8 @@ is a character, characters which map to multiple code points when
 cased, e.g. ﬁ, are returned unchanged.  */)
   (Lisp_Object obj)
 {
-  return casify_object (CASE_CAPITALIZE_UP, obj);
+  ENTER_LISP_FRAME (obj);
+  EXIT_LISP_FRAME (casify_object (CASE_CAPITALIZE_UP, obj));
 }
 
 /* Based on CTX, case region in a unibyte buffer from *STARTP to *ENDP.
@@ -481,6 +490,7 @@ do_casify_multibyte_region (struct casing_context *ctx,
 static ptrdiff_t
 casify_region (enum case_action flag, Lisp_Object b, Lisp_Object e)
 {
+  ENTER_LISP_FRAME_T (ptrdiff_t, b, e);
   ptrdiff_t added;
   struct casing_context ctx;
 
@@ -489,7 +499,7 @@ casify_region (enum case_action flag, Lisp_Object b, Lisp_Object e)
   ptrdiff_t end = XFASTINT (e);
   if (start == end)
     /* Not modifying because nothing marked.  */
-    return end;
+    EXIT_LISP_FRAME (end);
   modify_text (start, end);
   prepare_casing_context (&ctx, flag, true);
 
@@ -513,7 +523,7 @@ casify_region (enum case_action flag, Lisp_Object b, Lisp_Object e)
       update_compositions (start, end, CHECK_ALL);
     }
 
-  return orig_end + added;
+  EXIT_LISP_FRAME (orig_end + added);
 }
 
 DEFUN ("upcase-region", Fupcase_region, Supcase_region, 2, 3,
@@ -525,7 +535,10 @@ point and the mark is operated on.
 See also `capitalize-region'.  */)
   (Lisp_Object beg, Lisp_Object end, Lisp_Object region_noncontiguous_p)
 {
-  Lisp_Object bounds = Qnil;
+  ENTER_LISP_FRAME (beg, end, region_noncontiguous_p);
+  LISP_LOCALS (bounds);
+  bounds = Qnil;
+
 
   if (!NILP (region_noncontiguous_p))
     {
@@ -541,7 +554,7 @@ See also `capitalize-region'.  */)
   else
     casify_region (CASE_UP, beg, end);
 
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 DEFUN ("downcase-region", Fdowncase_region, Sdowncase_region, 2, 3,
@@ -552,7 +565,10 @@ the region to operate on.  When used as a command, the text between
 point and the mark is operated on.  */)
   (Lisp_Object beg, Lisp_Object end, Lisp_Object region_noncontiguous_p)
 {
-  Lisp_Object bounds = Qnil;
+  ENTER_LISP_FRAME (beg, end, region_noncontiguous_p);
+  LISP_LOCALS (bounds);
+  bounds = Qnil;
+
 
   if (!NILP (region_noncontiguous_p))
     {
@@ -568,7 +584,7 @@ point and the mark is operated on.  */)
   else
     casify_region (CASE_DOWN, beg, end);
 
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 DEFUN ("capitalize-region", Fcapitalize_region, Scapitalize_region, 2, 2, "r",
@@ -579,8 +595,9 @@ In programs, give two arguments, the starting and ending
 character positions to operate on.  */)
   (Lisp_Object beg, Lisp_Object end)
 {
+  ENTER_LISP_FRAME (beg, end);
   casify_region (CASE_CAPITALIZE, beg, end);
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 /* Like Fcapitalize_region but change only the initials.  */
@@ -594,19 +611,21 @@ In programs, give two arguments, the starting and ending
 character positions to operate on.  */)
   (Lisp_Object beg, Lisp_Object end)
 {
+  ENTER_LISP_FRAME (beg, end);
   casify_region (CASE_CAPITALIZE_UP, beg, end);
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 static Lisp_Object
 casify_word (enum case_action flag, Lisp_Object arg)
 {
+  ENTER_LISP_FRAME (arg);
   CHECK_NUMBER (arg);
   ptrdiff_t farend = scan_words (PT, XINT (arg));
   if (!farend)
     farend = XINT (arg) <= 0 ? BEGV : ZV;
   SET_PT (casify_region (flag, make_number (PT), make_number (farend)));
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 DEFUN ("upcase-word", Fupcase_word, Supcase_word, 1, 1, "p",
@@ -619,7 +638,8 @@ With negative argument, convert previous words but do not move.
 See also `capitalize-word'.  */)
   (Lisp_Object arg)
 {
-  return casify_word (CASE_UP, arg);
+  ENTER_LISP_FRAME (arg);
+  EXIT_LISP_FRAME (casify_word (CASE_UP, arg));
 }
 
 DEFUN ("downcase-word", Fdowncase_word, Sdowncase_word, 1, 1, "p",
@@ -631,7 +651,8 @@ is ignored when moving forward.
 With negative argument, convert previous words but do not move.  */)
   (Lisp_Object arg)
 {
-  return casify_word (CASE_DOWN, arg);
+  ENTER_LISP_FRAME (arg);
+  EXIT_LISP_FRAME (casify_word (CASE_DOWN, arg));
 }
 
 DEFUN ("capitalize-word", Fcapitalize_word, Scapitalize_word, 1, 1, "p",
@@ -646,7 +667,8 @@ is ignored when moving forward.
 With negative argument, capitalize previous words but do not move.  */)
   (Lisp_Object arg)
 {
-  return casify_word (CASE_CAPITALIZE, arg);
+  ENTER_LISP_FRAME (arg);
+  EXIT_LISP_FRAME (casify_word (CASE_CAPITALIZE, arg));
 }
 
 void

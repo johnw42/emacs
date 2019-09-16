@@ -55,9 +55,10 @@ static Lisp_Object otf_features (HDC context, const char *table);
 static int
 memq_no_quit (Lisp_Object elt, Lisp_Object list)
 {
+  ENTER_LISP_FRAME_T (int, elt, list);
   while (CONSP (list) && ! EQ (XCAR (list), elt))
     list = XCDR (list);
-  return (CONSP (list));
+  EXIT_LISP_FRAME ((CONSP (list)));
 }
 
 
@@ -65,23 +66,32 @@ memq_no_quit (Lisp_Object elt, Lisp_Object list)
 static Lisp_Object
 uniscribe_list (struct frame *f, Lisp_Object font_spec)
 {
-  Lisp_Object fonts = w32font_list_internal (f, font_spec, true);
+  ENTER_LISP_FRAME (font_spec);
+  LISP_LOCALS (fonts);
+  fonts = w32font_list_internal (f, font_spec, true);
+
   FONT_ADD_LOG ("uniscribe-list", font_spec, fonts);
-  return fonts;
+  EXIT_LISP_FRAME (fonts);
 }
 
 static Lisp_Object
 uniscribe_match (struct frame *f, Lisp_Object font_spec)
 {
-  Lisp_Object entity = w32font_match_internal (f, font_spec, true);
+  ENTER_LISP_FRAME (font_spec);
+  LISP_LOCALS (entity);
+  entity = w32font_match_internal (f, font_spec, true);
+
   FONT_ADD_LOG ("uniscribe-match", font_spec, entity);
-  return entity;
+  EXIT_LISP_FRAME (entity);
 }
 
 static Lisp_Object
 uniscribe_list_family (struct frame *f)
 {
-  Lisp_Object list = Qnil;
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (list, prev_quit);
+  list = Qnil;
+
   LOGFONT font_match_pattern;
   HDC dc;
 
@@ -93,7 +103,8 @@ uniscribe_list_family (struct frame *f)
      list it will return.  That's because get_frame_dc acquires the
      critical section, so we cannot quit before we release it in
      release_frame_dc.  */
-  Lisp_Object prev_quit = Vinhibit_quit;
+  prev_quit = Vinhibit_quit;
+
   Vinhibit_quit = Qt;
   dc = get_frame_dc (f);
 
@@ -103,15 +114,17 @@ uniscribe_list_family (struct frame *f)
   release_frame_dc (f, dc);
   Vinhibit_quit = prev_quit;
 
-  return list;
+  EXIT_LISP_FRAME (list);
 }
 
 static Lisp_Object
 uniscribe_open (struct frame *f, Lisp_Object font_entity, int pixel_size)
 {
-  Lisp_Object font_object
-    = font_make_object (VECSIZE (struct uniscribe_font_info),
+  ENTER_LISP_FRAME (font_entity);
+  LISP_LOCALS (font_object);
+  font_object = font_make_object (VECSIZE (struct uniscribe_font_info),
 			font_entity, pixel_size);
+
   struct uniscribe_font_info *uniscribe_font
     = (struct uniscribe_font_info *) XFONT_OBJECT (font_object);
 
@@ -119,7 +132,7 @@ uniscribe_open (struct frame *f, Lisp_Object font_entity, int pixel_size)
 
   if (!w32font_open_internal (f, font_entity, pixel_size, font_object))
     {
-      return Qnil;
+      EXIT_LISP_FRAME (Qnil);
     }
 
   /* Initialize the cache for this font.  */
@@ -130,7 +143,7 @@ uniscribe_open (struct frame *f, Lisp_Object font_entity, int pixel_size)
 
   uniscribe_font->w32_font.font.driver = &uniscribe_font_driver;
 
-  return font_object;
+  EXIT_LISP_FRAME (font_object);
 }
 
 static void
@@ -169,17 +182,20 @@ uniscribe_close (struct font *font)
 static Lisp_Object
 uniscribe_otf_capability (struct font *font)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (capability, features, prev_quit);
   HDC context;
   HFONT old_font;
   struct frame *f;
-  Lisp_Object capability = Fcons (Qnil, Qnil);
-  Lisp_Object features;
+  capability = Fcons (Qnil, Qnil);
+
 
   f = XFRAME (selected_frame);
   /* Prevent quitting while we cons the lists in otf_features.
      That's because get_frame_dc acquires the critical section, so we
      cannot quit before we release it in release_frame_dc.  */
-  Lisp_Object prev_quit = Vinhibit_quit;
+  prev_quit = Vinhibit_quit;
+
   Vinhibit_quit = Qt;
   context = get_frame_dc (f);
   old_font = SelectObject (context, FONT_HANDLE (font));
@@ -193,7 +209,7 @@ uniscribe_otf_capability (struct font *font)
   release_frame_dc (f, context);
   Vinhibit_quit = prev_quit;
 
-  return capability;
+  EXIT_LISP_FRAME (capability);
 }
 
 /* Uniscribe implementation of shape for font backend.
@@ -213,6 +229,8 @@ uniscribe_otf_capability (struct font *font)
 static Lisp_Object
 uniscribe_shape (Lisp_Object lgstring)
 {
+  ENTER_LISP_FRAME (lgstring);
+  LISP_LOCALS (lglyph, vec);
   struct font *font = CHECK_FONT_GET_OBJECT (LGSTRING_FONT (lgstring));
   struct uniscribe_font_info *uniscribe_font
     = (struct uniscribe_font_info *) font;
@@ -265,7 +283,7 @@ uniscribe_shape (Lisp_Object lgstring)
   if (FAILED (result))
     {
       xfree (items);
-      return Qnil;
+      EXIT_LISP_FRAME (Qnil);
     }
 
   glyphs = alloca (max_glyphs * sizeof (WORD));
@@ -348,7 +366,8 @@ uniscribe_shape (Lisp_Object lgstring)
 	      for (j = 0; j < nglyphs; j++)
 		{
 		  int lglyph_index = j + done_glyphs;
-		  Lisp_Object lglyph = LGSTRING_GLYPH (lgstring, lglyph_index);
+		  lglyph = LGSTRING_GLYPH (lgstring, lglyph_index);
+
 		  ABC char_metric;
 		  unsigned gl;
 
@@ -456,7 +475,8 @@ uniscribe_shape (Lisp_Object lgstring)
 			 are zero.  */
 		      || (!attributes[j].fClusterStart && items[i].a.fRTL))
 		    {
-		      Lisp_Object vec = make_uninit_vector (3);
+		      vec = make_uninit_vector (3);
+
 
 		      if (items[i].a.fRTL)
 			{
@@ -506,9 +526,9 @@ uniscribe_shape (Lisp_Object lgstring)
     }
 
   if (NILP (lgstring))
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
   else
-    return make_number (done_glyphs);
+    EXIT_LISP_FRAME (make_number (done_glyphs));
 }
 
 /* Uniscribe implementation of encode_char for font backend.
@@ -642,32 +662,33 @@ add_opentype_font_name_to_list (ENUMLOGFONTEX *logical_font,
 				NEWTEXTMETRICEX *physical_font,
 				DWORD font_type, LPARAM list_object)
 {
+  ENTER_LISP_FRAME_T (int CALLBACK ALIGN_STACK);
+  LISP_LOCALS (family);
   Lisp_Object* list = (Lisp_Object *) list_object;
-  Lisp_Object family;
 
   /* Skip vertical fonts (intended only for printing)  */
   if (logical_font->elfLogFont.lfFaceName[0] == '@')
-    return 1;
+    EXIT_LISP_FRAME (1);
 
   /* Skip non opentype fonts.  Count old truetype fonts as opentype,
      as some of them do contain GPOS and GSUB data that Uniscribe
      can make use of.  */
   if (!(physical_font->ntmTm.ntmFlags & NTMFLAGS_OPENTYPE)
       && font_type != TRUETYPE_FONTTYPE)
-    return 1;
+    EXIT_LISP_FRAME (1);
 
   /* Skip fonts that have no Unicode coverage.  */
   if (!physical_font->ntmFontSig.fsUsb[3]
       && !physical_font->ntmFontSig.fsUsb[2]
       && !physical_font->ntmFontSig.fsUsb[1]
       && !(physical_font->ntmFontSig.fsUsb[0] & 0x3fffffff))
-    return 1;
+    EXIT_LISP_FRAME (1);
 
   family = intern_font_name (logical_font->elfLogFont.lfFaceName);
   if (! memq_no_quit (family, *list))
     *list = Fcons (family, *list);
 
-  return 1;
+  EXIT_LISP_FRAME (1);
 }
 
 
@@ -730,16 +751,18 @@ static bool uniscribe_new_apis;
 static bool
 uniscribe_check_features (Lisp_Object features[2], OPENTYPE_TAG *ftags, int n)
 {
+  ENTER_LISP_FRAME_T (bool, features);
+  LISP_LOCALS (rest, feature);
   int j;
 
   for (j = 0; j < 2; j++)
     {
       bool negative = false;
-      Lisp_Object rest;
 
       for (rest = features[j]; CONSP (rest); rest = XCDR (rest))
 	{
-	  Lisp_Object feature = XCAR (rest);
+	  feature = XCAR (rest);
+
 
 	  /* The font must NOT have any of the features after nil.
 	     See the doc string of 'font-spec', under ':otf'.  */
@@ -757,7 +780,7 @@ uniscribe_check_features (Lisp_Object features[2], OPENTYPE_TAG *ftags, int n)
 		      /* Test fails if we find a feature that the font
 			 must NOT have.  */
 		      if (negative)
-			return false;
+			EXIT_LISP_FRAME (false);
 		      break;
 		    }
 		}
@@ -765,12 +788,12 @@ uniscribe_check_features (Lisp_Object features[2], OPENTYPE_TAG *ftags, int n)
 	      /* Test fails if we do NOT find a feature that the font
 		 should have.  */
 	      if (i >= n && !negative)
-		return false;
+		EXIT_LISP_FRAME (false);
 	    }
 	}
     }
 
-  return true;
+  EXIT_LISP_FRAME (true);
 }
 
 /* Check if font supports the required OTF script/language/features
@@ -783,6 +806,7 @@ static int
 uniscribe_check_otf_1 (HDC context, Lisp_Object script, Lisp_Object lang,
 		       Lisp_Object features[2], int *retval)
 {
+  ENTER_LISP_FRAME_T (int, script, lang, features);
   SCRIPT_CACHE cache = NULL;
   OPENTYPE_TAG tags[32], script_tag, lang_tag;
   int max_tags = ARRAYELTS (tags);
@@ -866,7 +890,7 @@ uniscribe_check_otf_1 (HDC context, Lisp_Object script, Lisp_Object lang,
  no_support:
   if (cache)
     ScriptFreeCache (&cache);
-  return ret;
+  EXIT_LISP_FRAME (ret);
 }
 
 /* Check if font supports the otf script/language/features specified.
@@ -875,7 +899,8 @@ uniscribe_check_otf_1 (HDC context, Lisp_Object script, Lisp_Object lang,
 int
 uniscribe_check_otf (LOGFONT *font, Lisp_Object otf_spec)
 {
-  Lisp_Object script, lang, rest;
+  ENTER_LISP_FRAME_T (int, otf_spec);
+  LISP_LOCALS (script, lang, rest);
   Lisp_Object features[2];
   DWORD feature_tables[2];
   DWORD script_tag, default_script, lang_tag = 0;
@@ -886,7 +911,7 @@ uniscribe_check_otf (LOGFONT *font, Lisp_Object otf_spec)
 
   /* Check the spec is in the right format.  */
   if (!CONSP (otf_spec) || XINT (Flength (otf_spec)) < 3)
-    return 0;
+    EXIT_LISP_FRAME (0);
 
   /* Break otf_spec into its components.  */
   script = XCAR (otf_spec);
@@ -1051,13 +1076,16 @@ uniscribe_check_otf (LOGFONT *font, Lisp_Object otf_spec)
   DeleteObject (check_font);
   release_frame_dc (f, context);
 
-  return retval;
+  EXIT_LISP_FRAME (retval);
 }
 
 static Lisp_Object
 otf_features (HDC context, const char *table)
 {
-  Lisp_Object script_list = Qnil;
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (script_list, script_tag, langsys_list, langsys_tag, feature_list);
+  script_list = Qnil;
+
   unsigned short scriptlist_table, n_scripts, feature_table;
   DWORD tbl = OTF_TAG (table);
   int i, j, k;
@@ -1071,7 +1099,6 @@ otf_features (HDC context, const char *table)
     {
       char script[5], lang[5];
       unsigned short script_table, lang_count, langsys_table, feature_count;
-      Lisp_Object script_tag, langsys_list, langsys_tag, feature_list;
       unsigned short record_offset = scriptlist_table + 2 + i * 6;
       OTF_TAG_VAL (tbl, record_offset, script);
       OTF_INT16_VAL (tbl, record_offset + 4, &script_table);
@@ -1135,10 +1162,10 @@ otf_features (HDC context, const char *table)
       script_list = Fcons (Fcons (script_tag, langsys_list), script_list);
     }
 
-  return script_list;
+  EXIT_LISP_FRAME (script_list);
 
 font_table_error:
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 #undef OTF_INT16_VAL

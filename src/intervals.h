@@ -140,9 +140,11 @@ struct interval
 INLINE void
 set_interval_object (INTERVAL i, Lisp_Object obj)
 {
+  ENTER_LISP_FRAME (obj);
   eassert (BUFFERP (obj) || STRINGP (obj));
   i->up_obj = 1;
   i->up.obj = obj;
+  EXIT_LISP_FRAME_VOID ();
 }
 
 INLINE void

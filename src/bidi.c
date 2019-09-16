@@ -1457,8 +1457,8 @@ bidi_fetch_char_skip_isolates (ptrdiff_t charpos, ptrdiff_t bytepos,
 static ptrdiff_t
 bidi_at_paragraph_end (ptrdiff_t charpos, ptrdiff_t bytepos)
 {
-  Lisp_Object sep_re;
-  Lisp_Object start_re;
+  ENTER_LISP_FRAME_T (ptrdiff_t);
+  LISP_LOCALS (sep_re, start_re);
   ptrdiff_t val;
 
   if (STRINGP (BVAR (current_buffer, bidi_paragraph_separate_re)))
@@ -1479,7 +1479,7 @@ bidi_at_paragraph_end (ptrdiff_t charpos, ptrdiff_t bytepos)
 	val = -2;
     }
 
-  return val;
+  EXIT_LISP_FRAME (val);
 }
 
 /* If the user has requested the long scans caching, make sure that
@@ -1542,10 +1542,12 @@ bidi_paragraph_cache_on_off (void)
 static ptrdiff_t
 bidi_find_paragraph_start (ptrdiff_t pos, ptrdiff_t pos_byte)
 {
-  Lisp_Object re =
-    STRINGP (BVAR (current_buffer, bidi_paragraph_start_re))
+  ENTER_LISP_FRAME_T (ptrdiff_t);
+  LISP_LOCALS (re);
+  re = STRINGP (BVAR (current_buffer, bidi_paragraph_start_re))
     ? BVAR (current_buffer, bidi_paragraph_start_re)
     : paragraph_start_re;
+
   ptrdiff_t limit = ZV, limit_byte = ZV_BYTE;
   struct region_cache *bpc = bidi_paragraph_cache_on_off ();
   ptrdiff_t n = 0, oldpos = pos, next;
@@ -1578,7 +1580,7 @@ bidi_find_paragraph_start (ptrdiff_t pos, ptrdiff_t pos_byte)
   /* Positions returned by the region cache are not limited to
      BEGV..ZV range, so we limit them here.  */
   pos_byte = clip_to_bounds (BEGV_BYTE, pos_byte, ZV_BYTE);
-  return pos_byte;
+  EXIT_LISP_FRAME (pos_byte);
 }
 
 /* On a 3.4 GHz machine, searching forward for a strong directional

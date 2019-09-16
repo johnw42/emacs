@@ -370,13 +370,16 @@ get_user_db (Display *display)
 static XrmDatabase
 get_environ_db (void)
 {
+  ENTER_LISP_FRAME_T (XrmDatabase);
+  LISP_LOCALS (system_name);
   XrmDatabase db;
   char *p = getenv ("XENVIRONMENT");
   char *filename = 0;
 
   if (!p)
     {
-      Lisp_Object system_name = Fsystem_name ();
+      system_name = Fsystem_name ();
+
       if (STRINGP (system_name))
 	{
 	  /* Use ~/.Xdefaults-HOSTNAME.  */
@@ -394,7 +397,7 @@ get_environ_db (void)
 
   xfree (filename);
 
-  return db;
+  EXIT_LISP_FRAME (db);
 }
 
 /* External interface.  */

@@ -204,6 +204,7 @@ convert_to_handle_as_ascii (void)
 static HGLOBAL
 convert_to_handle_as_coded (Lisp_Object coding_system)
 {
+  ENTER_LISP_FRAME_T (HGLOBAL, coding_system);
   HGLOBAL htext;
   unsigned char *dst = NULL;
   struct coding_system coding;
@@ -234,19 +235,21 @@ convert_to_handle_as_coded (Lisp_Object coding_system)
 
   xfree (coding.destination);
 
-  return htext;
+  EXIT_LISP_FRAME (htext);
 }
 
 static Lisp_Object
 render (Lisp_Object oformat)
 {
+  ENTER_LISP_FRAME (oformat);
+  LISP_LOCALS (cs);
   HGLOBAL htext = NULL;
   UINT format = XFASTINT (oformat);
 
   ONTRACE (fprintf (stderr, "render\n"));
 
   if (NILP (current_text))
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
 
   if (current_requires_encoding || format == CF_UNICODETEXT)
     {
@@ -261,7 +264,6 @@ render (Lisp_Object oformat)
 	  case CF_TEXT:
 	  case CF_OEMTEXT:
 	    {
-	      Lisp_Object cs;
 	      cs = coding_from_cp (cp_from_locale (current_lcid, format));
 	      htext = convert_to_handle_as_coded (cs);
 	      break;
@@ -274,15 +276,15 @@ render (Lisp_Object oformat)
   ONTRACE (fprintf (stderr, "render: htext = 0x%08X\n", (unsigned) htext));
 
   if (htext == NULL)
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
 
   if (SetClipboardData (format, htext) == NULL)
     {
       GlobalFree (htext);
-      return Qnil;
+      EXIT_LISP_FRAME (Qnil);
     }
 
-  return Qt;
+  EXIT_LISP_FRAME (Qt);
 }
 
 static Lisp_Object
@@ -324,6 +326,7 @@ render_locale (void)
 static Lisp_Object
 render_all (Lisp_Object ignore)
 {
+  ENTER_LISP_FRAME (ignore);
   ONTRACE (fprintf (stderr, "render_all\n"));
 
   /* According to the docs we should not call OpenClipboard() here,
@@ -376,12 +379,13 @@ render_all (Lisp_Object ignore)
 
   CloseClipboard ();
 
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 static void
 run_protected (Lisp_Object (*code) (Lisp_Object), Lisp_Object arg)
 {
+  ENTER_LISP_FRAME (arg);
   /* FIXME: This works but it doesn't feel right.  Too much fiddling
      with global variables and calling strange looking functions.  Is
      this really the right way to run Lisp callbacks?  */
@@ -400,15 +404,17 @@ run_protected (Lisp_Object (*code) (Lisp_Object), Lisp_Object arg)
   waiting_for_input = owfi;
 
   unblock_input ();
+  EXIT_LISP_FRAME_VOID ();
 }
 
 static Lisp_Object
 lisp_error_handler (Lisp_Object error)
 {
+  ENTER_LISP_FRAME (error);
   Vsignaling_function = Qnil;
   cmd_error_internal (error, "Error in delayed clipboard rendering: ");
   Vinhibit_quit = Qt;
-  return Qt;
+  EXIT_LISP_FRAME (Qt);
 }
 
 
@@ -480,12 +486,12 @@ term_w32select (void)
 static void
 setup_config (void)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (coding_system, dos_coding_system);
   const char *coding_name;
   const char *cp;
   char *end;
   int slen;
-  Lisp_Object coding_system;
-  Lisp_Object dos_coding_system;
 
   CHECK_SYMBOL (Vselection_coding_system);
 
@@ -502,7 +508,7 @@ setup_config (void)
   /* Check if we have it cached */
   if (!NILP (cfg_coding_system)
       && EQ (cfg_coding_system, dos_coding_system))
-    return;
+    EXIT_LISP_FRAME_VOID ();
   cfg_coding_system = dos_coding_system;
 
   /* Set some sensible fallbacks */
@@ -518,7 +524,7 @@ setup_config (void)
   if (cp != NULL && (cp == coding_name || cp[-1] == '-'))
     {
       cfg_clipboard_type = CF_UNICODETEXT;
-      return;
+      EXIT_LISP_FRAME_VOID ();
     }
 
   /* "cp[0-9]+.*" or "windows-[0-9]+.*" -> CF_TEXT or CF_OEMTEXT */
@@ -528,7 +534,7 @@ setup_config (void)
   else if (slen >= 10 && memcmp (coding_name, "windows-", 8) == 0)
     cp = coding_name + 8;
   else
-    return;
+    EXIT_LISP_FRAME_VOID ();
 
   end = (char*)cp;
   cfg_codepage = strtol (cp, &end, 10);
@@ -538,23 +544,24 @@ setup_config (void)
   if (cfg_codepage == 0 || (end-cp) < 2 )
     {
       cfg_codepage = ANSICP;
-      return;
+      EXIT_LISP_FRAME_VOID ();
     }
 
   /* Is it the currently active system default? */
   if (cfg_codepage == ANSICP)
     {
       /* cfg_clipboard_type = CF_TEXT; */
-      return;
+      EXIT_LISP_FRAME_VOID ();
     }
   if (cfg_codepage == OEMCP)
     {
       cfg_clipboard_type = CF_OEMTEXT;
-      return;
+      EXIT_LISP_FRAME_VOID ();
     }
 
   /* Else determine a suitable locale the hard way. */
   EnumSystemLocales (enum_locale_callback, LCID_INSTALLED);
+  EXIT_LISP_FRAME_VOID ();
 }
 
 static BOOL WINAPI
@@ -620,11 +627,12 @@ coding_from_cp (UINT codepage)
 static Lisp_Object
 validate_coding_system (Lisp_Object coding_system)
 {
-  Lisp_Object eol_type;
+  ENTER_LISP_FRAME (coding_system);
+  LISP_LOCALS (eol_type);
 
   /* Make sure the input is valid. */
   if (NILP (Fcoding_system_p (coding_system)))
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
 
   /* Make sure we use a DOS coding system as mandated by the system
      specs. */
@@ -632,23 +640,24 @@ validate_coding_system (Lisp_Object coding_system)
 
   /* Already a DOS coding system? */
   if (EQ (eol_type, make_number (1)))
-    return coding_system;
+    EXIT_LISP_FRAME (coding_system);
 
   /* Get EOL_TYPE vector of the base of CODING_SYSTEM.  */
   if (!VECTORP (eol_type))
     {
       eol_type = Fcoding_system_eol_type (Fcoding_system_base (coding_system));
       if (!VECTORP (eol_type))
-	return Qnil;
+	EXIT_LISP_FRAME (Qnil);
     }
 
-  return AREF (eol_type, 1);
+  EXIT_LISP_FRAME (AREF (eol_type, 1));
 }
 
 static void
 setup_windows_coding_system (Lisp_Object coding_system,
 			     struct coding_system * coding)
 {
+  ENTER_LISP_FRAME (coding_system);
   memset (coding, 0, sizeof (*coding));
   setup_coding_system (coding_system, coding);
 
@@ -664,6 +673,7 @@ setup_windows_coding_system (Lisp_Object coding_system,
      either.  */
   coding->common_flags &= ~CODING_ANNOTATION_MASK;
   coding->mode |= CODING_MODE_LAST_BLOCK | CODING_MODE_SAFE_ENCODING;
+  EXIT_LISP_FRAME_VOID ();
 }
 
 
@@ -673,6 +683,7 @@ DEFUN ("w32-set-clipboard-data", Fw32_set_clipboard_data,
        doc: /* This sets the clipboard data to the given text.  */)
   (Lisp_Object string, Lisp_Object ignored)
 {
+  ENTER_LISP_FRAME (string, ignored);
   BOOL ok = TRUE;
   int nbytes;
   unsigned char *src;
@@ -784,7 +795,7 @@ DEFUN ("w32-set-clipboard-data", Fw32_set_clipboard_data,
  done:
   unblock_input ();
 
-  return (ok ? string : Qnil);
+  EXIT_LISP_FRAME ((ok ? string : Qnil));
 }
 
 
@@ -793,8 +804,11 @@ DEFUN ("w32-get-clipboard-data", Fw32_get_clipboard_data,
        doc: /* This gets the clipboard data in text format.  */)
   (Lisp_Object ignored)
 {
+  ENTER_LISP_FRAME (ignored);
+  LISP_LOCALS (ret, coding_system, dos_coding_system);
   HGLOBAL htext;
-  Lisp_Object ret = Qnil;
+  ret = Qnil;
+
   UINT actual_clipboard_type;
   int use_configured_coding_system = 1;
 
@@ -805,7 +819,7 @@ DEFUN ("w32-get-clipboard-data", Fw32_get_clipboard_data,
   /* Don't pass our own text from the clipboard (which might be
      troublesome if the killed text includes null characters).  */
   if (!NILP (current_text))
-    return ret;
+    EXIT_LISP_FRAME (ret);
 
   setup_config ();
   actual_clipboard_type = cfg_clipboard_type;
@@ -870,8 +884,8 @@ DEFUN ("w32-get-clipboard-data", Fw32_get_clipboard_data,
     if (require_decoding)
       {
 	struct coding_system coding;
-	Lisp_Object coding_system = Qnil;
-	Lisp_Object dos_coding_system;
+	coding_system = Qnil;
+
 
 	/* `next-selection-coding-system' should override everything,
 	   even when the locale passed by the system disagrees.  The
@@ -1002,7 +1016,7 @@ DEFUN ("w32-get-clipboard-data", Fw32_get_clipboard_data,
  done:
   unblock_input ();
 
-  return (ret);
+  EXIT_LISP_FRAME ((ret));
 }
 
 /* Support checking for a clipboard selection.  */
@@ -1020,6 +1034,8 @@ server to query.  If omitted or nil, that stands for the selected
 frame's display, or the first available X display.  */)
   (Lisp_Object selection, Lisp_Object terminal)
 {
+  ENTER_LISP_FRAME (selection, terminal);
+  LISP_LOCALS (val);
   CHECK_SYMBOL (selection);
 
   /* Return nil for PRIMARY and SECONDARY selections; for CLIPBOARD, check
@@ -1027,7 +1043,8 @@ frame's display, or the first available X display.  */)
 
   if (EQ (selection, QCLIPBOARD))
     {
-      Lisp_Object val = Qnil;
+      val = Qnil;
+
 
       setup_config ();
 
@@ -1046,9 +1063,9 @@ frame's display, or the first available X display.  */)
 	      }
 	  CloseClipboard ();
 	}
-      return val;
+      EXIT_LISP_FRAME (val);
     }
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 /* Support enumerating available clipboard selection formats.  */
@@ -1069,6 +1086,8 @@ for `CLIPBOARD'.  The return value is a vector of symbols, each symbol
 representing a data format that is currently available in the clipboard.  */)
   (Lisp_Object selection, Lisp_Object terminal)
 {
+  ENTER_LISP_FRAME (selection, terminal);
+  LISP_LOCALS (val);
   /* Xlib-like names for standard Windows clipboard data formats.
      They are in upper-case to mimic xselect.c.  A couple of the names
      were changed to be more like their X counterparts.  */
@@ -1099,7 +1118,8 @@ representing a data format that is currently available in the clipboard.  */)
 
   if (EQ (selection, QCLIPBOARD))
     {
-      Lisp_Object val = Qnil;
+      val = Qnil;
+
 
       setup_config ();
 
@@ -1152,10 +1172,10 @@ representing a data format that is currently available in the clipboard.  */)
 	    }
 	  CloseClipboard ();
 	}
-      return val;
+      EXIT_LISP_FRAME (val);
     }
   /* For PRIMARY and SECONDARY we cons the values in w32--get-selection.  */
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 /* One-time init.  Called in the un-dumped Emacs, but not in the

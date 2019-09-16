@@ -81,11 +81,12 @@ read_bytecode_char (bool unreadflag)
 Lisp_Object
 get_doc_string (Lisp_Object filepos, bool unibyte, bool definition)
 {
+  ENTER_LISP_FRAME (filepos);
+  LISP_LOCALS (file, tem, pos, docdir);
   char *from, *to, *name, *p, *p1;
   int fd;
   int offset;
   EMACS_INT position;
-  Lisp_Object file, tem, pos;
   ptrdiff_t count;
   USE_SAFE_ALLOCA;
 
@@ -100,23 +101,23 @@ get_doc_string (Lisp_Object filepos, bool unibyte, bool definition)
       pos = XCDR (filepos);
     }
   else
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
 
   position = eabs (XINT (pos));
 
   if (!STRINGP (Vdoc_directory))
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
 
   if (!STRINGP (file))
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
 
   /* Put the file name in NAME as a C string.
      If it is relative, combine it with Vdoc_directory.  */
 
   tem = Ffile_name_absolute_p (file);
   file = ENCODE_FILE (file);
-  Lisp_Object docdir
-    = NILP (tem) ? ENCODE_FILE (Vdoc_directory) : empty_unibyte_string;
+  docdir = NILP (tem) ? ENCODE_FILE (Vdoc_directory) : empty_unibyte_string;
+
   ptrdiff_t docdir_sizemax = SBYTES (docdir) + 1;
 #ifndef CANNOT_DUMP
   docdir_sizemax = max (docdir_sizemax, sizeof sibling_etc);
@@ -145,7 +146,7 @@ get_doc_string (Lisp_Object filepos, bool unibyte, bool definition)
 	  SAFE_FREE ();
 	  AUTO_STRING (cannot_open, "Cannot open doc string file \"");
 	  AUTO_STRING (quote_nl, "\"\n");
-	  return concat3 (cannot_open, file, quote_nl);
+	  EXIT_LISP_FRAME (concat3 (cannot_open, file, quote_nl));
 	}
     }
   count = SPECPDL_INDEX ();
@@ -217,24 +218,24 @@ get_doc_string (Lisp_Object filepos, bool unibyte, bool definition)
       if (get_doc_string_buffer[offset - test] != '\037')
 	{
 	  if (get_doc_string_buffer[offset - test++] != ' ')
-	    return Qnil;
+	    EXIT_LISP_FRAME (Qnil);
 	  while (get_doc_string_buffer[offset - test] >= '0'
 		 && get_doc_string_buffer[offset - test] <= '9')
 	    test++;
 	  if (get_doc_string_buffer[offset - test++] != '@'
 	      || get_doc_string_buffer[offset - test] != '#')
-	    return Qnil;
+	    EXIT_LISP_FRAME (Qnil);
 	}
     }
   else
     {
       int test = 1;
       if (get_doc_string_buffer[offset - test++] != '\n')
-	return Qnil;
+	EXIT_LISP_FRAME (Qnil);
       while (get_doc_string_buffer[offset - test] > ' ')
 	test++;
       if (get_doc_string_buffer[offset - test] != '\037')
-	return Qnil;
+	EXIT_LISP_FRAME (Qnil);
     }
 
   /* Scan the text and perform quoting with ^A (char code 1).
@@ -272,12 +273,12 @@ Invalid data in documentation file -- %c followed by code %03o",
   if (definition)
     {
       read_bytecode_pointer = (unsigned char *) get_doc_string_buffer + offset;
-      return Fread (Qlambda);
+      EXIT_LISP_FRAME (Fread (Qlambda));
     }
 
   if (unibyte)
-    return make_unibyte_string (get_doc_string_buffer + offset,
-				to - (get_doc_string_buffer + offset));
+    EXIT_LISP_FRAME (make_unibyte_string (get_doc_string_buffer + offset,
+				to - (get_doc_string_buffer + offset)));
   else
     {
       /* The data determines whether the string is multibyte.  */
@@ -285,9 +286,9 @@ Invalid data in documentation file -- %c followed by code %03o",
 	= multibyte_chars_in_text (((unsigned char *) get_doc_string_buffer
 				    + offset),
 				   to - (get_doc_string_buffer + offset));
-      return make_string_from_bytes (get_doc_string_buffer + offset,
+      EXIT_LISP_FRAME (make_string_from_bytes (get_doc_string_buffer + offset,
 				     nchars,
-				     to - (get_doc_string_buffer + offset));
+				     to - (get_doc_string_buffer + offset)));
     }
 }
 
@@ -298,18 +299,20 @@ Invalid data in documentation file -- %c followed by code %03o",
 Lisp_Object
 read_doc_string (Lisp_Object filepos)
 {
-  return get_doc_string (filepos, 0, 1);
+  ENTER_LISP_FRAME (filepos);
+  EXIT_LISP_FRAME (get_doc_string (filepos, 0, 1));
 }
 
 static bool
 reread_doc_file (Lisp_Object file)
 {
+  ENTER_LISP_FRAME_T (bool, file);
   if (NILP (file))
     Fsnarf_documentation (Vdoc_file_name);
   else
     Fload (file, Qt, Qt, Qt, Qnil);
 
-  return 1;
+  EXIT_LISP_FRAME (1);
 }
 
 DEFUN ("documentation", Fdocumentation, Sdocumentation, 1, 2, 0,
@@ -318,9 +321,8 @@ Unless a non-nil second argument RAW is given, the
 string is passed through `substitute-command-keys'.  */)
   (Lisp_Object function, Lisp_Object raw)
 {
-  Lisp_Object fun;
-  Lisp_Object funcar;
-  Lisp_Object doc;
+  ENTER_LISP_FRAME (function, raw);
+  LISP_LOCALS (fun, funcar, doc, tem, tem1);
   bool try_reload = 1;
 
  documentation:
@@ -329,10 +331,11 @@ string is passed through `substitute-command-keys'.  */)
 
   if (SYMBOLP (function))
     {
-      Lisp_Object tem = Fget (function, Qfunction_documentation);
+      tem = Fget (function, Qfunction_documentation);
+
       if (!NILP (tem))
-	return Fdocumentation_property (function, Qfunction_documentation,
-					raw);
+	EXIT_LISP_FRAME (Fdocumentation_property (function, Qfunction_documentation,
+					raw));
     }
 
   fun = Findirect_function (function, Qnil);
@@ -347,21 +350,22 @@ string is passed through `substitute-command-keys'.  */)
   else if (COMPILEDP (fun))
     {
       if (PVSIZE (fun) <= COMPILED_DOC_STRING)
-	return Qnil;
+	EXIT_LISP_FRAME (Qnil);
       else
 	{
-	  Lisp_Object tem = AREF (fun, COMPILED_DOC_STRING);
+	  tem = AREF (fun, COMPILED_DOC_STRING);
+
 	  if (STRINGP (tem))
 	    doc = tem;
 	  else if (NATNUMP (tem) || CONSP (tem))
 	    doc = tem;
 	  else
-	    return Qnil;
+	    EXIT_LISP_FRAME (Qnil);
 	}
     }
   else if (STRINGP (fun) || VECTORP (fun))
     {
-      return build_string ("Keyboard macro.");
+      EXIT_LISP_FRAME (build_string ("Keyboard macro."));
     }
   else if (CONSP (fun))
     {
@@ -369,13 +373,15 @@ string is passed through `substitute-command-keys'.  */)
       if (!SYMBOLP (funcar))
 	xsignal1 (Qinvalid_function, fun);
       else if (EQ (funcar, Qkeymap))
-	return build_string ("Prefix command (definition is a keymap associating keystrokes with commands).");
+	EXIT_LISP_FRAME (build_string ("Prefix command (definition is a keymap associating keystrokes with commands)."));
       else if (EQ (funcar, Qlambda)
 	       || (EQ (funcar, Qclosure) && (fun = XCDR (fun), 1))
 	       || EQ (funcar, Qautoload))
 	{
-	  Lisp_Object tem1 = Fcdr (Fcdr (fun));
-	  Lisp_Object tem = Fcar (tem1);
+	  tem1 = Fcdr (Fcdr (fun));
+
+	  tem = Fcar (tem1);
+
 	  if (STRINGP (tem))
 	    doc = tem;
 	  /* Handle a doc reference--but these never come last
@@ -384,7 +390,7 @@ string is passed through `substitute-command-keys'.  */)
 		   && !NILP (XCDR (tem1)))
 	    doc = tem;
 	  else
-	    return Qnil;
+	    EXIT_LISP_FRAME (Qnil);
 	}
       else
 	goto oops;
@@ -401,7 +407,6 @@ string is passed through `substitute-command-keys'.  */)
     doc = Qnil;
   if (INTEGERP (doc) || CONSP (doc))
     {
-      Lisp_Object tem;
       tem = get_doc_string (doc, 0, 0);
       if (NILP (tem) && try_reload)
 	{
@@ -419,7 +424,7 @@ string is passed through `substitute-command-keys'.  */)
 
   if (NILP (raw))
     doc = Fsubstitute_command_keys (doc);
-  return doc;
+  EXIT_LISP_FRAME (doc);
 }
 
 DEFUN ("documentation-property", Fdocumentation_property,
@@ -433,8 +438,9 @@ This differs from `get' in that it can refer to strings stored in the
 aren't strings.  */)
   (Lisp_Object symbol, Lisp_Object prop, Lisp_Object raw)
 {
+  ENTER_LISP_FRAME (symbol, prop, raw);
+  LISP_LOCALS (tem, doc);
   bool try_reload = 1;
-  Lisp_Object tem;
 
  documentation_property:
 
@@ -443,7 +449,8 @@ aren't strings.  */)
     tem = Qnil;
   if (INTEGERP (tem) || (CONSP (tem) && INTEGERP (XCDR (tem))))
     {
-      Lisp_Object doc = tem;
+      doc = tem;
+
       tem = get_doc_string (tem, 0, 0);
       if (NILP (tem) && try_reload)
 	{
@@ -462,7 +469,7 @@ aren't strings.  */)
 
   if (NILP (raw) && STRINGP (tem))
     tem = Fsubstitute_command_keys (tem);
-  return tem;
+  EXIT_LISP_FRAME (tem);
 }
 
 /* Scanning the DOC files and placing docstring offsets into functions.  */
@@ -470,9 +477,12 @@ aren't strings.  */)
 static void
 store_function_docstring (Lisp_Object obj, EMACS_INT offset)
 {
+  ENTER_LISP_FRAME (obj);
+  LISP_LOCALS (fun, tem);
   /* Don't use indirect_function here, or defaliases will apply their
      docstrings to the base functions (Bug#2603).  */
-  Lisp_Object fun = SYMBOLP (obj) ? XSYMBOL (obj)->u.s.function : obj;
+  fun = SYMBOLP (obj) ? XSYMBOL (obj)->u.s.function : obj;
+
 
   /* The type determines where the docstring is stored.  */
 
@@ -481,7 +491,6 @@ store_function_docstring (Lisp_Object obj, EMACS_INT offset)
     fun = XCDR (fun);
   if (CONSP (fun))
     {
-      Lisp_Object tem;
 
       tem = XCAR (fun);
       if (EQ (tem, Qlambda) || EQ (tem, Qautoload)
@@ -515,6 +524,7 @@ store_function_docstring (Lisp_Object obj, EMACS_INT offset)
 		  : build_string ("<anonymous>")));
 	}
     }
+  EXIT_LISP_FRAME_VOID ();
 }
 
 
@@ -529,11 +539,12 @@ That file is found in `../etc' now; later, when the dumped Emacs is run,
 the same file name is found in the `doc-directory'.  */)
   (Lisp_Object filename)
 {
+  ENTER_LISP_FRAME (filename);
+  LISP_LOCALS (sym, delayed_init);
   int fd;
   char buf[1024 + 1];
   int filled;
   EMACS_INT pos;
-  Lisp_Object sym;
   char *p, *name;
   bool skip_file = 0;
   ptrdiff_t count;
@@ -541,8 +552,8 @@ the same file name is found in the `doc-directory'.  */)
   ptrdiff_t dirlen;
   /* Preloaded defcustoms using custom-initialize-delay are added to
      this list, but kept unbound.  See https://debbugs.gnu.org/11565  */
-  Lisp_Object delayed_init =
-    find_symbol_value (intern ("custom-delayed-init-variables"));
+  delayed_init = find_symbol_value (intern ("custom-delayed-init-variables"));
+
 
   if (EQ (delayed_init, Qunbound)) delayed_init = Qnil;
 
@@ -674,21 +685,24 @@ the same file name is found in the `doc-directory'.  */)
     }
 
   SAFE_FREE ();
-  return unbind_to (count, Qnil);
+  EXIT_LISP_FRAME (unbind_to (count, Qnil));
 }
 
 /* Return true if text quoting style should default to quote `like this'.  */
 static bool
 default_to_grave_quoting_style (void)
 {
+  ENTER_LISP_FRAME_T (bool);
+  LISP_LOCALS (dv);
   if (!text_quoting_flag)
-    return true;
+    EXIT_LISP_FRAME (true);
   if (! DISP_TABLE_P (Vstandard_display_table))
-    return false;
-  Lisp_Object dv = DISP_CHAR_VECTOR (XCHAR_TABLE (Vstandard_display_table),
+    EXIT_LISP_FRAME (false);
+  dv = DISP_CHAR_VECTOR (XCHAR_TABLE (Vstandard_display_table),
 				     LEFT_SINGLE_QUOTATION_MARK);
-  return (VECTORP (dv) && ASIZE (dv) == 1
-	  && EQ (AREF (dv, 0), make_number ('`')));
+
+  EXIT_LISP_FRAME ((VECTORP (dv) && ASIZE (dv) == 1
+	  && EQ (AREF (dv, 0), make_number ('`'))));
 }
 
 /* Return the current effective text quoting style.  */
@@ -733,6 +747,8 @@ Return the original STRING if no substitutions are made.
 Otherwise, return a new string.  */)
   (Lisp_Object string)
 {
+  ENTER_LISP_FRAME (string);
+  LISP_LOCALS (tem, keymap, name, str, active_maps, earlier_maps);
   char *buf;
   bool changed = false;
   bool nonquotes_changed = false;
@@ -740,22 +756,20 @@ Otherwise, return a new string.  */)
   char *bufp;
   ptrdiff_t idx;
   ptrdiff_t bsize;
-  Lisp_Object tem;
-  Lisp_Object keymap;
   unsigned char const *start;
   ptrdiff_t length, length_byte;
-  Lisp_Object name;
   ptrdiff_t nchars;
 
   if (NILP (string))
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
 
   /* If STRING contains non-ASCII unibyte data, process its
      properly-encoded multibyte equivalent instead.  This simplifies
      the implementation and is OK since substitute-command-keys is
      intended for use only on text strings.  Keep STRING around, since
      it will be returned if no changes occur.  */
-  Lisp_Object str = Fstring_make_multibyte (string);
+  str = Fstring_make_multibyte (string);
+
 
   enum text_quoting_style quoting_style = text_quoting_style ();
 
@@ -862,7 +876,8 @@ Otherwise, return a new string.  */)
 	 {
 	  bool generate_summary = strp[1] == '{';
 	  /* This is for computing the SHADOWS arg for describe_map_tree.  */
-	  Lisp_Object active_maps = Fcurrent_active_maps (Qnil, Qnil);
+	  active_maps = Fcurrent_active_maps (Qnil, Qnil);
+
 	  ptrdiff_t count = SPECPDL_INDEX ();
 
 	  start = strp + 2;
@@ -908,8 +923,8 @@ Otherwise, return a new string.  */)
 	    {
 	      /* Get the list of active keymaps that precede this one.
 		 If this one's not active, get nil.  */
-	      Lisp_Object earlier_maps
-		= Fcdr (Fmemq (tem, Freverse (active_maps)));
+	      earlier_maps = Fcdr (Fmemq (tem, Freverse (active_maps)));
+
 	      describe_map_tree (tem, 1, Fnreverse (earlier_maps),
 				 Qnil, 0, 1, 0, 0, 1);
 	    }
@@ -1005,7 +1020,7 @@ Otherwise, return a new string.  */)
     }
   else
     tem = string;
-  return unbind_to (count, tem);
+  EXIT_LISP_FRAME (unbind_to (count, tem));
 }
 
 void

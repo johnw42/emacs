@@ -164,7 +164,8 @@ ptrdiff_t
 get_composition_id (ptrdiff_t charpos, ptrdiff_t bytepos, ptrdiff_t nchars,
 		    Lisp_Object prop, Lisp_Object string)
 {
-  Lisp_Object id, length, components, key;
+  ENTER_LISP_FRAME_T (ptrdiff_t, prop, string);
+  LISP_LOCALS (id, length, components, key);
   ptrdiff_t glyph_len;
   struct Lisp_Vector *key_contents = XVECTOR_CACHE_INIT;
   struct Lisp_Hash_Table *hash_table = XHASH_TABLE (composition_hash_table);
@@ -199,7 +200,7 @@ get_composition_id (ptrdiff_t charpos, ptrdiff_t bytepos, ptrdiff_t nchars,
       /* PROP should be Form-B.  */
       if (XINT (id) < 0 || XINT (id) >= n_compositions)
 	goto invalid_composition;
-      return XINT (id);
+      EXIT_LISP_FRAME (XINT (id));
     }
 
   /* PROP should be Form-A.
@@ -252,7 +253,7 @@ get_composition_id (ptrdiff_t charpos, ptrdiff_t bytepos, ptrdiff_t nchars,
       id = HASH_VALUE (hash_table, hash_index);
       XSETCAR (prop, id);
       XSETCDR (prop, Fcons (make_number (nchars), Fcons (key, XCDR (prop))));
-      return XINT (id);
+      EXIT_LISP_FRAME (XINT (id));
     }
 
   /* This composition is a new one.  We must register it.  */
@@ -392,11 +393,11 @@ get_composition_id (ptrdiff_t charpos, ptrdiff_t bytepos, ptrdiff_t nchars,
 
   composition_table[n_compositions] = cmp;
 
-  return n_compositions++;
+  EXIT_LISP_FRAME (n_compositions++);
 
  invalid_composition:
   /* Would it be better to remove this `composition' property?  */
-  return -1;
+  EXIT_LISP_FRAME (-1);
 }
 
 
@@ -422,13 +423,14 @@ find_composition (ptrdiff_t pos, ptrdiff_t limit,
 		  ptrdiff_t *start, ptrdiff_t *end,
 		  Lisp_Object *prop, Lisp_Object object)
 {
-  Lisp_Object val;
+  ENTER_LISP_FRAME_T (bool, object);
+  LISP_LOCALS (val);
 
   if (get_property_and_range (pos, Qcomposition, prop, start, end, object))
-    return 1;
+    EXIT_LISP_FRAME (1);
 
   if (limit < 0 || limit == pos)
-    return 0;
+    EXIT_LISP_FRAME (0);
 
   if (limit > pos)		/* search forward */
     {
@@ -436,22 +438,22 @@ find_composition (ptrdiff_t pos, ptrdiff_t limit,
 					  object, make_number (limit));
       pos = XINT (val);
       if (pos == limit)
-	return 0;
+	EXIT_LISP_FRAME (0);
     }
   else				/* search backward */
     {
       if (get_property_and_range (pos - 1, Qcomposition, prop, start, end,
 				  object))
-	return 1;
+	EXIT_LISP_FRAME (1);
       val = Fprevious_single_property_change (make_number (pos), Qcomposition,
 					      object, make_number (limit));
       pos = XINT (val);
       if (pos == limit)
-	return 0;
+	EXIT_LISP_FRAME (0);
       pos--;
     }
   get_property_and_range (pos, Qcomposition, prop, start, end, object);
-  return 1;
+  EXIT_LISP_FRAME (1);
 }
 
 /* Run a proper function to adjust the composition sitting between
@@ -460,7 +462,8 @@ find_composition (ptrdiff_t pos, ptrdiff_t limit,
 static void
 run_composition_function (ptrdiff_t from, ptrdiff_t to, Lisp_Object prop)
 {
-  Lisp_Object func;
+  ENTER_LISP_FRAME (prop);
+  LISP_LOCALS (func);
   ptrdiff_t start, end;
 
   func = COMPOSITION_MODIFICATION_FUNC (prop);
@@ -476,6 +479,7 @@ run_composition_function (ptrdiff_t from, ptrdiff_t to, Lisp_Object prop)
     to = end;
   if (!NILP (Ffboundp (func)))
     call2 (func, make_number (from), make_number (to));
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Make invalid compositions adjacent to or inside FROM and TO valid.
@@ -492,18 +496,19 @@ run_composition_function (ptrdiff_t from, ptrdiff_t to, Lisp_Object prop)
 void
 update_compositions (ptrdiff_t from, ptrdiff_t to, int check_mask)
 {
-  Lisp_Object prop;
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (prop);
   ptrdiff_t start, end;
   /* The beginning and end of the region to set the property
      `auto-composed' to nil.  */
   ptrdiff_t min_pos = from, max_pos = to;
 
   if (inhibit_modification_hooks)
-    return;
+    EXIT_LISP_FRAME_VOID ();
 
   /* If FROM and TO are not in a valid range, do nothing.  */
   if (! (BEGV <= from && from <= to && to <= ZV))
-    return;
+    EXIT_LISP_FRAME_VOID ();
 
   if (check_mask & CHECK_HEAD)
     {
@@ -588,6 +593,7 @@ update_compositions (ptrdiff_t from, ptrdiff_t to, int check_mask)
 				       list1 (Qauto_composed), Qnil);
       unbind_to (count, Qnil);
     }
+  EXIT_LISP_FRAME_VOID ();
 }
 
 
@@ -598,7 +604,8 @@ update_compositions (ptrdiff_t from, ptrdiff_t to, int check_mask)
 void
 make_composition_value_copy (Lisp_Object list)
 {
-  Lisp_Object plist, val;
+  ENTER_LISP_FRAME (list);
+  LISP_LOCALS (plist, val);
 
   for (; CONSP (list); list = XCDR (list))
     {
@@ -611,6 +618,7 @@ make_composition_value_copy (Lisp_Object list)
 	  plist = XCDR (XCDR (plist));
 	}
     }
+  EXIT_LISP_FRAME_VOID ();
 }
 
 
@@ -624,12 +632,14 @@ void
 compose_text (ptrdiff_t start, ptrdiff_t end, Lisp_Object components,
 	      Lisp_Object modification_func, Lisp_Object string)
 {
-  Lisp_Object prop;
+  ENTER_LISP_FRAME (components, modification_func, string);
+  LISP_LOCALS (prop);
 
   prop = Fcons (Fcons (make_number (end - start), components),
 		modification_func);
   Fput_text_property  (make_number (start), make_number (end),
 		       Qcomposition, prop, string);
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Lisp glyph-string handlers.  */
@@ -645,18 +655,20 @@ static Lisp_Object gstring_lookup_cache (Lisp_Object);
 static Lisp_Object
 gstring_lookup_cache (Lisp_Object header)
 {
+  ENTER_LISP_FRAME (header);
   struct Lisp_Hash_Table *h = XHASH_TABLE (gstring_hash_table);
   ptrdiff_t i = hash_lookup (h, header, NULL);
 
-  return (i >= 0 ? HASH_VALUE (h, i) : Qnil);
+  EXIT_LISP_FRAME ((i >= 0 ? HASH_VALUE (h, i) : Qnil));
 }
 
 Lisp_Object
 composition_gstring_put_cache (Lisp_Object gstring, ptrdiff_t len)
 {
+  ENTER_LISP_FRAME (gstring);
+  LISP_LOCALS (header, copy);
   struct Lisp_Hash_Table *h = XHASH_TABLE (gstring_hash_table);
   EMACS_UINT hash;
-  Lisp_Object header, copy;
   ptrdiff_t i;
 
   header = LGSTRING_HEADER (gstring);
@@ -676,7 +688,7 @@ composition_gstring_put_cache (Lisp_Object gstring, ptrdiff_t len)
     LGSTRING_SET_GLYPH (copy, i, Fcopy_sequence (LGSTRING_GLYPH (gstring, i)));
   i = hash_put (h, LGSTRING_HEADER (copy), copy, hash);
   LGSTRING_SET_ID (copy, make_number (i));
-  return copy;
+  EXIT_LISP_FRAME (copy);
 }
 
 Lisp_Object
@@ -704,44 +716,49 @@ Clear composition cache.  */)
 bool
 composition_gstring_p (Lisp_Object gstring)
 {
-  Lisp_Object header;
+  ENTER_LISP_FRAME_T (bool, gstring);
+  LISP_LOCALS (header, glyph);
   ptrdiff_t i;
 
   if (! VECTORP (gstring) || ASIZE (gstring) < 2)
-    return 0;
+    EXIT_LISP_FRAME (0);
   header = LGSTRING_HEADER (gstring);
   if (! VECTORP (header) || ASIZE (header) < 2)
-    return 0;
+    EXIT_LISP_FRAME (0);
   if (! NILP (LGSTRING_FONT (gstring))
       && (! FONT_OBJECT_P (LGSTRING_FONT (gstring))
 	  && ! CODING_SYSTEM_P (LGSTRING_FONT (gstring))))
-    return 0;
+    EXIT_LISP_FRAME (0);
   for (i = 1; i < ASIZE (LGSTRING_HEADER (gstring)); i++)
     if (! NATNUMP (AREF (LGSTRING_HEADER (gstring), i)))
-      return 0;
+      EXIT_LISP_FRAME (0);
   if (! NILP (LGSTRING_ID (gstring)) && ! NATNUMP (LGSTRING_ID (gstring)))
-    return 0;
+    EXIT_LISP_FRAME (0);
   for (i = 0; i < LGSTRING_GLYPH_LEN (gstring); i++)
     {
-      Lisp_Object glyph = LGSTRING_GLYPH (gstring, i);
+      glyph = LGSTRING_GLYPH (gstring, i);
+
       if (NILP (glyph))
 	break;
       if (! VECTORP (glyph) || ASIZE (glyph) != LGLYPH_SIZE)
-	return 0;
+	EXIT_LISP_FRAME (0);
     }
-  return 1;
+  EXIT_LISP_FRAME (1);
 }
 
 int
 composition_gstring_width (Lisp_Object gstring, ptrdiff_t from, ptrdiff_t to,
 			   struct font_metrics *metrics)
 {
+  ENTER_LISP_FRAME_T (int, gstring);
+  LISP_LOCALS (font_object);
   Lisp_Object *glyph;
   int width = 0;
 
   if (metrics)
     {
-      Lisp_Object font_object = LGSTRING_FONT (gstring);
+      font_object = LGSTRING_FONT (gstring);
+
 
       if (FONT_OBJECT_P (font_object))
 	{
@@ -784,7 +801,7 @@ composition_gstring_width (Lisp_Object gstring, ptrdiff_t from, ptrdiff_t to,
 	    metrics->descent = x;
 	}
     }
-  return width;
+  EXIT_LISP_FRAME (width);
 }
 
 
@@ -795,6 +812,7 @@ static Lisp_Object
 fill_gstring_header (Lisp_Object header, ptrdiff_t from, ptrdiff_t from_byte,
 		     ptrdiff_t to, Lisp_Object font_object, Lisp_Object string)
 {
+  ENTER_LISP_FRAME (header, font_object, string);
   ptrdiff_t len = to - from, i;
 
   if (len == 0)
@@ -823,20 +841,25 @@ fill_gstring_header (Lisp_Object header, ptrdiff_t from, ptrdiff_t from_byte,
 	FETCH_STRING_CHAR_ADVANCE_NO_CHECK (c, string, from, from_byte);
       ASET (header, i + 1, make_number (c));
     }
-  return header;
+  EXIT_LISP_FRAME (header);
 }
 
 static void
 fill_gstring_body (Lisp_Object gstring)
 {
-  Lisp_Object font_object = LGSTRING_FONT (gstring);
-  Lisp_Object header = AREF (gstring, 0);
+  ENTER_LISP_FRAME (gstring);
+  LISP_LOCALS (font_object, header, g);
+  font_object = LGSTRING_FONT (gstring);
+
+  header = AREF (gstring, 0);
+
   ptrdiff_t len = LGSTRING_CHAR_LEN (gstring);
   ptrdiff_t i;
 
   for (i = 0; i < len; i++)
     {
-      Lisp_Object g = LGSTRING_GLYPH (gstring, i);
+      g = LGSTRING_GLYPH (gstring, i);
+
       int c = XFASTINT (AREF (header, i + 1));
 
       if (NILP (g))
@@ -866,6 +889,7 @@ fill_gstring_body (Lisp_Object gstring)
     }
   if (i < LGSTRING_GLYPH_LEN (gstring))
     LGSTRING_SET_GLYPH (gstring, i, Qnil);
+  EXIT_LISP_FRAME_VOID ();
 }
 
 
@@ -881,11 +905,13 @@ autocmp_chars (Lisp_Object rule, ptrdiff_t charpos, ptrdiff_t bytepos,
 	       ptrdiff_t limit, struct window *win, struct face *face,
 	       Lisp_Object string)
 {
+  ENTER_LISP_FRAME (rule, string);
+  LISP_LOCALS (pos, re, font_object, lgstring);
   ptrdiff_t count = SPECPDL_INDEX ();
-  Lisp_Object pos = make_number (charpos);
+  pos = make_number (charpos);
+
   ptrdiff_t to;
   ptrdiff_t pt = PT, pt_byte = PT_BYTE;
-  Lisp_Object re, font_object, lgstring;
   ptrdiff_t len;
 
   record_unwind_save_match_data ();
@@ -893,7 +919,7 @@ autocmp_chars (Lisp_Object rule, ptrdiff_t charpos, ptrdiff_t bytepos,
   if (NILP (re))
     len = 1;
   else if (! STRINGP (re))
-    return unbind_to (count, Qnil);
+    EXIT_LISP_FRAME (unbind_to (count, Qnil));
   else if ((len = fast_looking_at (re, charpos, bytepos, limit, -1, string))
 	   > 0)
     {
@@ -903,7 +929,7 @@ autocmp_chars (Lisp_Object rule, ptrdiff_t charpos, ptrdiff_t bytepos,
 	len = string_byte_to_char (string, bytepos + len) - charpos;
     }
   if (len <= 0)
-    return unbind_to (count, Qnil);
+    EXIT_LISP_FRAME (unbind_to (count, Qnil));
   to = limit = charpos + len;
   font_object = win->frame;
 #ifdef HAVE_WINDOW_SYSTEM
@@ -915,7 +941,7 @@ autocmp_chars (Lisp_Object rule, ptrdiff_t charpos, ptrdiff_t bytepos,
 	  || (! NILP (re)
 	      && to < limit
 	      && (fast_looking_at (re, charpos, bytepos, to, -1, string) <= 0)))
-	return unbind_to (count, Qnil);
+	EXIT_LISP_FRAME (unbind_to (count, Qnil));
     }
 #endif
   lgstring = Fcomposition_get_gstring (pos, make_number (to), font_object,
@@ -929,7 +955,7 @@ autocmp_chars (Lisp_Object rule, ptrdiff_t charpos, ptrdiff_t bytepos,
       lgstring = safe_call (6, Vauto_composition_function, AREF (rule, 2),
 			    pos, make_number (to), font_object, string);
     }
-  return unbind_to (count, lgstring);
+  EXIT_LISP_FRAME (unbind_to (count, lgstring));
 }
 
 /* 1 iff the character C is composable.  Characters of general
@@ -938,11 +964,12 @@ autocmp_chars (Lisp_Object rule, ptrdiff_t charpos, ptrdiff_t bytepos,
 static bool
 char_composable_p (int c)
 {
-  Lisp_Object val;
-  return (c > ' '
+  ENTER_LISP_FRAME_T (bool);
+  LISP_LOCALS (val);
+  EXIT_LISP_FRAME ((c > ' '
 	  && (c == ZERO_WIDTH_NON_JOINER || c == ZERO_WIDTH_JOINER
 	      || (val = CHAR_TABLE_REF (Vunicode_category_table, c),
-		  (INTEGERP (val) && (XINT (val) <= UNICODE_CATEGORY_So)))));
+		  (INTEGERP (val) && (XINT (val) <= UNICODE_CATEGORY_So))))));
 }
 
 /* Update cmp_it->stop_pos to the next position after CHARPOS (and
@@ -961,9 +988,10 @@ char_composable_p (int c)
 void
 composition_compute_stop_pos (struct composition_it *cmp_it, ptrdiff_t charpos, ptrdiff_t bytepos, ptrdiff_t endpos, Lisp_Object string)
 {
+  ENTER_LISP_FRAME (string);
+  LISP_LOCALS (prop, val, elt);
   ptrdiff_t start, end;
   int c;
-  Lisp_Object prop, val;
   /* This is from forward_to_next_line_start in xdisp.c.  */
   const int MAX_NEWLINE_DISTANCE = 500;
 
@@ -988,7 +1016,7 @@ composition_compute_stop_pos (struct composition_it *cmp_it, ptrdiff_t charpos, 
   cmp_it->reversed_p = 0;
   cmp_it->stop_pos = endpos;
   if (charpos == endpos)
-    return;
+    EXIT_LISP_FRAME_VOID ();
   /* FIXME: Bidi is not yet handled well in static composition.  */
   if (charpos < endpos
       && find_composition (charpos, endpos, &start, &end, &prop, string)
@@ -1000,7 +1028,7 @@ composition_compute_stop_pos (struct composition_it *cmp_it, ptrdiff_t charpos, 
     }
   if (NILP (BVAR (current_buffer, enable_multibyte_characters))
       || NILP (Vauto_composition_mode))
-    return;
+    EXIT_LISP_FRAME_VOID ();
   if (bytepos < 0)
     {
       if (NILP (string))
@@ -1029,7 +1057,8 @@ composition_compute_stop_pos (struct composition_it *cmp_it, ptrdiff_t charpos, 
 	    {
 	      for (EMACS_INT ridx = 0; CONSP (val); val = XCDR (val), ridx++)
 		{
-		  Lisp_Object elt = XCAR (val);
+		  elt = XCAR (val);
+
 		  if (VECTORP (elt) && ASIZE (elt) == 3
 		      && NATNUMP (AREF (elt, 1))
 		      && charpos - 1 - XFASTINT (AREF (elt, 1)) >= start)
@@ -1038,7 +1067,7 @@ composition_compute_stop_pos (struct composition_it *cmp_it, ptrdiff_t charpos, 
 		      cmp_it->lookback = XFASTINT (AREF (elt, 1));
 		      cmp_it->stop_pos = charpos - 1 - cmp_it->lookback;
 		      cmp_it->ch = c;
-		      return;
+		      EXIT_LISP_FRAME_VOID ();
 		    }
 		}
 	    }
@@ -1080,7 +1109,8 @@ composition_compute_stop_pos (struct composition_it *cmp_it, ptrdiff_t charpos, 
 	  val = CHAR_TABLE_REF (Vcomposition_function_table, c);
 	  for (EMACS_INT ridx = 0; CONSP (val); val = XCDR (val), ridx++)
 	    {
-	      Lisp_Object elt = XCAR (val);
+	      elt = XCAR (val);
+
 	      if (VECTORP (elt) && ASIZE (elt) == 3
 		  && NATNUMP (AREF (elt, 1))
 		  && charpos - XFASTINT (AREF (elt, 1)) > endpos)
@@ -1142,7 +1172,7 @@ composition_compute_stop_pos (struct composition_it *cmp_it, ptrdiff_t charpos, 
 	}
       if (cmp_it->ch >= 0)
 	/* We found a position to check.  */
-	return;
+	EXIT_LISP_FRAME_VOID ();
       /* Skip all uncomposable characters.  */
       if (NILP (string))
 	{
@@ -1165,6 +1195,7 @@ composition_compute_stop_pos (struct composition_it *cmp_it, ptrdiff_t charpos, 
 	}
     }
   cmp_it->stop_pos = charpos;
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Check if the character at CHARPOS (and BYTEPOS) is composed
@@ -1183,12 +1214,14 @@ composition_reseat_it (struct composition_it *cmp_it, ptrdiff_t charpos,
 		       ptrdiff_t bytepos, ptrdiff_t endpos, struct window *w,
 		       struct face *face, Lisp_Object string)
 {
+  ENTER_LISP_FRAME_T (bool, string);
+  LISP_LOCALS (prop, lgstring, val, elt);
   if (cmp_it->ch == -2)
     {
       composition_compute_stop_pos (cmp_it, charpos, bytepos, endpos, string);
       if (cmp_it->ch == -2 || cmp_it->stop_pos != charpos)
 	/* The current position is not composed.  */
-	return 0;
+	EXIT_LISP_FRAME (0);
     }
 
   if (endpos < 0)
@@ -1198,7 +1231,6 @@ composition_reseat_it (struct composition_it *cmp_it, ptrdiff_t charpos,
     {
       /* We are looking at a static composition.  */
       ptrdiff_t start, end;
-      Lisp_Object prop;
 
       find_composition (charpos, -1, &start, &end, &prop, string);
       cmp_it->id = get_composition_id (charpos, bytepos, end - start,
@@ -1210,8 +1242,8 @@ composition_reseat_it (struct composition_it *cmp_it, ptrdiff_t charpos,
     }
   else if (w)
     {
-      Lisp_Object lgstring = Qnil;
-      Lisp_Object val, elt;
+      lgstring = Qnil;
+
 
       val = CHAR_TABLE_REF (Vcomposition_function_table, cmp_it->ch);
       for (EMACS_INT i = 0; i < cmp_it->rule_idx; i++, val = XCDR (val))
@@ -1274,11 +1306,11 @@ composition_reseat_it (struct composition_it *cmp_it, ptrdiff_t charpos,
     }
   else
     goto no_composition;
-  return 1;
+  EXIT_LISP_FRAME (1);
 
  no_composition:
   if (charpos == endpos)
-    return 0;
+    EXIT_LISP_FRAME (0);
   if (charpos < endpos)
     {
       charpos++;
@@ -1296,7 +1328,7 @@ composition_reseat_it (struct composition_it *cmp_it, ptrdiff_t charpos,
   if (cmp_it->reversed_p)
     endpos = -1;
   composition_compute_stop_pos (cmp_it, charpos, bytepos, endpos, string);
-  return 0;
+  EXIT_LISP_FRAME (0);
 }
 
 /* Update charpos, nchars, nbytes, and width of the current grapheme
@@ -1317,6 +1349,8 @@ composition_reseat_it (struct composition_it *cmp_it, ptrdiff_t charpos,
 int
 composition_update_it (struct composition_it *cmp_it, ptrdiff_t charpos, ptrdiff_t bytepos, Lisp_Object string)
 {
+  ENTER_LISP_FRAME_T (int, string);
+  LISP_LOCALS (gstring, glyph);
   int i;
   int c UNINIT;
 
@@ -1349,8 +1383,8 @@ composition_update_it (struct composition_it *cmp_it, ptrdiff_t charpos, ptrdiff
   else
     {
       /* Automatic composition.  */
-      Lisp_Object gstring = composition_gstring_from_id (cmp_it->id);
-      Lisp_Object glyph;
+      gstring = composition_gstring_from_id (cmp_it->id);
+
       ptrdiff_t from;
 
       if (cmp_it->nglyphs == 0)
@@ -1358,7 +1392,7 @@ composition_update_it (struct composition_it *cmp_it, ptrdiff_t charpos, ptrdiff
 	  cmp_it->nchars = LGSTRING_CHAR_LEN (gstring);
 	  cmp_it->width = 0;
 	  cmp_it->from = cmp_it->to = 0;
-	  return -1;
+	  EXIT_LISP_FRAME (-1);
 	}
       if (! cmp_it->reversed_p)
 	{
@@ -1397,7 +1431,7 @@ composition_update_it (struct composition_it *cmp_it, ptrdiff_t charpos, ptrdiff
 	  cmp_it->width += CHARACTER_WIDTH (c);
 	}
     }
-  return c;
+  EXIT_LISP_FRAME (c);
 }
 
 
@@ -1446,19 +1480,20 @@ find_automatic_composition (ptrdiff_t pos, ptrdiff_t limit,
 			    ptrdiff_t *start, ptrdiff_t *end,
 			    Lisp_Object *gstring, Lisp_Object string)
 {
+  ENTER_LISP_FRAME_T (bool, string);
+  LISP_LOCALS (window, val, elt);
   ptrdiff_t head, tail, stop;
   /* Forward limit position of checking a composition taking a
      looking-back count into account.  */
   ptrdiff_t fore_check_limit;
   struct position_record cur, prev;
   int c;
-  Lisp_Object window;
   struct window *w;
   bool need_adjustment = 0;
 
   window = Fget_buffer_window (Fcurrent_buffer (), Qnil);
   if (NILP (window))
-    return 0;
+    EXIT_LISP_FRAME (0);
   w = XWINDOW (window);
 
   cur.pos = pos;
@@ -1520,7 +1555,7 @@ find_automatic_composition (ptrdiff_t pos, ptrdiff_t limit,
 	    {
 	      do {
 		if (cur.pos <= limit)
-		  return 0;
+		  EXIT_LISP_FRAME (0);
 		BACKWARD_CHAR (cur, stop);
 		c = STRING_CHAR (cur.p);
 	      } while (! char_composable_p (c));
@@ -1552,13 +1587,13 @@ find_automatic_composition (ptrdiff_t pos, ptrdiff_t limit,
       prev = cur;	/* remember the start of searching position. */
       while (cur.pos < fore_check_limit)
 	{
-	  Lisp_Object val;
 
 	  c = STRING_CHAR (cur.p);
 	  for (val = CHAR_TABLE_REF (Vcomposition_function_table, c);
 	       CONSP (val); val = XCDR (val))
 	    {
-	      Lisp_Object elt = XCAR (val);
+	      elt = XCAR (val);
+
 
 	      if (VECTORP (elt) && ASIZE (elt) == 3 && NATNUMP (AREF (elt, 1)))
 		{
@@ -1592,7 +1627,7 @@ find_automatic_composition (ptrdiff_t pos, ptrdiff_t limit,
 			  ? pos < *end
 			  : *start <= pos && pos < *end)
 			/* This is the target composition. */
-			return 1;
+			EXIT_LISP_FRAME (1);
 		      cur.pos = *end;
 		      if (NILP (string))
 			{
@@ -1614,11 +1649,11 @@ find_automatic_composition (ptrdiff_t pos, ptrdiff_t limit,
 	}
 
       if (pos < limit)		/* case (2) and (4)*/
-	return 0;
+	EXIT_LISP_FRAME (0);
       if (! NILP (*gstring))
-	return 1;
+	EXIT_LISP_FRAME (1);
       if (prev.pos == head)
-	return 0;
+	EXIT_LISP_FRAME (0);
       cur = prev;
       if (need_adjustment)
 	{
@@ -1637,11 +1672,12 @@ find_automatic_composition (ptrdiff_t pos, ptrdiff_t limit,
 ptrdiff_t
 composition_adjust_point (ptrdiff_t last_pt, ptrdiff_t new_pt)
 {
+  ENTER_LISP_FRAME_T (ptrdiff_t);
+  LISP_LOCALS (val, glyph);
   ptrdiff_t i, beg, end;
-  Lisp_Object val;
 
   if (new_pt == BEGV || new_pt == ZV)
-    return new_pt;
+    EXIT_LISP_FRAME (new_pt);
 
   /* At first check the static composition. */
   if (get_property_and_range (new_pt, Qcomposition, &val, &beg, &end, Qnil)
@@ -1649,33 +1685,34 @@ composition_adjust_point (ptrdiff_t last_pt, ptrdiff_t new_pt)
     {
       if (beg < new_pt /* && end > new_pt   <- It's always the case.  */
 	  && (last_pt <= beg || last_pt >= end))
-	return (new_pt < last_pt ? beg : end);
-      return new_pt;
+	EXIT_LISP_FRAME ((new_pt < last_pt ? beg : end));
+      EXIT_LISP_FRAME (new_pt);
     }
 
   if (NILP (BVAR (current_buffer, enable_multibyte_characters))
       || NILP (Vauto_composition_mode))
-    return new_pt;
+    EXIT_LISP_FRAME (new_pt);
 
   /* Next check the automatic composition.  */
   if (! find_automatic_composition (new_pt, (ptrdiff_t) -1, &beg, &end, &val,
 				    Qnil)
       || beg == new_pt)
-    return new_pt;
+    EXIT_LISP_FRAME (new_pt);
   for (i = 0; i < LGSTRING_GLYPH_LEN (val); i++)
     {
-      Lisp_Object glyph = LGSTRING_GLYPH (val, i);
+      glyph = LGSTRING_GLYPH (val, i);
+
 
       if (NILP (glyph))
 	break;
       if (beg + LGLYPH_FROM (glyph) == new_pt)
-	return new_pt;
+	EXIT_LISP_FRAME (new_pt);
       if (beg + LGLYPH_TO (glyph) >= new_pt)
-	return (new_pt < last_pt
+	EXIT_LISP_FRAME ((new_pt < last_pt
 		? beg + LGLYPH_FROM (glyph)
-		: beg + LGLYPH_TO (glyph) + 1);
+		: beg + LGLYPH_TO (glyph) + 1));
     }
-  return new_pt;
+  EXIT_LISP_FRAME (new_pt);
 }
 
 DEFUN ("composition-get-gstring", Fcomposition_get_gstring,
@@ -1721,7 +1758,8 @@ If GLYPH is nil, the remaining elements of the glyph-string vector
 should be ignored.  */)
   (Lisp_Object from, Lisp_Object to, Lisp_Object font_object, Lisp_Object string)
 {
-  Lisp_Object gstring, header;
+  ENTER_LISP_FRAME (from, to, font_object, string);
+  LISP_LOCALS (gstring, header);
   ptrdiff_t frompos, frombyte, topos;
 
   if (! FONT_OBJECT_P (font_object))
@@ -1757,14 +1795,14 @@ should be ignored.  */)
 				topos, font_object, string);
   gstring = gstring_lookup_cache (header);
   if (! NILP (gstring))
-    return gstring;
+    EXIT_LISP_FRAME (gstring);
 
   if (LGSTRING_GLYPH_LEN (gstring_work) < topos - frompos)
     gstring_work = Fmake_vector (make_number (topos - frompos + 2), Qnil);
   LGSTRING_SET_HEADER (gstring_work, header);
   LGSTRING_SET_ID (gstring_work, Qnil);
   fill_gstring_body (gstring_work);
-  return gstring_work;
+  EXIT_LISP_FRAME (gstring_work);
 }
 
 
@@ -1779,6 +1817,7 @@ Optional 3rd and 4th arguments are COMPONENTS and MODIFICATION-FUNC
 for the composition.  See `compose-region' for more details.  */)
   (Lisp_Object start, Lisp_Object end, Lisp_Object components, Lisp_Object modification_func)
 {
+  ENTER_LISP_FRAME (start, end, components, modification_func);
   validate_region (&start, &end);
   if (!NILP (components)
       && !INTEGERP (components)
@@ -1787,7 +1826,7 @@ for the composition.  See `compose-region' for more details.  */)
     CHECK_VECTOR (components);
 
   compose_text (XINT (start), XINT (end), components, modification_func, Qnil);
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 DEFUN ("compose-string-internal", Fcompose_string_internal,
@@ -1801,12 +1840,13 @@ for the composition.  See `compose-string' for more details.  */)
   (Lisp_Object string, Lisp_Object start, Lisp_Object end,
    Lisp_Object components, Lisp_Object modification_func)
 {
+  ENTER_LISP_FRAME (string, start, end, components, modification_func);
   ptrdiff_t from, to;
 
   CHECK_STRING (string);
   validate_subarray (string, start, end, SCHARS (string), &from, &to);
   compose_text (from, to, components, modification_func, string);
-  return string;
+  EXIT_LISP_FRAME (string);
 }
 
 DEFUN ("find-composition-internal", Ffind_composition_internal,
@@ -1817,7 +1857,8 @@ Return information about composition at or nearest to position POS.
 See `find-composition' for more details.  */)
   (Lisp_Object pos, Lisp_Object limit, Lisp_Object string, Lisp_Object detail_p)
 {
-  Lisp_Object prop, tail, gstring;
+  ENTER_LISP_FRAME (pos, limit, string, detail_p);
+  LISP_LOCALS (prop, tail, gstring, components, relative_p, mod_func);
   ptrdiff_t start, end, from, to;
   int id;
 
@@ -1849,8 +1890,8 @@ See `find-composition' for more details.  */)
 	  && ! NILP (Vauto_composition_mode)
 	  && find_automatic_composition (from, to, &start, &end, &gstring,
 					 string))
-	return list3 (make_number (start), make_number (end), gstring);
-      return Qnil;
+	EXIT_LISP_FRAME (list3 (make_number (start), make_number (end), gstring));
+      EXIT_LISP_FRAME (Qnil);
     }
   if ((end <= XINT (pos) || start > XINT (pos)))
     {
@@ -1858,12 +1899,12 @@ See `find-composition' for more details.  */)
 
       if (find_automatic_composition (from, to, &s, &e, &gstring, string)
 	  && (e <= XINT (pos) ? e > end : s < start))
-	return list3 (make_number (s), make_number (e), gstring);
+	EXIT_LISP_FRAME (list3 (make_number (s), make_number (e), gstring));
     }
   if (!composition_valid_p (start, end, prop))
-    return list3 (make_number (start), make_number (end), Qnil);
+    EXIT_LISP_FRAME (list3 (make_number (start), make_number (end), Qnil));
   if (NILP (detail_p))
-    return list3 (make_number (start), make_number (end), Qt);
+    EXIT_LISP_FRAME (list3 (make_number (start), make_number (end), Qt));
 
   if (composition_registered_p (prop))
     id = COMPOSITION_ID (prop);
@@ -1877,7 +1918,6 @@ See `find-composition' for more details.  */)
 
   if (id >= 0)
     {
-      Lisp_Object components, relative_p, mod_func;
       enum composition_method method = composition_method (prop);
       int width = composition_table[id]->width;
 
@@ -1890,7 +1930,7 @@ See `find-composition' for more details.  */)
   else
     tail = Qnil;
 
-  return Fcons (make_number (start), Fcons (make_number (end), tail));
+  EXIT_LISP_FRAME (Fcons (make_number (start), Fcons (make_number (end), tail)));
 }
 
 

@@ -68,6 +68,7 @@ static Lisp_Object interval_insert_in_front_hooks = NIL_INIT;
 static _Noreturn void
 text_read_only (Lisp_Object propval)
 {
+  ENTER_LISP_FRAME (propval);
   if (STRINGP (propval))
     xsignal1 (Qtext_read_only, propval);
 
@@ -79,6 +80,7 @@ text_read_only (Lisp_Object propval)
 static void
 modify_text_properties (Lisp_Object buffer, Lisp_Object start, Lisp_Object end)
 {
+  ENTER_LISP_FRAME (buffer, start, end);
   ptrdiff_t b = XINT (start), e = XINT (end);
   struct buffer *buf = XBUFFER (buffer), *old = current_buffer;
 
@@ -94,6 +96,7 @@ modify_text_properties (Lisp_Object buffer, Lisp_Object start, Lisp_Object end)
   bset_point_before_scroll (current_buffer, Qnil);
 
   set_buffer_internal (old);
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Complain if object is not string or buffer type.  */
@@ -101,7 +104,9 @@ modify_text_properties (Lisp_Object buffer, Lisp_Object start, Lisp_Object end)
 static void
 CHECK_STRING_OR_BUFFER (Lisp_Object x)
 {
+  ENTER_LISP_FRAME (x);
   CHECK_TYPE (STRINGP (x) || BUFFERP (x), Qbuffer_or_string_p, x);
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Extract the interval at the position pointed to by BEGIN from
@@ -133,6 +138,8 @@ INTERVAL
 validate_interval_range (Lisp_Object object, Lisp_Object *begin,
 			 Lisp_Object *end, bool force)
 {
+  ENTER_LISP_FRAME_T (INTERVAL, object);
+  LISP_LOCALS (n);
   INTERVAL i;
   ptrdiff_t searchpos;
 
@@ -143,11 +150,10 @@ validate_interval_range (Lisp_Object object, Lisp_Object *begin,
   /* If we are asked for a point, but from a subr which operates
      on a range, then return nothing.  */
   if (EQ (*begin, *end) && begin != end)
-    return NULL;
+    EXIT_LISP_FRAME (NULL);
 
   if (XINT (*begin) > XINT (*end))
     {
-      Lisp_Object n;
       n = *begin;
       *begin = *end;
       *end = n;
@@ -164,7 +170,7 @@ validate_interval_range (Lisp_Object object, Lisp_Object *begin,
 
       /* If there's no text, there are no properties.  */
       if (BUF_BEGV (b) == BUF_ZV (b))
-	return NULL;
+	EXIT_LISP_FRAME (NULL);
 
       searchpos = XINT (*begin);
     }
@@ -181,15 +187,15 @@ validate_interval_range (Lisp_Object object, Lisp_Object *begin,
       i = string_intervals (object);
 
       if (len == 0)
-	return NULL;
+	EXIT_LISP_FRAME (NULL);
 
       searchpos = XINT (*begin);
     }
 
   if (!i)
-    return (force ? create_root_interval (object) : i);
+    EXIT_LISP_FRAME ((force ? create_root_interval (object) : i));
 
-  return find_interval (i, searchpos);
+  EXIT_LISP_FRAME (find_interval (i, searchpos));
 }
 
 /* Validate LIST as a property list.  If LIST is not a list, then
@@ -199,12 +205,15 @@ validate_interval_range (Lisp_Object object, Lisp_Object *begin,
 static Lisp_Object
 validate_plist (Lisp_Object list)
 {
+  ENTER_LISP_FRAME (list);
+  LISP_LOCALS (tail);
   if (NILP (list))
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
 
   if (CONSP (list))
     {
-      Lisp_Object tail = list;
+      tail = list;
+
       do
 	{
 	  tail = XCDR (tail);
@@ -215,10 +224,10 @@ validate_plist (Lisp_Object list)
 	}
       while (CONSP (tail));
 
-      return list;
+      EXIT_LISP_FRAME (list);
     }
 
-  return list2 (list, Qnil);
+  EXIT_LISP_FRAME (list2 (list, Qnil));
 }
 
 /* Return true if interval I has all the properties,
@@ -227,12 +236,14 @@ validate_plist (Lisp_Object list)
 static bool
 interval_has_all_properties (Lisp_Object plist, INTERVAL i)
 {
-  Lisp_Object tail1, tail2;
+  ENTER_LISP_FRAME_T (bool, plist);
+  LISP_LOCALS (tail1, tail2, sym1);
 
   /* Go through each element of PLIST.  */
   for (tail1 = plist; CONSP (tail1); tail1 = Fcdr (XCDR (tail1)))
     {
-      Lisp_Object sym1 = XCAR (tail1);
+      sym1 = XCAR (tail1);
+
       bool found = false;
 
       /* Go through I's plist, looking for sym1 */
@@ -242,7 +253,7 @@ interval_has_all_properties (Lisp_Object plist, INTERVAL i)
 	    /* Found the same property on both lists.  If the
 	       values are unequal, return false.  */
 	    if (! EQ (Fcar (XCDR (tail1)), Fcar (XCDR (tail2))))
-	      return false;
+	      EXIT_LISP_FRAME (false);
 
 	    /* Property has same value on both lists; go to next one.  */
 	    found = true;
@@ -250,10 +261,10 @@ interval_has_all_properties (Lisp_Object plist, INTERVAL i)
 	  }
 
       if (! found)
-	return false;
+	EXIT_LISP_FRAME (false);
     }
 
-  return true;
+  EXIT_LISP_FRAME (true);
 }
 
 /* Return true if the plist of interval I has any of the
@@ -262,7 +273,8 @@ interval_has_all_properties (Lisp_Object plist, INTERVAL i)
 static bool
 interval_has_some_properties (Lisp_Object plist, INTERVAL i)
 {
-  Lisp_Object tail1, tail2, sym;
+  ENTER_LISP_FRAME_T (bool, plist);
+  LISP_LOCALS (tail1, tail2, sym);
 
   /* Go through each element of PLIST.  */
   for (tail1 = plist; CONSP (tail1); tail1 = Fcdr (XCDR (tail1)))
@@ -272,10 +284,10 @@ interval_has_some_properties (Lisp_Object plist, INTERVAL i)
       /* Go through i's plist, looking for tail1 */
       for (tail2 = i->plist; CONSP (tail2); tail2 = Fcdr (XCDR (tail2)))
 	if (EQ (sym, XCAR (tail2)))
-	  return true;
+	  EXIT_LISP_FRAME (true);
     }
 
-  return false;
+  EXIT_LISP_FRAME (false);
 }
 
 /* Return true if the plist of interval I has any of the
@@ -284,7 +296,8 @@ interval_has_some_properties (Lisp_Object plist, INTERVAL i)
 static bool
 interval_has_some_properties_list (Lisp_Object list, INTERVAL i)
 {
-  Lisp_Object tail1, tail2, sym;
+  ENTER_LISP_FRAME_T (bool, list);
+  LISP_LOCALS (tail1, tail2, sym);
 
   /* Go through each element of LIST.  */
   for (tail1 = list; CONSP (tail1); tail1 = XCDR (tail1))
@@ -294,10 +307,10 @@ interval_has_some_properties_list (Lisp_Object list, INTERVAL i)
       /* Go through i's plist, looking for tail1 */
       for (tail2 = i->plist; CONSP (tail2); tail2 = XCDR (XCDR (tail2)))
 	if (EQ (sym, XCAR (tail2)))
-	  return true;
+	  EXIT_LISP_FRAME (true);
     }
 
-  return false;
+  EXIT_LISP_FRAME (false);
 }
 
 /* Changing the plists of individual intervals.  */
@@ -307,15 +320,16 @@ interval_has_some_properties_list (Lisp_Object list, INTERVAL i)
 static Lisp_Object
 property_value (Lisp_Object plist, Lisp_Object prop)
 {
-  Lisp_Object value;
+  ENTER_LISP_FRAME (plist, prop);
+  LISP_LOCALS (value);
 
   while (PLIST_ELT_P (plist, value))
     if (EQ (XCAR (plist), prop))
-      return XCAR (value);
+      EXIT_LISP_FRAME (XCAR (value));
     else
       plist = XCDR (value);
 
-  return Qunbound;
+  EXIT_LISP_FRAME (Qunbound);
 }
 
 /* Set the properties of INTERVAL to PROPERTIES,
@@ -325,7 +339,8 @@ property_value (Lisp_Object plist, Lisp_Object prop)
 static void
 set_properties (Lisp_Object properties, INTERVAL interval, Lisp_Object object)
 {
-  Lisp_Object sym, value;
+  ENTER_LISP_FRAME (properties, object);
+  LISP_LOCALS (sym, value);
 
   if (BUFFERP (object))
     {
@@ -357,6 +372,7 @@ set_properties (Lisp_Object properties, INTERVAL interval, Lisp_Object object)
 
   /* Store new properties.  */
   set_interval_plist (interval, Fcopy_sequence (properties));
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Add the properties of PLIST to the interval I, or set
@@ -372,7 +388,8 @@ static bool
 add_properties (Lisp_Object plist, INTERVAL i, Lisp_Object object,
 		enum property_set_type set_type)
 {
-  Lisp_Object tail1, tail2, sym1, val1;
+  ENTER_LISP_FRAME_T (bool, plist, object);
+  LISP_LOCALS (tail1, tail2, sym1, val1, this_cdr);
   bool changed = false;
 
   tail1 = plist;
@@ -390,7 +407,6 @@ add_properties (Lisp_Object plist, INTERVAL i, Lisp_Object object,
       for (tail2 = i->plist; CONSP (tail2); tail2 = Fcdr (XCDR (tail2)))
 	if (EQ (sym1, XCAR (tail2)))
 	  {
-	    Lisp_Object this_cdr;
 
 	    this_cdr = XCDR (tail2);
 	    /* Found the property.  Now check its value.  */
@@ -448,7 +464,7 @@ add_properties (Lisp_Object plist, INTERVAL i, Lisp_Object object,
 	}
     }
 
-  return changed;
+  EXIT_LISP_FRAME (changed);
 }
 
 /* For any members of PLIST, or LIST,
@@ -459,18 +475,23 @@ add_properties (Lisp_Object plist, INTERVAL i, Lisp_Object object,
 static bool
 remove_properties (Lisp_Object plist, Lisp_Object list, INTERVAL i, Lisp_Object object)
 {
+  ENTER_LISP_FRAME_T (bool, plist, list, object);
+  LISP_LOCALS (tail1, current_plist, sym, tail2, this);
   bool changed = false;
 
   /* True means tail1 is a plist, otherwise it is a list.  */
   bool use_plist = ! NILP (plist);
-  Lisp_Object tail1 = use_plist ? plist : list;
+  tail1 = use_plist ? plist : list;
 
-  Lisp_Object current_plist = i->plist;
+
+  current_plist = i->plist;
+
 
   /* Go through each element of LIST or PLIST.  */
   while (CONSP (tail1))
     {
-      Lisp_Object sym = XCAR (tail1);
+      sym = XCAR (tail1);
+
 
       /* First, remove the symbol if it's at the head of the list */
       while (CONSP (current_plist) && EQ (sym, XCAR (current_plist)))
@@ -485,10 +506,12 @@ remove_properties (Lisp_Object plist, Lisp_Object list, INTERVAL i, Lisp_Object 
 	}
 
       /* Go through I's plist, looking for SYM.  */
-      Lisp_Object tail2 = current_plist;
+      tail2 = current_plist;
+
       while (! NILP (tail2))
 	{
-	  Lisp_Object this = XCDR (XCDR (tail2));
+	  this = XCDR (XCDR (tail2));
+
 	  if (CONSP (this) && EQ (sym, XCAR (this)))
 	    {
 	      if (BUFFERP (object))
@@ -509,7 +532,7 @@ remove_properties (Lisp_Object plist, Lisp_Object list, INTERVAL i, Lisp_Object 
 
   if (changed)
     set_interval_plist (i, current_plist);
-  return changed;
+  EXIT_LISP_FRAME (changed);
 }
 
 /* Returns the interval of POSITION in OBJECT.
@@ -518,13 +541,14 @@ remove_properties (Lisp_Object plist, Lisp_Object list, INTERVAL i, Lisp_Object 
 INTERVAL
 interval_of (ptrdiff_t position, Lisp_Object object)
 {
+  ENTER_LISP_FRAME_T (INTERVAL, object);
   register INTERVAL i;
   ptrdiff_t beg, end;
 
   if (NILP (object))
     XSETBUFFER (object, current_buffer);
   else if (EQ (object, Qt))
-    return NULL;
+    EXIT_LISP_FRAME (NULL);
 
   CHECK_STRING_OR_BUFFER (object);
 
@@ -546,9 +570,9 @@ interval_of (ptrdiff_t position, Lisp_Object object)
   if (!(beg <= position && position <= end))
     args_out_of_range (make_number (position), make_number (position));
   if (beg == end || !i)
-    return NULL;
+    EXIT_LISP_FRAME (NULL);
 
-  return find_interval (i, position);
+  EXIT_LISP_FRAME (find_interval (i, position));
 }
 
 DEFUN ("text-properties-at", Ftext_properties_at,
@@ -560,6 +584,7 @@ If OBJECT is a string, POSITION is a 0-based index into it.
 If POSITION is at the end of OBJECT, the value is nil.  */)
   (Lisp_Object position, Lisp_Object object)
 {
+  ENTER_LISP_FRAME (position, object);
   register INTERVAL i;
 
   if (NILP (object))
@@ -567,15 +592,15 @@ If POSITION is at the end of OBJECT, the value is nil.  */)
 
   i = validate_interval_range (object, &position, &position, soft);
   if (!i)
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
   /* If POSITION is at the end of the interval,
      it means it's the end of OBJECT.
      There are no properties at the very end,
      since no character follows.  */
   if (XINT (position) == LENGTH (i) + i->position)
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
 
-  return i->plist;
+  EXIT_LISP_FRAME (i->plist);
 }
 
 DEFUN ("get-text-property", Fget_text_property, Sget_text_property, 2, 3, 0,
@@ -585,7 +610,8 @@ to the current buffer.
 If POSITION is at the end of OBJECT, the value is nil.  */)
   (Lisp_Object position, Lisp_Object prop, Lisp_Object object)
 {
-  return textget (Ftext_properties_at (position, object), prop);
+  ENTER_LISP_FRAME (position, prop, object);
+  EXIT_LISP_FRAME (textget (Ftext_properties_at (position, object), prop));
 }
 
 /* Return the value of char's property PROP, in OBJECT at POSITION.
@@ -600,8 +626,10 @@ If POSITION is at the end of OBJECT, the value is nil.  */)
    window-specific overlays are considered only if they are associated
    with OBJECT. */
 Lisp_Object
-get_char_property_and_overlay (Lisp_Object position, register Lisp_Object prop, Lisp_Object object, Lisp_Object *overlay)
+get_char_property_and_overlay (Lisp_Object position, Lisp_Object prop, Lisp_Object object, Lisp_Object *overlay)
 {
+  ENTER_LISP_FRAME (position, prop, object);
+  LISP_LOCALS (tem);
   struct window *w = 0;
 
   CHECK_NUMBER_COERCE_MARKER (position);
@@ -636,14 +664,15 @@ get_char_property_and_overlay (Lisp_Object position, register Lisp_Object prop, 
       /* Now check the overlays in order of decreasing priority.  */
       while (--noverlays >= 0)
 	{
-	  Lisp_Object tem = Foverlay_get (overlay_vec[noverlays], prop);
+	  tem = Foverlay_get (overlay_vec[noverlays], prop);
+
 	  if (!NILP (tem))
 	    {
 	      if (overlay)
 		/* Return the overlay we got the property from.  */
 		*overlay = overlay_vec[noverlays];
 	      SAFE_FREE ();
-	      return tem;
+	      EXIT_LISP_FRAME (tem);
 	    }
 	}
       SAFE_FREE ();
@@ -655,7 +684,7 @@ get_char_property_and_overlay (Lisp_Object position, register Lisp_Object prop, 
 
   /* Not a buffer, or no appropriate overlay, so fall through to the
      simpler case.  */
-  return Fget_text_property (position, prop, object);
+  EXIT_LISP_FRAME (Fget_text_property (position, prop, object));
 }
 
 DEFUN ("get-char-property", Fget_char_property, Sget_char_property, 2, 3, 0,
@@ -669,7 +698,8 @@ If OBJECT is a window, then that window's buffer is used, but window-specific
 overlays are considered only if they are associated with OBJECT.  */)
   (Lisp_Object position, Lisp_Object prop, Lisp_Object object)
 {
-  return get_char_property_and_overlay (position, prop, object, 0);
+  ENTER_LISP_FRAME (position, prop, object);
+  EXIT_LISP_FRAME (get_char_property_and_overlay (position, prop, object, 0));
 }
 
 DEFUN ("get-char-property-and-overlay", Fget_char_property_and_overlay,
@@ -688,10 +718,11 @@ overlays are considered only if they are associated with OBJECT.  If
 POSITION is at the end of OBJECT, both car and cdr are nil.  */)
   (Lisp_Object position, Lisp_Object prop, Lisp_Object object)
 {
-  Lisp_Object overlay;
-  Lisp_Object val
-    = get_char_property_and_overlay (position, prop, object, &overlay);
-  return Fcons (val, overlay);
+  ENTER_LISP_FRAME (position, prop, object);
+  LISP_LOCALS (overlay, val);
+  val = get_char_property_and_overlay (position, prop, object, &overlay);
+
+  EXIT_LISP_FRAME (Fcons (val, overlay));
 }
 
 
@@ -709,7 +740,8 @@ search past position LIMIT, and returns LIMIT if nothing is found
 before LIMIT.  LIMIT is a no-op if it is greater than (point-max).  */)
   (Lisp_Object position, Lisp_Object limit)
 {
-  Lisp_Object temp;
+  ENTER_LISP_FRAME (position, limit);
+  LISP_LOCALS (temp);
 
   temp = Fnext_overlay_change (position);
   if (! NILP (limit))
@@ -718,7 +750,7 @@ before LIMIT.  LIMIT is a no-op if it is greater than (point-max).  */)
       if (XINT (limit) < XINT (temp))
 	temp = limit;
     }
-  return Fnext_property_change (position, Qnil, temp);
+  EXIT_LISP_FRAME (Fnext_property_change (position, Qnil, temp));
 }
 
 DEFUN ("previous-char-property-change", Fprevious_char_property_change,
@@ -735,7 +767,8 @@ search before position LIMIT, and returns LIMIT if nothing is found
 before LIMIT.  LIMIT is a no-op if it is less than (point-min).  */)
   (Lisp_Object position, Lisp_Object limit)
 {
-  Lisp_Object temp;
+  ENTER_LISP_FRAME (position, limit);
+  LISP_LOCALS (temp);
 
   temp = Fprevious_overlay_change (position);
   if (! NILP (limit))
@@ -744,7 +777,7 @@ before LIMIT.  LIMIT is a no-op if it is less than (point-min).  */)
       if (XINT (limit) > XINT (temp))
 	temp = limit;
     }
-  return Fprevious_property_change (position, Qnil, temp);
+  EXIT_LISP_FRAME (Fprevious_property_change (position, Qnil, temp));
 }
 
 
@@ -768,6 +801,8 @@ If the property is constant all the way to the end of OBJECT, return the
 last valid position in OBJECT.  */)
   (Lisp_Object position, Lisp_Object prop, Lisp_Object object, Lisp_Object limit)
 {
+  ENTER_LISP_FRAME (position, prop, object, limit);
+  LISP_LOCALS (initial_value, value);
   if (STRINGP (object))
     {
       position = Fnext_single_property_change (position, prop, object, limit);
@@ -784,7 +819,6 @@ last valid position in OBJECT.  */)
     }
   else
     {
-      Lisp_Object initial_value, value;
       ptrdiff_t count = SPECPDL_INDEX ();
 
       if (! NILP (object))
@@ -829,7 +863,7 @@ last valid position in OBJECT.  */)
       unbind_to (count, Qnil);
     }
 
-  return position;
+  EXIT_LISP_FRAME (position);
 }
 
 DEFUN ("previous-single-char-property-change",
@@ -853,6 +887,8 @@ If the property is constant all the way to the start of OBJECT, return the
 first valid position in OBJECT.  */)
   (Lisp_Object position, Lisp_Object prop, Lisp_Object object, Lisp_Object limit)
 {
+  ENTER_LISP_FRAME (position, prop, object, limit);
+  LISP_LOCALS (initial_value, value);
   if (STRINGP (object))
     {
       position = Fprevious_single_property_change (position, prop, object, limit);
@@ -895,9 +931,9 @@ first valid position in OBJECT.  */)
 	}
       else
 	{
-	  Lisp_Object initial_value
-	    = Fget_char_property (make_number (XFASTINT (position) - 1),
+	  initial_value = Fget_char_property (make_number (XFASTINT (position) - 1),
 				  prop, object);
+
 
 	  while (true)
 	    {
@@ -910,9 +946,9 @@ first valid position in OBJECT.  */)
 		}
 	      else
 		{
-		  Lisp_Object value
-		    = Fget_char_property (make_number (XFASTINT (position) - 1),
+		  value = Fget_char_property (make_number (XFASTINT (position) - 1),
 					  prop, object);
+
 
 		  if (!EQ (value, initial_value))
 		    break;
@@ -923,7 +959,7 @@ first valid position in OBJECT.  */)
       unbind_to (count, Qnil);
     }
 
-  return position;
+  EXIT_LISP_FRAME (position);
 }
 
 DEFUN ("next-property-change", Fnext_property_change,
@@ -942,6 +978,7 @@ If the optional third argument LIMIT is non-nil, don't search
 past position LIMIT; return LIMIT if nothing is found before LIMIT.  */)
   (Lisp_Object position, Lisp_Object object, Lisp_Object limit)
 {
+  ENTER_LISP_FRAME (position, object, limit);
   register INTERVAL i, next;
 
   if (NILP (object))
@@ -967,11 +1004,11 @@ past position LIMIT; return LIMIT if nothing is found before LIMIT.  */)
 				: BUF_ZV (XBUFFER (object))));
       else
 	XSETFASTINT (position, next->position);
-      return position;
+      EXIT_LISP_FRAME (position);
     }
 
   if (!i)
-    return limit;
+    EXIT_LISP_FRAME (limit);
 
   next = next_interval (i);
 
@@ -986,9 +1023,9 @@ past position LIMIT; return LIMIT if nothing is found before LIMIT.  */)
 	      : (STRINGP (object)
 		 ? SCHARS (object)
 		 : BUF_ZV (XBUFFER (object))))))
-    return limit;
+    EXIT_LISP_FRAME (limit);
   else
-    return make_number (next->position);
+    EXIT_LISP_FRAME (make_number (next->position));
 }
 
 DEFUN ("next-single-property-change", Fnext_single_property_change,
@@ -1008,8 +1045,9 @@ If the optional fourth argument LIMIT is non-nil, don't search
 past position LIMIT; return LIMIT if nothing is found before LIMIT.  */)
   (Lisp_Object position, Lisp_Object prop, Lisp_Object object, Lisp_Object limit)
 {
+  ENTER_LISP_FRAME (position, prop, object, limit);
+  LISP_LOCALS (here_val);
   register INTERVAL i, next;
-  register Lisp_Object here_val;
 
   if (NILP (object))
     XSETBUFFER (object, current_buffer);
@@ -1019,7 +1057,7 @@ past position LIMIT; return LIMIT if nothing is found before LIMIT.  */)
 
   i = validate_interval_range (object, &position, &position, soft);
   if (!i)
-    return limit;
+    EXIT_LISP_FRAME (limit);
 
   here_val = textget (i->plist, prop);
   next = next_interval (i);
@@ -1035,9 +1073,9 @@ past position LIMIT; return LIMIT if nothing is found before LIMIT.  */)
 	      : (STRINGP (object)
 		 ? SCHARS (object)
 		 : BUF_ZV (XBUFFER (object))))))
-    return limit;
+    EXIT_LISP_FRAME (limit);
   else
-    return make_number (next->position);
+    EXIT_LISP_FRAME (make_number (next->position));
 }
 
 DEFUN ("previous-property-change", Fprevious_property_change,
@@ -1056,6 +1094,7 @@ If the optional third argument LIMIT is non-nil, don't search
 back past position LIMIT; return LIMIT if nothing is found until LIMIT.  */)
   (Lisp_Object position, Lisp_Object object, Lisp_Object limit)
 {
+  ENTER_LISP_FRAME (position, object, limit);
   register INTERVAL i, previous;
 
   if (NILP (object))
@@ -1066,7 +1105,7 @@ back past position LIMIT; return LIMIT if nothing is found until LIMIT.  */)
 
   i = validate_interval_range (object, &position, &position, soft);
   if (!i)
-    return limit;
+    EXIT_LISP_FRAME (limit);
 
   /* Start with the interval containing the char before point.  */
   if (i->position == XFASTINT (position))
@@ -1083,9 +1122,9 @@ back past position LIMIT; return LIMIT if nothing is found until LIMIT.  */)
 	  <= (INTEGERP (limit)
 	      ? XFASTINT (limit)
 	      : (STRINGP (object) ? 0 : BUF_BEGV (XBUFFER (object))))))
-    return limit;
+    EXIT_LISP_FRAME (limit);
   else
-    return make_number (previous->position + LENGTH (previous));
+    EXIT_LISP_FRAME (make_number (previous->position + LENGTH (previous)));
 }
 
 DEFUN ("previous-single-property-change", Fprevious_single_property_change,
@@ -1105,8 +1144,9 @@ If the optional fourth argument LIMIT is non-nil, don't search
 back past position LIMIT; return LIMIT if nothing is found until LIMIT.  */)
   (Lisp_Object position, Lisp_Object prop, Lisp_Object object, Lisp_Object limit)
 {
+  ENTER_LISP_FRAME (position, prop, object, limit);
+  LISP_LOCALS (here_val);
   register INTERVAL i, previous;
-  register Lisp_Object here_val;
 
   if (NILP (object))
     XSETBUFFER (object, current_buffer);
@@ -1121,7 +1161,7 @@ back past position LIMIT; return LIMIT if nothing is found until LIMIT.  */)
     i = previous_interval (i);
 
   if (!i)
-    return limit;
+    EXIT_LISP_FRAME (limit);
 
   here_val = textget (i->plist, prop);
   previous = previous_interval (i);
@@ -1136,9 +1176,9 @@ back past position LIMIT; return LIMIT if nothing is found until LIMIT.  */)
 	  <= (INTEGERP (limit)
 	      ? XFASTINT (limit)
 	      : (STRINGP (object) ? 0 : BUF_BEGV (XBUFFER (object))))))
-    return limit;
+    EXIT_LISP_FRAME (limit);
   else
-    return make_number (previous->position + LENGTH (previous));
+    EXIT_LISP_FRAME (make_number (previous->position + LENGTH (previous)));
 }
 
 /* Used by add-text-properties and add-face-text-property. */
@@ -1268,8 +1308,9 @@ Return t if any property value actually changed, nil otherwise.  */)
   (Lisp_Object start, Lisp_Object end, Lisp_Object properties,
    Lisp_Object object)
 {
-  return add_text_properties_1 (start, end, properties, object,
-				TEXT_PROPERTY_REPLACE);
+  ENTER_LISP_FRAME (start, end, properties, object);
+  EXIT_LISP_FRAME (add_text_properties_1 (start, end, properties, object,
+				TEXT_PROPERTY_REPLACE));
 }
 
 /* Callers note, this can GC when OBJECT is a buffer (or nil).  */
@@ -1285,9 +1326,10 @@ markers).  If OBJECT is a string, START and END are 0-based indices into it.  */
   (Lisp_Object start, Lisp_Object end, Lisp_Object property,
    Lisp_Object value, Lisp_Object object)
 {
+  ENTER_LISP_FRAME (start, end, property, value, object);
   AUTO_LIST2 (properties, property, value);
   Fadd_text_properties (start, end, properties, object);
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 DEFUN ("set-text-properties", Fset_text_properties,
@@ -1301,7 +1343,8 @@ If PROPERTIES is nil, the effect is to remove all properties from
 the designated part of OBJECT.  */)
   (Lisp_Object start, Lisp_Object end, Lisp_Object properties, Lisp_Object object)
 {
-  return set_text_properties (start, end, properties, object, Qt);
+  ENTER_LISP_FRAME (start, end, properties, object);
+  EXIT_LISP_FRAME (set_text_properties (start, end, properties, object, Qt));
 }
 
 
@@ -1327,12 +1370,13 @@ into it.  */)
   (Lisp_Object start, Lisp_Object end, Lisp_Object face,
    Lisp_Object append, Lisp_Object object)
 {
+  ENTER_LISP_FRAME (start, end, face, append, object);
   AUTO_LIST2 (properties, Qface, face);
   add_text_properties_1 (start, end, properties, object,
 			 (NILP (append)
 			  ? TEXT_PROPERTY_PREPEND
 			  : TEXT_PROPERTY_APPEND));
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 /* Replace properties of text from START to END with new list of
@@ -1348,8 +1392,9 @@ Lisp_Object
 set_text_properties (Lisp_Object start, Lisp_Object end, Lisp_Object properties,
 		     Lisp_Object object, Lisp_Object coherent_change_p)
 {
+  ENTER_LISP_FRAME (start, end, properties, object, coherent_change_p);
+  LISP_LOCALS (ostart, oend);
   register INTERVAL i;
-  Lisp_Object ostart, oend;
   bool first_time = true;
 
   ostart = start;
@@ -1367,10 +1412,10 @@ set_text_properties (Lisp_Object start, Lisp_Object end, Lisp_Object properties,
       && XFASTINT (end) == SCHARS (object))
     {
       if (!string_intervals (object))
-	return Qnil;
+	EXIT_LISP_FRAME (Qnil);
 
       set_string_intervals (object, NULL);
-      return Qt;
+      EXIT_LISP_FRAME (Qt);
     }
 
  retry:
@@ -1380,7 +1425,7 @@ set_text_properties (Lisp_Object start, Lisp_Object end, Lisp_Object properties,
     {
       /* If buffer has no properties, and we want none, return now.  */
       if (NILP (properties))
-	return Qnil;
+	EXIT_LISP_FRAME (Qnil);
 
       /* Restore the original START and END values
 	 because validate_interval_range increments them for strings.  */
@@ -1390,7 +1435,7 @@ set_text_properties (Lisp_Object start, Lisp_Object end, Lisp_Object properties,
       i = validate_interval_range (object, &start, &end, hard);
       /* This can return if start == end.  */
       if (!i)
-	return Qnil;
+	EXIT_LISP_FRAME (Qnil);
     }
 
   if (BUFFERP (object) && !NILP (coherent_change_p) && first_time)
@@ -1415,7 +1460,7 @@ set_text_properties (Lisp_Object start, Lisp_Object end, Lisp_Object properties,
   if (BUFFERP (object) && !NILP (coherent_change_p))
     signal_after_change (XINT (start), XINT (end) - XINT (start),
 			 XINT (end) - XINT (start));
-  return Qt;
+  EXIT_LISP_FRAME (Qt);
 }
 
 /* Replace properties of text from START to END with new list of
@@ -1427,6 +1472,7 @@ set_text_properties (Lisp_Object start, Lisp_Object end, Lisp_Object properties,
 void
 set_text_properties_1 (Lisp_Object start, Lisp_Object end, Lisp_Object properties, Lisp_Object object, INTERVAL i)
 {
+  ENTER_LISP_FRAME (start, end, properties, object);
   register INTERVAL prev_changed = NULL;
   register ptrdiff_t s, len;
   INTERVAL unchanged;
@@ -1442,7 +1488,7 @@ set_text_properties_1 (Lisp_Object start, Lisp_Object end, Lisp_Object propertie
       len = XINT (start) - s;
     }
   else
-    return;
+    EXIT_LISP_FRAME_VOID ();
 
   eassert (i);
 
@@ -1456,13 +1502,13 @@ set_text_properties_1 (Lisp_Object start, Lisp_Object end, Lisp_Object propertie
 	  copy_properties (unchanged, i);
 	  i = split_interval_left (i, len);
 	  set_properties (properties, i, object);
-	  return;
+	  EXIT_LISP_FRAME_VOID ();
 	}
 
       set_properties (properties, i, object);
 
       if (LENGTH (i) == len)
-	return;
+	EXIT_LISP_FRAME_VOID ();
 
       prev_changed = i;
       len -= LENGTH (i);
@@ -1485,7 +1531,7 @@ set_text_properties_1 (Lisp_Object start, Lisp_Object end, Lisp_Object propertie
 	  set_properties (properties, i, object);
 	  if (prev_changed)
 	    merge_interval_left (i);
-	  return;
+	  EXIT_LISP_FRAME_VOID ();
 	}
 
       len -= LENGTH (i);
@@ -1502,6 +1548,7 @@ set_text_properties_1 (Lisp_Object start, Lisp_Object end, Lisp_Object propertie
       i = next_interval (i);
     }
   while (len > 0);
+  EXIT_LISP_FRAME_VOID ();
 }
 
 DEFUN ("remove-text-properties", Fremove_text_properties,
@@ -1518,6 +1565,7 @@ Return t if any property was actually removed, nil otherwise.
 Use `set-text-properties' if you want to remove all text properties.  */)
   (Lisp_Object start, Lisp_Object end, Lisp_Object properties, Lisp_Object object)
 {
+  ENTER_LISP_FRAME (start, end, properties, object);
   INTERVAL i, unchanged;
   ptrdiff_t s, len;
   bool modified = false;
@@ -1529,7 +1577,7 @@ Use `set-text-properties' if you want to remove all text properties.  */)
  retry:
   i = validate_interval_range (object, &start, &end, soft);
   if (!i)
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
 
   s = XINT (start);
   len = XINT (end) - s;
@@ -1542,7 +1590,7 @@ Use `set-text-properties' if you want to remove all text properties.  */)
       do
 	{
 	  if (got >= len)
-	    return Qnil;
+	    EXIT_LISP_FRAME (Qnil);
 	  len -= got;
 	  i = next_interval (i);
 	  got = LENGTH (i);
@@ -1591,7 +1639,7 @@ Use `set-text-properties' if you want to remove all text properties.  */)
 	      if (BUFFERP (object))
 		signal_after_change (XINT (start), XINT (end) - XINT (start),
 				     XINT (end) - XINT (start));
-	      return Qt;
+	      EXIT_LISP_FRAME (Qt);
 	    }
 
 	  if (LENGTH (i) == len)
@@ -1600,7 +1648,7 @@ Use `set-text-properties' if you want to remove all text properties.  */)
 	      if (BUFFERP (object))
 		signal_after_change (XINT (start), XINT (end) - XINT (start),
 				     XINT (end) - XINT (start));
-	      return Qt;
+	      EXIT_LISP_FRAME (Qt);
 	    }
 
 	  /* i has the properties, and goes past the change limit */
@@ -1611,7 +1659,7 @@ Use `set-text-properties' if you want to remove all text properties.  */)
 	  if (BUFFERP (object))
 	    signal_after_change (XINT (start), XINT (end) - XINT (start),
 				 XINT (end) - XINT (start));
-	  return Qt;
+	  EXIT_LISP_FRAME (Qt);
 	}
 
       len -= LENGTH (i);
@@ -1630,10 +1678,11 @@ markers).  If OBJECT is a string, START and END are 0-based indices into it.
 Return t if any property was actually removed, nil otherwise.  */)
   (Lisp_Object start, Lisp_Object end, Lisp_Object list_of_properties, Lisp_Object object)
 {
+  ENTER_LISP_FRAME (start, end, list_of_properties, object);
+  LISP_LOCALS (properties);
   INTERVAL i, unchanged;
   ptrdiff_t s, len;
   bool modified = false;
-  Lisp_Object properties;
   properties = list_of_properties;
 
   if (NILP (object))
@@ -1641,7 +1690,7 @@ Return t if any property was actually removed, nil otherwise.  */)
 
   i = validate_interval_range (object, &start, &end, soft);
   if (!i)
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
 
   s = XINT (start);
   len = XINT (end) - s;
@@ -1654,7 +1703,7 @@ Return t if any property was actually removed, nil otherwise.  */)
       do
 	{
 	  if (got >= len)
-	    return Qnil;
+	    EXIT_LISP_FRAME (Qnil);
 	  len -= got;
 	  i = next_interval (i);
 	  got = LENGTH (i);
@@ -1690,10 +1739,10 @@ Return t if any property was actually removed, nil otherwise.  */)
 		    signal_after_change (XINT (start),
 					 XINT (end) - XINT (start),
 					 XINT (end) - XINT (start));
-		  return Qt;
+		  EXIT_LISP_FRAME (Qt);
 		}
 	      else
-		return Qnil;
+		EXIT_LISP_FRAME (Qnil);
 	    }
 	  else if (LENGTH (i) == len)
 	    {
@@ -1703,7 +1752,7 @@ Return t if any property was actually removed, nil otherwise.  */)
 	      if (BUFFERP (object))
 		signal_after_change (XINT (start), XINT (end) - XINT (start),
 				     XINT (end) - XINT (start));
-	      return Qt;
+	      EXIT_LISP_FRAME (Qt);
 	    }
 	  else
 	    { /* i has the properties, and goes past the change limit.  */
@@ -1716,7 +1765,7 @@ Return t if any property was actually removed, nil otherwise.  */)
 	      if (BUFFERP (object))
 		signal_after_change (XINT (start), XINT (end) - XINT (start),
 				     XINT (end) - XINT (start));
-	      return Qt;
+	      EXIT_LISP_FRAME (Qt);
 	    }
 	}
       if (interval_has_some_properties_list (properties, i))
@@ -1736,10 +1785,10 @@ Return t if any property was actually removed, nil otherwise.  */)
                 signal_after_change (XINT (start),
                                      XINT (end) - XINT (start),
                                      XINT (end) - XINT (start));
-              return Qt;
+              EXIT_LISP_FRAME (Qt);
             }
           else
-            return Qnil;
+            EXIT_LISP_FRAME (Qnil);
         }
     }
 }
@@ -1754,6 +1803,7 @@ the current buffer), START and END are buffer positions (integers or
 markers).  If OBJECT is a string, START and END are 0-based indices into it.  */)
   (Lisp_Object start, Lisp_Object end, Lisp_Object property, Lisp_Object value, Lisp_Object object)
 {
+  ENTER_LISP_FRAME (start, end, property, value, object);
   register INTERVAL i;
   register ptrdiff_t e, pos;
 
@@ -1761,7 +1811,7 @@ markers).  If OBJECT is a string, START and END are 0-based indices into it.  */
     XSETBUFFER (object, current_buffer);
   i = validate_interval_range (object, &start, &end, soft);
   if (!i)
-    return (!NILP (value) || EQ (start, end) ? Qnil : start);
+    EXIT_LISP_FRAME ((!NILP (value) || EQ (start, end) ? Qnil : start));
   e = XINT (end);
 
   while (i)
@@ -1773,11 +1823,11 @@ markers).  If OBJECT is a string, START and END are 0-based indices into it.  */
 	  pos = i->position;
 	  if (pos < XINT (start))
 	    pos = XINT (start);
-	  return make_number (pos);
+	  EXIT_LISP_FRAME (make_number (pos));
 	}
       i = next_interval (i);
     }
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 DEFUN ("text-property-not-all", Ftext_property_not_all,
@@ -1790,6 +1840,7 @@ the current buffer), START and END are buffer positions (integers or
 markers).  If OBJECT is a string, START and END are 0-based indices into it.  */)
   (Lisp_Object start, Lisp_Object end, Lisp_Object property, Lisp_Object value, Lisp_Object object)
 {
+  ENTER_LISP_FRAME (start, end, property, value, object);
   register INTERVAL i;
   register ptrdiff_t s, e;
 
@@ -1797,7 +1848,7 @@ markers).  If OBJECT is a string, START and END are 0-based indices into it.  */
     XSETBUFFER (object, current_buffer);
   i = validate_interval_range (object, &start, &end, soft);
   if (!i)
-    return (NILP (value) || EQ (start, end)) ? Qnil : start;
+    EXIT_LISP_FRAME ((NILP (value) || EQ (start, end)) ? Qnil : start);
   s = XINT (start);
   e = XINT (end);
 
@@ -1809,11 +1860,11 @@ markers).  If OBJECT is a string, START and END are 0-based indices into it.  */
 	{
 	  if (i->position > s)
 	    s = i->position;
-	  return make_number (s);
+	  EXIT_LISP_FRAME (make_number (s));
 	}
       i = next_interval (i);
     }
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 
@@ -1826,11 +1877,14 @@ markers).  If OBJECT is a string, START and END are 0-based indices into it.  */
 int
 text_property_stickiness (Lisp_Object prop, Lisp_Object pos, Lisp_Object buffer)
 {
+  ENTER_LISP_FRAME_T (int, prop, pos, buffer);
+  LISP_LOCALS (prev_pos, front_sticky, defalt, rear_non_sticky);
   bool ignore_previous_character;
-  Lisp_Object prev_pos = make_number (XINT (pos) - 1);
-  Lisp_Object front_sticky;
+  prev_pos = make_number (XINT (pos) - 1);
+
   bool is_rear_sticky = true, is_front_sticky = false; /* defaults */
-  Lisp_Object defalt = Fassq (prop, Vtext_property_default_nonsticky);
+  defalt = Fassq (prop, Vtext_property_default_nonsticky);
+
 
   if (NILP (buffer))
     XSETBUFFER (buffer, current_buffer);
@@ -1841,8 +1895,8 @@ text_property_stickiness (Lisp_Object prop, Lisp_Object pos, Lisp_Object buffer)
     is_rear_sticky = false;
   else
     {
-      Lisp_Object rear_non_sticky
-	= Fget_text_property (prev_pos, Qrear_nonsticky, buffer);
+      rear_non_sticky = Fget_text_property (prev_pos, Qrear_nonsticky, buffer);
+
 
       if (!NILP (CONSP (rear_non_sticky)
 		 ? Fmemq (prop, rear_non_sticky)
@@ -1864,11 +1918,11 @@ text_property_stickiness (Lisp_Object prop, Lisp_Object pos, Lisp_Object buffer)
 
   /* Simple cases, where the properties are consistent.  */
   if (is_rear_sticky && !is_front_sticky)
-    return -1;
+    EXIT_LISP_FRAME (-1);
   else if (!is_rear_sticky && is_front_sticky)
-    return 1;
+    EXIT_LISP_FRAME (1);
   else if (!is_rear_sticky && !is_front_sticky)
-    return 0;
+    EXIT_LISP_FRAME (0);
 
   /* The stickiness properties are inconsistent, so we have to
      disambiguate.  Basically, rear-sticky wins, _except_ if the
@@ -1876,9 +1930,9 @@ text_property_stickiness (Lisp_Object prop, Lisp_Object pos, Lisp_Object buffer)
      front-sticky wins.  */
   if (ignore_previous_character
       || NILP (Fget_text_property (prev_pos, prop, buffer)))
-    return 1;
+    EXIT_LISP_FRAME (1);
   else
-    return -1;
+    EXIT_LISP_FRAME (-1);
 }
 
 
@@ -1896,20 +1950,18 @@ Lisp_Object
 copy_text_properties (Lisp_Object start, Lisp_Object end, Lisp_Object src,
 		      Lisp_Object pos, Lisp_Object dest, Lisp_Object prop)
 {
+  ENTER_LISP_FRAME (start, end, src, pos, dest, prop);
+  LISP_LOCALS (res, stuff, plist, dest_start, dest_end);
   INTERVAL i;
-  Lisp_Object res;
-  Lisp_Object stuff;
-  Lisp_Object plist;
   ptrdiff_t s, e, e2, p, len;
   bool modified = false;
 
   i = validate_interval_range (src, &start, &end, soft);
   if (!i)
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
 
   CHECK_NUMBER_COERCE_MARKER (pos);
   {
-    Lisp_Object dest_start, dest_end;
 
     e = XINT (pos) + (XINT (end) - XINT (start));
     if (MOST_POSITIVE_FIXNUM < e)
@@ -1969,7 +2021,7 @@ copy_text_properties (Lisp_Object start, Lisp_Object end, Lisp_Object src,
       stuff = Fcdr (stuff);
     }
 
-  return modified ? Qt : Qnil;
+  EXIT_LISP_FRAME (modified ? Qt : Qnil);
 }
 
 
@@ -1983,8 +2035,9 @@ copy_text_properties (Lisp_Object start, Lisp_Object end, Lisp_Object src,
 Lisp_Object
 text_property_list (Lisp_Object object, Lisp_Object start, Lisp_Object end, Lisp_Object prop)
 {
+  ENTER_LISP_FRAME (object, start, end, prop);
+  LISP_LOCALS (result, plist);
   struct interval *i;
-  Lisp_Object result;
 
   result = Qnil;
 
@@ -1997,7 +2050,6 @@ text_property_list (Lisp_Object object, Lisp_Object start, Lisp_Object end, Lisp
       while (s < e)
 	{
 	  ptrdiff_t interval_end, len;
-	  Lisp_Object plist;
 
 	  interval_end = i->position + LENGTH (i);
 	  if (interval_end > e)
@@ -2026,7 +2078,7 @@ text_property_list (Lisp_Object object, Lisp_Object start, Lisp_Object end, Lisp
 	}
     }
 
-  return result;
+  EXIT_LISP_FRAME (result);
 }
 
 
@@ -2038,9 +2090,10 @@ text_property_list (Lisp_Object object, Lisp_Object start, Lisp_Object end, Lisp
 void
 add_text_properties_from_list (Lisp_Object object, Lisp_Object list, Lisp_Object delta)
 {
+  ENTER_LISP_FRAME (object, list, delta);
+  LISP_LOCALS (item, start, end, plist);
   for (; CONSP (list); list = XCDR (list))
     {
-      Lisp_Object item, start, end, plist;
 
       item = XCAR (list);
       start = make_number (XINT (XCAR (item)) + XINT (delta));
@@ -2049,6 +2102,7 @@ add_text_properties_from_list (Lisp_Object object, Lisp_Object list, Lisp_Object
 
       Fadd_text_properties (start, end, plist, object);
     }
+  EXIT_LISP_FRAME_VOID ();
 }
 
 
@@ -2061,12 +2115,15 @@ add_text_properties_from_list (Lisp_Object object, Lisp_Object list, Lisp_Object
 Lisp_Object
 extend_property_ranges (Lisp_Object list, Lisp_Object old_end, Lisp_Object new_end)
 {
-  Lisp_Object prev = Qnil, head = list;
+  ENTER_LISP_FRAME (list, old_end, new_end);
+  LISP_LOCALS (prev, head, item, beg);
+  prev = Qnil;
+  head = list;
+
   ptrdiff_t max = XINT (new_end);
 
   for (; CONSP (list); prev = list, list = XCDR (list))
     {
-      Lisp_Object item, beg;
       ptrdiff_t end;
 
       item = XCAR (list);
@@ -2094,7 +2151,7 @@ extend_property_ranges (Lisp_Object list, Lisp_Object old_end, Lisp_Object new_e
 	}
     }
 
-  return head;
+  EXIT_LISP_FRAME (head);
 }
 
 
@@ -2104,11 +2161,13 @@ extend_property_ranges (Lisp_Object list, Lisp_Object old_end, Lisp_Object new_e
 static void
 call_mod_hooks (Lisp_Object list, Lisp_Object start, Lisp_Object end)
 {
+  ENTER_LISP_FRAME (list, start, end);
   while (!NILP (list))
     {
       call2 (Fcar (list), start, end);
       list = Fcdr (list);
     }
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Check for read-only intervals between character positions START ... END,
@@ -2123,11 +2182,10 @@ void
 verify_interval_modification (struct buffer *buf,
 			      ptrdiff_t start, ptrdiff_t end)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (hooks, prev_mod_hooks, mod_hooks, before, after, tem);
   INTERVAL intervals = buffer_intervals (buf);
   INTERVAL i;
-  Lisp_Object hooks;
-  Lisp_Object prev_mod_hooks;
-  Lisp_Object mod_hooks;
 
   hooks = Qnil;
   prev_mod_hooks = Qnil;
@@ -2137,7 +2195,7 @@ verify_interval_modification (struct buffer *buf,
   interval_insert_in_front_hooks = Qnil;
 
   if (!intervals)
-    return;
+    EXIT_LISP_FRAME_VOID ();
 
   if (start > end)
     {
@@ -2150,7 +2208,6 @@ verify_interval_modification (struct buffer *buf,
   if (start == end)
     {
       INTERVAL prev = NULL;
-      Lisp_Object before, after;
 
       /* Set I to the interval containing the char after START,
 	 and PREV to the interval containing the char before START.
@@ -2187,7 +2244,6 @@ verify_interval_modification (struct buffer *buf,
 		  if (! NILP (after)
 		      && NILP (Fmemq (after, Vinhibit_read_only)))
 		    {
-		      Lisp_Object tem;
 
 		      tem = textget (i->plist, Qfront_sticky);
 		      if (TMEM (Qread_only, tem)
@@ -2207,7 +2263,6 @@ verify_interval_modification (struct buffer *buf,
 		  if (! NILP (before)
 		      && NILP (Fmemq (before, Vinhibit_read_only)))
 		    {
-		      Lisp_Object tem;
 
 		      tem = textget (prev->plist, Qrear_nonsticky);
 		      if (! TMEM (Qread_only, tem)
@@ -2226,7 +2281,6 @@ verify_interval_modification (struct buffer *buf,
 		 Check for read-only as well as category.  */
 	      if (! NILP (after) && NILP (Fmemq (after, Vinhibit_read_only)))
 		{
-		  Lisp_Object tem;
 
 		  tem = textget (i->plist, Qfront_sticky);
 		  if (TMEM (Qread_only, tem)
@@ -2293,6 +2347,7 @@ verify_interval_modification (struct buffer *buf,
 	    }
 	}
     }
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Run the interval hooks for an insertion on character range START ... END.
@@ -2303,12 +2358,14 @@ verify_interval_modification (struct buffer *buf,
 void
 report_interval_modification (Lisp_Object start, Lisp_Object end)
 {
+  ENTER_LISP_FRAME (start, end);
   if (! NILP (interval_insert_behind_hooks))
     call_mod_hooks (interval_insert_behind_hooks, start, end);
   if (! NILP (interval_insert_in_front_hooks)
       && ! EQ (interval_insert_in_front_hooks,
 	       interval_insert_behind_hooks))
     call_mod_hooks (interval_insert_in_front_hooks, start, end);
+  EXIT_LISP_FRAME_VOID ();
 }
 
 void

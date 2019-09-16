@@ -113,28 +113,29 @@ usage: (interactive &optional ARG-DESCRIPTOR)  */
 /* Quotify EXP: if EXP is constant, return it.
    If EXP is not constant, return (quote EXP).  */
 static Lisp_Object
-quotify_arg (register Lisp_Object exp)
+quotify_arg (Lisp_Object exp)
 {
+  ENTER_LISP_FRAME (exp);
   if (CONSP (exp)
       || (SYMBOLP (exp)
 	  && !NILP (exp) && !EQ (exp, Qt)))
-    return list2 (Qquote, exp);
+    EXIT_LISP_FRAME (list2 (Qquote, exp));
 
-  return exp;
+  EXIT_LISP_FRAME (exp);
 }
 
 /* Modify EXP by quotifying each element (except the first).  */
 static Lisp_Object
 quotify_args (Lisp_Object exp)
 {
-  register Lisp_Object tail;
-  Lisp_Object next;
+  ENTER_LISP_FRAME (exp);
+  LISP_LOCALS (tail, next);
   for (tail = exp; CONSP (tail); tail = next)
     {
       next = XCDR (tail);
       XSETCAR (tail, quotify_arg (XCAR (tail)));
     }
-  return exp;
+  EXIT_LISP_FRAME (exp);
 }
 
 static const char *callint_argfuns[]
@@ -143,7 +144,8 @@ static const char *callint_argfuns[]
 static void
 check_mark (bool for_region)
 {
-  Lisp_Object tem;
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (tem);
   tem = Fmarker_buffer (BVAR (current_buffer, mark));
   if (NILP (tem) || (XBUFFER (tem) != current_buffer))
     error (for_region ? "The mark is not set now, so there is no region"
@@ -151,6 +153,7 @@ check_mark (bool for_region)
   if (!NILP (Vtransient_mark_mode) && NILP (Vmark_even_if_inactive)
       && NILP (BVAR (current_buffer, mark_active)))
     xsignal0 (Qmark_inactive);
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* If the list of args INPUT was produced with an explicit call to
@@ -164,12 +167,13 @@ check_mark (bool for_region)
 static void
 fix_command (Lisp_Object input, Lisp_Object values)
 {
+  ENTER_LISP_FRAME (input, values);
+  LISP_LOCALS (car, intail, valtail, elt, presflag, carelt);
   /* FIXME: Instead of this ugly hack, we should provide a way for an
      interactive spec to return an expression/function that will re-build the
      args without user intervention.  */
   if (CONSP (input))
     {
-      Lisp_Object car;
 
       car = XCAR (input);
       /* Skip through certain special forms.  */
@@ -186,16 +190,13 @@ fix_command (Lisp_Object input, Lisp_Object values)
 	}
       if (EQ (car, Qlist))
 	{
-	  Lisp_Object intail, valtail;
 	  for (intail = Fcdr (input), valtail = values;
 	       CONSP (valtail);
 	       intail = Fcdr (intail), valtail = XCDR (valtail))
 	    {
-	      Lisp_Object elt;
 	      elt = Fcar (intail);
 	      if (CONSP (elt))
 		{
-		  Lisp_Object presflag, carelt;
 		  carelt = XCAR (elt);
 		  /* If it is (if X Y), look at Y.  */
 		  if (EQ (carelt, Qif)
@@ -222,6 +223,7 @@ fix_command (Lisp_Object input, Lisp_Object values)
 	    }
 	}
     }
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Helper function to call `read-file-name' from C.  */
@@ -230,9 +232,10 @@ static Lisp_Object
 read_file_name (Lisp_Object default_filename, Lisp_Object mustmatch,
 		Lisp_Object initial, Lisp_Object predicate)
 {
-  return CALLN (Ffuncall, intern ("read-file-name"),
+  ENTER_LISP_FRAME (default_filename, mustmatch, initial, predicate);
+  EXIT_LISP_FRAME (CALLN (Ffuncall, intern ("read-file-name"),
 		callint_message, Qnil, default_filename,
-		mustmatch, initial, predicate);
+		mustmatch, initial, predicate));
 }
 
 /* BEWARE: Calling this directly from C would defeat the purpose!  */
@@ -243,13 +246,14 @@ return non-nil.
 usage: (funcall-interactively FUNCTION &rest ARGUMENTS)  */)
      (ptrdiff_t nargs, Lisp_Object *args)
 {
+  ENTER_LISP_FRAME_VA (nargs, args);
   ptrdiff_t speccount = SPECPDL_INDEX ();
   temporarily_switch_to_single_kboard (NULL);
 
   /* Nothing special to do here, all the work is inside
      `called-interactively-p'.  Which will look for us as a marker in the
      backtrace.  */
-  return unbind_to (speccount, Ffuncall (nargs, args));
+  EXIT_LISP_FRAME (unbind_to (speccount, Ffuncall (nargs, args)));
 }
 
 DEFUN ("call-interactively", Fcall_interactively, Scall_interactively, 1, 3, 0,
@@ -270,15 +274,13 @@ invoke it.  If KEYS is omitted or nil, the return value of
 `this-command-keys-vector' is used.  */)
   (Lisp_Object function, Lisp_Object record_flag, Lisp_Object keys)
 {
+  ENTER_LISP_FRAME (function, record_flag, keys);
+  LISP_LOCALS (specs, filter_specs, teml, up_event, enable, prefix_arg, save_this_command, save_last_command, save_this_original_command, save_real_this_command, form, input, funval, values);
+  LISP_LOCALS (this_cmd, result, event, w, tem2, val);
   /* `args' will contain the array of arguments to pass to the function.
      `visargs' will contain the same list but in a nicer form, so that if we
      pass it to Fformat_message it will be understandable to a human.  */
   Lisp_Object *args, *visargs;
-  Lisp_Object specs;
-  Lisp_Object filter_specs;
-  Lisp_Object teml;
-  Lisp_Object up_event;
-  Lisp_Object enable;
   USE_SAFE_ALLOCA;
   ptrdiff_t speccount = SPECPDL_INDEX ();
 
@@ -286,7 +288,6 @@ invoke it.  If KEYS is omitted or nil, the return value of
      the 'e' interactive code.  */
   ptrdiff_t next_event;
 
-  Lisp_Object prefix_arg;
   char *string;
   const char *tem;
 
@@ -301,8 +302,6 @@ invoke it.  If KEYS is omitted or nil, the return value of
   ptrdiff_t key_count;
   bool record_then_fail = 0;
 
-  Lisp_Object save_this_command, save_last_command;
-  Lisp_Object save_this_original_command, save_real_this_command;
 
   save_this_command = Vthis_command;
   save_this_original_command = Vthis_original_command;
@@ -338,7 +337,6 @@ invoke it.  If KEYS is omitted or nil, the return value of
 
   /* Set SPECS to the interactive form, or barf if not interactive.  */
   {
-    Lisp_Object form;
     form = Finteractive_form (function);
     if (CONSP (form))
       specs = filter_specs = Fcar (XCDR (form));
@@ -349,8 +347,8 @@ invoke it.  If KEYS is omitted or nil, the return value of
   /* If SPECS is not a string, invent one.  */
   if (! STRINGP (specs))
     {
-      Lisp_Object input;
-      Lisp_Object funval = Findirect_function (function, Qt);
+      funval = Findirect_function (function, Qt);
+
       uintmax_t events = num_input_events;
       input = specs;
       /* Compute the arg values using the user's expression.  */
@@ -360,8 +358,6 @@ invoke it.  If KEYS is omitted or nil, the return value of
       if (events != num_input_events || !NILP (record_flag))
 	{
 	  /* We should record this command on the command history.  */
-	  Lisp_Object values;
-	  Lisp_Object this_cmd;
 	  /* Make a copy of the list of values, for the command history,
 	     and turn them into things we can eval.  */
 	  values = quotify_args (Fcopy_sequence (specs));
@@ -385,11 +381,11 @@ invoke it.  If KEYS is omitted or nil, the return value of
       Vreal_this_command = save_real_this_command;
       kset_last_command (current_kboard, save_last_command);
 
-      Lisp_Object result
-	= unbind_to (speccount, CALLN (Fapply, Qfuncall_interactively,
+      result = unbind_to (speccount, CALLN (Fapply, Qfuncall_interactively,
 				       function, specs));
+
       SAFE_FREE ();
-      return result;
+      EXIT_LISP_FRAME (result);
     }
 
   /* SPECS is set to a string; use it as an interactive prompt.
@@ -435,7 +431,6 @@ invoke it.  If KEYS is omitted or nil, the return value of
 	string++;
       else if (*string == '@')
 	{
-	  Lisp_Object event, w;
 
 	  event = (next_event < key_count
 		   ? AREF (keys, next_event)
@@ -601,7 +596,6 @@ invoke it.  If KEYS is omitted or nil, the return value of
 	      teml = XCAR (teml);
 	    if (SYMBOLP (teml))
 	      {
-		Lisp_Object tem2;
 
 		teml = Fget (teml, Qevent_symbol_elements);
 		/* Ignore first element, which is the base key.  */
@@ -633,7 +627,6 @@ invoke it.  If KEYS is omitted or nil, the return value of
 	      teml = XCAR (teml);
 	    if (SYMBOLP (teml))
 	      {
-		Lisp_Object tem2;
 
 		teml = Fget (teml, Qevent_symbol_elements);
 		/* Ignore first element, which is the base key.  */
@@ -848,13 +841,12 @@ invoke it.  If KEYS is omitted or nil, the return value of
   kset_last_command (current_kboard, save_last_command);
 
   {
-    Lisp_Object val;
     specbind (Qcommand_debug_status, Qnil);
 
     val = Ffuncall (nargs, args);
     val = unbind_to (speccount, val);
     SAFE_FREE ();
-    return val;
+    EXIT_LISP_FRAME (val);
   }
 }
 
@@ -865,7 +857,8 @@ A raw prefix argument is what you get from `(interactive "P")'.
 Its numeric meaning is what you would get from `(interactive "p")'.  */)
   (Lisp_Object raw)
 {
-  Lisp_Object val;
+  ENTER_LISP_FRAME (raw);
+  LISP_LOCALS (val);
 
   if (NILP (raw))
     XSETFASTINT (val, 1);
@@ -878,7 +871,7 @@ Its numeric meaning is what you would get from `(interactive "p")'.  */)
   else
     XSETFASTINT (val, 1);
 
-  return val;
+  EXIT_LISP_FRAME (val);
 }
 
 void

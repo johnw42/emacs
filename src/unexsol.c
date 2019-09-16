@@ -12,11 +12,11 @@
 void
 unexec (const char *new_name, const char *old_name)
 {
-  Lisp_Object data;
-  Lisp_Object errstring;
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (data, errstring);
 
   if (! dldump (0, new_name, RTLD_MEMORY))
-    return;
+    EXIT_LISP_FRAME_VOID ();
 
   data = list1 (build_string (new_name));
   synchronize_system_messages_locale ();
@@ -25,4 +25,5 @@ unexec (const char *new_name, const char *old_name)
 
   xsignal (Qfile_error,
 	   Fcons (build_string ("Cannot unexec"), Fcons (errstring, data)));
+  EXIT_LISP_FRAME_VOID ();
 }

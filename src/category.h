@@ -81,15 +81,19 @@ INLINE_HEADER_BEGIN
 INLINE bool
 CATEGORY_MEMBER (EMACS_INT category, Lisp_Object category_set)
 {
-  return bool_vector_bitref (category_set, category);
+  ENTER_LISP_FRAME_T (bool, category_set);
+  EXIT_LISP_FRAME (bool_vector_bitref (category_set, category));
 }
 
 /* Return true if category set of CH contains CATEGORY.  */
 INLINE bool
 CHAR_HAS_CATEGORY (int ch, int category)
 {
-  Lisp_Object category_set = CATEGORY_SET (ch);
-  return CATEGORY_MEMBER (category, category_set);
+  ENTER_LISP_FRAME_T (bool);
+  LISP_LOCALS (category_set);
+  category_set = CATEGORY_SET (ch);
+
+  EXIT_LISP_FRAME (CATEGORY_MEMBER (category, category_set));
 }
 
 /* The standard category table is stored where it will automatically

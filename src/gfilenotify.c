@@ -40,7 +40,8 @@ dir_monitor_callback (GFileMonitor *monitor,
 		      GFileMonitorEvent event_type,
 		      gpointer user_data)
 {
-  Lisp_Object symbol, monitor_object, watch_object, flags;
+  ENTER_LISP_FRAME_T (gboolean);
+  LISP_LOCALS (symbol, monitor_object, watch_object, flags, otail);
   char *name = g_file_get_parse_name (file);
   char *oname = other_file ? g_file_get_parse_name (other_file) : NULL;
 
@@ -83,7 +84,8 @@ dir_monitor_callback (GFileMonitor *monitor,
   if (CONSP (watch_object))
     {
       struct input_event event;
-      Lisp_Object otail = oname ? list1 (build_string (oname)) : Qnil;
+      otail = oname ? list1 (build_string (oname)) : Qnil;
+
 
       /* Check, whether event_type is expected.  */
       flags = XCAR (XCDR (XCDR (watch_object)));
@@ -120,7 +122,7 @@ dir_monitor_callback (GFileMonitor *monitor,
   g_free (name);
   g_free (oname);
 
-  return TRUE;
+  EXIT_LISP_FRAME (TRUE);
 }
 
 DEFUN ("gfile-add-watch", Fgfile_add_watch, Sgfile_add_watch, 3, 3, 0,
@@ -166,7 +168,8 @@ FILE is the name of the file whose event is being reported.  FILE1
 will be reported only in case of the `moved' event.  */)
   (Lisp_Object file, Lisp_Object flags, Lisp_Object callback)
 {
-  Lisp_Object watch_object;
+  ENTER_LISP_FRAME (file, flags, callback);
+  LISP_LOCALS (watch_object, watch_descriptor);
   GFile *gfile;
   GFileMonitor *monitor;
   GFileMonitorFlags gflags = G_FILE_MONITOR_NONE;
@@ -203,7 +206,8 @@ will be reported only in case of the `moved' event.  */)
   if (! monitor)
     xsignal2 (Qfile_notify_error, build_string ("Cannot watch file"), file);
 
-  Lisp_Object watch_descriptor = make_pointer_integer (monitor);
+  watch_descriptor = make_pointer_integer (monitor);
+
 
   /* Check the dicey assumption that make_pointer_integer is safe.  */
   if (! INTEGERP (watch_descriptor))
@@ -224,7 +228,7 @@ will be reported only in case of the `moved' event.  */)
   watch_object = list4 (watch_descriptor, file, flags, callback);
   watch_list = Fcons (watch_object, watch_list);
 
-  return watch_descriptor;
+  EXIT_LISP_FRAME (watch_descriptor);
 }
 
 DEFUN ("gfile-rm-watch", Fgfile_rm_watch, Sgfile_rm_watch, 1, 1, 0,
@@ -233,7 +237,10 @@ DEFUN ("gfile-rm-watch", Fgfile_rm_watch, Sgfile_rm_watch, 1, 1, 0,
 WATCH-DESCRIPTOR should be an object returned by `gfile-add-watch'.  */)
      (Lisp_Object watch_descriptor)
 {
-  Lisp_Object watch_object = assq_no_quit (watch_descriptor, watch_list);
+  ENTER_LISP_FRAME (watch_descriptor);
+  LISP_LOCALS (watch_object);
+  watch_object = assq_no_quit (watch_descriptor, watch_list);
+
 
   if (! CONSP (watch_object))
     xsignal2 (Qfile_notify_error, build_string ("Not a watch descriptor"),
@@ -252,7 +259,7 @@ WATCH-DESCRIPTOR should be an object returned by `gfile-add-watch'.  */)
   /* Cleanup.  */
   g_object_unref (monitor);
 
-  return Qt;
+  EXIT_LISP_FRAME (Qt);
 }
 
 DEFUN ("gfile-valid-p", Fgfile_valid_p, Sgfile_valid_p, 1, 1, 0,
@@ -266,13 +273,16 @@ reason.  Removing the watch by calling `gfile-rm-watch' also makes it
 invalid.  */)
      (Lisp_Object watch_descriptor)
 {
-  Lisp_Object watch_object = Fassoc (watch_descriptor, watch_list, Qnil);
+  ENTER_LISP_FRAME (watch_descriptor);
+  LISP_LOCALS (watch_object);
+  watch_object = Fassoc (watch_descriptor, watch_list, Qnil);
+
   if (NILP (watch_object))
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
   else
     {
       GFileMonitor *monitor = XINTPTR (watch_descriptor);
-      return g_file_monitor_is_cancelled (monitor) ? Qnil : Qt;
+      EXIT_LISP_FRAME (g_file_monitor_is_cancelled (monitor) ? Qnil : Qt);
     }
 }
 
@@ -286,12 +296,13 @@ WATCH-DESCRIPTOR should be an object returned by `gfile-add-watch'.
 If WATCH-DESCRIPTOR is not valid, nil is returned.  */)
      (Lisp_Object watch_descriptor)
 {
+  ENTER_LISP_FRAME (watch_descriptor);
   if (NILP (Fgfile_valid_p (watch_descriptor)))
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
   else
     {
       GFileMonitor *monitor = XINTPTR (watch_descriptor);
-      return intern (G_OBJECT_TYPE_NAME (monitor));
+      EXIT_LISP_FRAME (intern (G_OBJECT_TYPE_NAME (monitor)));
     }
 }
 

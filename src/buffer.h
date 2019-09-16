@@ -970,20 +970,24 @@ struct buffer
 INLINE bool
 BUFFERP (Lisp_Object a)
 {
-  return PSEUDOVECTORP (a, PVEC_BUFFER);
+  ENTER_LISP_FRAME_T (bool, a);
+  EXIT_LISP_FRAME (PSEUDOVECTORP (a, PVEC_BUFFER));
 }
 
 INLINE void
 CHECK_BUFFER (Lisp_Object x)
 {
+  ENTER_LISP_FRAME (x);
   CHECK_TYPE (BUFFERP (x), Qbufferp, x);
+  EXIT_LISP_FRAME_VOID ();
 }
 
 INLINE struct buffer *
 XBUFFER (Lisp_Object a)
 {
+  ENTER_LISP_FRAME_T (struct buffer *, a);
   eassert (BUFFERP (a));
-  return XUNTAG_VECTORLIKE (a);
+  EXIT_LISP_FRAME (XUNTAG_VECTORLIKE (a));
 }
 
 /* Most code should use these functions to set Lisp fields in struct
@@ -992,134 +996,178 @@ XBUFFER (Lisp_Object a)
 INLINE void
 bset_bidi_paragraph_direction (struct buffer *b, Lisp_Object val)
 {
+  ENTER_LISP_FRAME (val);
   scheme_check_ptr (b, "buffer");
   PV_LISP_FIELD_SET(b, bidi_paragraph_direction_, val);
+  EXIT_LISP_FRAME_VOID ();
 }
 INLINE void
 bset_cache_long_scans (struct buffer *b, Lisp_Object val)
 {
+  ENTER_LISP_FRAME (val);
   scheme_check_ptr (b, "buffer");
   PV_LISP_FIELD_SET(b, cache_long_scans_, val);
+  EXIT_LISP_FRAME_VOID ();
 }
 INLINE void
 bset_case_canon_table (struct buffer *b, Lisp_Object val)
 {
+  ENTER_LISP_FRAME (val);
   scheme_check_ptr (b, "buffer");
   PV_LISP_FIELD_SET(b, case_canon_table_, val);
+  EXIT_LISP_FRAME_VOID ();
 }
 INLINE void
 bset_case_eqv_table (struct buffer *b, Lisp_Object val)
 {
+  ENTER_LISP_FRAME (val);
   scheme_check_ptr (b, "buffer");
   PV_LISP_FIELD_SET(b, case_eqv_table_, val);
+  EXIT_LISP_FRAME_VOID ();
 }
 INLINE void
 bset_directory (struct buffer *b, Lisp_Object val)
 {
+  ENTER_LISP_FRAME (val);
   scheme_check_ptr (b, "buffer");
   PV_LISP_FIELD_SET(b, directory_, val);
+  EXIT_LISP_FRAME_VOID ();
 }
 INLINE void
 bset_display_count (struct buffer *b, Lisp_Object val)
 {
+  ENTER_LISP_FRAME (val);
   scheme_check_ptr (b, "buffer");
   PV_LISP_FIELD_SET(b, display_count_, val);
+  EXIT_LISP_FRAME_VOID ();
 }
 INLINE void
 bset_left_margin_cols (struct buffer *b, Lisp_Object val)
 {
+  ENTER_LISP_FRAME (val);
   scheme_check_ptr (b, "buffer");
   PV_LISP_FIELD_SET(b, left_margin_cols_, val);
+  EXIT_LISP_FRAME_VOID ();
 }
 INLINE void
 bset_right_margin_cols (struct buffer *b, Lisp_Object val)
 {
+  ENTER_LISP_FRAME (val);
   scheme_check_ptr (b, "buffer");
   PV_LISP_FIELD_SET(b, right_margin_cols_, val);
+  EXIT_LISP_FRAME_VOID ();
 }
 INLINE void
 bset_display_time (struct buffer *b, Lisp_Object val)
 {
+  ENTER_LISP_FRAME (val);
   scheme_check_ptr (b, "buffer");
   PV_LISP_FIELD_SET(b, display_time_, val);
+  EXIT_LISP_FRAME_VOID ();
 }
 INLINE void
 bset_downcase_table (struct buffer *b, Lisp_Object val)
 {
+  ENTER_LISP_FRAME (val);
   scheme_check_ptr (b, "buffer");
   PV_LISP_FIELD_SET(b, downcase_table_, val);
+  EXIT_LISP_FRAME_VOID ();
 }
 INLINE void
 bset_enable_multibyte_characters (struct buffer *b, Lisp_Object val)
 {
+  ENTER_LISP_FRAME (val);
   scheme_check_ptr (b, "buffer");
   PV_LISP_FIELD_SET(b, enable_multibyte_characters_, val);
+  EXIT_LISP_FRAME_VOID ();
 }
 INLINE void
 bset_filename (struct buffer *b, Lisp_Object val)
 {
+  ENTER_LISP_FRAME (val);
   scheme_check_ptr (b, "buffer");
   PV_LISP_FIELD_SET(b, filename_, val);
+  EXIT_LISP_FRAME_VOID ();
 }
 INLINE void
 bset_keymap (struct buffer *b, Lisp_Object val)
 {
+  ENTER_LISP_FRAME (val);
   scheme_check_ptr (b, "buffer");
   PV_LISP_FIELD_SET(b, keymap_, val);
+  EXIT_LISP_FRAME_VOID ();
 }
 INLINE void
 bset_last_selected_window (struct buffer *b, Lisp_Object val)
 {
+  ENTER_LISP_FRAME (val);
   scheme_check_ptr (b, "buffer");
   PV_LISP_FIELD_SET(b, last_selected_window_, val);
+  EXIT_LISP_FRAME_VOID ();
 }
 INLINE void
 bset_local_var_alist (struct buffer *b, Lisp_Object val)
 {
+  ENTER_LISP_FRAME (val);
   scheme_check_ptr (b, "buffer");
   PV_LISP_FIELD_SET(b, local_var_alist_, val);
+  EXIT_LISP_FRAME_VOID ();
 }
 INLINE void
 bset_mark_active (struct buffer *b, Lisp_Object val)
 {
+  ENTER_LISP_FRAME (val);
   scheme_check_ptr (b, "buffer");
   PV_LISP_FIELD_SET(b, mark_active_, val);
+  EXIT_LISP_FRAME_VOID ();
 }
 INLINE void
 bset_point_before_scroll (struct buffer *b, Lisp_Object val)
 {
+  ENTER_LISP_FRAME (val);
   scheme_check_ptr (b, "buffer");
   PV_LISP_FIELD_SET(b, point_before_scroll_, val);
+  EXIT_LISP_FRAME_VOID ();
 }
 INLINE void
 bset_read_only (struct buffer *b, Lisp_Object val)
 {
+  ENTER_LISP_FRAME (val);
   scheme_check_ptr (b, "buffer");
   PV_LISP_FIELD_SET(b, read_only_, val);
+  EXIT_LISP_FRAME_VOID ();
 }
 INLINE void
 bset_truncate_lines (struct buffer *b, Lisp_Object val)
 {
+  ENTER_LISP_FRAME (val);
   scheme_check_ptr (b, "buffer");
   PV_LISP_FIELD_SET(b, truncate_lines_, val);
+  EXIT_LISP_FRAME_VOID ();
 }
 INLINE void
 bset_undo_list (struct buffer *b, Lisp_Object val)
 {
+  ENTER_LISP_FRAME (val);
   scheme_check_ptr (b, "buffer");
   b->undo_list_ = val;
+  EXIT_LISP_FRAME_VOID ();
 }
 INLINE void
 bset_upcase_table (struct buffer *b, Lisp_Object val)
 {
+  ENTER_LISP_FRAME (val);
   scheme_check_ptr (b, "buffer");
   PV_LISP_FIELD_SET(b, upcase_table_, val);
+  EXIT_LISP_FRAME_VOID ();
 }
 INLINE void
 bset_width_table (struct buffer *b, Lisp_Object val)
 {
+  ENTER_LISP_FRAME (val);
   scheme_check_ptr (b, "buffer");
   PV_LISP_FIELD_SET(b, width_table_, val);
+  EXIT_LISP_FRAME_VOID ();
 }
 
 #ifndef HAVE_CHEZ_SCHEME
@@ -1247,7 +1295,8 @@ extern void set_buffer_if_live (Lisp_Object);
 INLINE struct buffer *
 decode_buffer (Lisp_Object b)
 {
-  return NILP (b) ? current_buffer : (CHECK_BUFFER (b), XBUFFER (b));
+  ENTER_LISP_FRAME_T (struct buffer *, b);
+  EXIT_LISP_FRAME (NILP (b) ? current_buffer : (CHECK_BUFFER (b), XBUFFER (b)));
 }
 
 /* Set the current buffer to B.
@@ -1491,26 +1540,36 @@ per_buffer_value (struct buffer *b, int offset)
 INLINE void
 set_per_buffer_value (struct buffer *b, int offset, Lisp_Object value)
 {
+  ENTER_LISP_FRAME (value);
   scheme_check_ptr (b, "buffer");
   *(Lisp_Object *)(offset + (char *) b) = value;
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Downcase a character C, or make no change if that cannot be done.  */
 INLINE int
 downcase (int c)
 {
-  Lisp_Object downcase_table = BVAR (current_buffer, downcase_table);
-  Lisp_Object down = CHAR_TABLE_REF (downcase_table, c);
-  return NATNUMP (down) ? XFASTINT (down) : c;
+  ENTER_LISP_FRAME_T (int);
+  LISP_LOCALS (downcase_table, down);
+  downcase_table = BVAR (current_buffer, downcase_table);
+
+  down = CHAR_TABLE_REF (downcase_table, c);
+
+  EXIT_LISP_FRAME (NATNUMP (down) ? XFASTINT (down) : c);
 }
 
 /* Upcase a character C, or make no change if that cannot be done. */
 INLINE int
 upcase (int c)
 {
-  Lisp_Object upcase_table = BVAR (current_buffer, upcase_table);
-  Lisp_Object up = CHAR_TABLE_REF (upcase_table, c);
-  return NATNUMP (up) ? XFASTINT (up) : c;
+  ENTER_LISP_FRAME_T (int);
+  LISP_LOCALS (upcase_table, up);
+  upcase_table = BVAR (current_buffer, upcase_table);
+
+  up = CHAR_TABLE_REF (upcase_table, c);
+
+  EXIT_LISP_FRAME (NATNUMP (up) ? XFASTINT (up) : c);
 }
 
 /* True if C is upper case.  */

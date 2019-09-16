@@ -59,7 +59,9 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 static void
 CHECK_FLOAT (Lisp_Object x)
 {
+  ENTER_LISP_FRAME (x);
   CHECK_TYPE (FLOATP (x), Qfloatp, x);
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Extract a Lisp number as a `double', or signal an error.  */
@@ -67,8 +69,9 @@ CHECK_FLOAT (Lisp_Object x)
 double
 extract_float (Lisp_Object num)
 {
+  ENTER_LISP_FRAME_T (double, num);
   CHECK_NUMBER_OR_FLOAT (num);
-  return XFLOATINT (num);
+  EXIT_LISP_FRAME (XFLOATINT (num));
 }
 
 /* Trig functions.  */
@@ -77,18 +80,20 @@ DEFUN ("acos", Facos, Sacos, 1, 1, 0,
        doc: /* Return the inverse cosine of ARG.  */)
   (Lisp_Object arg)
 {
+  ENTER_LISP_FRAME (arg);
   double d = extract_float (arg);
   d = acos (d);
-  return make_float (d);
+  EXIT_LISP_FRAME (make_float (d));
 }
 
 DEFUN ("asin", Fasin, Sasin, 1, 1, 0,
        doc: /* Return the inverse sine of ARG.  */)
   (Lisp_Object arg)
 {
+  ENTER_LISP_FRAME (arg);
   double d = extract_float (arg);
   d = asin (d);
-  return make_float (d);
+  EXIT_LISP_FRAME (make_float (d));
 }
 
 DEFUN ("atan", Fatan, Satan, 1, 2, 0,
@@ -99,6 +104,7 @@ divided by X, i.e. the angle in radians between the vector (X, Y)
 and the x-axis.  */)
   (Lisp_Object y, Lisp_Object x)
 {
+  ENTER_LISP_FRAME (y, x);
   double d = extract_float (y);
 
   if (NILP (x))
@@ -108,42 +114,46 @@ and the x-axis.  */)
       double d2 = extract_float (x);
       d = atan2 (d, d2);
     }
-  return make_float (d);
+  EXIT_LISP_FRAME (make_float (d));
 }
 
 DEFUN ("cos", Fcos, Scos, 1, 1, 0,
        doc: /* Return the cosine of ARG.  */)
   (Lisp_Object arg)
 {
+  ENTER_LISP_FRAME (arg);
   double d = extract_float (arg);
   d = cos (d);
-  return make_float (d);
+  EXIT_LISP_FRAME (make_float (d));
 }
 
 DEFUN ("sin", Fsin, Ssin, 1, 1, 0,
        doc: /* Return the sine of ARG.  */)
   (Lisp_Object arg)
 {
+  ENTER_LISP_FRAME (arg);
   double d = extract_float (arg);
   d = sin (d);
-  return make_float (d);
+  EXIT_LISP_FRAME (make_float (d));
 }
 
 DEFUN ("tan", Ftan, Stan, 1, 1, 0,
        doc: /* Return the tangent of ARG.  */)
   (Lisp_Object arg)
 {
+  ENTER_LISP_FRAME (arg);
   double d = extract_float (arg);
   d = tan (d);
-  return make_float (d);
+  EXIT_LISP_FRAME (make_float (d));
 }
 
 DEFUN ("isnan", Fisnan, Sisnan, 1, 1, 0,
        doc: /* Return non nil if argument X is a NaN.  */)
   (Lisp_Object x)
 {
+  ENTER_LISP_FRAME (x);
   CHECK_FLOAT (x);
-  return isnan (XFLOAT_DATA (x)) ? Qt : Qnil;
+  EXIT_LISP_FRAME (isnan (XFLOAT_DATA (x)) ? Qt : Qnil);
 }
 
 /* Although the substitute does not work on NaNs, it is good enough
@@ -157,6 +167,7 @@ DEFUN ("copysign", Fcopysign, Scopysign, 2, 2, 0,
 Cause an error if X1 or X2 is not a float.  */)
   (Lisp_Object x1, Lisp_Object x2)
 {
+  ENTER_LISP_FRAME (x1, x2);
   double f1, f2;
 
   CHECK_FLOAT (x1);
@@ -167,7 +178,7 @@ Cause an error if X1 or X2 is not a float.  */)
 
   /* Use signbit instead of copysign, to avoid calling make_float when
      the result is X1.  */
-  return signbit (f1) != signbit (f2) ? make_float (-f1) : x1;
+  EXIT_LISP_FRAME (signbit (f1) != signbit (f2) ? make_float (-f1) : x1);
 }
 
 DEFUN ("frexp", Ffrexp, Sfrexp, 1, 1, 0,
@@ -182,10 +193,11 @@ The function returns the cons cell (SGNFCAND . EXP).
 If X is zero, both parts (SGNFCAND and EXP) are zero.  */)
   (Lisp_Object x)
 {
+  ENTER_LISP_FRAME (x);
   double f = extract_float (x);
   int exponent;
   double sgnfcand = frexp (f, &exponent);
-  return Fcons (make_float (sgnfcand), make_number (exponent));
+  EXIT_LISP_FRAME (Fcons (make_float (sgnfcand), make_number (exponent)));
 }
 
 DEFUN ("ldexp", Fldexp, Sldexp, 2, 2, 0,
@@ -193,24 +205,28 @@ DEFUN ("ldexp", Fldexp, Sldexp, 2, 2, 0,
 EXPONENT must be an integer.   */)
   (Lisp_Object sgnfcand, Lisp_Object exponent)
 {
+  ENTER_LISP_FRAME (sgnfcand, exponent);
   CHECK_NUMBER (exponent);
   int e = min (max (INT_MIN, XINT (exponent)), INT_MAX);
-  return make_float (ldexp (extract_float (sgnfcand), e));
+  EXIT_LISP_FRAME (make_float (ldexp (extract_float (sgnfcand), e)));
 }
 
 DEFUN ("exp", Fexp, Sexp, 1, 1, 0,
        doc: /* Return the exponential base e of ARG.  */)
   (Lisp_Object arg)
 {
+  ENTER_LISP_FRAME (arg);
   double d = extract_float (arg);
   d = exp (d);
-  return make_float (d);
+  EXIT_LISP_FRAME (make_float (d));
 }
 
 DEFUN ("expt", Fexpt, Sexpt, 2, 2, 0,
        doc: /* Return the exponential ARG1 ** ARG2.  */)
   (Lisp_Object arg1, Lisp_Object arg2)
 {
+  ENTER_LISP_FRAME (arg1, arg2);
+  LISP_LOCALS (val);
   CHECK_NUMBER_OR_FLOAT (arg1);
   CHECK_NUMBER_OR_FLOAT (arg2);
   if (INTEGERP (arg1)     /* common lisp spec */
@@ -219,7 +235,6 @@ DEFUN ("expt", Fexpt, Sexpt, 2, 2, 0,
     {				/* this can be improved by pre-calculating */
       EMACS_INT y;		/* some binary powers of x then accumulating */
       EMACS_UINT acc, x;  /* Unsigned so that overflow is well defined.  */
-      Lisp_Object val;
 
       x = XINT (arg1);
       y = XINT (arg2);
@@ -232,9 +247,9 @@ DEFUN ("expt", Fexpt, Sexpt, 2, 2, 0,
 	    acc *= x;
 	}
       XSETINT (val, acc);
-      return val;
+      EXIT_LISP_FRAME (val);
     }
-  return make_float (pow (XFLOATINT (arg1), XFLOATINT (arg2)));
+  EXIT_LISP_FRAME (make_float (pow (XFLOATINT (arg1), XFLOATINT (arg2))));
 }
 
 DEFUN ("log", Flog, Slog, 1, 2, 0,
@@ -242,6 +257,7 @@ DEFUN ("log", Flog, Slog, 1, 2, 0,
 If the optional argument BASE is given, return log ARG using that base.  */)
   (Lisp_Object arg, Lisp_Object base)
 {
+  ENTER_LISP_FRAME (arg, base);
   double d = extract_float (arg);
 
   if (NILP (base))
@@ -259,22 +275,24 @@ If the optional argument BASE is given, return log ARG using that base.  */)
       else
 	d = log (d) / log (b);
     }
-  return make_float (d);
+  EXIT_LISP_FRAME (make_float (d));
 }
 
 DEFUN ("sqrt", Fsqrt, Ssqrt, 1, 1, 0,
        doc: /* Return the square root of ARG.  */)
   (Lisp_Object arg)
 {
+  ENTER_LISP_FRAME (arg);
   double d = extract_float (arg);
   d = sqrt (d);
-  return make_float (d);
+  EXIT_LISP_FRAME (make_float (d));
 }
 
 DEFUN ("abs", Fabs, Sabs, 1, 1, 0,
        doc: /* Return the absolute value of ARG.  */)
-  (register Lisp_Object arg)
+  (Lisp_Object arg)
 {
+  ENTER_LISP_FRAME (arg);
   CHECK_NUMBER_OR_FLOAT (arg);
 
   if (FLOATP (arg))
@@ -282,19 +300,20 @@ DEFUN ("abs", Fabs, Sabs, 1, 1, 0,
   else if (XINT (arg) < 0)
     XSETINT (arg, - XINT (arg));
 
-  return arg;
+  EXIT_LISP_FRAME (arg);
 }
 
 DEFUN ("float", Ffloat, Sfloat, 1, 1, 0,
        doc: /* Return the floating point number equal to ARG.  */)
-  (register Lisp_Object arg)
+  (Lisp_Object arg)
 {
+  ENTER_LISP_FRAME (arg);
   CHECK_NUMBER_OR_FLOAT (arg);
 
   if (INTEGERP (arg))
-    return make_float ((double) XINT (arg));
+    EXIT_LISP_FRAME (make_float ((double) XINT (arg)));
   else				/* give 'em the same float back */
-    return arg;
+    EXIT_LISP_FRAME (arg);
 }
 
 static int
@@ -310,6 +329,7 @@ DEFUN ("logb", Flogb, Slogb, 1, 1, 0,
 This is the same as the exponent of a float.  */)
   (Lisp_Object arg)
 {
+  ENTER_LISP_FRAME (arg);
   EMACS_INT value;
   CHECK_NUMBER_OR_FLOAT (arg);
 
@@ -336,7 +356,7 @@ This is the same as the exponent of a float.  */)
 	       : EMACS_UINT_WIDTH - 1 - ecount_leading_zeros (i));
     }
 
-  return make_number (value);
+  EXIT_LISP_FRAME (make_number (value));
 }
 
 
@@ -348,13 +368,14 @@ rounding_driver (Lisp_Object arg, Lisp_Object divisor,
 		 EMACS_INT (*int_round2) (EMACS_INT, EMACS_INT),
 		 const char *name)
 {
+  ENTER_LISP_FRAME (arg, divisor);
   CHECK_NUMBER_OR_FLOAT (arg);
 
   double d;
   if (NILP (divisor))
     {
       if (! FLOATP (arg))
-	return arg;
+	EXIT_LISP_FRAME (arg);
       d = XFLOAT_DATA (arg);
     }
   else
@@ -364,7 +385,7 @@ rounding_driver (Lisp_Object arg, Lisp_Object divisor,
 	{
 	  if (XINT (divisor) == 0)
 	    xsignal0 (Qarith_error);
-	  return make_number (int_round2 (XINT (arg), XINT (divisor)));
+	  EXIT_LISP_FRAME (make_number (int_round2 (XINT (arg), XINT (divisor))));
 	}
 
       double f1 = FLOATP (arg) ? XFLOAT_DATA (arg) : XINT (arg);
@@ -383,7 +404,7 @@ rounding_driver (Lisp_Object arg, Lisp_Object divisor,
     {
       EMACS_INT ir = dr;
       if (! FIXNUM_OVERFLOW_P (ir))
-	return make_number (ir);
+	EXIT_LISP_FRAME (make_number (ir));
     }
   xsignal2 (Qrange_error, build_string (name), arg);
 }
@@ -451,7 +472,8 @@ This rounds the value towards +inf.
 With optional DIVISOR, return the smallest integer no less than ARG/DIVISOR.  */)
   (Lisp_Object arg, Lisp_Object divisor)
 {
-  return rounding_driver (arg, divisor, ceil, ceiling2, "ceiling");
+  ENTER_LISP_FRAME (arg, divisor);
+  EXIT_LISP_FRAME (rounding_driver (arg, divisor, ceil, ceiling2, "ceiling"));
 }
 
 DEFUN ("floor", Ffloor, Sfloor, 1, 2, 0,
@@ -460,7 +482,8 @@ This rounds the value towards -inf.
 With optional DIVISOR, return the largest integer no greater than ARG/DIVISOR.  */)
   (Lisp_Object arg, Lisp_Object divisor)
 {
-  return rounding_driver (arg, divisor, floor, floor2, "floor");
+  ENTER_LISP_FRAME (arg, divisor);
+  EXIT_LISP_FRAME (rounding_driver (arg, divisor, floor, floor2, "floor"));
 }
 
 DEFUN ("round", Fround, Sround, 1, 2, 0,
@@ -473,7 +496,8 @@ your machine.  For example, (round 2.5) can return 3 on some
 systems, but 2 on others.  */)
   (Lisp_Object arg, Lisp_Object divisor)
 {
-  return rounding_driver (arg, divisor, emacs_rint, round2, "round");
+  ENTER_LISP_FRAME (arg, divisor);
+  EXIT_LISP_FRAME (rounding_driver (arg, divisor, emacs_rint, round2, "round"));
 }
 
 DEFUN ("truncate", Ftruncate, Struncate, 1, 2, 0,
@@ -482,14 +506,16 @@ Rounds ARG toward zero.
 With optional DIVISOR, truncate ARG/DIVISOR.  */)
   (Lisp_Object arg, Lisp_Object divisor)
 {
-  return rounding_driver (arg, divisor, emacs_trunc, truncate2,
-			  "truncate");
+  ENTER_LISP_FRAME (arg, divisor);
+  EXIT_LISP_FRAME (rounding_driver (arg, divisor, emacs_trunc, truncate2,
+			  "truncate"));
 }
 
 
 Lisp_Object
 fmod_float (Lisp_Object x, Lisp_Object y)
 {
+  ENTER_LISP_FRAME (x, y);
   double f1, f2;
 
   f1 = FLOATP (x) ? XFLOAT_DATA (x) : XINT (x);
@@ -501,7 +527,7 @@ fmod_float (Lisp_Object x, Lisp_Object y)
   if (f2 < 0 ? f1 > 0 : f1 < 0)
     f1 += f2;
 
-  return make_float (f1);
+  EXIT_LISP_FRAME (make_float (f1));
 }
 
 DEFUN ("fceiling", Ffceiling, Sfceiling, 1, 1, 0,
@@ -509,10 +535,11 @@ DEFUN ("fceiling", Ffceiling, Sfceiling, 1, 1, 0,
 \(Round toward +inf.)  */)
   (Lisp_Object arg)
 {
+  ENTER_LISP_FRAME (arg);
   CHECK_FLOAT (arg);
   double d = XFLOAT_DATA (arg);
   d = ceil (d);
-  return make_float (d);
+  EXIT_LISP_FRAME (make_float (d));
 }
 
 DEFUN ("ffloor", Fffloor, Sffloor, 1, 1, 0,
@@ -520,20 +547,22 @@ DEFUN ("ffloor", Fffloor, Sffloor, 1, 1, 0,
 \(Round toward -inf.)  */)
   (Lisp_Object arg)
 {
+  ENTER_LISP_FRAME (arg);
   CHECK_FLOAT (arg);
   double d = XFLOAT_DATA (arg);
   d = floor (d);
-  return make_float (d);
+  EXIT_LISP_FRAME (make_float (d));
 }
 
 DEFUN ("fround", Ffround, Sfround, 1, 1, 0,
        doc: /* Return the nearest integer to ARG, as a float.  */)
   (Lisp_Object arg)
 {
+  ENTER_LISP_FRAME (arg);
   CHECK_FLOAT (arg);
   double d = XFLOAT_DATA (arg);
   d = emacs_rint (d);
-  return make_float (d);
+  EXIT_LISP_FRAME (make_float (d));
 }
 
 DEFUN ("ftruncate", Fftruncate, Sftruncate, 1, 1, 0,
@@ -541,10 +570,11 @@ DEFUN ("ftruncate", Fftruncate, Sftruncate, 1, 1, 0,
 \(Round toward zero.)  */)
   (Lisp_Object arg)
 {
+  ENTER_LISP_FRAME (arg);
   CHECK_FLOAT (arg);
   double d = XFLOAT_DATA (arg);
   d = emacs_trunc (d);
-  return make_float (d);
+  EXIT_LISP_FRAME (make_float (d));
 }
 
 void

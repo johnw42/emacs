@@ -35,9 +35,10 @@ DEFUN ("forward-point", Fforward_point, Sforward_point, 1, 1, 0,
        doc: /* Return buffer position N characters after (before if N negative) point.  */)
   (Lisp_Object n)
 {
+  ENTER_LISP_FRAME (n);
   CHECK_NUMBER (n);
 
-  return make_number (PT + XINT (n));
+  EXIT_LISP_FRAME (make_number (PT + XINT (n)));
 }
 
 /* Add N to point; or subtract N if FORWARD is false.  N defaults to 1.
@@ -45,6 +46,7 @@ DEFUN ("forward-point", Fforward_point, Sforward_point, 1, 1, 0,
 static Lisp_Object
 move_point (Lisp_Object n, bool forward)
 {
+  ENTER_LISP_FRAME (n);
   /* This used to just set point to point + XINT (n), and then check
      to see if it was within boundaries.  But now that SET_PT can
      potentially do a lot of stuff (calling entering and exiting
@@ -72,7 +74,7 @@ move_point (Lisp_Object n, bool forward)
     }
 
   SET_PT (new_point);
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 DEFUN ("forward-char", Fforward_char, Sforward_char, 0, 1, "^p",
@@ -86,7 +88,8 @@ right or to the left on the screen.  This is in contrast with
 \\[right-char], which see.  */)
   (Lisp_Object n)
 {
-  return move_point (n, 1);
+  ENTER_LISP_FRAME (n);
+  EXIT_LISP_FRAME (move_point (n, 1));
 }
 
 DEFUN ("backward-char", Fbackward_char, Sbackward_char, 0, 1, "^p",
@@ -100,7 +103,8 @@ right or to the left on the screen.  This is in contrast with
 \\[left-char], which see.  */)
   (Lisp_Object n)
 {
-  return move_point (n, 0);
+  ENTER_LISP_FRAME (n);
+  EXIT_LISP_FRAME (move_point (n, 0));
 }
 
 DEFUN ("forward-line", Fforward_line, Sforward_line, 0, 1, "^p",
@@ -121,6 +125,7 @@ it as a line moved across, even though there is no next line to
 go to its beginning.  */)
   (Lisp_Object n)
 {
+  ENTER_LISP_FRAME (n);
   ptrdiff_t opoint = PT, pos, pos_byte, shortage, count;
 
   if (NILP (n))
@@ -142,7 +147,7 @@ go to its beginning.  */)
 	      && (FETCH_BYTE (PT_BYTE - 1) != '\n'))))
     shortage--;
 
-  return make_number (count <= 0 ? - shortage : shortage);
+  EXIT_LISP_FRAME (make_number (count <= 0 ? - shortage : shortage));
 }
 
 DEFUN ("beginning-of-line", Fbeginning_of_line, Sbeginning_of_line, 0, 1, "^p",
@@ -159,6 +164,7 @@ instead.  For instance, `(forward-line 0)' does the same thing as
 `(beginning-of-line)', except that it ignores field boundaries.  */)
   (Lisp_Object n)
 {
+  ENTER_LISP_FRAME (n);
   if (NILP (n))
     XSETFASTINT (n, 1);
   else
@@ -166,7 +172,7 @@ instead.  For instance, `(forward-line 0)' does the same thing as
 
   SET_PT (XINT (Fline_beginning_position (n)));
 
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 DEFUN ("end-of-line", Fend_of_line, Send_of_line, 0, 1, "^p",
@@ -182,6 +188,7 @@ not move.  To ignore field boundaries bind `inhibit-field-text-motion'
 to t.  */)
   (Lisp_Object n)
 {
+  ENTER_LISP_FRAME (n);
   ptrdiff_t newpos;
 
   if (NILP (n))
@@ -215,7 +222,7 @@ to t.  */)
 	break;
     }
 
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 DEFUN ("delete-char", Fdelete_char, Sdelete_char, 1, 2, "p\nP",
@@ -228,6 +235,7 @@ The command `delete-forward-char' is preferable for interactive use, e.g.
 because it respects values of `delete-active-region' and `overwrite-mode'.  */)
   (Lisp_Object n, Lisp_Object killflag)
 {
+  ENTER_LISP_FRAME (n, killflag);
   EMACS_INT pos;
 
   CHECK_NUMBER (n);
@@ -257,7 +265,7 @@ because it respects values of `delete-active-region' and `overwrite-mode'.  */)
     {
       call1 (Qkill_forward_chars, n);
     }
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 /* Note that there's code in command_loop_1 which typically avoids
@@ -274,6 +282,7 @@ a non-nil value for the inserted character.  At the end, it runs
 `post-self-insert-hook'.  */)
   (Lisp_Object n)
 {
+  ENTER_LISP_FRAME (n);
   CHECK_NUMBER (n);
 
   if (XINT (n) < 0)
@@ -294,7 +303,7 @@ a non-nil value for the inserted character.  At the end, it runs
     frame_make_pointer_invisible (SELECTED_FRAME ());
   }
 
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 /* Insert N times character C
@@ -306,10 +315,10 @@ a non-nil value for the inserted character.  At the end, it runs
 static int
 internal_self_insert (int c, EMACS_INT n)
 {
+  ENTER_LISP_FRAME_T (int);
+  LISP_LOCALS (tem, overwrite, sym, prop, string, auto_fill_result);
   int hairy = 0;
-  Lisp_Object tem;
   register enum syntaxcode synt;
-  Lisp_Object overwrite;
   /* Length of multi-byte form of C.  */
   int len;
   /* Working buffer and pointer for multi-byte form of C.  */
@@ -413,7 +422,6 @@ internal_self_insert (int c, EMACS_INT n)
 	  == Sword))
     {
       EMACS_INT modiff = MODIFF;
-      Lisp_Object sym;
 
       sym = call0 (Qexpand_abbrev);
 
@@ -424,10 +432,9 @@ internal_self_insert (int c, EMACS_INT n)
 	  && ! NILP (XSYMBOL (sym)->u.s.function)
 	  && SYMBOLP (XSYMBOL (sym)->u.s.function))
 	{
-	  Lisp_Object prop;
 	  prop = Fget (XSYMBOL (sym)->u.s.function, intern ("no-self-insert"));
 	  if (! NILP (prop))
-	    return 1;
+	    EXIT_LISP_FRAME (1);
 	}
 
       if (MODIFF != modiff)
@@ -439,7 +446,8 @@ internal_self_insert (int c, EMACS_INT n)
       int mc = ((NILP (BVAR (current_buffer, enable_multibyte_characters))
 		 && SINGLE_BYTE_CHAR_P (c))
 		? UNIBYTE_TO_CHAR (c) : c);
-      Lisp_Object string = Fmake_string (make_number (n), make_number (mc));
+      string = Fmake_string (make_number (n), make_number (mc));
+
 
       if (spaces_to_insert)
 	{
@@ -469,7 +477,6 @@ internal_self_insert (int c, EMACS_INT n)
        : (c == ' ' || c == '\n'))
       && !NILP (BVAR (current_buffer, auto_fill_function)))
     {
-      Lisp_Object auto_fill_result;
 
       if (c == '\n')
 	/* After inserting a newline, move to previous line and fill
@@ -487,7 +494,7 @@ internal_self_insert (int c, EMACS_INT n)
   /* Run hooks for electric keys.  */
   run_hook (Qpost_self_insert_hook);
 
-  return hairy;
+  EXIT_LISP_FRAME (hairy);
 }
 
 /* module initialization */

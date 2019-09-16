@@ -45,9 +45,12 @@ DEF_DLL_FN (void, xmlCheckVersion, (int));
 static bool
 libxml2_loaded_p (void)
 {
-  Lisp_Object found = Fassq (Qlibxml2, Vlibrary_cache);
+  ENTER_LISP_FRAME_T (bool);
+  LISP_LOCALS (found);
+  found = Fassq (Qlibxml2, Vlibrary_cache);
 
-  return CONSP (found) && EQ (XCDR (found), Qt);
+
+  EXIT_LISP_FRAME (CONSP (found) && EQ (XCDR (found), Qt));
 }
 
 # undef htmlReadMemory
@@ -121,12 +124,16 @@ init_libxml2_functions (void)
 static Lisp_Object
 make_dom (xmlNode *node)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (result, plist);
   if (node->type == XML_ELEMENT_NODE)
     {
-      Lisp_Object result = list1 (intern ((char *) node->name));
+      result = list1 (intern ((char *) node->name));
+
       xmlNode *child;
       xmlAttr *property;
-      Lisp_Object plist = Qnil;
+      plist = Qnil;
+
 
       /* First add the attributes. */
       property = node->properties;
@@ -152,33 +159,36 @@ make_dom (xmlNode *node)
 	  child = child->next;
 	}
 
-      return Fnreverse (result);
+      EXIT_LISP_FRAME (Fnreverse (result));
     }
   else if (node->type == XML_TEXT_NODE || node->type == XML_CDATA_SECTION_NODE)
     {
       if (node->content)
-	return build_string ((char *) node->content);
+	EXIT_LISP_FRAME (build_string ((char *) node->content));
       else
-	return Qnil;
+	EXIT_LISP_FRAME (Qnil);
     }
   else if (node->type == XML_COMMENT_NODE)
     {
       if (node->content)
-	return list3 (intern ("comment"), Qnil,
-		      build_string ((char *) node->content));
+	EXIT_LISP_FRAME (list3 (intern ("comment"), Qnil,
+		      build_string ((char *) node->content)));
       else
-	return Qnil;
+	EXIT_LISP_FRAME (Qnil);
     }
   else
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
 }
 
 static Lisp_Object
 parse_region (Lisp_Object start, Lisp_Object end, Lisp_Object base_url,
 	      Lisp_Object discard_comments, bool htmlp)
 {
+  ENTER_LISP_FRAME (start, end, base_url, discard_comments);
+  LISP_LOCALS (result, r);
   xmlDoc *doc;
-  Lisp_Object result = Qnil;
+  result = Qnil;
+
   const char *burl = "";
   ptrdiff_t istart, iend, istart_byte, iend_byte;
   unsigned char *buftext;
@@ -229,7 +239,8 @@ parse_region (Lisp_Object start, Lisp_Object end, Lisp_Object base_url,
 
   if (doc != NULL)
     {
-      Lisp_Object r = Qnil;
+      r = Qnil;
+
       if (NILP(discard_comments))
         {
           /* If the document has toplevel comments, then this should
@@ -256,7 +267,7 @@ parse_region (Lisp_Object start, Lisp_Object end, Lisp_Object base_url,
       xmlFreeDoc (doc);
     }
 
-  return result;
+  EXIT_LISP_FRAME (result);
 }
 
 void
@@ -274,9 +285,10 @@ If BASE-URL is non-nil, it is used to expand relative URLs.
 If DISCARD-COMMENTS is non-nil, all HTML comments are discarded. */)
   (Lisp_Object start, Lisp_Object end, Lisp_Object base_url, Lisp_Object discard_comments)
 {
+  ENTER_LISP_FRAME (start, end, base_url, discard_comments);
   if (init_libxml2_functions ())
-    return parse_region (start, end, base_url, discard_comments, true);
-  return Qnil;
+    EXIT_LISP_FRAME (parse_region (start, end, base_url, discard_comments, true));
+  EXIT_LISP_FRAME (Qnil);
 }
 
 DEFUN ("libxml-parse-xml-region", Flibxml_parse_xml_region,
@@ -287,9 +299,10 @@ If BASE-URL is non-nil, it is used to expand relative URLs.
 If DISCARD-COMMENTS is non-nil, all HTML comments are discarded. */)
   (Lisp_Object start, Lisp_Object end, Lisp_Object base_url, Lisp_Object discard_comments)
 {
+  ENTER_LISP_FRAME (start, end, base_url, discard_comments);
   if (init_libxml2_functions ())
-    return parse_region (start, end, base_url, discard_comments, false);
-  return Qnil;
+    EXIT_LISP_FRAME (parse_region (start, end, base_url, discard_comments, false));
+  EXIT_LISP_FRAME (Qnil);
 }
 
 

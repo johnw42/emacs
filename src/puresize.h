@@ -110,7 +110,9 @@ PURE_P (void *ptr)
 INLINE void
 CHECK_IMPURE (Lisp_Object obj, void *ptr)
 {
+  ENTER_LISP_FRAME (obj);
   puresize_h_CHECK_IMPURE (obj, ptr);
+  EXIT_LISP_FRAME_VOID ();
 }
 
 #if DEFINE_KEY_OPS_AS_MACROS

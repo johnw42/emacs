@@ -50,6 +50,8 @@ If optional second arg, NO-EXEC, is non-nil, do not re-execute last
 macro before appending to it.  */)
   (Lisp_Object append, Lisp_Object no_exec)
 {
+  ENTER_LISP_FRAME (append, no_exec);
+  LISP_LOCALS (c);
   if (!NILP (KVAR (current_kboard, defining_kbd_macro)))
     error ("Already defining kbd macro");
 
@@ -96,7 +98,6 @@ macro before appending to it.  */)
       cvt = STRINGP (KVAR (current_kboard, Vlast_kbd_macro));
       for (i = 0; i < len; i++)
 	{
-	  Lisp_Object c;
 	  c = Faref (KVAR (current_kboard, Vlast_kbd_macro), make_number (i));
 	  if (cvt && NATNUMP (c) && (XFASTINT (c) & 0x80))
 	    XSETFASTINT (c, CHAR_META | (XFASTINT (c) & ~0x80));
@@ -116,7 +117,7 @@ macro before appending to it.  */)
     }
   kset_defining_kbd_macro (current_kboard, Qt);
 
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 /* Finish defining the current keyboard macro.  */
@@ -148,6 +149,7 @@ In Lisp, optional second arg LOOPFUNC may be a function that is called prior to
 each iteration of the macro.  Iteration stops if LOOPFUNC returns nil.  */)
   (Lisp_Object repeat, Lisp_Object loopfunc)
 {
+  ENTER_LISP_FRAME (repeat, loopfunc);
   if (NILP (KVAR (current_kboard, defining_kbd_macro)))
     error ("Not defining kbd macro");
 
@@ -170,7 +172,7 @@ each iteration of the macro.  Iteration stops if LOOPFUNC returns nil.  */)
       Fexecute_kbd_macro (KVAR (current_kboard, Vlast_kbd_macro),
 			  repeat, loopfunc);
     }
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 /* Store character c into kbd macro being defined.  */
@@ -178,6 +180,7 @@ each iteration of the macro.  Iteration stops if LOOPFUNC returns nil.  */)
 void
 store_kbd_macro_char (Lisp_Object c)
 {
+  ENTER_LISP_FRAME (c);
   struct kboard *kb = current_kboard;
 
   if (!NILP (KVAR (kb, defining_kbd_macro)))
@@ -195,6 +198,7 @@ store_kbd_macro_char (Lisp_Object c)
 
       *kb->kbd_macro_ptr++ = c;
     }
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Declare that all chars stored so far in the kbd macro being defined
@@ -220,8 +224,9 @@ DEFUN ("store-kbd-macro-event", Fstore_kbd_macro_event,
        doc: /* Store EVENT into the keyboard macro being defined.  */)
   (Lisp_Object event)
 {
+  ENTER_LISP_FRAME (event);
   store_kbd_macro_char (event);
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 DEFUN ("call-last-kbd-macro", Fcall_last_kbd_macro, Scall_last_kbd_macro,
@@ -237,6 +242,7 @@ In Lisp, optional second arg LOOPFUNC may be a function that is called prior to
 each iteration of the macro.  Iteration stops if LOOPFUNC returns nil.  */)
   (Lisp_Object prefix, Lisp_Object loopfunc)
 {
+  ENTER_LISP_FRAME (prefix, loopfunc);
   /* Don't interfere with recognition of the previous command
      from before this macro started.  */
   Vthis_command = KVAR (current_kboard, Vlast_command);
@@ -255,7 +261,7 @@ each iteration of the macro.  Iteration stops if LOOPFUNC returns nil.  */)
      so that it can be last, again, after we return.  */
   Vthis_command = KVAR (current_kboard, Vlast_command);
 
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 /* Restore Vexecuting_kbd_macro and executing_kbd_macro_index.
@@ -264,12 +270,14 @@ each iteration of the macro.  Iteration stops if LOOPFUNC returns nil.  */)
 static void
 pop_kbd_macro (Lisp_Object info)
 {
-  Lisp_Object tem;
+  ENTER_LISP_FRAME (info);
+  LISP_LOCALS (tem);
   Vexecuting_kbd_macro = XCAR (info);
   tem = XCDR (info);
   executing_kbd_macro_index = XINT (XCAR (tem));
   Vreal_this_command = XCDR (tem);
   run_hook (Qkbd_macro_termination_hook);
+  EXIT_LISP_FRAME_VOID ();
 }
 
 DEFUN ("execute-kbd-macro", Fexecute_kbd_macro, Sexecute_kbd_macro, 1, 3, 0,
@@ -282,8 +290,8 @@ Optional third arg LOOPFUNC may be a function that is called prior to
 each iteration of the macro.  Iteration stops if LOOPFUNC returns nil.  */)
   (Lisp_Object macro, Lisp_Object count, Lisp_Object loopfunc)
 {
-  Lisp_Object final;
-  Lisp_Object tem;
+  ENTER_LISP_FRAME (macro, count, loopfunc);
+  LISP_LOCALS (final, tem, cont);
   ptrdiff_t pdlcount = SPECPDL_INDEX ();
   EMACS_INT repeat = 1;
   EMACS_INT success_count = 0;
@@ -315,7 +323,6 @@ each iteration of the macro.  Iteration stops if LOOPFUNC returns nil.  */)
 
       if (!NILP (loopfunc))
 	{
-	  Lisp_Object cont;
 	  cont = call0 (loopfunc);
 	  if (NILP (cont))
 	    break;
@@ -334,7 +341,7 @@ each iteration of the macro.  Iteration stops if LOOPFUNC returns nil.  */)
 
   Vreal_this_command = Vexecuting_kbd_macro;
 
-  return unbind_to (pdlcount, Qnil);
+  EXIT_LISP_FRAME (unbind_to (pdlcount, Qnil));
 }
 
 void

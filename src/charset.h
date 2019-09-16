@@ -332,7 +332,9 @@ INLINE void
 set_charset_attr (struct charset *charset, enum charset_attr_index idx,
 		  Lisp_Object val)
 {
+  ENTER_LISP_FRAME (val);
   ASET (CHARSET_ATTRIBUTES (charset), idx, val);
+  EXIT_LISP_FRAME_VOID ();
 }
 
 

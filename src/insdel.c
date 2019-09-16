@@ -448,7 +448,8 @@ buffer_overflow (void)
 static void
 make_gap_larger (ptrdiff_t nbytes_added)
 {
-  Lisp_Object tem;
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (tem);
   ptrdiff_t real_gap_loc;
   ptrdiff_t real_gap_loc_byte;
   ptrdiff_t old_gap_size;
@@ -491,6 +492,7 @@ make_gap_larger (ptrdiff_t nbytes_added)
   *(Z_ADDR) = 0;
 
   Vinhibit_quit = tem;
+  EXIT_LISP_FRAME_VOID ();
 }
 
 #if defined USE_MMAP_FOR_BUFFERS || defined REL_ALLOC || defined DOUG_LEA_MALLOC
@@ -500,7 +502,8 @@ make_gap_larger (ptrdiff_t nbytes_added)
 static void
 make_gap_smaller (ptrdiff_t nbytes_removed)
 {
-  Lisp_Object tem;
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (tem);
   ptrdiff_t real_gap_loc;
   ptrdiff_t real_gap_loc_byte;
   ptrdiff_t real_Z;
@@ -552,6 +555,7 @@ make_gap_smaller (ptrdiff_t nbytes_removed)
   *(Z_ADDR) = 0;
 
   Vinhibit_quit = tem;
+  EXIT_LISP_FRAME_VOID ();
 }
 
 #endif /* USE_MMAP_FOR_BUFFERS || REL_ALLOC || DOUG_LEA_MALLOC */
@@ -961,15 +965,17 @@ void
 insert_from_string (Lisp_Object string, ptrdiff_t pos, ptrdiff_t pos_byte,
 		    ptrdiff_t length, ptrdiff_t length_byte, bool inherit)
 {
+  ENTER_LISP_FRAME (string);
   ptrdiff_t opoint = PT;
 
   if (SCHARS (string) == 0)
-    return;
+    EXIT_LISP_FRAME_VOID ();
 
   insert_from_string_1 (string, pos, pos_byte, length, length_byte,
 			inherit, 0);
   signal_after_change (opoint, 0, PT - opoint);
   update_compositions (opoint, PT, CHECK_BORDER);
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Like `insert_from_string' except that all markers pointing
@@ -981,15 +987,17 @@ insert_from_string_before_markers (Lisp_Object string,
 				   ptrdiff_t length, ptrdiff_t length_byte,
 				   bool inherit)
 {
+  ENTER_LISP_FRAME (string);
   ptrdiff_t opoint = PT;
 
   if (SCHARS (string) == 0)
-    return;
+    EXIT_LISP_FRAME_VOID ();
 
   insert_from_string_1 (string, pos, pos_byte, length, length_byte,
 			inherit, 1);
   signal_after_change (opoint, 0, PT - opoint);
   update_compositions (opoint, PT, CHECK_BORDER);
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Subroutine of the insertion functions above.  */
@@ -999,6 +1007,7 @@ insert_from_string_1 (Lisp_Object string, ptrdiff_t pos, ptrdiff_t pos_byte,
 		      ptrdiff_t nchars, ptrdiff_t nbytes,
 		      bool inherit, bool before_markers)
 {
+  ENTER_LISP_FRAME (string);
   ptrdiff_t outgoing_nbytes = nbytes;
   INTERVAL intervals;
 
@@ -1077,6 +1086,7 @@ insert_from_string_1 (Lisp_Object string, ptrdiff_t pos, ptrdiff_t pos_byte,
   adjust_point (nchars, outgoing_nbytes);
 
   check_markers ();
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Insert a sequence of NCHARS chars which occupy NBYTES bytes
@@ -1288,6 +1298,7 @@ static void
 adjust_after_replace (ptrdiff_t from, ptrdiff_t from_byte,
 		      Lisp_Object prev_text, ptrdiff_t len, ptrdiff_t len_byte)
 {
+  ENTER_LISP_FRAME (prev_text);
   ptrdiff_t nchars_del = 0, nbytes_del = 0;
 
 #ifdef BYTE_COMBINING_DEBUG
@@ -1340,6 +1351,7 @@ adjust_after_replace (ptrdiff_t from, ptrdiff_t from_byte,
     evaporate_overlays (from);
   MODIFF++;
   CHARS_MODIFF = MODIFF;
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Record undo information, adjust markers and position keepers for an
@@ -1381,13 +1393,14 @@ replace_range (ptrdiff_t from, ptrdiff_t to, Lisp_Object new,
                bool prepare, bool inherit, bool markers,
                bool adjust_match_data)
 {
+  ENTER_LISP_FRAME (new);
+  LISP_LOCALS (deletion);
   ptrdiff_t inschars = SCHARS (new);
   ptrdiff_t insbytes = SBYTES (new);
   ptrdiff_t from_byte, to_byte;
   ptrdiff_t nbytes_del, nchars_del;
   INTERVAL intervals;
   ptrdiff_t outgoing_insbytes = insbytes;
-  Lisp_Object deletion;
 
   check_markers ();
 
@@ -1413,7 +1426,7 @@ replace_range (ptrdiff_t from, ptrdiff_t to, Lisp_Object new,
   nbytes_del = to_byte - from_byte;
 
   if (nbytes_del <= 0 && insbytes == 0)
-    return;
+    EXIT_LISP_FRAME_VOID ();
 
   /* Make OUTGOING_INSBYTES describe the text
      as it will be inserted in this buffer.  */
@@ -1541,6 +1554,7 @@ replace_range (ptrdiff_t from, ptrdiff_t to, Lisp_Object new,
 
   signal_after_change (from, nchars_del, GPT - from);
   update_compositions (from, GPT, CHECK_BORDER);
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Replace the text from character positions FROM to TO with
@@ -1684,8 +1698,9 @@ del_range (ptrdiff_t from, ptrdiff_t to)
 Lisp_Object
 del_range_1 (ptrdiff_t from, ptrdiff_t to, bool prepare, bool ret_string)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (deletion);
   ptrdiff_t from_byte, to_byte;
-  Lisp_Object deletion;
 
   /* Make args be valid */
   if (from < BEGV)
@@ -1694,7 +1709,7 @@ del_range_1 (ptrdiff_t from, ptrdiff_t to, bool prepare, bool ret_string)
     to = ZV;
 
   if (to <= from)
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
 
   if (prepare)
     {
@@ -1709,7 +1724,7 @@ del_range_1 (ptrdiff_t from, ptrdiff_t to, bool prepare, bool ret_string)
   deletion = del_range_2 (from, from_byte, to, to_byte, ret_string);
   signal_after_change (from, to - from, 0);
   update_compositions (from, from, CHECK_HEAD);
-  return deletion;
+  EXIT_LISP_FRAME (deletion);
 }
 
 /* Like del_range_1 but args are byte positions, not char positions.  */
@@ -1806,8 +1821,9 @@ Lisp_Object
 del_range_2 (ptrdiff_t from, ptrdiff_t from_byte,
 	     ptrdiff_t to, ptrdiff_t to_byte, bool ret_string)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (deletion);
   ptrdiff_t nbytes_del, nchars_del;
-  Lisp_Object deletion;
 
   check_markers ();
 
@@ -1876,7 +1892,7 @@ del_range_2 (ptrdiff_t from, ptrdiff_t from_byte,
 
   evaporate_overlays (from);
 
-  return deletion;
+  EXIT_LISP_FRAME (deletion);
 }
 
 /* Call this if you're about to change the text of current buffer
@@ -1930,8 +1946,9 @@ void
 prepare_to_modify_buffer_1 (ptrdiff_t start, ptrdiff_t end,
 			    ptrdiff_t *preserve_ptr)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (temp, preserve_marker);
   struct buffer *base_buffer;
-  Lisp_Object temp;
 
   XSETFASTINT (temp, start);
   if (!NILP (BVAR (current_buffer, read_only)))
@@ -1945,7 +1962,6 @@ prepare_to_modify_buffer_1 (ptrdiff_t start, ptrdiff_t end,
     {
       if (preserve_ptr)
 	{
-	  Lisp_Object preserve_marker;
 	  preserve_marker = Fcopy_marker (make_number (*preserve_ptr), Qnil);
 	  verify_interval_modification (current_buffer, start, end);
 	  *preserve_ptr = marker_position (preserve_marker);
@@ -1962,7 +1978,7 @@ prepare_to_modify_buffer_1 (ptrdiff_t start, ptrdiff_t end,
     base_buffer = current_buffer;
 
   if (inhibit_modification_hooks)
-    return;
+    EXIT_LISP_FRAME_VOID ();
 
   if (!NILP (BVAR (base_buffer, file_truename))
       /* Make binding buffer-file-name to nil effective.  */
@@ -1984,6 +2000,7 @@ prepare_to_modify_buffer_1 (ptrdiff_t start, ptrdiff_t end,
 
   signal_before_change (start, end, preserve_ptr);
   Fset (Qdeactivate_mark, Qt);
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Like above, but called when we know that the buffer text
@@ -2107,9 +2124,8 @@ static void
 signal_before_change (ptrdiff_t start_int, ptrdiff_t end_int,
 		      ptrdiff_t *preserve_ptr)
 {
-  Lisp_Object start, end;
-  Lisp_Object start_marker, end_marker;
-  Lisp_Object preserve_marker;
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (start, end, start_marker, end_marker, preserve_marker);
   ptrdiff_t count = SPECPDL_INDEX ();
   struct rvoe_arg rvoe_arg;
 
@@ -2165,6 +2181,7 @@ signal_before_change (ptrdiff_t start_int, ptrdiff_t end_int,
   RESTORE_VALUE;
 
   unbind_to (count, Qnil);
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Signal a change immediately after it happens.
@@ -2177,11 +2194,13 @@ signal_before_change (ptrdiff_t start_int, ptrdiff_t end_int,
 void
 signal_after_change (ptrdiff_t charpos, ptrdiff_t lendel, ptrdiff_t lenins)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (elt);
   ptrdiff_t count = SPECPDL_INDEX ();
   struct rvoe_arg rvoe_arg;
 
   if (inhibit_modification_hooks)
-    return;
+    EXIT_LISP_FRAME_VOID ();
 
   /* If we are deferring calls to the after-change functions
      and there are no before-change functions,
@@ -2190,7 +2209,6 @@ signal_after_change (ptrdiff_t charpos, ptrdiff_t lendel, ptrdiff_t lenins)
       && NILP (Vbefore_change_functions)
       && !buffer_has_overlays ())
     {
-      Lisp_Object elt;
 
       if (!NILP (combine_after_change_list)
 	  && current_buffer != XBUFFER (combine_after_change_buffer))
@@ -2202,7 +2220,7 @@ signal_after_change (ptrdiff_t charpos, ptrdiff_t lendel, ptrdiff_t lenins)
 	= Fcons (elt, combine_after_change_list);
       combine_after_change_buffer = Fcurrent_buffer ();
 
-      return;
+      EXIT_LISP_FRAME_VOID ();
     }
 
   if (!NILP (combine_after_change_list))
@@ -2242,6 +2260,7 @@ signal_after_change (ptrdiff_t charpos, ptrdiff_t lendel, ptrdiff_t lenins)
 				  make_number (charpos + lenins));
 
   unbind_to (count, Qnil);
+  EXIT_LISP_FRAME_VOID ();
 }
 
 static void
@@ -2255,13 +2274,14 @@ DEFUN ("combine-after-change-execute", Fcombine_after_change_execute,
        doc: /* This function is for use internally in the function `combine-after-change-calls'.  */)
   (void)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (tail, elt);
   ptrdiff_t count = SPECPDL_INDEX ();
   ptrdiff_t beg, end, change;
   ptrdiff_t begpos, endpos;
-  Lisp_Object tail;
 
   if (NILP (combine_after_change_list))
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
 
   /* It is rare for combine_after_change_buffer to be invalid, but
      possible.  It can happen when combine-after-change-calls is
@@ -2271,7 +2291,7 @@ DEFUN ("combine-after-change-execute", Fcombine_after_change_execute,
       || !BUFFER_LIVE_P (XBUFFER (combine_after_change_buffer)))
     {
       combine_after_change_list = Qnil;
-      return Qnil;
+      EXIT_LISP_FRAME (Qnil);
     }
 
   record_unwind_current_buffer ();
@@ -2290,7 +2310,6 @@ DEFUN ("combine-after-change-execute", Fcombine_after_change_execute,
   for (tail = combine_after_change_list; CONSP (tail);
        tail = XCDR (tail))
     {
-      Lisp_Object elt;
       ptrdiff_t thisbeg, thisend, thischange;
 
       /* Extract the info from the next element.  */
@@ -2332,7 +2351,7 @@ DEFUN ("combine-after-change-execute", Fcombine_after_change_execute,
   signal_after_change (begpos, endpos - begpos - change, endpos - begpos);
   update_compositions (begpos, endpos, CHECK_ALL);
 
-  return unbind_to (count, Qnil);
+  EXIT_LISP_FRAME (unbind_to (count, Qnil));
 }
 
 void

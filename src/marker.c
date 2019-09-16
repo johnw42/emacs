@@ -130,7 +130,9 @@ clear_charpos_cache (struct buffer *b)
 static void
 CHECK_MARKER (Lisp_Object x)
 {
+  ENTER_LISP_FRAME (x);
   CHECK_TYPE (MARKERP (x), Qmarkerp, x);
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Return the byte position corresponding to CHARPOS in B.  */
@@ -394,9 +396,10 @@ buf_bytepos_to_charpos (struct buffer *b, ptrdiff_t bytepos)
 DEFUN ("marker-buffer", Fmarker_buffer, Smarker_buffer, 1, 1, 0,
        doc: /* Return the buffer that MARKER points into, or nil if none.
 Returns nil if MARKER points into a dead buffer.  */)
-  (register Lisp_Object marker)
+  (Lisp_Object marker)
 {
-  register Lisp_Object buf;
+  ENTER_LISP_FRAME (marker);
+  LISP_LOCALS (buf);
   CHECK_MARKER (marker);
   if (XMARKER (marker)->buffer)
     {
@@ -406,20 +409,21 @@ Returns nil if MARKER points into a dead buffer.  */)
 	 markers have to be unlinked from their buffer as soon as the buffer
 	 is killed.  */
       eassert (BUFFER_LIVE_P (XBUFFER (buf)));
-      return buf;
+      EXIT_LISP_FRAME (buf);
     }
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 DEFUN ("marker-position", Fmarker_position, Smarker_position, 1, 1, 0,
        doc: /* Return the position of MARKER, or nil if it points nowhere.  */)
   (Lisp_Object marker)
 {
+  ENTER_LISP_FRAME (marker);
   CHECK_MARKER (marker);
   if (XMARKER (marker)->buffer)
-    return make_number (XMARKER (marker)->charpos);
+    EXIT_LISP_FRAME (make_number (XMARKER (marker)->charpos));
 
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 /* Change M so it points to B at CHARPOS and BYTEPOS.  */
@@ -454,8 +458,9 @@ attach_marker (struct Lisp_Marker *m, struct buffer *b,
 static struct buffer *
 live_buffer (Lisp_Object buffer)
 {
+  ENTER_LISP_FRAME_T (struct buffer *, buffer);
   struct buffer *b = decode_buffer (buffer);
-  return BUFFER_LIVE_P (b) ? b : NULL;
+  EXIT_LISP_FRAME (BUFFER_LIVE_P (b) ? b : NULL);
 }
 
 /* Internal function to set MARKER in BUFFER at POSITION.  Non-zero
@@ -465,6 +470,7 @@ static Lisp_Object
 set_marker_internal (Lisp_Object marker, Lisp_Object position,
 		     Lisp_Object buffer, bool restricted)
 {
+  ENTER_LISP_FRAME (marker, position, buffer);
   struct Lisp_Marker *m;
   struct buffer *b = live_buffer (buffer);
 
@@ -520,7 +526,7 @@ set_marker_internal (Lisp_Object marker, Lisp_Object position,
 
       attach_marker (m, b, charpos, bytepos);
     }
-  return marker;
+  EXIT_LISP_FRAME (marker);
 }
 
 DEFUN ("set-marker", Fset_marker, Sset_marker, 2, 3, 0,
@@ -530,7 +536,8 @@ POSITION is nil, makes marker point nowhere so it no longer slows down
 editing in any buffer.  Returns MARKER.  */)
   (Lisp_Object marker, Lisp_Object position, Lisp_Object buffer)
 {
-  return set_marker_internal (marker, position, buffer, false);
+  ENTER_LISP_FRAME (marker, position, buffer);
+  EXIT_LISP_FRAME (set_marker_internal (marker, position, buffer, false));
 }
 
 /* Like the above, but won't let the position be outside the visible part.  */
@@ -539,7 +546,8 @@ Lisp_Object
 set_marker_restricted (Lisp_Object marker, Lisp_Object position,
 		       Lisp_Object buffer)
 {
-  return set_marker_internal (marker, position, buffer, true);
+  ENTER_LISP_FRAME (marker, position, buffer);
+  EXIT_LISP_FRAME (set_marker_internal (marker, position, buffer, true));
 }
 
 /* Set the position of MARKER, specifying both the
@@ -549,6 +557,7 @@ Lisp_Object
 set_marker_both (Lisp_Object marker, Lisp_Object buffer,
 		 ptrdiff_t charpos, ptrdiff_t bytepos)
 {
+  ENTER_LISP_FRAME (marker, buffer);
   register struct Lisp_Marker *m;
   register struct buffer *b = live_buffer (buffer);
 
@@ -559,7 +568,7 @@ set_marker_both (Lisp_Object marker, Lisp_Object buffer,
     attach_marker (m, b, charpos, bytepos);
   else
     unchain_marker (m);
-  return marker;
+  EXIT_LISP_FRAME (marker);
 }
 
 /* Like the above, but won't let the position be outside the visible part.  */
@@ -568,6 +577,7 @@ Lisp_Object
 set_marker_restricted_both (Lisp_Object marker, Lisp_Object buffer,
 			    ptrdiff_t charpos, ptrdiff_t bytepos)
 {
+  ENTER_LISP_FRAME (marker, buffer);
   register struct Lisp_Marker *m;
   register struct buffer *b = live_buffer (buffer);
 
@@ -583,7 +593,7 @@ set_marker_restricted_both (Lisp_Object marker, Lisp_Object buffer,
     }
   else
     unchain_marker (m);
-  return marker;
+  EXIT_LISP_FRAME (marker);
 }
 
 /* Detach a marker so that it no longer points anywhere and no longer
@@ -592,7 +602,9 @@ set_marker_restricted_both (Lisp_Object marker, Lisp_Object buffer,
 void
 detach_marker (Lisp_Object marker)
 {
+  ENTER_LISP_FRAME (marker);
   Fset_marker (marker, Qnil, Qnil);
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Remove MARKER from the chain of whatever buffer it is in,
@@ -643,6 +655,7 @@ unchain_marker (register struct Lisp_Marker *marker)
 ptrdiff_t
 marker_position (Lisp_Object marker)
 {
+  ENTER_LISP_FRAME_T (ptrdiff_t, marker);
   register struct Lisp_Marker *m = XMARKER (marker);
   register struct buffer *buf = m->buffer;
 
@@ -651,7 +664,7 @@ marker_position (Lisp_Object marker)
 
   eassert (BUF_BEG (buf) <= m->charpos && m->charpos <= BUF_Z (buf));
 
-  return m->charpos;
+  EXIT_LISP_FRAME (m->charpos);
 }
 
 /* Return the byte position of marker MARKER, as a C integer.  */
@@ -659,6 +672,7 @@ marker_position (Lisp_Object marker)
 ptrdiff_t
 marker_byte_position (Lisp_Object marker)
 {
+  ENTER_LISP_FRAME_T (ptrdiff_t, marker);
   register struct Lisp_Marker *m = XMARKER (marker);
   register struct buffer *buf = m->buffer;
 
@@ -667,7 +681,7 @@ marker_byte_position (Lisp_Object marker)
 
   eassert (BUF_BEG_BYTE (buf) <= m->bytepos && m->bytepos <= BUF_Z_BYTE (buf));
 
-  return m->bytepos;
+  EXIT_LISP_FRAME (m->bytepos);
 }
 
 DEFUN ("copy-marker", Fcopy_marker, Scopy_marker, 0, 2, 0,
@@ -677,9 +691,10 @@ at that position in the current buffer.
 If MARKER is not specified, the new marker does not point anywhere.
 The optional argument TYPE specifies the insertion type of the new marker;
 see `marker-insertion-type'.  */)
-  (register Lisp_Object marker, Lisp_Object type)
+  (Lisp_Object marker, Lisp_Object type)
 {
-  register Lisp_Object new;
+  ENTER_LISP_FRAME (marker, type);
+  LISP_LOCALS (new);
 
   if (!NILP (marker))
   CHECK_TYPE (INTEGERP (marker) || MARKERP (marker), Qinteger_or_marker_p, marker);
@@ -688,17 +703,18 @@ see `marker-insertion-type'.  */)
   Fset_marker (new, marker,
 	       (MARKERP (marker) ? Fmarker_buffer (marker) : Qnil));
   XMARKER (new)->insertion_type = !NILP (type);
-  return new;
+  EXIT_LISP_FRAME (new);
 }
 
 DEFUN ("marker-insertion-type", Fmarker_insertion_type,
        Smarker_insertion_type, 1, 1, 0,
        doc: /* Return insertion type of MARKER: t if it stays after inserted text.
 The value nil means the marker stays before text inserted there.  */)
-  (register Lisp_Object marker)
+  (Lisp_Object marker)
 {
+  ENTER_LISP_FRAME (marker);
   CHECK_MARKER (marker);
-  return XMARKER (marker)->insertion_type ? Qt : Qnil;
+  EXIT_LISP_FRAME (XMARKER (marker)->insertion_type ? Qt : Qnil);
 }
 
 DEFUN ("set-marker-insertion-type", Fset_marker_insertion_type,
@@ -708,10 +724,11 @@ If TYPE is t, it means the marker advances when you insert text at it.
 If TYPE is nil, it means the marker stays behind when you insert text at it.  */)
   (Lisp_Object marker, Lisp_Object type)
 {
+  ENTER_LISP_FRAME (marker, type);
   CHECK_MARKER (marker);
 
   XMARKER (marker)->insertion_type = ! NILP (type);
-  return type;
+  EXIT_LISP_FRAME (type);
 }
 
 DEFUN ("buffer-has-markers-at", Fbuffer_has_markers_at, Sbuffer_has_markers_at,
@@ -719,6 +736,7 @@ DEFUN ("buffer-has-markers-at", Fbuffer_has_markers_at, Sbuffer_has_markers_at,
        doc: /* Return t if there are markers pointing at POSITION in the current buffer.  */)
   (Lisp_Object position)
 {
+  ENTER_LISP_FRAME (position);
   register struct Lisp_Marker *tail;
   register ptrdiff_t charpos;
 
@@ -726,9 +744,9 @@ DEFUN ("buffer-has-markers-at", Fbuffer_has_markers_at, Sbuffer_has_markers_at,
 
   for (tail = BUF_MARKERS (current_buffer); tail; tail = tail->next)
     if (tail->charpos == charpos)
-      return Qt;
+      EXIT_LISP_FRAME (Qt);
 
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 #ifdef MARKER_DEBUG

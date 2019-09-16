@@ -428,20 +428,24 @@ struct window
 INLINE bool
 WINDOWP (Lisp_Object a)
 {
-  return PSEUDOVECTORP (a, PVEC_WINDOW);
+  ENTER_LISP_FRAME_T (bool, a);
+  EXIT_LISP_FRAME (PSEUDOVECTORP (a, PVEC_WINDOW));
 }
 
 INLINE void
 CHECK_WINDOW (Lisp_Object x)
 {
+  ENTER_LISP_FRAME (x);
   CHECK_TYPE (WINDOWP (x), Qwindowp, x);
+  EXIT_LISP_FRAME_VOID ();
 }
 
 INLINE struct window *
 XWINDOW (Lisp_Object a)
 {
+  ENTER_LISP_FRAME_T (struct window *, a);
   eassert (WINDOWP (a));
-  return XUNTAG_VECTORLIKE (a);
+  EXIT_LISP_FRAME (XUNTAG_VECTORLIKE (a));
 }
 
 /* Most code should use these functions to set Lisp fields in struct
@@ -449,49 +453,65 @@ XWINDOW (Lisp_Object a)
 INLINE void
 wset_frame (struct window *w, Lisp_Object val)
 {
+  ENTER_LISP_FRAME (val);
   PV_LISP_FIELD_SET(w, frame, val);
+  EXIT_LISP_FRAME_VOID ();
 }
 
 INLINE void
 wset_next (struct window *w, Lisp_Object val)
 {
+  ENTER_LISP_FRAME (val);
   PV_LISP_FIELD_SET(w, next, val);
+  EXIT_LISP_FRAME_VOID ();
 }
 
 INLINE void
 wset_prev (struct window *w, Lisp_Object val)
 {
+  ENTER_LISP_FRAME (val);
   PV_LISP_FIELD_SET(w, prev, val);
+  EXIT_LISP_FRAME_VOID ();
 }
 
 INLINE void
 wset_redisplay_end_trigger (struct window *w, Lisp_Object val)
 {
+  ENTER_LISP_FRAME (val);
   PV_LISP_FIELD_SET(w, redisplay_end_trigger, val);
+  EXIT_LISP_FRAME_VOID ();
 }
 
 INLINE void
 wset_new_pixel (struct window *w, Lisp_Object val)
 {
+  ENTER_LISP_FRAME (val);
   PV_LISP_FIELD_SET(w, new_pixel, val);
+  EXIT_LISP_FRAME_VOID ();
 }
 
 INLINE void
 wset_vertical_scroll_bar (struct window *w, Lisp_Object val)
 {
+  ENTER_LISP_FRAME (val);
   PV_LISP_FIELD_SET(w, vertical_scroll_bar, val);
+  EXIT_LISP_FRAME_VOID ();
 }
 
 INLINE void
 wset_horizontal_scroll_bar (struct window *w, Lisp_Object val)
 {
+  ENTER_LISP_FRAME (val);
   PV_LISP_FIELD_SET(w, horizontal_scroll_bar, val);
+  EXIT_LISP_FRAME_VOID ();
 }
 
 INLINE void
 wset_horizontal_scroll_bar_type (struct window *w, Lisp_Object val)
 {
+  ENTER_LISP_FRAME (val);
   PV_LISP_FIELD_SET(w, horizontal_scroll_bar_type, val);
+  EXIT_LISP_FRAME_VOID ();
 }
 
 INLINE void

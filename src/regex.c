@@ -2110,6 +2110,8 @@ set_image_of_range_1 (struct range_table_work_area *work_area,
 		      re_wchar_t start, re_wchar_t end,
 		      RE_TRANSLATE_TYPE translate)
 {
+  ENTER_LISP_FRAME_T (int);
+  LISP_LOCALS (eqv_table);
   /* `one_case' indicates a character, or a run of characters,
      each of which is an isolate (no case-equivalents).
      This includes all ASCII non-letters.
@@ -2133,14 +2135,13 @@ set_image_of_range_1 (struct range_table_work_area *work_area,
   enum case_type run_type = strange;
   int run_start, run_end, run_eqv_end;
 
-  Lisp_Object eqv_table;
 
   if (!RE_TRANSLATE_P (translate))
     {
       EXTEND_RANGE_TABLE (work_area, 2);
       work_area->table[work_area->used++] = (start);
       work_area->table[work_area->used++] = (end);
-      return -1;
+      EXIT_LISP_FRAME (-1);
     }
 
   eqv_table = XCHAR_TABLE (translate)->extras[2];
@@ -2241,7 +2242,7 @@ set_image_of_range_1 (struct range_table_work_area *work_area,
 	= RE_TRANSLATE (eqv_table, run_end);
     }
 
-  return -1;
+  EXIT_LISP_FRAME (-1);
 }
 
 #endif /* emacs */

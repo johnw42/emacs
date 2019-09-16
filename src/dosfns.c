@@ -62,6 +62,7 @@ REGISTERS should be a vector produced by `make-register' and
 `set-register-value'.  */)
   (Lisp_Object interrupt, Lisp_Object registers)
 {
+  ENTER_LISP_FRAME (interrupt, registers);
   register int i;
   int no;
   union REGS inregs, outregs;
@@ -70,7 +71,7 @@ REGISTERS should be a vector produced by `make-register' and
   no = (unsigned long) XINT (interrupt);
   CHECK_VECTOR (registers);
   if (no < 0 || no > 0xff || ASIZE (registers) != 8)
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
   for (i = 0; i < 8; i++)
     CHECK_NUMBER (AREF (registers, i));
 
@@ -94,7 +95,7 @@ REGISTERS should be a vector produced by `make-register' and
   ASET (registers, 6, make_number (outregs.x.cflag));
   ASET (registers, 7, make_number (outregs.x.flags));
 
-  return registers;
+  EXIT_LISP_FRAME (registers);
 }
 
 DEFUN ("msdos-memget", Fdos_memget, Sdos_memget, 2, 2, 0,
@@ -102,6 +103,7 @@ DEFUN ("msdos-memget", Fdos_memget, Sdos_memget, 2, 2, 0,
 Return the updated VECTOR.  */)
   (Lisp_Object address, Lisp_Object vector)
 {
+  ENTER_LISP_FRAME (address, vector);
   register int i;
   int offs, len;
   char *buf;
@@ -111,20 +113,21 @@ Return the updated VECTOR.  */)
   CHECK_VECTOR (vector);
   len = ASIZE (vector);
   if (len < 1 || len > 2048 || offs < 0 || offs > 0xfffff - len)
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
   buf = alloca (len);
   dosmemget (offs, len, buf);
 
   for (i = 0; i < len; i++)
     ASET (vector, i, make_number (buf[i]));
 
-  return vector;
+  EXIT_LISP_FRAME (vector);
 }
 
 DEFUN ("msdos-memput", Fdos_memput, Sdos_memput, 2, 2, 0,
        doc: /* Write DOS memory at offset ADDRESS from VECTOR.  */)
   (Lisp_Object address, Lisp_Object vector)
 {
+  ENTER_LISP_FRAME (address, vector);
   register int i;
   int offs, len;
   char *buf;
@@ -134,7 +137,7 @@ DEFUN ("msdos-memput", Fdos_memput, Sdos_memput, 2, 2, 0,
   CHECK_VECTOR (vector);
   len = ASIZE (vector);
   if (len < 1 || len > 2048 || offs < 0 || offs > 0xfffff - len)
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
   buf = alloca (len);
 
   for (i = 0; i < len; i++)
@@ -144,7 +147,7 @@ DEFUN ("msdos-memput", Fdos_memput, Sdos_memput, 2, 2, 0,
     }
 
   dosmemput (buf, len, offs);
-  return Qt;
+  EXIT_LISP_FRAME (Qt);
 }
 
 DEFUN ("msdos-set-keyboard", Fmsdos_set_keyboard, Smsdos_set_keyboard, 1, 2, 0,
@@ -154,10 +157,11 @@ all keys; otherwise it is only used when the ALT key is pressed.
 The current keyboard layout is available in dos-keyboard-code.  */)
   (Lisp_Object country_code, Lisp_Object allkeys)
 {
+  ENTER_LISP_FRAME (country_code, allkeys);
   CHECK_NUMBER (country_code);
   if (!dos_set_keyboard (XINT (country_code), !NILP (allkeys)))
-    return Qnil;
-  return Qt;
+    EXIT_LISP_FRAME (Qnil);
+  EXIT_LISP_FRAME (Qt);
 }
 
 #ifndef HAVE_X_WINDOWS
@@ -459,9 +463,10 @@ w95_set_virtual_machine_title (const char *title_string)
 void
 x_set_title (struct frame *f, Lisp_Object name)
 {
+  ENTER_LISP_FRAME (name);
   /* Don't change the title if it's already NAME.  */
   if (EQ (name, f->title))
-    return;
+    EXIT_LISP_FRAME_VOID ();
 
   update_mode_lines = 13;
 
@@ -476,6 +481,7 @@ x_set_title (struct frame *f, Lisp_Object name)
       w95_set_virtual_machine_title (SDATA (name));
       unblock_input ();
     }
+  EXIT_LISP_FRAME_VOID ();
 }
 #endif /* !HAVE_X_WINDOWS */
 
@@ -487,8 +493,9 @@ storage available to a non-superuser.  All 3 numbers are in bytes.
 If the underlying system call fails, value is nil.  */)
   (Lisp_Object filename)
 {
+  ENTER_LISP_FRAME (filename);
+  LISP_LOCALS (encoded, value);
   struct statfs stfs;
-  Lisp_Object encoded, value;
 
   CHECK_STRING (filename);
   filename = Fexpand_file_name (filename, Qnil);
@@ -501,7 +508,7 @@ If the underlying system call fails, value is nil.  */)
 		   make_float ((double) stfs.f_bsize * stfs.f_bfree),
 		   make_float ((double) stfs.f_bsize * stfs.f_bavail));
 
-  return value;
+  EXIT_LISP_FRAME (value);
 }
 
 /* System depended enumeration of and access to system processes a-la
@@ -511,18 +518,24 @@ If the underlying system call fails, value is nil.  */)
 Lisp_Object
 list_system_processes (void)
 {
-  Lisp_Object proclist = Qnil;
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (proclist);
+  proclist = Qnil;
+
 
   proclist = Fcons (make_fixnum_or_float (getpid ()), proclist);
 
-  return proclist;
+  EXIT_LISP_FRAME (proclist);
 }
 
 Lisp_Object
 system_process_attributes (Lisp_Object pid)
 {
+  ENTER_LISP_FRAME (pid);
+  LISP_LOCALS (attrs, cmd_str, decoded_cmd, tem);
   int proc_id;
-  Lisp_Object attrs = Qnil;
+  attrs = Qnil;
+
 
   CHECK_NUMBER_OR_FLOAT (pid);
   proc_id = FLOATP (pid) ? XFLOAT_DATA (pid) : XINT (pid);
@@ -536,7 +549,6 @@ system_process_attributes (Lisp_Object pid)
       char *cmdline = NULL, *p, *q;
       size_t cmdline_size = 0;
       int i;
-      Lisp_Object cmd_str, decoded_cmd, tem;
       double pmem;
 #ifndef SYSTEM_MALLOC
       extern unsigned long ret_lim_data ();
@@ -629,7 +641,7 @@ system_process_attributes (Lisp_Object pid)
       attrs = Fcons (Fcons (Qargs, decoded_cmd), attrs);
     }
 
-  return attrs;
+  EXIT_LISP_FRAME (attrs);
 }
 
 /* Support for memory-info.  */

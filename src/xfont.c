@@ -184,6 +184,7 @@ static bool
 xfont_chars_supported (Lisp_Object chars, XFontStruct *xfont,
 		       struct charset *encoding, struct charset *repertory)
 {
+  ENTER_LISP_FRAME_T (bool, chars);
   struct charset *charset = repertory ? repertory : encoding;
 
   if (CONSP (chars))
@@ -205,7 +206,7 @@ xfont_chars_supported (Lisp_Object chars, XFontStruct *xfont,
 	  if (! xfont_get_pcm (xfont, &char2b))
 	    break;
 	}
-      return (NILP (chars));
+      EXIT_LISP_FRAME ((NILP (chars)));
     }
   else if (VECTORP (chars))
     {
@@ -228,9 +229,9 @@ xfont_chars_supported (Lisp_Object chars, XFontStruct *xfont,
 	  if (xfont_get_pcm (xfont, &char2b))
 	    break;
 	}
-      return (i >= 0);
+      EXIT_LISP_FRAME ((i >= 0));
     }
-  return false;
+  EXIT_LISP_FRAME (false);
 }
 
 /* A hash table recoding which font supports which scripts.  Each key
@@ -253,18 +254,18 @@ static Lisp_Object
 xfont_supported_scripts (Display *display, char *fontname, Lisp_Object props,
 			 struct charset *encoding)
 {
-  Lisp_Object scripts;
+  ENTER_LISP_FRAME (props);
+  LISP_LOCALS (scripts, val, script, chars);
 
   /* Two special cases to avoid opening rather big fonts.  */
   if (EQ (AREF (props, 2), Qja))
-    return list2 (intern ("kana"), intern ("han"));
+    EXIT_LISP_FRAME (list2 (intern ("kana"), intern ("han")));
   if (EQ (AREF (props, 2), Qko))
-    return list1 (intern ("hangul"));
+    EXIT_LISP_FRAME (list1 (intern ("hangul")));
   scripts = Fgethash (props, xfont_scripts_cache, Qt);
   if (EQ (scripts, Qt))
     {
       XFontStruct *xfont;
-      Lisp_Object val;
 
       scripts = Qnil;
       xfont = XLoadQueryFont (display, fontname);
@@ -276,8 +277,10 @@ xfont_supported_scripts (Display *display, char *fontname, Lisp_Object props,
 		   val = XCDR (val))
 		if (CONSP (XCAR (val)) && SYMBOLP (XCAR (XCAR (val))))
 		  {
-		    Lisp_Object script = XCAR (XCAR (val));
-		    Lisp_Object chars = XCDR (XCAR (val));
+		    script = XCAR (XCAR (val));
+
+		    chars = XCDR (XCAR (val));
+
 
 		    if (xfont_chars_supported (chars, xfont, encoding, NULL))
 		      scripts = Fcons (script, scripts);
@@ -290,15 +293,19 @@ xfont_supported_scripts (Display *display, char *fontname, Lisp_Object props,
 	scripts = Fcons (Qlatin, scripts);
       Fputhash (Fcopy_sequence (props), scripts, xfont_scripts_cache);
     }
-  return scripts;
+  EXIT_LISP_FRAME (scripts);
 }
 
 static Lisp_Object
 xfont_list_pattern (Display *display, const char *pattern,
 		    Lisp_Object registry, Lisp_Object script)
 {
-  Lisp_Object list = Qnil;
-  Lisp_Object chars = Qnil;
+  ENTER_LISP_FRAME (registry, script);
+  LISP_LOCALS (list, chars, scripts, entity, tail, elt);
+  list = Qnil;
+
+  chars = Qnil;
+
   struct charset *encoding, *repertory = NULL;
   int i, limit, num_fonts;
   char **names;
@@ -308,18 +315,18 @@ xfont_list_pattern (Display *display, const char *pattern,
   if (! NILP (registry)
       && font_registry_charsets (registry, &encoding, &repertory) < 0)
     /* Unknown REGISTRY, not supported.  */
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
   if (! NILP (script))
     {
       chars = assq_no_quit (script, Vscript_representative_chars);
       if (NILP (chars))
 	/* We can't tell whether or not a font supports SCRIPT.  */
-	return Qnil;
+	EXIT_LISP_FRAME (Qnil);
       chars = XCDR (chars);
       if (repertory)
 	{
 	  if (! xfont_chars_supported (chars, NULL, encoding, repertory))
-	    return Qnil;
+	    EXIT_LISP_FRAME (Qnil);
 	  script = Qnil;
 	}
     }
@@ -347,7 +354,9 @@ xfont_list_pattern (Display *display, const char *pattern,
     {
       char **indices = alloca (sizeof (char *) * num_fonts);
       struct Lisp_Vector *props = XVECTOR (xfont_scratch_props);
-      Lisp_Object scripts = Qnil, entity = Qnil;
+      scripts = Qnil;
+      entity = Qnil;
+
 
       for (i = 0; i < ASIZE (xfont_scratch_props); i++)
 	ASET (xfont_scratch_props, i, Qnil);
@@ -398,12 +407,12 @@ xfont_list_pattern (Display *display, const char *pattern,
 	      }
 	    else if (CONSP (Vscalable_fonts_allowed))
 	      {
-		Lisp_Object tail;
 
 		for (tail = Vscalable_fonts_allowed; CONSP (tail);
 		     tail = XCDR (tail))
 		  {
-		    Lisp_Object elt = XCAR (tail);
+		    elt = XCAR (tail);
+
 		    if (STRINGP (elt)
 			&& (fast_c_string_match_ignore_case (elt, indices[i],
 							     len)
@@ -457,14 +466,15 @@ xfont_list_pattern (Display *display, const char *pattern,
   unblock_input ();
 
   FONT_ADD_LOG ("xfont-list", build_string (pattern), list);
-  return list;
+  EXIT_LISP_FRAME (list);
 }
 
 static Lisp_Object
 xfont_list (struct frame *f, Lisp_Object spec)
 {
+  ENTER_LISP_FRAME (spec);
+  LISP_LOCALS (registry, list, val, extra, script, alter);
   Display *display = FRAME_DISPLAY_INFO (f)->display;
-  Lisp_Object registry, list, val, extra, script;
   int len;
   /* Large enough to contain the longest XLFD (255 bytes) in UTF-8.  */
   char name[512];
@@ -474,16 +484,16 @@ xfont_list (struct frame *f, Lisp_Object spec)
     {
       val = assq_no_quit (QCotf, extra);
       if (! NILP (val))
-	return Qnil;
+	EXIT_LISP_FRAME (Qnil);
       val = assq_no_quit (QClang, extra);
       if (! NILP (val))
-	return Qnil;
+	EXIT_LISP_FRAME (Qnil);
     }
 
   registry = AREF (spec, FONT_REGISTRY_INDEX);
   len = font_unparse_xlfd (spec, 0, name, 512);
   if (len < 0 || (len = xfont_encode_coding_xlfd (name)) < 0)
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
 
   val = assq_no_quit (QCscript, extra);
   script = CDR (val);
@@ -502,7 +512,6 @@ xfont_list (struct frame *f, Lisp_Object spec)
   if (NILP (list) && ! NILP (registry))
     {
       /* Try alternate registries.  */
-      Lisp_Object alter;
 
       if ((alter = Fassoc (SYMBOL_NAME (registry),
 			   Vface_alternative_font_registry_alist,
@@ -531,19 +540,20 @@ xfont_list (struct frame *f, Lisp_Object spec)
 	{
 	  memcpy (name, SDATA (XCDR (val)), SBYTES (XCDR (val)) + 1);
 	  if (xfont_encode_coding_xlfd (name) < 0)
-	    return Qnil;
+	    EXIT_LISP_FRAME (Qnil);
 	  list = xfont_list_pattern (display, name, registry, script);
 	}
     }
 
-  return list;
+  EXIT_LISP_FRAME (list);
 }
 
 static Lisp_Object
 xfont_match (struct frame *f, Lisp_Object spec)
 {
+  ENTER_LISP_FRAME (spec);
+  LISP_LOCALS (extra, val, entity);
   Display *display = FRAME_DISPLAY_INFO (f)->display;
-  Lisp_Object extra, val, entity;
   char name[512];
   XFontStruct *xfont;
   unsigned long value;
@@ -553,14 +563,14 @@ xfont_match (struct frame *f, Lisp_Object spec)
   if (! CONSP (val) || ! STRINGP (XCDR (val)))
     {
       if (font_unparse_xlfd (spec, 0, name, 512) < 0)
-	return Qnil;
+	EXIT_LISP_FRAME (Qnil);
     }
   else if (SBYTES (XCDR (val)) < 512)
     memcpy (name, SDATA (XCDR (val)), SBYTES (XCDR (val)) + 1);
   else
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
   if (xfont_encode_coding_xlfd (name) < 0)
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
 
   block_input ();
   entity = Qnil;
@@ -590,16 +600,17 @@ xfont_match (struct frame *f, Lisp_Object spec)
   unblock_input ();
 
   FONT_ADD_LOG ("xfont-match", spec, entity);
-  return entity;
+  EXIT_LISP_FRAME (entity);
 }
 
 static Lisp_Object
 xfont_list_family (struct frame *f)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (list, family);
   Display_Info *dpyinfo = FRAME_DISPLAY_INFO (f);
   char **names;
   int num_fonts, i;
-  Lisp_Object list;
   char *last_family UNINIT;
   int last_len;
 
@@ -619,7 +630,6 @@ xfont_list_family (struct frame *f)
   for (i = 0, last_len = 0; i < num_fonts; i++)
     {
       char *p0 = names[i], *p1, buf[512];
-      Lisp_Object family;
       int decoded_len;
 
       p0++;			/* skip the leading '-' */
@@ -646,20 +656,20 @@ xfont_list_family (struct frame *f)
   x_uncatch_errors ();
   unblock_input ();
 
-  return list;
+  EXIT_LISP_FRAME (list);
 }
 
 static Lisp_Object
 xfont_open (struct frame *f, Lisp_Object entity, int pixel_size)
 {
+  ENTER_LISP_FRAME (entity);
+  LISP_LOCALS (registry, font_object, fullname, temp, val);
   Display_Info *dpyinfo = FRAME_DISPLAY_INFO (f);
   Display *display = dpyinfo->display;
   char name[512];
   int len;
   unsigned long value;
-  Lisp_Object registry;
   struct charset *encoding, *repertory;
-  Lisp_Object font_object, fullname;
   struct font *font;
   XFontStruct *xfont;
 
@@ -669,7 +679,7 @@ xfont_open (struct frame *f, Lisp_Object entity, int pixel_size)
   if (font_registry_charsets (registry, &encoding, &repertory) < 0)
     {
       FONT_ADD_LOG ("  x:unknown registry", registry, Qnil);
-      return Qnil;
+      EXIT_LISP_FRAME (Qnil);
     }
 
   if (XINT (AREF (entity, FONT_SIZE_INDEX)) != 0)
@@ -685,7 +695,7 @@ xfont_open (struct frame *f, Lisp_Object entity, int pixel_size)
   if (len <= 0 || (len = xfont_encode_coding_xlfd (name)) < 0)
     {
       FONT_ADD_LOG ("  x:unparse failed", entity, Qnil);
-      return Qnil;
+      EXIT_LISP_FRAME (Qnil);
     }
 
   block_input ();
@@ -708,7 +718,6 @@ xfont_open (struct frame *f, Lisp_Object entity, int pixel_size)
 	 and
 	   -misc-fixed-medium-r-normal--20-*-*-*-c-100-iso8859-1
 	 So, we try again with wildcards in RESX and RESY.  */
-      Lisp_Object temp;
 
       temp = copy_font_spec (entity);
       ASET (temp, FONT_DPI_INDEX, Qnil);
@@ -716,7 +725,7 @@ xfont_open (struct frame *f, Lisp_Object entity, int pixel_size)
       if (len <= 0 || (len = xfont_encode_coding_xlfd (name)) < 0)
 	{
 	  FONT_ADD_LOG ("  x:unparse failed", temp, Qnil);
-	  return Qnil;
+	  EXIT_LISP_FRAME (Qnil);
 	}
       xfont = XLoadQueryFont (display, name);
       if (x_had_errors_p (display))
@@ -760,7 +769,7 @@ xfont_open (struct frame *f, Lisp_Object entity, int pixel_size)
   if (! xfont)
     {
       FONT_ADD_LOG ("  x:open failed", build_string (name), Qnil);
-      return Qnil;
+      EXIT_LISP_FRAME (Qnil);
     }
 
   font_object = font_make_object (VECSIZE (struct xfont_info),
@@ -801,7 +810,6 @@ xfont_open (struct frame *f, Lisp_Object entity, int pixel_size)
     {
       XCharStruct *pcm;
       XChar2b char2b;
-      Lisp_Object val;
 
       char2b.byte1 = 0x00, char2b.byte2 = 0x20;
       pcm = xfont_get_pcm (xfont, &char2b);
@@ -861,7 +869,7 @@ xfont_open (struct frame *f, Lisp_Object entity, int pixel_size)
        && (fast_string_match_ignore_case
 	   (Vvertical_centering_font_regexp, fullname) >= 0));
 
-  return font_object;
+  EXIT_LISP_FRAME (font_object);
 }
 
 static void
@@ -901,7 +909,10 @@ xfont_prepare_face (struct frame *f, struct face *face)
 static int
 xfont_has_char (Lisp_Object font, int c)
 {
-  Lisp_Object registry = AREF (font, FONT_REGISTRY_INDEX);
+  ENTER_LISP_FRAME_T (int, font);
+  LISP_LOCALS (registry);
+  registry = AREF (font, FONT_REGISTRY_INDEX);
+
   struct charset *encoding;
   struct charset *repertory = NULL;
 
@@ -919,12 +930,12 @@ xfont_has_char (Lisp_Object font, int c)
     }
   else if (font_registry_charsets (registry, &encoding, &repertory) < 0)
     /* Unknown REGISTRY, not usable.  */
-    return 0;
+    EXIT_LISP_FRAME (0);
   if (ASCII_CHAR_P (c) && encoding->ascii_compatible_p)
-    return 1;
+    EXIT_LISP_FRAME (1);
   if (! repertory)
-    return -1;
-  return (ENCODE_CHAR (repertory, c) != CHARSET_INVALID_CODE (repertory));
+    EXIT_LISP_FRAME (-1);
+  EXIT_LISP_FRAME ((ENCODE_CHAR (repertory, c) != CHARSET_INVALID_CODE (repertory)));
 }
 
 static unsigned

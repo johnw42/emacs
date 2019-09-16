@@ -480,10 +480,11 @@ remove_watch (struct notification *dirwatch)
 static DWORD
 filter_list_to_flags (Lisp_Object filter_list)
 {
+  ENTER_LISP_FRAME_T (DWORD, filter_list);
   DWORD flags = 0;
 
   if (NILP (filter_list))
-    return flags;
+    EXIT_LISP_FRAME (flags);
 
   if (!NILP (Fmember (Qfile_name, filter_list)))
     flags |= FILE_NOTIFY_CHANGE_FILE_NAME;
@@ -502,7 +503,7 @@ filter_list_to_flags (Lisp_Object filter_list)
   if (!NILP (Fmember (Qsecurity_desc, filter_list)))
     flags |= FILE_NOTIFY_CHANGE_SECURITY;
 
-  return flags;
+  EXIT_LISP_FRAME (flags);
 }
 
 DEFUN ("w32notify-add-watch", Fw32notify_add_watch,
@@ -555,11 +556,11 @@ will never come in.  Volumes shared from remote Windows machines do
 generate notifications correctly, though.  */)
   (Lisp_Object file, Lisp_Object filter, Lisp_Object callback)
 {
-  Lisp_Object dirfn, basefn, watch_object, watch_descriptor;
+  ENTER_LISP_FRAME (file, filter, callback);
+  LISP_LOCALS (dirfn, basefn, watch_object, watch_descriptor, lisp_errstr);
   DWORD flags;
   BOOL subdirs = FALSE;
   struct notification *dirwatch = NULL;
-  Lisp_Object lisp_errstr;
   char *errstr;
 
   CHECK_LIST (filter);
@@ -625,7 +626,7 @@ generate notifications correctly, though.  */)
   watch_object = Fcons (watch_descriptor, callback);
   watch_list = Fcons (watch_object, watch_list);
 
-  return watch_descriptor;
+  EXIT_LISP_FRAME (watch_descriptor);
 }
 
 DEFUN ("w32notify-rm-watch", Fw32notify_rm_watch,
@@ -635,7 +636,8 @@ DEFUN ("w32notify-rm-watch", Fw32notify_rm_watch,
 WATCH-DESCRIPTOR should be an object returned by `w32notify-add-watch'.  */)
      (Lisp_Object watch_descriptor)
 {
-  Lisp_Object watch_object;
+  ENTER_LISP_FRAME (watch_descriptor);
+  LISP_LOCALS (watch_object);
   struct notification *dirwatch;
   int status = -1;
 
@@ -655,18 +657,21 @@ WATCH-DESCRIPTOR should be an object returned by `w32notify-add-watch'.  */)
     report_file_notify_error ("Invalid watch descriptor",
 			      Fcons (watch_descriptor, Qnil));
 
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 Lisp_Object
 w32_get_watch_object (void *desc)
 {
-  Lisp_Object descriptor = make_pointer_integer (desc);
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (descriptor);
+  descriptor = make_pointer_integer (desc);
+
 
   /* This is called from the input queue handling code, inside a
      critical section, so we cannot possibly quit if watch_list is not
      in the right condition.  */
-  return NILP (watch_list) ? Qnil : assoc_no_quit (descriptor, watch_list);
+  EXIT_LISP_FRAME (NILP (watch_list) ? Qnil : assoc_no_quit (descriptor, watch_list));
 }
 
 DEFUN ("w32notify-valid-p", Fw32notify_valid_p, Sw32notify_valid_p, 1, 1, 0,
@@ -679,7 +684,10 @@ the watcher thread exits abnormally for any other reason.  Removing the
 watch by calling `w32notify-rm-watch' also makes it invalid.  */)
      (Lisp_Object watch_descriptor)
 {
-  Lisp_Object watch_object = Fassoc (watch_descriptor, watch_list, Qnil);
+  ENTER_LISP_FRAME (watch_descriptor);
+  LISP_LOCALS (watch_object);
+  watch_object = Fassoc (watch_descriptor, watch_list, Qnil);
+
 
   if (!NILP (watch_object))
     {
@@ -687,10 +695,10 @@ watch by calling `w32notify-rm-watch' also makes it invalid.  */)
 	(struct notification *)XINTPTR (watch_descriptor);
       if (w32_valid_pointer_p (dirwatch, sizeof(struct notification))
 	  && dirwatch->dir != NULL)
-	return Qt;
+	EXIT_LISP_FRAME (Qt);
     }
 
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 void

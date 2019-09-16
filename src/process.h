@@ -207,20 +207,24 @@ struct Lisp_Process
 INLINE bool
 PROCESSP (Lisp_Object a)
 {
-  return PSEUDOVECTORP (a, PVEC_PROCESS);
+  ENTER_LISP_FRAME_T (bool, a);
+  EXIT_LISP_FRAME (PSEUDOVECTORP (a, PVEC_PROCESS));
 }
 
 INLINE void
 CHECK_PROCESS (Lisp_Object x)
 {
+  ENTER_LISP_FRAME (x);
   CHECK_TYPE (PROCESSP (x), Qprocessp, x);
+  EXIT_LISP_FRAME_VOID ();
 }
 
 INLINE struct Lisp_Process *
 XPROCESS (Lisp_Object a)
 {
+  ENTER_LISP_FRAME_T (struct Lisp_Process *, a);
   eassert (PROCESSP (a));
-  return XUNTAG_VECTORLIKE (a);
+  EXIT_LISP_FRAME (XUNTAG_VECTORLIKE (a));
 }
 
 /* Every field in the preceding structure except for the first two

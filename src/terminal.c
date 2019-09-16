@@ -56,9 +56,10 @@ tset_param_alist (struct terminal *t, Lisp_Object val)
 void
 ring_bell (struct frame *f)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (function);
   if (!NILP (Vring_bell_function))
     {
-      Lisp_Object function;
 
       /* Temporarily set the global variable to nil
 	 so that if we get an error, it stays nil
@@ -77,6 +78,7 @@ ring_bell (struct frame *f)
     }
   else if (FRAME_TERMINAL (f)->ring_bell_hook)
     (*FRAME_TERMINAL (f)->ring_bell_hook) (f);
+  EXIT_LISP_FRAME_VOID ();
 }
 
 void
@@ -205,6 +207,7 @@ ins_del_lines (struct frame *f, int vpos, int n)
 static struct terminal *
 decode_terminal (Lisp_Object terminal)
 {
+  ENTER_LISP_FRAME_T (struct terminal *, terminal);
   struct terminal *t;
 
   if (NILP (terminal))
@@ -212,7 +215,7 @@ decode_terminal (Lisp_Object terminal)
   t = (TERMINALP (terminal)
        ? XTERMINAL (terminal)
        : FRAMEP (terminal) ? FRAME_TERMINAL (XFRAME (terminal)) : NULL);
-  return t && t->name ? t : NULL;
+  EXIT_LISP_FRAME (t && t->name ? t : NULL);
 }
 
 /* Like above, but throw an error if TERMINAL is not valid or deleted.  */
@@ -220,11 +223,12 @@ decode_terminal (Lisp_Object terminal)
 struct terminal *
 decode_live_terminal (Lisp_Object terminal)
 {
+  ENTER_LISP_FRAME_T (struct terminal *, terminal);
   struct terminal *t = decode_terminal (terminal);
 
   if (!t)
     wrong_type_argument (Qterminal_live_p, terminal);
-  return t;
+  EXIT_LISP_FRAME (t);
 }
 
 /* Like decode_terminal, but ensure that the resulting terminal object refers
@@ -233,9 +237,10 @@ decode_live_terminal (Lisp_Object terminal)
 struct terminal *
 decode_tty_terminal (Lisp_Object terminal)
 {
+  ENTER_LISP_FRAME_T (struct terminal *, terminal);
   struct terminal *t = decode_live_terminal (terminal);
 
-  return (t->type == output_termcap || t->type == output_msdos_raw) ? t : NULL;
+  EXIT_LISP_FRAME ((t->type == output_termcap || t->type == output_msdos_raw) ? t : NULL);
 }
 
 /* Return an active (not suspended) text-based terminal device that uses
@@ -274,8 +279,9 @@ allocate_terminal (void)
 struct terminal *
 create_terminal (enum output_method type, struct redisplay_interface *rif)
 {
+  ENTER_LISP_FRAME_T (struct terminal *);
+  LISP_LOCALS (terminal_coding, keyboard_coding);
   struct terminal *terminal = allocate_terminal ();
-  Lisp_Object terminal_coding, keyboard_coding;
 
   terminal->next_terminal = terminal_list;
   terminal_list = terminal;
@@ -305,7 +311,7 @@ create_terminal (enum output_method type, struct redisplay_interface *rif)
   setup_coding_system (keyboard_coding, terminal->keyboard_coding);
   setup_coding_system (terminal_coding, terminal->terminal_coding);
 
-  return terminal;
+  EXIT_LISP_FRAME (terminal);
 }
 
 /* Low-level function to close all frames on a terminal, remove it
@@ -314,12 +320,13 @@ create_terminal (enum output_method type, struct redisplay_interface *rif)
 void
 delete_terminal (struct terminal *terminal)
 {
-  Lisp_Object tail, frame;
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (tail, frame);
 
   /* Protect against recursive calls.  delete_frame calls the
      delete_terminal_hook when we delete our last frame.  */
   if (!terminal->name)
-    return;
+    EXIT_LISP_FRAME_VOID ();
   xfree (terminal->name);
   terminal->name = NULL;
 
@@ -335,6 +342,7 @@ delete_terminal (struct terminal *terminal)
     }
 
   delete_terminal_internal (terminal);
+  EXIT_LISP_FRAME_VOID ();
 }
 
 void
@@ -368,10 +376,11 @@ Normally, you may not delete a display if all other displays are suspended,
 but if the second argument FORCE is non-nil, you may do so. */)
   (Lisp_Object terminal, Lisp_Object force)
 {
+  ENTER_LISP_FRAME (terminal, force);
   struct terminal *t = decode_terminal (terminal);
 
   if (!t)
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
 
   if (NILP (force))
     {
@@ -398,7 +407,7 @@ but if the second argument FORCE is non-nil, you may do so. */)
   else
     delete_terminal (t);
 
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 
@@ -409,15 +418,16 @@ If FRAME is nil, the selected frame is used.
 The terminal device is represented by its integer identifier.  */)
   (Lisp_Object frame)
 {
+  ENTER_LISP_FRAME (frame);
+  LISP_LOCALS (terminal);
   struct terminal *t = FRAME_TERMINAL (decode_live_frame (frame));
 
   if (!t)
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
   else
     {
-      Lisp_Object terminal;
       XSETTERMINAL (terminal, t);
-      return terminal;
+      EXIT_LISP_FRAME (terminal);
     }
 }
 
@@ -429,24 +439,25 @@ sort of output terminal it uses.  See the documentation of `framep' for
 possible return values.  */)
   (Lisp_Object object)
 {
+  ENTER_LISP_FRAME (object);
   struct terminal *t = decode_terminal (object);
 
   if (!t)
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
 
   switch (t->type)
     {
     case output_initial: /* The initial frame is like a termcap frame. */
     case output_termcap:
-      return Qt;
+      EXIT_LISP_FRAME (Qt);
     case output_x_window:
-      return Qx;
+      EXIT_LISP_FRAME (Qx);
     case output_w32:
-      return Qw32;
+      EXIT_LISP_FRAME (Qw32);
     case output_msdos_raw:
-      return Qpc;
+      EXIT_LISP_FRAME (Qpc);
     case output_ns:
-      return Qns;
+      EXIT_LISP_FRAME (Qns);
     default:
       emacs_abort ();
     }
@@ -456,7 +467,10 @@ DEFUN ("terminal-list", Fterminal_list, Sterminal_list, 0, 0, 0,
        doc: /* Return a list of all terminal devices.  */)
   (void)
 {
-  Lisp_Object terminal, terminals = Qnil;
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (terminal, terminals);
+  terminals = Qnil;
+
   struct terminal *t;
 
   for (t = terminal_list; t; t = t->next_terminal)
@@ -465,7 +479,7 @@ DEFUN ("terminal-list", Fterminal_list, Sterminal_list, 0, 0, 0,
       terminals = Fcons (terminal, terminals);
     }
 
-  return terminals;
+  EXIT_LISP_FRAME (terminals);
 }
 
 DEFUN ("terminal-name", Fterminal_name, Sterminal_name, 0, 1, 0,
@@ -476,9 +490,10 @@ TERMINAL may be a terminal object, a frame, or nil (meaning the
 selected frame's terminal). */)
   (Lisp_Object terminal)
 {
+  ENTER_LISP_FRAME (terminal);
   struct terminal *t = decode_live_terminal (terminal);
 
-  return t->name ? build_string (t->name) : Qnil;
+  EXIT_LISP_FRAME (t->name ? build_string (t->name) : Qnil);
 }
 
 
@@ -489,17 +504,21 @@ selected frame's terminal). */)
 static Lisp_Object
 store_terminal_param (struct terminal *t, Lisp_Object parameter, Lisp_Object value)
 {
-  Lisp_Object old_alist_elt = Fassq (parameter, t->param_alist);
+  ENTER_LISP_FRAME (parameter, value);
+  LISP_LOCALS (old_alist_elt, result);
+  old_alist_elt = Fassq (parameter, t->param_alist);
+
   if (EQ (old_alist_elt, Qnil))
     {
       tset_param_alist (t, Fcons (Fcons (parameter, value), t->param_alist));
-      return Qnil;
+      EXIT_LISP_FRAME (Qnil);
     }
   else
     {
-      Lisp_Object result = Fcdr (old_alist_elt);
+      result = Fcdr (old_alist_elt);
+
       Fsetcdr (old_alist_elt, value);
-      return result;
+      EXIT_LISP_FRAME (result);
     }
 }
 
@@ -513,7 +532,8 @@ TERMINAL can be a terminal object, a frame, or nil (meaning the
 selected frame's terminal).  */)
   (Lisp_Object terminal)
 {
-  return Fcopy_alist (decode_live_terminal (terminal)->param_alist);
+  ENTER_LISP_FRAME (terminal);
+  EXIT_LISP_FRAME (Fcopy_alist (decode_live_terminal (terminal)->param_alist));
 }
 
 DEFUN ("terminal-parameter", Fterminal_parameter, Sterminal_parameter, 2, 2, 0,
@@ -522,8 +542,9 @@ TERMINAL can be a terminal object, a frame, or nil (meaning the
 selected frame's terminal).  */)
   (Lisp_Object terminal, Lisp_Object parameter)
 {
+  ENTER_LISP_FRAME (terminal, parameter);
   CHECK_SYMBOL (parameter);
-  return Fcdr (Fassq (parameter, decode_live_terminal (terminal)->param_alist));
+  EXIT_LISP_FRAME (Fcdr (Fassq (parameter, decode_live_terminal (terminal)->param_alist)));
 }
 
 DEFUN ("set-terminal-parameter", Fset_terminal_parameter,
@@ -535,7 +556,8 @@ TERMINAL can be a terminal object, a frame or nil (meaning the
 selected frame's terminal).  */)
   (Lisp_Object terminal, Lisp_Object parameter, Lisp_Object value)
 {
-  return store_terminal_param (decode_live_terminal (terminal), parameter, value);
+  ENTER_LISP_FRAME (terminal, parameter, value);
+  EXIT_LISP_FRAME (store_terminal_param (decode_live_terminal (terminal), parameter, value));
 }
 
 #if HAVE_STRUCT_UNIPAIR_UNICODE
@@ -545,7 +567,10 @@ selected frame's terminal).  */)
 static void
 calculate_glyph_code_table (struct terminal *t)
 {
-  Lisp_Object glyphtab = Qt;
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (glyphtab);
+  glyphtab = Qt;
+
   enum { initial_unipairs = 1000 };
   int entry_ct = initial_unipairs;
   struct unipair unipair_buffer[initial_unipairs];
@@ -572,6 +597,7 @@ calculate_glyph_code_table (struct terminal *t)
 
   xfree (alloced);
   t->glyph_code_table = glyphtab;
+  EXIT_LISP_FRAME_VOID ();
 }
 #endif
 

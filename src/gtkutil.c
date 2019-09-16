@@ -337,8 +337,10 @@ xg_get_pixbuf_from_pix_and_mask (struct frame *f,
 static Lisp_Object
 file_for_image (Lisp_Object image)
 {
-  Lisp_Object specified_file = Qnil;
-  Lisp_Object tail;
+  ENTER_LISP_FRAME (image);
+  LISP_LOCALS (specified_file, tail);
+  specified_file = Qnil;
+
 
   for (tail = XCDR (image);
        NILP (specified_file) && CONSP (tail) && CONSP (XCDR (tail));
@@ -346,7 +348,7 @@ file_for_image (Lisp_Object image)
     if (EQ (XCAR (tail), QCfile))
       specified_file = XCAR (XCDR (tail));
 
-  return specified_file;
+  EXIT_LISP_FRAME (specified_file);
 }
 
 /* For the image defined in IMG, make and return a GtkImage.  For displays with
@@ -366,13 +368,15 @@ xg_get_image_for_pixmap (struct frame *f,
                          GtkWidget *widget,
                          GtkImage *old_widget)
 {
+  ENTER_LISP_FRAME_T (GtkWidget *);
+  LISP_LOCALS (specified_file, file);
   GdkPixbuf *icon_buf;
 
   /* If we have a file, let GTK do all the image handling.
      This seems to be the only way to make insensitive and activated icons
      look good in all cases.  */
-  Lisp_Object specified_file = file_for_image (img->spec);
-  Lisp_Object file;
+  specified_file = file_for_image (img->spec);
+
 
   /* We already loaded the image once before calling this
      function, so this only fails if the image file has been removed.
@@ -387,7 +391,7 @@ xg_get_image_for_pixmap (struct frame *f,
       else
         gtk_image_set_from_file (old_widget, encoded_file);
 
-      return GTK_WIDGET (old_widget);
+      EXIT_LISP_FRAME (GTK_WIDGET (old_widget));
     }
 
   /* No file, do the image handling ourselves.  This will look very bad
@@ -415,7 +419,7 @@ xg_get_image_for_pixmap (struct frame *f,
       g_object_unref (G_OBJECT (icon_buf));
     }
 
-  return GTK_WIDGET (old_widget);
+  EXIT_LISP_FRAME (GTK_WIDGET (old_widget));
 }
 
 
@@ -703,8 +707,10 @@ xg_prepare_tooltip (struct frame *f,
                     int *width,
                     int *height)
 {
+  ENTER_LISP_FRAME_T (bool, string);
+  LISP_LOCALS (encoded_string);
 #ifndef USE_GTK_TOOLTIP
-  return 0;
+  EXIT_LISP_FRAME (0);
 #else
   struct x_output *x = f->output_data.x;
   GtkWidget *widget;
@@ -713,9 +719,8 @@ xg_prepare_tooltip (struct frame *f,
   GtkSettings *settings;
   gboolean tt_enabled = TRUE;
   GtkRequisition req;
-  Lisp_Object encoded_string;
 
-  if (!x->ttip_lbl) return 0;
+  if (!x->ttip_lbl) EXIT_LISP_FRAME (0);
 
   block_input ();
   encoded_string = ENCODE_UTF_8 (string);
@@ -747,7 +752,7 @@ xg_prepare_tooltip (struct frame *f,
 
   unblock_input ();
 
-  return 1;
+  EXIT_LISP_FRAME (1);
 #endif /* USE_GTK_TOOLTIP */
 }
 
@@ -928,16 +933,19 @@ xg_frame_resized (struct frame *f, int pixelwidth, int pixelheight)
 void
 xg_frame_set_char_size (struct frame *f, int width, int height)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (fullscreen);
   int pixelwidth = FRAME_TEXT_TO_PIXEL_WIDTH (f, width);
   int pixelheight = FRAME_TEXT_TO_PIXEL_HEIGHT (f, height);
-  Lisp_Object fullscreen = get_frame_param (f, Qfullscreen);
+  fullscreen = get_frame_param (f, Qfullscreen);
+
   gint gwidth, gheight;
   int totalheight
     = pixelheight + FRAME_TOOLBAR_HEIGHT (f) + FRAME_MENUBAR_HEIGHT (f);
   int totalwidth = pixelwidth + FRAME_TOOLBAR_WIDTH (f);
 
   if (FRAME_PIXEL_HEIGHT (f) == 0)
-    return;
+    EXIT_LISP_FRAME_VOID ();
 
   gtk_window_get_size (GTK_WINDOW (FRAME_GTK_OUTER_WIDGET (f)),
 		       &gwidth, &gheight);
@@ -1015,6 +1023,7 @@ xg_frame_set_char_size (struct frame *f, int width, int height)
   else
     adjust_frame_size (f, width, height, 5, 0, Qxg_frame_set_char_size);
 
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Handle height/width changes (i.e. add/remove/move menu/toolbar).
@@ -1093,6 +1102,8 @@ style_changed_cb (GObject *go,
                   GParamSpec *spec,
                   gpointer user_data)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (rest, frame);
   struct input_event event;
   GdkDisplay *gdpy = user_data;
   const char *display_name = gdk_display_get_name (gdpy);
@@ -1112,7 +1123,6 @@ style_changed_cb (GObject *go,
      on this display.  */
   if (dpy)
     {
-      Lisp_Object rest, frame;
       FOR_EACH_FRAME (rest, frame)
         {
           struct frame *f = XFRAME (frame);
@@ -1126,6 +1136,7 @@ style_changed_cb (GObject *go,
             }
         }
     }
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Called when a delete-event occurs on WIDGET.  */
@@ -1367,6 +1378,8 @@ xg_free_frame_widgets (struct frame *f)
 void
 x_wm_set_size_hint (struct frame *f, long int flags, bool user_position)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (fs_state, frame);
   /* Must use GTK routines here, otherwise GTK resets the size hints
      to its own defaults.  */
   GdkGeometry size_hints;
@@ -1374,7 +1387,6 @@ x_wm_set_size_hint (struct frame *f, long int flags, bool user_position)
   int base_width, base_height;
   int min_rows = 0, min_cols = 0;
   int win_gravity = f->win_gravity;
-  Lisp_Object fs_state, frame;
   int scale = xg_get_scale (f);
 
   /* Don't set size hints during initialization; that apparently leads
@@ -1383,7 +1395,7 @@ x_wm_set_size_hint (struct frame *f, long int flags, bool user_position)
   if (NILP (Vafter_init_time)
       || !FRAME_GTK_OUTER_WIDGET (f)
       || FRAME_PARENT_FRAME (f))
-    return;
+    EXIT_LISP_FRAME_VOID ();
 
   XSETFRAME (frame, f);
   fs_state = Fframe_parameter (frame, Qfullscreen);
@@ -1394,7 +1406,7 @@ x_wm_set_size_hint (struct frame *f, long int flags, bool user_position)
       /* Don't set hints when maximized or fullscreen.  Apparently KWin and
          Gtk3 don't get along and the frame shrinks (!).
       */
-      return;
+      EXIT_LISP_FRAME_VOID ();
     }
 
   if (flags)
@@ -1484,6 +1496,7 @@ x_wm_set_size_hint (struct frame *f, long int flags, bool user_position)
       f->output_data.x->hint_flags = hint_flags;
       unblock_input ();
     }
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Change background color of a frame.
@@ -1495,13 +1508,14 @@ x_wm_set_size_hint (struct frame *f, long int flags, bool user_position)
 void
 xg_set_background_color (struct frame *f, unsigned long bg)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (bar);
   if (FRAME_GTK_WIDGET (f))
     {
       block_input ();
       xg_set_widget_bg (f, FRAME_GTK_WIDGET (f), FRAME_BACKGROUND_PIXEL (f));
 
 #ifdef USE_TOOLKIT_SCROLL_BARS
-      Lisp_Object bar;
       for (bar = FRAME_SCROLL_BARS (f);
            !NILP (bar);
            bar = XSCROLL_BAR (bar)->next)
@@ -1514,6 +1528,7 @@ xg_set_background_color (struct frame *f, unsigned long bg)
 #endif
       unblock_input ();
     }
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Change the frame's decoration (title bar + resize borders).  This
@@ -1521,6 +1536,7 @@ xg_set_background_color (struct frame *f, unsigned long bg)
 void
 xg_set_undecorated (struct frame *f, Lisp_Object undecorated)
 {
+  ENTER_LISP_FRAME (undecorated);
   if (FRAME_GTK_WIDGET (f))
     {
       block_input ();
@@ -1528,6 +1544,7 @@ xg_set_undecorated (struct frame *f, Lisp_Object undecorated)
 				NILP (undecorated) ? TRUE : FALSE);
       unblock_input ();
     }
+  EXIT_LISP_FRAME_VOID ();
 }
 
 
@@ -1536,13 +1553,14 @@ xg_set_undecorated (struct frame *f, Lisp_Object undecorated)
 void
 xg_frame_restack (struct frame *f1, struct frame *f2, bool above_flag)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (frame1, frame2);
 #if GTK_CHECK_VERSION (2, 18, 0)
   block_input ();
   if (FRAME_GTK_OUTER_WIDGET (f1) && FRAME_GTK_OUTER_WIDGET (f2))
     {
       GdkWindow *gwin1 = gtk_widget_get_window (FRAME_GTK_OUTER_WIDGET (f1));
       GdkWindow *gwin2 = gtk_widget_get_window (FRAME_GTK_OUTER_WIDGET (f2));
-      Lisp_Object frame1, frame2;
 
       XSETFRAME (frame1, f1);
       XSETFRAME (frame2, f2);
@@ -1552,6 +1570,7 @@ xg_frame_restack (struct frame *f1, struct frame *f2, bool above_flag)
     }
   unblock_input ();
 #endif
+  EXIT_LISP_FRAME_VOID ();
 }
 
 
@@ -1559,12 +1578,14 @@ xg_frame_restack (struct frame *f1, struct frame *f2, bool above_flag)
 void
 xg_set_skip_taskbar (struct frame *f, Lisp_Object skip_taskbar)
 {
+  ENTER_LISP_FRAME (skip_taskbar);
   block_input ();
   if (FRAME_GTK_WIDGET (f))
     gdk_window_set_skip_taskbar_hint
       (gtk_widget_get_window (FRAME_GTK_OUTER_WIDGET (f)),
        NILP (skip_taskbar) ? FALSE : TRUE);
   unblock_input ();
+  EXIT_LISP_FRAME_VOID ();
 }
 
 
@@ -1572,6 +1593,7 @@ xg_set_skip_taskbar (struct frame *f, Lisp_Object skip_taskbar)
 void
 xg_set_no_focus_on_map (struct frame *f, Lisp_Object no_focus_on_map)
 {
+  ENTER_LISP_FRAME (no_focus_on_map);
   block_input ();
   if (FRAME_GTK_WIDGET (f))
     {
@@ -1581,12 +1603,14 @@ xg_set_no_focus_on_map (struct frame *f, Lisp_Object no_focus_on_map)
       gtk_window_set_focus_on_map (gwin, g_no_focus_on_map);
     }
   unblock_input ();
+  EXIT_LISP_FRAME_VOID ();
 }
 
 
 void
 xg_set_no_accept_focus (struct frame *f, Lisp_Object no_accept_focus)
 {
+  ENTER_LISP_FRAME (no_accept_focus);
   block_input ();
   if (FRAME_GTK_WIDGET (f))
     {
@@ -1596,11 +1620,13 @@ xg_set_no_accept_focus (struct frame *f, Lisp_Object no_accept_focus)
       gtk_window_set_accept_focus (gwin, g_no_accept_focus);
     }
   unblock_input ();
+  EXIT_LISP_FRAME_VOID ();
 }
 
 void
 xg_set_override_redirect (struct frame *f, Lisp_Object override_redirect)
 {
+  ENTER_LISP_FRAME (override_redirect);
   block_input ();
 
   if (FRAME_GTK_OUTER_WIDGET (f))
@@ -1611,6 +1637,7 @@ xg_set_override_redirect (struct frame *f, Lisp_Object override_redirect)
     }
 
   unblock_input ();
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Set the frame icon to ICON_PIXMAP/MASK.  This must be done with GTK
@@ -1995,6 +2022,8 @@ xg_get_file_with_chooser (struct frame *f,
 			  bool mustmatch_p, bool only_dir_p,
 			  xg_get_file_func *func)
 {
+  ENTER_LISP_FRAME_T (GtkWidget *);
+  LISP_LOCALS (file);
   char msgbuf[1024];
 
   GtkWidget *filewin, *wtoggle, *wbox;
@@ -2053,7 +2082,6 @@ xg_get_file_with_chooser (struct frame *f,
 
   if (default_filename)
     {
-      Lisp_Object file;
       char *utf8_filename;
 
       file = build_string (default_filename);
@@ -2082,7 +2110,7 @@ xg_get_file_with_chooser (struct frame *f,
     }
 
   *func = xg_get_file_name_from_chooser;
-  return filewin;
+  EXIT_LISP_FRAME (filewin);
 }
 
 #ifdef HAVE_GTK_FILE_SELECTION_NEW
@@ -2225,9 +2253,12 @@ static char *x_last_font_name;
 Lisp_Object
 xg_get_font (struct frame *f, const char *default_name)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (font);
   GtkWidget *w;
   int done = 0;
-  Lisp_Object font = Qnil;
+  font = Qnil;
+
 
   w = gtk_font_chooser_dialog_new
     ("Pick a font", GTK_WINDOW (FRAME_GTK_OUTER_WIDGET (f)));
@@ -2299,7 +2330,7 @@ xg_get_font (struct frame *f, const char *default_name)
     }
 
   gtk_widget_destroy (w);
-  return font;
+  EXIT_LISP_FRAME (font);
 }
 #endif /* HAVE_FREETYPE */
 
@@ -2401,9 +2432,10 @@ unref_cl_data (xg_menu_cb_data *cl_data)
 void
 xg_mark_data (void)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (rest, frame);
 #ifndef HAVE_CHEZ_SCHEME
   xg_list_node *iter;
-  Lisp_Object rest, frame;
 
   for (iter = xg_menu_cb_list.next; iter; iter = iter->next)
     mark_object (((xg_menu_cb_data *) iter)->menu_bar_vector);
@@ -2433,6 +2465,7 @@ xg_mark_data (void)
         }
     }
 #endif /* not HAVE_CHEZ_SCHEME */
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Callback called when a menu item is destroyed.  Used to free data.
@@ -4222,7 +4255,8 @@ xg_page_setup_dialog (void)
 Lisp_Object
 xg_get_page_setup (void)
 {
-  Lisp_Object orientation_symbol;
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (orientation_symbol);
 
   if (page_setup == NULL)
     page_setup = gtk_page_setup_new ();
@@ -4245,7 +4279,7 @@ xg_get_page_setup (void)
       eassume (false);
     }
 
-  return listn (CONSTYPE_HEAP, 7,
+  EXIT_LISP_FRAME (listn (CONSTYPE_HEAP, 7,
 		Fcons (Qorientation, orientation_symbol),
 #define MAKE_FLOAT_PAGE_SETUP(f)  make_float (f (page_setup, GTK_UNIT_POINTS))
 		Fcons (Qwidth,
@@ -4261,23 +4295,28 @@ xg_get_page_setup (void)
 		Fcons (Qbottom_margin,
 		       MAKE_FLOAT_PAGE_SETUP (gtk_page_setup_get_bottom_margin))
 #undef MAKE_FLOAT_PAGE_SETUP
-		);
+		));
 }
 
 static void
 draw_page (GtkPrintOperation *operation, GtkPrintContext *context,
 	   gint page_nr, gpointer user_data)
 {
-  Lisp_Object frames = *((Lisp_Object *) user_data);
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (frames);
+  frames = *((Lisp_Object *) user_data);
+
   struct frame *f = XFRAME (Fnth (make_number (page_nr), frames));
   cairo_t *cr = gtk_print_context_get_cairo_context (context);
 
   x_cr_draw_frame (cr, f);
+  EXIT_LISP_FRAME_VOID ();
 }
 
 void
 xg_print_frames_dialog (Lisp_Object frames)
 {
+  ENTER_LISP_FRAME (frames);
   GtkPrintOperation *print;
   GtkPrintOperationResult res;
 
@@ -4298,6 +4337,7 @@ xg_print_frames_dialog (Lisp_Object frames)
 	g_object_ref (gtk_print_operation_get_print_settings (print));
     }
   g_object_unref (print);
+  EXIT_LISP_FRAME_VOID ();
 }
 
 #endif	/* USE_CAIRO */
@@ -4350,17 +4390,18 @@ xg_tool_bar_button_cb (GtkWidget *widget,
 static void
 xg_tool_bar_callback (GtkWidget *w, gpointer client_data)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (key, frame);
   intptr_t idx = (intptr_t) client_data;
   gpointer gmod = g_object_get_data (G_OBJECT (w), XG_TOOL_BAR_LAST_MODIFIER);
   intptr_t mod = (intptr_t) gmod;
 
   struct frame *f = g_object_get_data (G_OBJECT (w), XG_FRAME_DATA);
-  Lisp_Object key, frame;
   struct input_event event;
   EVENT_INIT (event);
 
   if (! f || ! f->n_tool_bar_items || NILP (f->tool_bar_items))
-    return;
+    EXIT_LISP_FRAME_VOID ();
 
   idx *= TOOL_BAR_ITEM_NSLOTS;
 
@@ -4386,6 +4427,7 @@ xg_tool_bar_callback (GtkWidget *w, gpointer client_data)
   /* Return focus to the frame after we have clicked on a detached
      tool bar button. */
   x_focus_frame (f, false);
+  EXIT_LISP_FRAME_VOID ();
 }
 
 static GtkWidget *
@@ -4415,12 +4457,13 @@ xg_tool_bar_help_callback (GtkWidget *w,
                            GdkEventCrossing *event,
                            gpointer client_data)
 {
+  ENTER_LISP_FRAME_T (gboolean);
+  LISP_LOCALS (help, frame);
   intptr_t idx = (intptr_t) client_data;
   struct frame *f = g_object_get_data (G_OBJECT (w), XG_FRAME_DATA);
-  Lisp_Object help, frame;
 
   if (! f || ! f->n_tool_bar_items || NILP (f->tool_bar_items))
-    return FALSE;
+    EXIT_LISP_FRAME (FALSE);
 
   if (event->type == GDK_ENTER_NOTIFY)
     {
@@ -4436,7 +4479,7 @@ xg_tool_bar_help_callback (GtkWidget *w,
   XSETFRAME (frame, f);
   kbd_buffer_store_help_event (frame, help);
 
-  return FALSE;
+  EXIT_LISP_FRAME (FALSE);
 }
 
 
@@ -4485,6 +4528,7 @@ xg_tool_bar_item_expose_callback (GtkWidget *w,
 static void
 xg_pack_tool_bar (struct frame *f, Lisp_Object pos)
 {
+  ENTER_LISP_FRAME (pos);
   struct x_output *x = f->output_data.x;
   bool into_hbox = EQ (pos, Qleft) || EQ (pos, Qright);
   GtkWidget *top_widget = x->toolbar_widget;
@@ -4518,6 +4562,7 @@ xg_pack_tool_bar (struct frame *f, Lisp_Object pos)
       x->toolbar_in_hbox = false;
     }
   x->toolbar_is_packed = true;
+  EXIT_LISP_FRAME_VOID ();
 }
 
 static bool xg_update_tool_bar_sizes (struct frame *f);
@@ -4587,14 +4632,16 @@ xg_create_tool_bar (struct frame *f)
 static Lisp_Object
 find_rtl_image (struct frame *f, Lisp_Object image, Lisp_Object rtl)
 {
+  ENTER_LISP_FRAME (image, rtl);
+  LISP_LOCALS (file, rtl_name, rtl_image);
   int i;
-  Lisp_Object file, rtl_name;
 
   rtl_name = Ffile_name_nondirectory (rtl);
 
   for (i = 0; i < f->n_tool_bar_items; ++i)
     {
-      Lisp_Object rtl_image = PROP (TOOL_BAR_ITEM_IMAGES);
+      rtl_image = PROP (TOOL_BAR_ITEM_IMAGES);
+
       if (!NILP (file = file_for_image (rtl_image)))
         {
           file = call1 (intern ("file-name-sans-extension"),
@@ -4607,7 +4654,7 @@ find_rtl_image (struct frame *f, Lisp_Object image, Lisp_Object rtl)
         }
     }
 
-  return image;
+  EXIT_LISP_FRAME (image);
 }
 
 static GtkToolItem *
@@ -4861,13 +4908,14 @@ find_icon_from_name (char *name,
 void
 update_frame_tool_bar (struct frame *f)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (style, image, stock, rtl, specified_file, tem);
   int i, j;
   struct x_output *x = f->output_data.x;
   int hmargin = 0, vmargin = 0;
   GtkToolbar *wtoolbar;
   GtkToolItem *ti;
   GtkTextDirection dir;
-  Lisp_Object style;
   bool text_image, horiz;
   struct xg_frame_tb_info *tbinfo;
   GdkScreen *screen;
@@ -4875,7 +4923,7 @@ update_frame_tool_bar (struct frame *f)
 
 
   if (! FRAME_GTK_WIDGET (f))
-    return;
+    EXIT_LISP_FRAME_VOID ();
 
   block_input ();
 
@@ -4922,7 +4970,7 @@ update_frame_tool_bar (struct frame *f)
       && ! NILP (Fequal (tbinfo->last_tool_bar, f->tool_bar_items)))
     {
       unblock_input ();
-      return;
+      EXIT_LISP_FRAME_VOID ();
     }
 
   tbinfo->last_tool_bar = f->tool_bar_items;
@@ -4943,13 +4991,11 @@ update_frame_tool_bar (struct frame *f)
       ptrdiff_t img_id;
       int icon_size = 0;
       struct image *img = NULL;
-      Lisp_Object image;
-      Lisp_Object stock = Qnil;
+      stock = Qnil;
+
       char *stock_name = NULL;
       char *icon_name = NULL;
-      Lisp_Object rtl;
       GtkWidget *wbutton = NULL;
-      Lisp_Object specified_file;
       bool vert_only = ! NILP (PROP (TOOL_BAR_ITEM_VERT_ONLY));
       const char *label
 	= (EQ (style, Qimage) || (vert_only && horiz)) ? NULL
@@ -5000,7 +5046,6 @@ update_frame_tool_bar (struct frame *f)
 
       if (CONSP (stock))
         {
-          Lisp_Object tem;
           for (tem = stock; CONSP (tem); tem = XCDR (tem))
             if (! NILP (tem) && STRINGP (XCAR (tem)))
               {
@@ -5160,6 +5205,7 @@ update_frame_tool_bar (struct frame *f)
     }
 
   unblock_input ();
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Deallocate all resources for the tool bar on frame F.
@@ -5214,11 +5260,12 @@ free_frame_tool_bar (struct frame *f)
 void
 xg_change_toolbar_position (struct frame *f, Lisp_Object pos)
 {
+  ENTER_LISP_FRAME (pos);
   struct x_output *x = f->output_data.x;
   GtkWidget *top_widget = x->toolbar_widget;
 
   if (! x->toolbar_widget || ! top_widget)
-    return;
+    EXIT_LISP_FRAME_VOID ();
 
   block_input ();
   g_object_ref (top_widget);
@@ -5243,6 +5290,7 @@ xg_change_toolbar_position (struct frame *f, Lisp_Object pos)
 
 
   unblock_input ();
+  EXIT_LISP_FRAME_VOID ();
 }
 
 

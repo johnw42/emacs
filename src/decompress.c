@@ -90,20 +90,22 @@ DEFUN ("zlib-available-p", Fzlib_available_p, Szlib_available_p, 0, 0, 0,
        doc: /* Return t if zlib decompression is available in this instance of Emacs.  */)
      (void)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (found, status);
 #ifdef WINDOWSNT
-  Lisp_Object found = Fassq (Qzlib, Vlibrary_cache);
+  found = Fassq (Qzlib, Vlibrary_cache);
+
   if (CONSP (found))
-    return XCDR (found);
+    EXIT_LISP_FRAME (XCDR (found));
   else
     {
-      Lisp_Object status;
       zlib_initialized = init_zlib_functions ();
       status = zlib_initialized ? Qt : Qnil;
       Vlibrary_cache = Fcons (Fcons (Qzlib, status), Vlibrary_cache);
-      return status;
+      EXIT_LISP_FRAME (status);
     }
 #else
-  return Qt;
+  EXIT_LISP_FRAME (Qt);
 #endif
 }
 
@@ -116,6 +118,7 @@ On failure, return nil and leave the data in place.
 This function can be called only in unibyte buffers.  */)
   (Lisp_Object start, Lisp_Object end)
 {
+  ENTER_LISP_FRAME (start, end);
   ptrdiff_t istart, iend, pos_byte;
   z_stream stream;
   int inflate_status;
@@ -133,7 +136,7 @@ This function can be called only in unibyte buffers.  */)
   if (!zlib_initialized)
     {
       message1 ("zlib library not found");
-      return Qnil;
+      EXIT_LISP_FRAME (Qnil);
     }
 #endif
 
@@ -152,7 +155,7 @@ This function can be called only in unibyte buffers.  */)
   /* The magic number 32 apparently means "autodetect both the gzip and
      zlib formats" according to zlib.h.  */
   if (inflateInit2 (&stream, MAX_WBITS + 32) != Z_OK)
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
 
   unwind_data.start = iend;
   unwind_data.stream = &stream;
@@ -191,14 +194,14 @@ This function can be called only in unibyte buffers.  */)
   while (inflate_status == Z_OK);
 
   if (inflate_status != Z_STREAM_END)
-    return unbind_to (count, Qnil);
+    EXIT_LISP_FRAME (unbind_to (count, Qnil));
 
   unwind_data.start = 0;
 
   /* Delete the compressed data.  */
   del_range (istart, iend);
 
-  return unbind_to (count, Qt);
+  EXIT_LISP_FRAME (unbind_to (count, Qt));
 }
 
 

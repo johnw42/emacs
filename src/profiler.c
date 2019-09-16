@@ -40,14 +40,17 @@ static struct hash_table_test hashtest_profiler;
 static Lisp_Object
 make_log (EMACS_INT heap_size, EMACS_INT max_stack_depth)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (log);
   /* We use a standard Elisp hash-table object, but we use it in
      a special way.  This is OK as long as the object is not exposed
      to Elisp, i.e. until it is returned by *-profiler-log, after which
      it can't be used any more.  */
-  Lisp_Object log = make_hash_table (hashtest_profiler, heap_size,
+  log = make_hash_table (hashtest_profiler, heap_size,
 				     DEFAULT_REHASH_SIZE,
 				     DEFAULT_REHASH_THRESHOLD,
 				     Qnil, false);
+
   struct Lisp_Hash_Table *h = XHASH_TABLE (log);
 
   /* What is special about our hash-tables is that the keys are pre-filled
@@ -56,7 +59,7 @@ make_log (EMACS_INT heap_size, EMACS_INT max_stack_depth)
   while (i > 0)
     set_hash_key_slot (h, --i,
 		       Fmake_vector (make_number (max_stack_depth), Qnil));
-  return log;
+  EXIT_LISP_FRAME (log);
 }
 
 /* Evict the least used half of the hash_table.
@@ -103,6 +106,8 @@ static EMACS_INT approximate_median (log_t *log,
 
 static void evict_lower_half (log_t *log)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (key, tmp);
   ptrdiff_t size = ASIZE (log->key_and_value) / 2;
   EMACS_INT median = approximate_median (log, 0, size);
   ptrdiff_t i;
@@ -112,9 +117,9 @@ static void evict_lower_half (log_t *log)
        so as to make sure we evict something no matter what.  */
     if (XINT (HASH_VALUE (log, i)) <= median)
       {
-	Lisp_Object key = HASH_KEY (log, i);
+	key = HASH_KEY (log, i);
+
 	{ /* FIXME: we could make this more efficient.  */
-	  Lisp_Object tmp;
 	  XSET_HASH_TABLE (tmp, log); /* FIXME: Use make_lisp_ptr.  */
 	  Fremhash (key, tmp);
 	}
@@ -126,6 +131,7 @@ static void evict_lower_half (log_t *log)
 
 	set_hash_key_slot (log, i, key);
       }
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Record the current backtrace in LOG.  COUNT is the weight of this
@@ -135,7 +141,8 @@ static void evict_lower_half (log_t *log)
 static void
 record_backtrace (log_t *log, EMACS_INT count)
 {
-  Lisp_Object backtrace;
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (backtrace);
   ptrdiff_t index;
 
   if (log->next_free < 0)
@@ -185,6 +192,7 @@ record_backtrace (log_t *log, EMACS_INT count)
 	   get there.  */
       }
   }
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Sampling profiler.  */
@@ -261,6 +269,7 @@ deliver_profiler_signal (int signal)
 static int
 setup_cpu_timer (Lisp_Object sampling_interval)
 {
+  ENTER_LISP_FRAME_T (int, sampling_interval);
   struct sigaction action;
   struct itimerval timer;
   struct timespec interval;
@@ -271,7 +280,7 @@ setup_cpu_timer (Lisp_Object sampling_interval)
 			  ? ((EMACS_INT) TYPE_MAXIMUM (time_t) * billion
 			     + (billion - 1))
 			  : EMACS_INT_MAX)))
-    return -1;
+    EXIT_LISP_FRAME (-1);
 
   current_sampling_interval = XINT (sampling_interval);
   interval = make_timespec (current_sampling_interval / billion,
@@ -314,17 +323,17 @@ setup_cpu_timer (Lisp_Object sampling_interval)
       struct itimerspec ispec;
       ispec.it_value = ispec.it_interval = interval;
       if (timer_settime (profiler_timer, 0, &ispec, 0) == 0)
-	return TIMER_SETTIME_RUNNING;
+	EXIT_LISP_FRAME (TIMER_SETTIME_RUNNING);
     }
 #endif
 
 #ifdef HAVE_SETITIMER
   timer.it_value = timer.it_interval = make_timeval (interval);
   if (setitimer (ITIMER_PROF, &timer, 0) == 0)
-    return SETITIMER_RUNNING;
+    EXIT_LISP_FRAME (SETITIMER_RUNNING);
 #endif
 
-  return NOT_RUNNING;
+  EXIT_LISP_FRAME (NOT_RUNNING);
 }
 
 DEFUN ("profiler-cpu-start", Fprofiler_cpu_start, Sprofiler_cpu_start,
@@ -334,6 +343,7 @@ It takes call-stack samples each SAMPLING-INTERVAL nanoseconds, approximately.
 See also `profiler-log-size' and `profiler-max-stack-depth'.  */)
   (Lisp_Object sampling_interval)
 {
+  ENTER_LISP_FRAME (sampling_interval);
   if (profiler_cpu_running)
     error ("CPU profiler is already running");
 
@@ -357,7 +367,7 @@ See also `profiler-log-size' and `profiler-max-stack-depth'.  */)
 	error ("Unable to start profiler timer");
     }
 
-  return Qt;
+  EXIT_LISP_FRAME (Qt);
 }
 
 DEFUN ("profiler-cpu-stop", Fprofiler_cpu_stop, Sprofiler_cpu_stop,
@@ -415,7 +425,10 @@ of functions, where the last few elements may be nil.
 Before returning, a new log is allocated for future samples.  */)
   (void)
 {
-  Lisp_Object result = cpu_log;
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (result);
+  result = cpu_log;
+
   /* Here we're making the log visible to Elisp, so it's not safe any
      more for our use afterwards since we can't rely on its special
      pre-allocated keys anymore.  So we have to allocate a new one.  */
@@ -426,7 +439,7 @@ Before returning, a new log is allocated for future samples.  */)
 	    make_number (cpu_gc_count),
 	    result);
   cpu_gc_count = 0;
-  return result;
+  EXIT_LISP_FRAME (result);
 }
 #endif /* PROFILER_CPU_SUPPORT */
 
@@ -490,14 +503,17 @@ of functions, where the last few elements may be nil.
 Before returning, a new log is allocated for future samples.  */)
   (void)
 {
-  Lisp_Object result = memory_log;
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (result);
+  result = memory_log;
+
   /* Here we're making the log visible to Elisp , so it's not safe any
      more for our use afterwards since we can't rely on its special
      pre-allocated keys anymore.  So we have to allocate a new one.  */
   memory_log = (profiler_memory_running
 		? make_log (profiler_log_size, profiler_max_stack_depth)
 		: Qnil);
-  return result;
+  EXIT_LISP_FRAME (result);
 }
 
 
@@ -517,6 +533,7 @@ Used to determine if different closures are just different instances of
 the same lambda expression, or are really unrelated function.  */)
      (Lisp_Object f1, Lisp_Object f2)
 {
+  ENTER_LISP_FRAME (f1, f2);
   bool res;
   if (EQ (f1, f2))
     res = true;
@@ -528,47 +545,51 @@ the same lambda expression, or are really unrelated function.  */)
     res = EQ (XCDR (XCDR (f1)), XCDR (XCDR (f2)));
   else
     res = false;
-  return res ? Qt : Qnil;
+  EXIT_LISP_FRAME (res ? Qt : Qnil);
 }
 
 static bool
 cmpfn_profiler (struct hash_table_test *t,
 		Lisp_Object bt1, Lisp_Object bt2)
 {
+  ENTER_LISP_FRAME_T (bool, bt1, bt2);
   if (VECTORP (bt1) && VECTORP (bt2))
     {
       ptrdiff_t i, l = ASIZE (bt1);
       if (l != ASIZE (bt2))
-	return false;
+	EXIT_LISP_FRAME (false);
       for (i = 0; i < l; i++)
 	if (NILP (Ffunction_equal (AREF (bt1, i), AREF (bt2, i))))
-	  return false;
-      return true;
+	  EXIT_LISP_FRAME (false);
+      EXIT_LISP_FRAME (true);
     }
   else
-    return EQ (bt1, bt2);
+    EXIT_LISP_FRAME (EQ (bt1, bt2));
 }
 
 static EMACS_UINT
 hashfn_profiler (struct hash_table_test *ht, Lisp_Object bt)
 {
+  ENTER_LISP_FRAME_T (EMACS_UINT, bt);
+  LISP_LOCALS (f);
   if (VECTORP (bt))
     {
       EMACS_UINT hash = 0;
       ptrdiff_t i, l = ASIZE (bt);
       for (i = 0; i < l; i++)
 	{
-	  Lisp_Object f = AREF (bt, i);
+	  f = AREF (bt, i);
+
 	  EMACS_UINT hash1
 	    = (COMPILEDP (f) ? XHASH (AREF (f, COMPILED_BYTECODE))
 	       : (CONSP (f) && CONSP (XCDR (f)) && EQ (Qclosure, XCAR (f)))
 	       ? XHASH (XCDR (XCDR (f))) : XHASH (f));
 	  hash = sxhash_combine (hash, hash1);
 	}
-      return SXHASH_REDUCE (hash);
+      EXIT_LISP_FRAME (SXHASH_REDUCE (hash));
     }
   else
-    return XHASH (bt);
+    EXIT_LISP_FRAME (XHASH (bt));
 }
 
 void

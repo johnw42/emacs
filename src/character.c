@@ -201,9 +201,10 @@ emacs_string_char (const unsigned char *p, const unsigned char **advanced, int *
 int
 translate_char (Lisp_Object table, int c)
 {
+  ENTER_LISP_FRAME_T (int, table);
+  LISP_LOCALS (ch);
   if (CHAR_TABLE_P (table))
     {
-      Lisp_Object ch;
 
       ch = CHAR_TABLE_REF (table, c);
       if (CHARACTERP (ch))
@@ -214,7 +215,7 @@ translate_char (Lisp_Object table, int c)
       for (; CONSP (table); table = XCDR (table))
 	c = translate_char (XCAR (table), c);
     }
-  return c;
+  EXIT_LISP_FRAME (c);
 }
 
 DEFUN ("characterp", Fcharacterp, Scharacterp, 1, 2, 0,
@@ -226,7 +227,8 @@ usage: (characterp OBJECT)  */
        attributes: const)
   (Lisp_Object object, Lisp_Object ignore)
 {
-  return (CHARACTERP (object) ? Qt : Qnil);
+  ENTER_LISP_FRAME (object, ignore);
+  EXIT_LISP_FRAME ((CHARACTERP (object) ? Qt : Qnil));
 }
 
 DEFUN ("max-char", Fmax_char, Smax_char, 0, 0, 0,
@@ -242,6 +244,7 @@ DEFUN ("unibyte-char-to-multibyte", Funibyte_char_to_multibyte,
        doc: /* Convert the byte CH to multibyte character.  */)
   (Lisp_Object ch)
 {
+  ENTER_LISP_FRAME (ch);
   int c;
 
   CHECK_CHARACTER (ch);
@@ -249,7 +252,7 @@ DEFUN ("unibyte-char-to-multibyte", Funibyte_char_to_multibyte,
   if (c >= 0x100)
     error ("Not a unibyte character: %d", c);
   MAKE_CHAR_MULTIBYTE (c);
-  return make_number (c);
+  EXIT_LISP_FRAME (make_number (c));
 }
 
 DEFUN ("multibyte-char-to-unibyte", Fmultibyte_char_to_unibyte,
@@ -258,6 +261,7 @@ DEFUN ("multibyte-char-to-unibyte", Fmultibyte_char_to_unibyte,
 If the multibyte character does not represent a byte, return -1.  */)
   (Lisp_Object ch)
 {
+  ENTER_LISP_FRAME (ch);
   int cm;
 
   CHECK_CHARACTER (ch);
@@ -265,11 +269,11 @@ If the multibyte character does not represent a byte, return -1.  */)
   if (cm < 256)
     /* Can't distinguish a byte read from a unibyte buffer from
        a latin1 char, so let's let it slide.  */
-    return ch;
+    EXIT_LISP_FRAME (ch);
   else
     {
       int cu = CHAR_TO_BYTE_SAFE (cm);
-      return make_number (cu);
+      EXIT_LISP_FRAME (make_number (cu));
     }
 }
 
@@ -279,11 +283,14 @@ If the multibyte character does not represent a byte, return -1.  */)
 static ptrdiff_t
 char_width (int c, struct Lisp_Char_Table *dp)
 {
+  ENTER_LISP_FRAME_T (ptrdiff_t);
+  LISP_LOCALS (disp, ch);
   ptrdiff_t width = CHARACTER_WIDTH (c);
 
   if (dp)
     {
-      Lisp_Object disp = DISP_CHAR_VECTOR (dp, c), ch;
+      disp = DISP_CHAR_VECTOR (dp, c);
+
       int i;
 
       if (VECTORP (disp))
@@ -303,7 +310,7 @@ char_width (int c, struct Lisp_Char_Table *dp)
 	      }
 	  }
     }
-  return width;
+  EXIT_LISP_FRAME (width);
 }
 
 
@@ -314,13 +321,14 @@ Tab is taken to occupy `tab-width' columns.
 usage: (char-width CHAR)  */)
   (Lisp_Object ch)
 {
+  ENTER_LISP_FRAME (ch);
   int c;
   ptrdiff_t width;
 
   CHECK_CHARACTER (ch);
   c = XINT (ch);
   width = char_width (c, buffer_display_table ());
-  return make_number (width);
+  EXIT_LISP_FRAME (make_number (width));
 }
 
 /* Return width of string STR of length LEN when displayed in the
@@ -386,6 +394,8 @@ ptrdiff_t
 lisp_string_width (Lisp_Object string, ptrdiff_t precision,
 		   ptrdiff_t *nchars, ptrdiff_t *nbytes)
 {
+  ENTER_LISP_FRAME_T (ptrdiff_t, string);
+  LISP_LOCALS (val);
   ptrdiff_t len = SCHARS (string);
   /* This set multibyte to 0 even if STRING is multibyte when it
      contains only ascii and eight-bit-graphic, but that's
@@ -399,7 +409,6 @@ lisp_string_width (Lisp_Object string, ptrdiff_t precision,
   while (i < len)
     {
       ptrdiff_t chars, bytes, thiswidth;
-      Lisp_Object val;
       ptrdiff_t cmp_id;
       ptrdiff_t ignore, end;
 
@@ -431,7 +440,7 @@ lisp_string_width (Lisp_Object string, ptrdiff_t precision,
 	{
 	  *nchars = i;
 	  *nbytes = i_byte;
-	  return width;
+	  EXIT_LISP_FRAME (width);
 	}
       if (INT_ADD_WRAPV (thiswidth, width, &width))
 	string_overflow ();
@@ -445,7 +454,7 @@ lisp_string_width (Lisp_Object string, ptrdiff_t precision,
       *nbytes = i_byte;
     }
 
-  return width;
+  EXIT_LISP_FRAME (width);
 }
 
 DEFUN ("string-width", Fstring_width, Sstring_width, 1, 1, 0,
@@ -458,11 +467,12 @@ taken to occupy `tab-width' columns.
 usage: (string-width STRING)  */)
   (Lisp_Object str)
 {
-  Lisp_Object val;
+  ENTER_LISP_FRAME (str);
+  LISP_LOCALS (val);
 
   CHECK_STRING (str);
   XSETFASTINT (val, lisp_string_width (str, -1, NULL, NULL));
-  return val;
+  EXIT_LISP_FRAME (val);
 }
 
 /* Return the number of characters in the NBYTES bytes at PTR.
@@ -745,6 +755,7 @@ str_to_unibyte (const unsigned char *src, unsigned char *dst, ptrdiff_t chars)
 static ptrdiff_t
 string_count_byte8 (Lisp_Object string)
 {
+  ENTER_LISP_FRAME_T (ptrdiff_t, string);
   bool multibyte = STRING_MULTIBYTE (string);
   ptrdiff_t nbytes = SBYTES (string);
   unsigned char *p = SDATA (string);
@@ -768,13 +779,15 @@ string_count_byte8 (Lisp_Object string)
 	if (*p++ >= 0x80)
 	  count++;
       }
-  return count;
+  EXIT_LISP_FRAME (count);
 }
 
 
 Lisp_Object
 string_escape_byte8 (Lisp_Object string)
 {
+  ENTER_LISP_FRAME (string);
+  LISP_LOCALS (val);
   ptrdiff_t nchars = SCHARS (string);
   ptrdiff_t nbytes = SBYTES (string);
   bool multibyte = STRING_MULTIBYTE (string);
@@ -782,16 +795,15 @@ string_escape_byte8 (Lisp_Object string)
   ptrdiff_t thrice_byte8_count, uninit_nchars, uninit_nbytes;
   const unsigned char *src, *src_end;
   unsigned char *dst;
-  Lisp_Object val;
   int c, len;
 
   if (multibyte && nchars == nbytes)
-    return string;
+    EXIT_LISP_FRAME (string);
 
   byte8_count = string_count_byte8 (string);
 
   if (byte8_count == 0)
-    return string;
+    EXIT_LISP_FRAME (string);
 
   if (INT_MULTIPLY_WRAPV (byte8_count, 3, &thrice_byte8_count))
     string_overflow ();
@@ -839,7 +851,7 @@ string_escape_byte8 (Lisp_Object string)
 	else
 	  *dst++ = c;
       }
-  return val;
+  EXIT_LISP_FRAME (val);
 }
 
 
@@ -849,10 +861,11 @@ Concatenate all the argument characters and make the result a string.
 usage: (string &rest CHARACTERS)  */)
   (ptrdiff_t n, Lisp_Object *args)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (str);
   ptrdiff_t i;
   int c;
   unsigned char *buf, *p;
-  Lisp_Object str;
   USE_SAFE_ALLOCA;
 
   SAFE_NALLOCA (buf, MAX_MULTIBYTE_LENGTH, n);
@@ -867,7 +880,7 @@ usage: (string &rest CHARACTERS)  */)
 
   str = make_string_from_bytes ((char *) buf, n, p - buf);
   SAFE_FREE ();
-  return str;
+  EXIT_LISP_FRAME (str);
 }
 
 DEFUN ("unibyte-string", Funibyte_string, Sunibyte_string, 0, MANY, 0,
@@ -875,8 +888,9 @@ DEFUN ("unibyte-string", Funibyte_string, Sunibyte_string, 0, MANY, 0,
 usage: (unibyte-string &rest BYTES)  */)
   (ptrdiff_t n, Lisp_Object *args)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (str);
   ptrdiff_t i;
-  Lisp_Object str;
   USE_SAFE_ALLOCA;
   unsigned char *buf = SAFE_ALLOCA (n);
   unsigned char *p = buf;
@@ -889,7 +903,7 @@ usage: (unibyte-string &rest BYTES)  */)
 
   str = make_string_from_bytes ((char *) buf, n, p - buf);
   SAFE_FREE ();
-  return str;
+  EXIT_LISP_FRAME (str);
 }
 
 DEFUN ("char-resolve-modifiers", Fchar_resolve_modifiers,
@@ -900,11 +914,12 @@ code.  Unresolved modifiers are kept in the value.
 usage: (char-resolve-modifiers CHAR)  */)
   (Lisp_Object character)
 {
+  ENTER_LISP_FRAME (character);
   EMACS_INT c;
 
   CHECK_NUMBER (character);
   c = XINT (character);
-  return make_number (char_resolve_modifier_mask (c));
+  EXIT_LISP_FRAME (make_number (char_resolve_modifier_mask (c)));
 }
 
 DEFUN ("get-byte", Fget_byte, Sget_byte, 0, 2, 0,
@@ -919,6 +934,7 @@ If the current buffer (or STRING) is multibyte, and the target
 character is not ASCII nor 8-bit character, an error is signaled.  */)
   (Lisp_Object position, Lisp_Object string)
 {
+  ENTER_LISP_FRAME (position, string);
   int c;
   ptrdiff_t pos;
   unsigned char *p;
@@ -938,7 +954,7 @@ character is not ASCII nor 8-bit character, an error is signaled.  */)
 	  p = CHAR_POS_ADDR (pos);
 	}
       if (NILP (BVAR (current_buffer, enable_multibyte_characters)))
-	return make_number (*p);
+	EXIT_LISP_FRAME (make_number (*p));
     }
   else
     {
@@ -956,29 +972,32 @@ character is not ASCII nor 8-bit character, an error is signaled.  */)
 	  p = SDATA (string) + string_char_to_byte (string, pos);
 	}
       if (! STRING_MULTIBYTE (string))
-	return make_number (*p);
+	EXIT_LISP_FRAME (make_number (*p));
     }
   c = STRING_CHAR (p);
   if (CHAR_BYTE8_P (c))
     c = CHAR_TO_BYTE8 (c);
   else if (! ASCII_CHAR_P (c))
     error ("Not an ASCII nor an 8-bit character: %d", c);
-  return make_number (c);
+  EXIT_LISP_FRAME (make_number (c));
 }
 
 /* Return true if C is an alphabetic character.  */
 bool
 alphabeticp (int c)
 {
-  Lisp_Object category = CHAR_TABLE_REF (Vunicode_category_table, c);
+  ENTER_LISP_FRAME_T (bool);
+  LISP_LOCALS (category);
+  category = CHAR_TABLE_REF (Vunicode_category_table, c);
+
   if (! INTEGERP (category))
-    return false;
+    EXIT_LISP_FRAME (false);
   EMACS_INT gen_cat = XINT (category);
 
   /* See UTS #18.  There are additional characters that should be
      here, those designated as Other_uppercase, Other_lowercase,
      and Other_alphabetic; FIXME.  */
-  return (gen_cat == UNICODE_CATEGORY_Lu
+  EXIT_LISP_FRAME ((gen_cat == UNICODE_CATEGORY_Lu
 	  || gen_cat == UNICODE_CATEGORY_Ll
 	  || gen_cat == UNICODE_CATEGORY_Lt
 	  || gen_cat == UNICODE_CATEGORY_Lm
@@ -986,20 +1005,23 @@ alphabeticp (int c)
 	  || gen_cat == UNICODE_CATEGORY_Mn
 	  || gen_cat == UNICODE_CATEGORY_Mc
 	  || gen_cat == UNICODE_CATEGORY_Me
-	  || gen_cat == UNICODE_CATEGORY_Nl);
+	  || gen_cat == UNICODE_CATEGORY_Nl));
 }
 
 /* Return true if C is an alphabetic or decimal-number character.  */
 bool
 alphanumericp (int c)
 {
-  Lisp_Object category = CHAR_TABLE_REF (Vunicode_category_table, c);
+  ENTER_LISP_FRAME_T (bool);
+  LISP_LOCALS (category);
+  category = CHAR_TABLE_REF (Vunicode_category_table, c);
+
   if (! INTEGERP (category))
-    return false;
+    EXIT_LISP_FRAME (false);
   EMACS_INT gen_cat = XINT (category);
 
   /* See UTS #18.  Same comment as for alphabeticp applies.  FIXME. */
-  return (gen_cat == UNICODE_CATEGORY_Lu
+  EXIT_LISP_FRAME ((gen_cat == UNICODE_CATEGORY_Lu
 	  || gen_cat == UNICODE_CATEGORY_Ll
 	  || gen_cat == UNICODE_CATEGORY_Lt
 	  || gen_cat == UNICODE_CATEGORY_Lm
@@ -1008,40 +1030,46 @@ alphanumericp (int c)
 	  || gen_cat == UNICODE_CATEGORY_Mc
 	  || gen_cat == UNICODE_CATEGORY_Me
 	  || gen_cat == UNICODE_CATEGORY_Nl
-	  || gen_cat == UNICODE_CATEGORY_Nd);
+	  || gen_cat == UNICODE_CATEGORY_Nd));
 }
 
 /* Return true if C is a graphic character.  */
 bool
 graphicp (int c)
 {
-  Lisp_Object category = CHAR_TABLE_REF (Vunicode_category_table, c);
+  ENTER_LISP_FRAME_T (bool);
+  LISP_LOCALS (category);
+  category = CHAR_TABLE_REF (Vunicode_category_table, c);
+
   if (! INTEGERP (category))
-    return false;
+    EXIT_LISP_FRAME (false);
   EMACS_INT gen_cat = XINT (category);
 
   /* See UTS #18.  */
-  return (!(gen_cat == UNICODE_CATEGORY_Zs /* space separator */
+  EXIT_LISP_FRAME ((!(gen_cat == UNICODE_CATEGORY_Zs /* space separator */
 	    || gen_cat == UNICODE_CATEGORY_Zl /* line separator */
 	    || gen_cat == UNICODE_CATEGORY_Zp /* paragraph separator */
 	    || gen_cat == UNICODE_CATEGORY_Cc /* control */
 	    || gen_cat == UNICODE_CATEGORY_Cs /* surrogate */
-	    || gen_cat == UNICODE_CATEGORY_Cn)); /* unassigned */
+	    || gen_cat == UNICODE_CATEGORY_Cn))); /* unassigned */
 }
 
 /* Return true if C is a printable character.  */
 bool
 printablep (int c)
 {
-  Lisp_Object category = CHAR_TABLE_REF (Vunicode_category_table, c);
+  ENTER_LISP_FRAME_T (bool);
+  LISP_LOCALS (category);
+  category = CHAR_TABLE_REF (Vunicode_category_table, c);
+
   if (! INTEGERP (category))
-    return false;
+    EXIT_LISP_FRAME (false);
   EMACS_INT gen_cat = XINT (category);
 
   /* See UTS #18.  */
-  return (!(gen_cat == UNICODE_CATEGORY_Cc /* control */
+  EXIT_LISP_FRAME ((!(gen_cat == UNICODE_CATEGORY_Cc /* control */
 	    || gen_cat == UNICODE_CATEGORY_Cs /* surrogate */
-	    || gen_cat == UNICODE_CATEGORY_Cn)); /* unassigned */
+	    || gen_cat == UNICODE_CATEGORY_Cn))); /* unassigned */
 }
 
 /* Return true if C is a horizontal whitespace character, as defined

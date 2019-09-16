@@ -66,6 +66,8 @@ release_global_lock (void)
 static void
 post_acquire_global_lock (struct thread_state *self)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (sym, data);
   struct thread_state *prev_thread = current_thread;
 
   /* Do this early on, so that code below could signal errors (e.g.,
@@ -95,13 +97,16 @@ post_acquire_global_lock (struct thread_state *self)
       the thread comes here after acquiring the lock the next time).  */
   if (!NILP (current_thread->error_symbol) && handlerlist)
     {
-      Lisp_Object sym = current_thread->error_symbol;
-      Lisp_Object data = current_thread->error_data;
+      sym = current_thread->error_symbol;
+
+      data = current_thread->error_data;
+
 
       current_thread->error_symbol = Qnil;
       current_thread->error_data = Qnil;
       Fsignal (sym, data);
     }
+  EXIT_LISP_FRAME_VOID ();
 }
 
 static void
@@ -263,8 +268,9 @@ NAME, if given, is used as the name of the mutex.  The name is
 informational only.  */)
   (Lisp_Object name)
 {
+  ENTER_LISP_FRAME (name);
+  LISP_LOCALS (result);
   struct Lisp_Mutex *mutex;
-  Lisp_Object result;
 
   if (!NILP (name))
     CHECK_STRING (name);
@@ -277,7 +283,7 @@ informational only.  */)
   lisp_mutex_init (&mutex->mutex);
 
   XSETMUTEX (result, mutex);
-  return result;
+  EXIT_LISP_FRAME (result);
 }
 
 static void
@@ -310,6 +316,7 @@ is signaled using `thread-signal'.
 Note that calls to `mutex-lock' and `mutex-unlock' must be paired.  */)
   (Lisp_Object mutex)
 {
+  ENTER_LISP_FRAME (mutex);
   struct Lisp_Mutex *lmutex;
   ptrdiff_t count = SPECPDL_INDEX ();
 
@@ -319,7 +326,7 @@ Note that calls to `mutex-lock' and `mutex-unlock' must be paired.  */)
   current_thread->event_object = mutex;
   record_unwind_protect_void (do_unwind_mutex_lock);
   flush_stack_call_func (mutex_lock_callback, lmutex);
-  return unbind_to (count, Qnil);
+  EXIT_LISP_FRAME (unbind_to (count, Qnil));
 }
 
 static void
@@ -339,13 +346,14 @@ Otherwise, decrement the mutex's count.  If the count is zero,
 release MUTEX.   */)
   (Lisp_Object mutex)
 {
+  ENTER_LISP_FRAME (mutex);
   struct Lisp_Mutex *lmutex;
 
   CHECK_MUTEX (mutex);
   lmutex = XMUTEX (mutex);
 
   flush_stack_call_func (mutex_unlock_callback, lmutex);
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 DEFUN ("mutex-name", Fmutex_name, Smutex_name, 1, 1, 0,
@@ -353,12 +361,13 @@ DEFUN ("mutex-name", Fmutex_name, Smutex_name, 1, 1, 0,
 If no name was given when MUTEX was created, return nil.  */)
   (Lisp_Object mutex)
 {
+  ENTER_LISP_FRAME (mutex);
   struct Lisp_Mutex *lmutex;
 
   CHECK_MUTEX (mutex);
   lmutex = XMUTEX (mutex);
 
-  return lmutex->name;
+  EXIT_LISP_FRAME (lmutex->name);
 }
 
 void
@@ -381,8 +390,9 @@ NAME, if given, is the name of this condition variable.  The name is
 informational only.  */)
   (Lisp_Object mutex, Lisp_Object name)
 {
+  ENTER_LISP_FRAME (mutex, name);
+  LISP_LOCALS (result);
   struct Lisp_CondVar *condvar;
-  Lisp_Object result;
 
   CHECK_MUTEX (mutex);
   if (!NILP (name))
@@ -397,17 +407,18 @@ informational only.  */)
   sys_cond_init (&condvar->cond);
 
   XSETCONDVAR (result, condvar);
-  return result;
+  EXIT_LISP_FRAME (result);
 }
 
 static void
 condition_wait_callback (void *arg)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (cond);
   struct Lisp_CondVar *cvar = arg;
   struct Lisp_Mutex *mutex = XMUTEX (cvar->mutex);
   struct thread_state *self = current_thread;
   unsigned int saved_count;
-  Lisp_Object cond;
 
   XSETCONDVAR (cond, cvar);
   self->event_object = cond;
@@ -431,6 +442,7 @@ condition_wait_callback (void *arg)
      to announce us as the current thread by calling
      post_acquire_global_lock.  */
   post_acquire_global_lock (self);
+  EXIT_LISP_FRAME_VOID ();
 }
 
 DEFUN ("condition-wait", Fcondition_wait, Scondition_wait, 1, 1, 0,
@@ -446,6 +458,7 @@ this thread to be signaled with `thread-signal'.  When
 this thread.  */)
   (Lisp_Object cond)
 {
+  ENTER_LISP_FRAME (cond);
   struct Lisp_CondVar *cvar;
   struct Lisp_Mutex *mutex;
 
@@ -458,7 +471,7 @@ this thread.  */)
 
   flush_stack_call_func (condition_wait_callback, cvar);
 
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 /* Used to communicate arguments to condition_notify_callback.  */
@@ -471,11 +484,12 @@ struct notify_args
 static void
 condition_notify_callback (void *arg)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (cond);
   struct notify_args *na = arg;
   struct Lisp_Mutex *mutex = XMUTEX (na->cvar->mutex);
   struct thread_state *self = current_thread;
   unsigned int saved_count;
-  Lisp_Object cond;
 
   XSETCONDVAR (cond, na->cvar);
   saved_count = lisp_mutex_unlock_for_wait (&mutex->mutex);
@@ -489,6 +503,7 @@ condition_notify_callback (void *arg)
      post_acquire_global_lock.  */
   lisp_mutex_lock (&mutex->mutex, saved_count);
   post_acquire_global_lock (self);
+  EXIT_LISP_FRAME_VOID ();
 }
 
 DEFUN ("condition-notify", Fcondition_notify, Scondition_notify, 1, 2, 0,
@@ -504,6 +519,7 @@ This releases COND's mutex when notifying COND.  When
 thread.  */)
   (Lisp_Object cond, Lisp_Object all)
 {
+  ENTER_LISP_FRAME (cond, all);
   struct Lisp_CondVar *cvar;
   struct Lisp_Mutex *mutex;
   struct notify_args args;
@@ -519,19 +535,20 @@ thread.  */)
   args.all = !NILP (all);
   flush_stack_call_func (condition_notify_callback, &args);
 
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 DEFUN ("condition-mutex", Fcondition_mutex, Scondition_mutex, 1, 1, 0,
        doc: /* Return the mutex associated with condition variable COND.  */)
   (Lisp_Object cond)
 {
+  ENTER_LISP_FRAME (cond);
   struct Lisp_CondVar *cvar;
 
   CHECK_CONDVAR (cond);
   cvar = XCONDVAR (cond);
 
-  return cvar->mutex;
+  EXIT_LISP_FRAME (cvar->mutex);
 }
 
 DEFUN ("condition-name", Fcondition_name, Scondition_name, 1, 1, 0,
@@ -539,12 +556,13 @@ DEFUN ("condition-name", Fcondition_name, Scondition_name, 1, 1, 0,
 If no name was given when COND was created, return nil.  */)
   (Lisp_Object cond)
 {
+  ENTER_LISP_FRAME (cond);
   struct Lisp_CondVar *cvar;
 
   CHECK_CONDVAR (cond);
   cvar = XCONDVAR (cond);
 
-  return cvar->name;
+  EXIT_LISP_FRAME (cvar->name);
 }
 
 void
@@ -618,6 +636,8 @@ thread_select (select_func *func, int max_fds, fd_set *rfds,
 static void
 mark_one_thread (struct thread_state *thread)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (tem);
   /* Get the stack top now, in case mark_specpdl changes it.  */
   void *stack_top = thread->stack_top;
 
@@ -639,7 +659,6 @@ mark_one_thread (struct thread_state *thread)
 
   if (thread->m_current_buffer)
     {
-      Lisp_Object tem;
       XSETBUFFER (tem, thread->m_current_buffer);
       mark_object (tem);
     }
@@ -649,21 +668,24 @@ mark_one_thread (struct thread_state *thread)
   if (!NILP (thread->m_saved_last_thing_searched))
     mark_object (thread->m_saved_last_thing_searched);
 #endif
+  EXIT_LISP_FRAME_VOID ();
 }
 
 static void
 mark_threads_callback (void *ignore)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (thread_obj);
   struct thread_state *iter;
 
   for (iter = all_threads; iter; iter = iter->next_thread)
     {
-      Lisp_Object thread_obj;
 
       XSETTHREAD (thread_obj, iter);
       mark_object (thread_obj);
       mark_one_thread (iter);
     }
+  EXIT_LISP_FRAME_VOID ();
 }
 
 void
@@ -782,9 +804,10 @@ When the function exits, the thread dies.
 If NAME is given, it must be a string; it names the new thread.  */)
   (Lisp_Object function, Lisp_Object name)
 {
+  ENTER_LISP_FRAME (function, name);
+  LISP_LOCALS (result);
   sys_thread_t thr;
   struct thread_state *new_thread;
-  Lisp_Object result;
   const char *c_name = NULL;
   size_t offset = offsetof (struct thread_state, m_stack_bottom);
 
@@ -841,16 +864,17 @@ If NAME is given, it must be a string; it names the new thread.  */)
 
   /* FIXME: race here where new thread might not be filled in?  */
   XSETTHREAD (result, new_thread);
-  return result;
+  EXIT_LISP_FRAME (result);
 }
 
 DEFUN ("current-thread", Fcurrent_thread, Scurrent_thread, 0, 0, 0,
        doc: /* Return the current thread.  */)
   (void)
 {
-  Lisp_Object result;
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (result);
   XSETTHREAD (result, current_thread);
-  return result;
+  EXIT_LISP_FRAME (result);
 }
 
 DEFUN ("thread-name", Fthread_name, Sthread_name, 1, 1, 0,
@@ -858,12 +882,13 @@ DEFUN ("thread-name", Fthread_name, Sthread_name, 1, 1, 0,
 The name is the same object that was passed to `make-thread'.  */)
      (Lisp_Object thread)
 {
+  ENTER_LISP_FRAME (thread);
   struct thread_state *tstate;
 
   CHECK_THREAD (thread);
   tstate = XTHREAD (thread);
 
-  return tstate->name;
+  EXIT_LISP_FRAME (tstate->name);
 }
 
 static void
@@ -884,6 +909,7 @@ This will interrupt a blocked call to `mutex-lock', `condition-wait',
 or `thread-join' in the target thread.  */)
   (Lisp_Object thread, Lisp_Object error_symbol, Lisp_Object data)
 {
+  ENTER_LISP_FRAME (thread, error_symbol, data);
   struct thread_state *tstate;
 
   CHECK_THREAD (thread);
@@ -900,19 +926,20 @@ or `thread-join' in the target thread.  */)
   if (tstate->wait_condvar)
     flush_stack_call_func (thread_signal_callback, tstate);
 
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 DEFUN ("thread-live-p", Fthread_live_p, Sthread_live_p, 1, 1, 0,
        doc: /* Return t if THREAD is alive, or nil if it has exited.  */)
   (Lisp_Object thread)
 {
+  ENTER_LISP_FRAME (thread);
   struct thread_state *tstate;
 
   CHECK_THREAD (thread);
   tstate = XTHREAD (thread);
 
-  return thread_live_p (tstate) ? Qt : Qnil;
+  EXIT_LISP_FRAME (thread_live_p (tstate) ? Qt : Qnil);
 }
 
 DEFUN ("thread--blocker", Fthread_blocker, Sthread_blocker, 1, 1, 0,
@@ -924,20 +951,22 @@ If THREAD is blocked in `condition-wait', return the condition variable.
 Otherwise, if THREAD is not blocked, return nil.  */)
   (Lisp_Object thread)
 {
+  ENTER_LISP_FRAME (thread);
   struct thread_state *tstate;
 
   CHECK_THREAD (thread);
   tstate = XTHREAD (thread);
 
-  return tstate->event_object;
+  EXIT_LISP_FRAME (tstate->event_object);
 }
 
 static void
 thread_join_callback (void *arg)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (thread);
   struct thread_state *tstate = arg;
   struct thread_state *self = current_thread;
-  Lisp_Object thread;
 
   XSETTHREAD (thread, tstate);
   self->event_object = thread;
@@ -948,6 +977,7 @@ thread_join_callback (void *arg)
   self->wait_condvar = NULL;
   self->event_object = Qnil;
   post_acquire_global_lock (self);
+  EXIT_LISP_FRAME_VOID ();
 }
 
 DEFUN ("thread-join", Fthread_join, Sthread_join, 1, 1, 0,
@@ -957,6 +987,7 @@ the current thread is signaled.
 It is an error for a thread to try to join itself.  */)
   (Lisp_Object thread)
 {
+  ENTER_LISP_FRAME (thread);
   struct thread_state *tstate;
 
   CHECK_THREAD (thread);
@@ -968,28 +999,30 @@ It is an error for a thread to try to join itself.  */)
   if (thread_live_p (tstate))
     flush_stack_call_func (thread_join_callback, tstate);
 
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 DEFUN ("all-threads", Fall_threads, Sall_threads, 0, 0, 0,
        doc: /* Return a list of all the live threads.  */)
   (void)
 {
-  Lisp_Object result = Qnil;
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (result, thread);
+  result = Qnil;
+
   struct thread_state *iter;
 
   for (iter = all_threads; iter; iter = iter->next_thread)
     {
       if (thread_live_p (iter))
 	{
-	  Lisp_Object thread;
 
 	  XSETTHREAD (thread, iter);
 	  result = Fcons (thread, result);
 	}
     }
 
-  return result;
+  EXIT_LISP_FRAME (result);
 }
 
 DEFUN ("thread-last-error", Fthread_last_error, Sthread_last_error, 0, 0, 0,

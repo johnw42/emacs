@@ -73,7 +73,10 @@ static Lisp_Object watch_list = NIL_INIT;
 static Lisp_Object
 mask_to_aspects (uint32_t mask)
 {
-  Lisp_Object aspects = Qnil;
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (aspects);
+  aspects = Qnil;
+
   if (mask & IN_ACCESS)
     aspects = Fcons (Qaccess, aspects);
   if (mask & IN_ATTRIB)
@@ -106,48 +109,49 @@ mask_to_aspects (uint32_t mask)
     aspects = Fcons (Qq_overflow, aspects);
   if (mask & IN_UNMOUNT)
     aspects = Fcons (Qunmount, aspects);
-  return aspects;
+  EXIT_LISP_FRAME (aspects);
 }
 
 static uint32_t
 symbol_to_inotifymask (Lisp_Object symb)
 {
+  ENTER_LISP_FRAME_T (uint32_t, symb);
   if (EQ (symb, Qaccess))
-    return IN_ACCESS;
+    EXIT_LISP_FRAME (IN_ACCESS);
   else if (EQ (symb, Qattrib))
-    return IN_ATTRIB;
+    EXIT_LISP_FRAME (IN_ATTRIB);
   else if (EQ (symb, Qclose_write))
-    return IN_CLOSE_WRITE;
+    EXIT_LISP_FRAME (IN_CLOSE_WRITE);
   else if (EQ (symb, Qclose_nowrite))
-    return IN_CLOSE_NOWRITE;
+    EXIT_LISP_FRAME (IN_CLOSE_NOWRITE);
   else if (EQ (symb, Qcreate))
-    return IN_CREATE;
+    EXIT_LISP_FRAME (IN_CREATE);
   else if (EQ (symb, Qdelete))
-    return IN_DELETE;
+    EXIT_LISP_FRAME (IN_DELETE);
   else if (EQ (symb, Qdelete_self))
-    return IN_DELETE_SELF;
+    EXIT_LISP_FRAME (IN_DELETE_SELF);
   else if (EQ (symb, Qmodify))
-    return IN_MODIFY;
+    EXIT_LISP_FRAME (IN_MODIFY);
   else if (EQ (symb, Qmove_self))
-    return IN_MOVE_SELF;
+    EXIT_LISP_FRAME (IN_MOVE_SELF);
   else if (EQ (symb, Qmoved_from))
-    return IN_MOVED_FROM;
+    EXIT_LISP_FRAME (IN_MOVED_FROM);
   else if (EQ (symb, Qmoved_to))
-    return IN_MOVED_TO;
+    EXIT_LISP_FRAME (IN_MOVED_TO);
   else if (EQ (symb, Qopen))
-    return IN_OPEN;
+    EXIT_LISP_FRAME (IN_OPEN);
   else if (EQ (symb, Qmove))
-    return IN_MOVE;
+    EXIT_LISP_FRAME (IN_MOVE);
   else if (EQ (symb, Qclose))
-    return IN_CLOSE;
+    EXIT_LISP_FRAME (IN_CLOSE);
 
   else if (EQ (symb, Qdont_follow))
-    return IN_DONT_FOLLOW;
+    EXIT_LISP_FRAME (IN_DONT_FOLLOW);
   else if (EQ (symb, Qonlydir))
-    return IN_ONLYDIR;
+    EXIT_LISP_FRAME (IN_ONLYDIR);
 
   else if (EQ (symb, Qt) || EQ (symb, Qall_events))
-    return IN_ALL_EVENTS;
+    EXIT_LISP_FRAME (IN_ALL_EVENTS);
   else
     {
       errno = EINVAL;
@@ -158,28 +162,32 @@ symbol_to_inotifymask (Lisp_Object symb)
 static uint32_t
 aspect_to_inotifymask (Lisp_Object aspect)
 {
+  ENTER_LISP_FRAME_T (uint32_t, aspect);
+  LISP_LOCALS (x);
   if (CONSP (aspect) || NILP (aspect))
     {
-      Lisp_Object x = aspect;
+      x = aspect;
+
       uint32_t mask = 0;
       FOR_EACH_TAIL (x)
 	mask |= symbol_to_inotifymask (XCAR (x));
       CHECK_LIST_END (x, aspect);
-      return mask;
+      EXIT_LISP_FRAME (mask);
     }
   else
-    return symbol_to_inotifymask (aspect);
+    EXIT_LISP_FRAME (symbol_to_inotifymask (aspect));
 }
 
 static Lisp_Object
 inotifyevent_to_event (Lisp_Object watch, struct inotify_event const *ev)
 {
-  Lisp_Object name;
+  ENTER_LISP_FRAME (watch);
+  LISP_LOCALS (name);
   uint32_t mask;
   CONS_TO_INTEGER (Fnth (make_number (3), watch), uint32_t, mask);
 
   if (! (mask & ev->mask))
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
 
   if (ev->len > 0)
     {
@@ -190,11 +198,11 @@ inotifyevent_to_event (Lisp_Object watch, struct inotify_event const *ev)
   else
     name = XCAR (XCDR (watch));
 
-  return list2 (list4 (Fcons (INTEGER_TO_CONS (ev->wd), XCAR (watch)),
+  EXIT_LISP_FRAME (list2 (list4 (Fcons (INTEGER_TO_CONS (ev->wd), XCAR (watch)),
                        mask_to_aspects (ev->mask),
                        name,
 		       INTEGER_TO_CONS (ev->cookie)),
-		Fnth (make_number (2), watch));
+		Fnth (make_number (2), watch)));
 }
 
 /* Add a new watch to watch-descriptor WD watching FILENAME and using
@@ -204,10 +212,14 @@ static Lisp_Object
 add_watch (int wd, Lisp_Object filename,
 	   uint32_t imask, Lisp_Object callback)
 {
-  Lisp_Object descriptor = INTEGER_TO_CONS (wd);
-  Lisp_Object tail = assoc_no_quit (descriptor, watch_list);
-  Lisp_Object watch, watch_id;
-  Lisp_Object mask = INTEGER_TO_CONS (imask);
+  ENTER_LISP_FRAME (filename, callback);
+  LISP_LOCALS (descriptor, tail, watch, watch_id, mask);
+  descriptor = INTEGER_TO_CONS (wd);
+
+  tail = assoc_no_quit (descriptor, watch_list);
+
+  mask = INTEGER_TO_CONS (imask);
+
 
   EMACS_INT id = 0;
   if (NILP (tail))
@@ -233,7 +245,7 @@ add_watch (int wd, Lisp_Object filename,
   watch = list4 (watch_id, filename, callback, mask);
   XSETCDR (tail, Fcons (watch, XCDR (tail)));
 
-  return Fcons (descriptor, watch_id);
+  EXIT_LISP_FRAME (Fcons (descriptor, watch_id));
 }
 
 /* Find the watch list element (if any) matching DESCRIPTOR.  Return
@@ -246,11 +258,14 @@ add_watch (int wd, Lisp_Object filename,
 static Lisp_Object
 find_descriptor (Lisp_Object descriptor)
 {
-  Lisp_Object tail, prevtail = Qt;
+  ENTER_LISP_FRAME (descriptor);
+  LISP_LOCALS (tail, prevtail);
+  prevtail = Qt;
+
   for (tail = watch_list; !NILP (tail); prevtail = tail, tail = XCDR (tail))
     if (equal_no_quit (XCAR (XCAR (tail)), descriptor))
-      return prevtail;
-  return Qnil;
+      EXIT_LISP_FRAME (prevtail);
+  EXIT_LISP_FRAME (Qnil);
 }
 
 /*  Remove all watches associated with the watch list element after
@@ -260,7 +275,10 @@ find_descriptor (Lisp_Object descriptor)
 static void
 remove_descriptor (Lisp_Object prevtail, bool invalid_p)
 {
-  Lisp_Object tail = CONSP (prevtail) ? XCDR (prevtail) : watch_list;
+  ENTER_LISP_FRAME (prevtail);
+  LISP_LOCALS (tail);
+  tail = CONSP (prevtail) ? XCDR (prevtail) : watch_list;
+
 
   int inotify_errno = 0;
   if (! invalid_p)
@@ -289,18 +307,24 @@ remove_descriptor (Lisp_Object prevtail, bool invalid_p)
       errno = inotify_errno;
       report_file_notify_error ("Could not rm watch", XCAR (tail));
     }
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /*  Remove watch associated with (descriptor, id).  */
 static void
 remove_watch (Lisp_Object descriptor, Lisp_Object id)
 {
-  Lisp_Object prevtail = find_descriptor (descriptor);
-  if (NILP (prevtail))
-    return;
+  ENTER_LISP_FRAME (descriptor, id);
+  LISP_LOCALS (prevtail, elt, prev);
+  prevtail = find_descriptor (descriptor);
 
-  Lisp_Object elt = XCAR (CONSP (prevtail) ? XCDR (prevtail) : watch_list);
-  for (Lisp_Object prev = elt; !NILP (XCDR (prev)); prev = XCDR (prev))
+  if (NILP (prevtail))
+    EXIT_LISP_FRAME_VOID ();
+
+  elt = XCAR (CONSP (prevtail) ? XCDR (prevtail) : watch_list);
+
+  for (prev = elt;
+ !NILP (XCDR (prev)); prev = XCDR (prev))
     if (EQ (id, XCAR (XCAR (XCDR (prev)))))
       {
 	XSETCDR (prev, XCDR (XCDR (prev)));
@@ -308,6 +332,7 @@ remove_watch (Lisp_Object descriptor, Lisp_Object id)
 	  remove_descriptor (prevtail, false);
 	break;
       }
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* This callback is called when the FD is available for read.  The inotify
@@ -315,6 +340,8 @@ remove_watch (Lisp_Object descriptor, Lisp_Object id)
 static void
 inotify_callback (int fd, void *_)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (descriptor, prevtail, tail, watches);
   int to_read;
   if (ioctl (fd, FIONREAD, &to_read) < 0)
     report_file_notify_error ("Error while retrieving file system events",
@@ -332,13 +359,17 @@ inotify_callback (int fd, void *_)
   for (ssize_t i = 0; i < n; )
     {
       struct inotify_event *ev = (struct inotify_event *) &buffer[i];
-      Lisp_Object descriptor = INTEGER_TO_CONS (ev->wd);
-      Lisp_Object prevtail = find_descriptor (descriptor);
+      descriptor = INTEGER_TO_CONS (ev->wd);
+
+      prevtail = find_descriptor (descriptor);
+
 
       if (! NILP (prevtail))
         {
-	  Lisp_Object tail = CONSP (prevtail) ? XCDR (prevtail) : watch_list;
-	  for (Lisp_Object watches = XCDR (XCAR (tail)); ! NILP (watches);
+	  tail = CONSP (prevtail) ? XCDR (prevtail) : watch_list;
+
+	  for (watches = XCDR (XCAR (tail));
+ ! NILP (watches);
 	       watches = XCDR (watches))
             {
               event.arg = inotifyevent_to_event (XCAR (watches), ev);
@@ -353,6 +384,7 @@ inotify_callback (int fd, void *_)
     }
 
   SAFE_FREE ();
+  EXIT_LISP_FRAME_VOID ();
 }
 
 DEFUN ("inotify-add-watch", Finotify_add_watch, Sinotify_add_watch, 3, 3, 0,
@@ -418,7 +450,8 @@ IN_MASK_ADD
 IN_ONESHOT  */)
      (Lisp_Object filename, Lisp_Object aspect, Lisp_Object callback)
 {
-  Lisp_Object encoded_file_name;
+  ENTER_LISP_FRAME (filename, aspect, callback);
+  LISP_LOCALS (encoded_file_name);
   int wd = -1;
   uint32_t imask = aspect_to_inotifymask (aspect);
   uint32_t mask = imask | IN_MASK_ADD | IN_EXCL_UNLINK;
@@ -439,19 +472,20 @@ IN_ONESHOT  */)
   if (wd < 0)
     report_file_notify_error ("Could not add watch for file", filename);
 
-  return add_watch (wd, filename, imask, callback);
+  EXIT_LISP_FRAME (add_watch (wd, filename, imask, callback));
 }
 
 static bool
 valid_watch_descriptor (Lisp_Object wd)
 {
-  return (CONSP (wd)
+  ENTER_LISP_FRAME_T (bool, wd);
+  EXIT_LISP_FRAME ((CONSP (wd)
 	  && (RANGED_INTEGERP (0, XCAR (wd), INT_MAX)
 	      || (CONSP (XCAR (wd))
 		  && RANGED_INTEGERP ((MOST_POSITIVE_FIXNUM >> 16) + 1,
 				      XCAR (XCAR (wd)), INT_MAX >> 16)
 		  && RANGED_INTEGERP (0, XCDR (XCAR (wd)), (1 << 16) - 1)))
-	  && NATNUMP (XCDR (wd)));
+	  && NATNUMP (XCDR (wd))));
 }
 
 DEFUN ("inotify-rm-watch", Finotify_rm_watch, Sinotify_rm_watch, 1, 1, 0,
@@ -462,8 +496,9 @@ WATCH-DESCRIPTOR should be an object returned by `inotify-add-watch'.
 See inotify_rm_watch(2) for more information.  */)
      (Lisp_Object watch_descriptor)
 {
+  ENTER_LISP_FRAME (watch_descriptor);
+  LISP_LOCALS (descriptor, id);
 
-  Lisp_Object descriptor, id;
 
   if (! valid_watch_descriptor (watch_descriptor))
     report_file_notify_error ("Invalid descriptor ", watch_descriptor);
@@ -472,7 +507,7 @@ See inotify_rm_watch(2) for more information.  */)
   id = XCDR (watch_descriptor);
   remove_watch (descriptor, id);
 
-  return Qt;
+  EXIT_LISP_FRAME (Qt);
 }
 
 DEFUN ("inotify-valid-p", Finotify_valid_p, Sinotify_valid_p, 1, 1, 0,
@@ -486,13 +521,17 @@ reason.  Removing the watch by calling `inotify-rm-watch' also makes
 it invalid.  */)
      (Lisp_Object watch_descriptor)
 {
+  ENTER_LISP_FRAME (watch_descriptor);
+  LISP_LOCALS (tail, watch);
   if (! valid_watch_descriptor (watch_descriptor))
-    return Qnil;
-  Lisp_Object tail = assoc_no_quit (XCAR (watch_descriptor), watch_list);
+    EXIT_LISP_FRAME (Qnil);
+  tail = assoc_no_quit (XCAR (watch_descriptor), watch_list);
+
   if (NILP (tail))
-    return Qnil;
-  Lisp_Object watch = assq_no_quit (XCDR (watch_descriptor), XCDR (tail));
-  return ! NILP (watch) ? Qt : Qnil;
+    EXIT_LISP_FRAME (Qnil);
+  watch = assq_no_quit (XCDR (watch_descriptor), XCDR (tail));
+
+  EXIT_LISP_FRAME (! NILP (watch) ? Qt : Qnil);
 }
 
 #ifdef INOTIFY_DEBUG

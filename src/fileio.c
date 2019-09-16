@@ -198,24 +198,31 @@ check_writable (const char *filename, int amode)
 Lisp_Object
 get_file_errno_data (char const *string, Lisp_Object name, int errorno)
 {
-  Lisp_Object data = CONSP (name) || NILP (name) ? name : list1 (name);
+  ENTER_LISP_FRAME (name);
+  LISP_LOCALS (data, errstring, errdata);
+  data = CONSP (name) || NILP (name) ? name : list1 (name);
+
   char *str = emacs_strerror (errorno);
   AUTO_STRING (unibyte_str, str);
-  Lisp_Object errstring
-    = code_convert_string_norecord (unibyte_str, Vlocale_coding_system, 0);
-  Lisp_Object errdata = Fcons (errstring, data);
+  errstring = code_convert_string_norecord (unibyte_str, Vlocale_coding_system, 0);
+
+  errdata = Fcons (errstring, data);
+
 
   if (errorno == EEXIST)
-    return Fcons (Qfile_already_exists, errdata);
+    EXIT_LISP_FRAME (Fcons (Qfile_already_exists, errdata));
   else
-    return Fcons (errorno == ENOENT ? Qfile_missing : Qfile_error,
-		  Fcons (build_string (string), errdata));
+    EXIT_LISP_FRAME (Fcons (errorno == ENOENT ? Qfile_missing : Qfile_error,
+		  Fcons (build_string (string), errdata)));
 }
 
 void
 report_file_errno (char const *string, Lisp_Object name, int errorno)
 {
-  Lisp_Object data = get_file_errno_data (string, name, errorno);
+  ENTER_LISP_FRAME (name);
+  LISP_LOCALS (data);
+  data = get_file_errno_data (string, name, errorno);
+
 
   xsignal (Fcar (data), Fcdr (data));
 }
@@ -228,7 +235,9 @@ report_file_errno (char const *string, Lisp_Object name, int errorno)
 void
 report_file_error (char const *string, Lisp_Object name)
 {
+  ENTER_LISP_FRAME (name);
   report_file_errno (string, name, errno);
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Like report_file_error, but reports a file-notify-error instead.  */
@@ -236,14 +245,19 @@ report_file_error (char const *string, Lisp_Object name)
 void
 report_file_notify_error (const char *string, Lisp_Object name)
 {
+  ENTER_LISP_FRAME (name);
+  LISP_LOCALS (errstring, data, errdata);
   char *str = emacs_strerror (errno);
   AUTO_STRING (unibyte_str, str);
-  Lisp_Object errstring
-    = code_convert_string_norecord (unibyte_str, Vlocale_coding_system, 0);
-  Lisp_Object data = CONSP (name) || NILP (name) ? name : list1 (name);
-  Lisp_Object errdata = Fcons (errstring, data);
+  errstring = code_convert_string_norecord (unibyte_str, Vlocale_coding_system, 0);
+
+  data = CONSP (name) || NILP (name) ? name : list1 (name);
+
+  errdata = Fcons (errstring, data);
+
 
   xsignal (Qfile_notify_error, Fcons (build_string (string), errdata));
+  EXIT_LISP_FRAME_VOID ();
 }
 
 void
@@ -264,8 +278,10 @@ fclose_unwind (void *arg)
 void
 restore_point_unwind (Lisp_Object location)
 {
+  ENTER_LISP_FRAME (location);
   Fgoto_char (location);
   unchain_marker (XMARKER (location));
+  EXIT_LISP_FRAME_VOID ();
 }
 
 
@@ -282,8 +298,9 @@ but still do run any other handlers.  This lets handlers
 use the standard functions without calling themselves recursively.  */)
   (Lisp_Object filename, Lisp_Object operation)
 {
+  ENTER_LISP_FRAME (filename, operation);
+  LISP_LOCALS (chain, inhibited_handlers, result, elt, string, handler, operations, tem);
   /* This function must not munge the match data.  */
-  Lisp_Object chain, inhibited_handlers, result;
   ptrdiff_t pos = -1;
 
   result = Qnil;
@@ -297,14 +314,16 @@ use the standard functions without calling themselves recursively.  */)
   for (chain = Vfile_name_handler_alist; CONSP (chain);
        chain = XCDR (chain))
     {
-      Lisp_Object elt;
       elt = XCAR (chain);
       if (CONSP (elt))
 	{
-	  Lisp_Object string = XCAR (elt);
+	  string = XCAR (elt);
+
 	  ptrdiff_t match_pos;
-	  Lisp_Object handler = XCDR (elt);
-	  Lisp_Object operations = Qnil;
+	  handler = XCDR (elt);
+
+	  operations = Qnil;
+
 
 	  if (SYMBOLP (handler))
 	    operations = Fget (handler, Qoperations);
@@ -313,7 +332,6 @@ use the standard functions without calling themselves recursively.  */)
 	      && (match_pos = fast_string_match (string, filename)) > pos
 	      && (NILP (operations) || ! NILP (Fmemq (operation, operations))))
 	    {
-	      Lisp_Object tem;
 
 	      handler = XCDR (elt);
 	      tem = Fmemq (handler, inhibited_handlers);
@@ -327,7 +345,7 @@ use the standard functions without calling themselves recursively.  */)
 
       maybe_quit ();
     }
-  return result;
+  EXIT_LISP_FRAME (result);
 }
 
 DEFUN ("file-name-directory", Ffile_name_directory, Sfile_name_directory,
@@ -338,7 +356,8 @@ Otherwise return a directory name.
 Given a Unix syntax file name, returns a string ending in slash.  */)
   (Lisp_Object filename)
 {
-  Lisp_Object handler;
+  ENTER_LISP_FRAME (filename);
+  LISP_LOCALS (handler, handled_name, tem_fn);
 
   CHECK_STRING (filename);
 
@@ -347,9 +366,10 @@ Given a Unix syntax file name, returns a string ending in slash.  */)
   handler = Ffind_file_name_handler (filename, Qfile_name_directory);
   if (!NILP (handler))
     {
-      Lisp_Object handled_name = call2 (handler, Qfile_name_directory,
+      handled_name = call2 (handler, Qfile_name_directory,
 					filename);
-      return STRINGP (handled_name) ? handled_name : Qnil;
+
+      EXIT_LISP_FRAME (STRINGP (handled_name) ? handled_name : Qnil);
     }
 
   char *beg = SSDATA (filename);
@@ -366,10 +386,9 @@ Given a Unix syntax file name, returns a string ending in slash.  */)
 	 ) p--;
 
   if (p == beg)
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
 #ifdef DOS_NT
   /* Expansion of "c:" to drive and default directory.  */
-  Lisp_Object tem_fn;
   USE_SAFE_ALLOCA;
   SAFE_ALLOCA_STRING (beg, filename);
   p = beg + (p - SSDATA (filename));
@@ -418,9 +437,9 @@ Given a Unix syntax file name, returns a string ending in slash.  */)
       tem_fn = make_specified_string (beg, -1, p - beg, 0);
     }
   SAFE_FREE ();
-  return tem_fn;
+  EXIT_LISP_FRAME (tem_fn);
 #else  /* DOS_NT */
-  return make_specified_string (beg, -1, p - beg, STRING_MULTIBYTE (filename));
+  EXIT_LISP_FRAME (make_specified_string (beg, -1, p - beg, STRING_MULTIBYTE (filename)));
 #endif	/* DOS_NT */
 }
 
@@ -432,8 +451,9 @@ this is everything after the last slash,
 or the entire name if it contains no slash.  */)
   (Lisp_Object filename)
 {
+  ENTER_LISP_FRAME (filename);
+  LISP_LOCALS (handler, handled_name);
   register const char *beg, *p, *end;
-  Lisp_Object handler;
 
   CHECK_STRING (filename);
 
@@ -442,10 +462,11 @@ or the entire name if it contains no slash.  */)
   handler = Ffind_file_name_handler (filename, Qfile_name_nondirectory);
   if (!NILP (handler))
     {
-      Lisp_Object handled_name = call2 (handler, Qfile_name_nondirectory,
+      handled_name = call2 (handler, Qfile_name_nondirectory,
 					filename);
+
       if (STRINGP (handled_name))
-	return handled_name;
+	EXIT_LISP_FRAME (handled_name);
       error ("Invalid handler in `file-name-handler-alist'");
     }
 
@@ -462,7 +483,7 @@ or the entire name if it contains no slash.  */)
 	 )
     p--;
 
-  return make_specified_string (p, -1, end - p, STRING_MULTIBYTE (filename));
+  EXIT_LISP_FRAME (make_specified_string (p, -1, end - p, STRING_MULTIBYTE (filename)));
 }
 
 DEFUN ("unhandled-file-name-directory", Funhandled_file_name_directory,
@@ -478,19 +499,21 @@ The `call-process' and `start-process' functions use this function to
 get a current directory to run processes in.  */)
   (Lisp_Object filename)
 {
-  Lisp_Object handler;
+  ENTER_LISP_FRAME (filename);
+  LISP_LOCALS (handler, handled_name);
 
   /* If the file name has special constructs in it,
      call the corresponding file handler.  */
   handler = Ffind_file_name_handler (filename, Qunhandled_file_name_directory);
   if (!NILP (handler))
     {
-      Lisp_Object handled_name = call2 (handler, Qunhandled_file_name_directory,
+      handled_name = call2 (handler, Qunhandled_file_name_directory,
 					filename);
-      return STRINGP (handled_name) ? handled_name : Qnil;
+
+      EXIT_LISP_FRAME (STRINGP (handled_name) ? handled_name : Qnil);
     }
 
-  return Ffile_name_as_directory (filename);
+  EXIT_LISP_FRAME (Ffile_name_as_directory (filename));
 }
 
 /* Maximum number of bytes that DST will be longer than SRC
@@ -535,9 +558,10 @@ For a Unix-syntax file name, just appends a slash unless a trailing slash
 is already present.  */)
   (Lisp_Object file)
 {
+  ENTER_LISP_FRAME (file);
+  LISP_LOCALS (handler, val, handled_name);
   char *buf;
   ptrdiff_t length;
-  Lisp_Object handler, val;
   USE_SAFE_ALLOCA;
 
   CHECK_STRING (file);
@@ -547,10 +571,11 @@ is already present.  */)
   handler = Ffind_file_name_handler (file, Qfile_name_as_directory);
   if (!NILP (handler))
     {
-      Lisp_Object handled_name = call2 (handler, Qfile_name_as_directory,
+      handled_name = call2 (handler, Qfile_name_as_directory,
 					file);
+
       if (STRINGP (handled_name))
-	return handled_name;
+	EXIT_LISP_FRAME (handled_name);
       error ("Invalid handler in `file-name-handler-alist'");
     }
 
@@ -563,7 +588,7 @@ is already present.  */)
 				   STRING_MULTIBYTE (file));
   val = make_specified_string (buf, -1, length, STRING_MULTIBYTE (file));
   SAFE_FREE ();
-  return val;
+  EXIT_LISP_FRAME (val);
 }
 
 /* Convert from directory name SRC of length SRCLEN to file name in
@@ -597,10 +622,11 @@ DEFUN ("directory-name-p", Fdirectory_name_p, Sdirectory_name_p, 1, 1, 0,
        doc: /* Return non-nil if NAME ends with a directory separator character.  */)
   (Lisp_Object name)
 {
+  ENTER_LISP_FRAME (name);
   CHECK_STRING (name);
   ptrdiff_t namelen = SBYTES (name);
   unsigned char c = namelen ? SREF (name, namelen - 1) : 0;
-  return IS_DIRECTORY_SEP (c) ? Qt : Qnil;
+  EXIT_LISP_FRAME (IS_DIRECTORY_SEP (c) ? Qt : Qnil);
 }
 
 /* Return the expansion of NEWNAME, except that if NEWNAME is a
@@ -612,9 +638,10 @@ DEFUN ("directory-name-p", Fdirectory_name_p, Sdirectory_name_p, 1, 1, 0,
 static Lisp_Object
 expand_cp_target (Lisp_Object file, Lisp_Object newname)
 {
-  return (!NILP (Fdirectory_name_p (newname))
+  ENTER_LISP_FRAME (file, newname);
+  EXIT_LISP_FRAME ((!NILP (Fdirectory_name_p (newname))
 	  ? Fexpand_file_name (Ffile_name_nondirectory (file), newname)
-	  : Fexpand_file_name (newname, Qnil));
+	  : Fexpand_file_name (newname, Qnil)));
 }
 
 DEFUN ("directory-file-name", Fdirectory_file_name, Sdirectory_file_name,
@@ -626,9 +653,10 @@ a directory is different from its name as a file.
 In Unix-syntax, this function just removes the final slash.  */)
   (Lisp_Object directory)
 {
+  ENTER_LISP_FRAME (directory);
+  LISP_LOCALS (handler, val, handled_name);
   char *buf;
   ptrdiff_t length;
-  Lisp_Object handler, val;
   USE_SAFE_ALLOCA;
 
   CHECK_STRING (directory);
@@ -638,10 +666,11 @@ In Unix-syntax, this function just removes the final slash.  */)
   handler = Ffind_file_name_handler (directory, Qdirectory_file_name);
   if (!NILP (handler))
     {
-      Lisp_Object handled_name = call2 (handler, Qdirectory_file_name,
+      handled_name = call2 (handler, Qdirectory_file_name,
 					directory);
+
       if (STRINGP (handled_name))
-	return handled_name;
+	EXIT_LISP_FRAME (handled_name);
       error ("Invalid handler in `file-name-handler-alist'");
     }
 
@@ -654,7 +683,7 @@ In Unix-syntax, this function just removes the final slash.  */)
 				STRING_MULTIBYTE (directory));
   val = make_specified_string (buf, -1, length, STRING_MULTIBYTE (directory));
   SAFE_FREE ();
-  return val;
+  EXIT_LISP_FRAME (val);
 }
 
 DEFUN ("make-temp-file-internal", Fmake_temp_file_internal,
@@ -673,16 +702,21 @@ This function does not grok magic file names.  */)
   (Lisp_Object prefix, Lisp_Object dir_flag, Lisp_Object suffix,
    Lisp_Object text)
 {
+  ENTER_LISP_FRAME (prefix, dir_flag, suffix, text);
+  LISP_LOCALS (encoded_prefix, encoded_suffix, val);
   CHECK_STRING (prefix);
   CHECK_STRING (suffix);
-  Lisp_Object encoded_prefix = ENCODE_FILE (prefix);
-  Lisp_Object encoded_suffix = ENCODE_FILE (suffix);
+  encoded_prefix = ENCODE_FILE (prefix);
+
+  encoded_suffix = ENCODE_FILE (suffix);
+
   ptrdiff_t prefix_len = SBYTES (encoded_prefix);
   ptrdiff_t suffix_len = SBYTES (encoded_suffix);
   if (INT_MAX < suffix_len)
     args_out_of_range (prefix, suffix);
   int nX = 6;
-  Lisp_Object val = make_uninit_string (prefix_len + nX + suffix_len);
+  val = make_uninit_string (prefix_len + nX + suffix_len);
+
   char *data = SSDATA (val);
   memcpy (data, SSDATA (encoded_prefix), prefix_len);
   memset (data + prefix_len, 'X', nX);
@@ -713,7 +747,7 @@ This function does not grok magic file names.  */)
 	};
       report_file_error (kind_message[kind], prefix);
     }
-  return val;
+  EXIT_LISP_FRAME (val);
 }
 
 
@@ -729,8 +763,9 @@ later creating the file, which opens all kinds of security holes.
 For that reason, you should normally use `make-temp-file' instead.  */)
   (Lisp_Object prefix)
 {
-  return Fmake_temp_file_internal (prefix, make_number (0),
-				   empty_unibyte_string, Qnil);
+  ENTER_LISP_FRAME (prefix);
+  EXIT_LISP_FRAME (Fmake_temp_file_internal (prefix, make_number (0),
+				   empty_unibyte_string, Qnil));
 }
 
 DEFUN ("expand-file-name", Fexpand_file_name, Sexpand_file_name, 1, 2, 0,
@@ -761,6 +796,8 @@ sure DIRNAME in this example doesn't end in a slash, unless it's
 the root directory.  */)
   (Lisp_Object name, Lisp_Object default_directory)
 {
+  ENTER_LISP_FRAME (name, default_directory);
+  LISP_LOCALS (handler, result, handled_name, hdir, tem);
   /* These point to SDATA and need to be careful with string-relocation
      during GC (via DECODE_FILE).  */
   char *nm;
@@ -778,9 +815,7 @@ the root directory.  */)
   bool is_escaped = 0;
 #endif /* DOS_NT */
   ptrdiff_t length, nbytes;
-  Lisp_Object handler, result, handled_name;
   bool multibyte;
-  Lisp_Object hdir;
   USE_SAFE_ALLOCA;
 
   CHECK_STRING (name);
@@ -793,7 +828,7 @@ the root directory.  */)
       handled_name = call3 (handler, Qexpand_file_name,
 			    name, default_directory);
       if (STRINGP (handled_name))
-	return handled_name;
+	EXIT_LISP_FRAME (handled_name);
       error ("Invalid handler in `file-name-handler-alist'");
     }
 
@@ -826,7 +861,7 @@ the root directory.  */)
 	  handled_name = call3 (handler, Qexpand_file_name,
 				name, default_directory);
 	  if (STRINGP (handled_name))
-	    return handled_name;
+	    EXIT_LISP_FRAME (handled_name);
 	  error ("Invalid handler in `file-name-handler-alist'");
 	}
     }
@@ -1060,7 +1095,7 @@ the root directory.  */)
 	    name = make_specified_string (nm, -1, nmlim - nm, multibyte);
 #endif /* not DOS_NT */
 	  SAFE_FREE ();
-	  return name;
+	  EXIT_LISP_FRAME (name);
 	}
     }
 
@@ -1091,7 +1126,6 @@ the root directory.  */)
       if (IS_DIRECTORY_SEP (nm[1])
 	  || nm[1] == 0)	/* ~ by itself */
 	{
-	  Lisp_Object tem;
 
 	  if (!(newdir = egetenv ("HOME")))
 	    newdir = newdirlim = "";
@@ -1135,7 +1169,6 @@ the root directory.  */)
 	  unblock_input ();
 	  if (pw)
 	    {
-	      Lisp_Object tem;
 
 	      newdir = pw->pw_dir;
 	      /* `getpwnam' may return a unibyte string, which will
@@ -1173,7 +1206,8 @@ the root directory.  */)
 	    adir = NULL;
 	  else if (multibyte)
 	    {
-	      Lisp_Object tem = build_string (adir);
+	      tem = build_string (adir);
+
 
 	      tem = DECODE_FILE (tem);
 	      newdirlim = adir + SBYTES (tem);
@@ -1276,7 +1310,8 @@ the root directory.  */)
 	    getcwd (adir, adir_size);
 	  if (multibyte)
 	    {
-	      Lisp_Object tem = build_string (adir);
+	      tem = build_string (adir);
+
 
 	      tem = DECODE_FILE (tem);
 	      newdirlim = adir + SBYTES (tem);
@@ -1473,7 +1508,7 @@ the root directory.  */)
     }
 
   SAFE_FREE ();
-  return result;
+  EXIT_LISP_FRAME (result);
 }
 
 #if 0
@@ -1705,11 +1740,12 @@ If `//' appears, everything up to and including the first of
 those `/' is discarded.  */)
   (Lisp_Object filename)
 {
+  ENTER_LISP_FRAME (filename);
+  LISP_LOCALS (handler, handled_name, result, name, tmp, xname);
   char *nm, *p, *x, *endp;
   bool substituted = false;
   bool multibyte;
   char *xnm;
-  Lisp_Object handler;
 
   CHECK_STRING (filename);
 
@@ -1720,10 +1756,11 @@ those `/' is discarded.  */)
   handler = Ffind_file_name_handler (filename, Qsubstitute_in_file_name);
   if (!NILP (handler))
     {
-      Lisp_Object handled_name = call2 (handler, Qsubstitute_in_file_name,
+      handled_name = call2 (handler, Qsubstitute_in_file_name,
 					filename);
+
       if (STRINGP (handled_name))
-	return handled_name;
+	EXIT_LISP_FRAME (handled_name);
       error ("Invalid handler in `file-name-handler-alist'");
     }
 
@@ -1746,21 +1783,22 @@ those `/' is discarded.  */)
        again.  Important with filenames like "/home/foo//:/hello///there"
        which would substitute to "/:/hello///there" rather than "/there".  */
     {
-      Lisp_Object result
-	= (Fsubstitute_in_file_name
+      result = (Fsubstitute_in_file_name
 	   (make_specified_string (p, -1, endp - p, multibyte)));
+
       SAFE_FREE ();
-      return result;
+      EXIT_LISP_FRAME (result);
     }
 
   /* See if any variables are substituted into the string.  */
 
   if (!NILP (Ffboundp (Qsubstitute_env_in_file_name)))
     {
-      Lisp_Object name
-	= (!substituted ? filename
+      name = (!substituted ? filename
 	   : make_specified_string (nm, -1, endp - nm, multibyte));
-      Lisp_Object tmp = call1 (Qsubstitute_env_in_file_name, name);
+
+      tmp = call1 (Qsubstitute_env_in_file_name, name);
+
       CHECK_STRING (tmp);
       if (!EQ (tmp, name))
 	substituted = true;
@@ -1774,7 +1812,7 @@ those `/' is discarded.  */)
 	filename = Fdowncase (filename);
 #endif
       SAFE_FREE ();
-      return filename;
+      EXIT_LISP_FRAME (filename);
     }
 
   xnm = SSDATA (filename);
@@ -1790,7 +1828,8 @@ those `/' is discarded.  */)
 #ifdef WINDOWSNT
   if (!NILP (Vw32_downcase_file_names))
     {
-      Lisp_Object xname = make_specified_string (xnm, -1, x - xnm, multibyte);
+      xname = make_specified_string (xnm, -1, x - xnm, multibyte);
+
 
       filename = Fdowncase (xname);
     }
@@ -1799,7 +1838,7 @@ those `/' is discarded.  */)
   if (xnm != SSDATA (filename))
     filename = make_specified_string (xnm, -1, x - xnm, multibyte);
   SAFE_FREE ();
-  return filename;
+  EXIT_LISP_FRAME (filename);
 }
 
 /* A slightly faster and more convenient way to get
@@ -1808,7 +1847,10 @@ those `/' is discarded.  */)
 Lisp_Object
 expand_and_dir_to_file (Lisp_Object filename)
 {
-  Lisp_Object absname = Fexpand_file_name (filename, Qnil);
+  ENTER_LISP_FRAME (filename);
+  LISP_LOCALS (absname);
+  absname = Fexpand_file_name (filename, Qnil);
+
 
   /* Remove final slash, if any (unless this is the root dir).
      stat behaves differently depending!  */
@@ -1817,7 +1859,7 @@ expand_and_dir_to_file (Lisp_Object filename)
       && !IS_DEVICE_SEP (SREF (absname, SBYTES (absname) - 2)))
     /* We cannot take shortcuts; they might be wrong for magic file names.  */
     absname = Fdirectory_file_name (absname);
-  return absname;
+  EXIT_LISP_FRAME (absname);
 }
 
 /* Signal an error if the file ABSNAME already exists.
@@ -1833,7 +1875,8 @@ barf_or_query_if_file_exists (Lisp_Object absname, bool known_to_exist,
 			      const char *querystring, bool interactive,
 			      bool quick)
 {
-  Lisp_Object tem, encoded_filename;
+  ENTER_LISP_FRAME (absname);
+  LISP_LOCALS (tem, encoded_filename);
   struct stat statbuf;
 
   encoded_filename = ENCODE_FILE (absname);
@@ -1861,6 +1904,7 @@ barf_or_query_if_file_exists (Lisp_Object absname, bool known_to_exist,
 	xsignal2 (Qfile_already_exists,
 		  build_string ("File already exists"), absname);
     }
+  EXIT_LISP_FRAME_VOID ();
 }
 
 #ifndef WINDOWSNT
@@ -1910,9 +1954,9 @@ permissions.  */)
    Lisp_Object keep_time, Lisp_Object preserve_uid_gid,
    Lisp_Object preserve_permissions)
 {
-  Lisp_Object handler;
+  ENTER_LISP_FRAME (file, newname, ok_if_already_exists, keep_time, preserve_uid_gid, preserve_permissions);
+  LISP_LOCALS (handler, encoded_file, encoded_newname);
   ptrdiff_t count = SPECPDL_INDEX ();
-  Lisp_Object encoded_file, encoded_newname;
 #if HAVE_LIBSELINUX
   security_context_t con;
   int conlength = 0;
@@ -1936,9 +1980,9 @@ permissions.  */)
   if (NILP (handler))
     handler = Ffind_file_name_handler (newname, Qcopy_file);
   if (!NILP (handler))
-    return call7 (handler, Qcopy_file, file, newname,
+    EXIT_LISP_FRAME (call7 (handler, Qcopy_file, file, newname,
 		  ok_if_already_exists, keep_time, preserve_uid_gid,
-		  preserve_permissions);
+		  preserve_permissions));
 
   encoded_file = ENCODE_FILE (file);
   encoded_newname = ENCODE_FILE (newname);
@@ -2135,7 +2179,7 @@ permissions.  */)
   /* Discard the unwind protects.  */
   specpdl_ptr = specpdl + count;
 
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 DEFUN ("make-directory-internal", Fmake_directory_internal,
@@ -2143,16 +2187,16 @@ DEFUN ("make-directory-internal", Fmake_directory_internal,
        doc: /* Create a new directory named DIRECTORY.  */)
   (Lisp_Object directory)
 {
+  ENTER_LISP_FRAME (directory);
+  LISP_LOCALS (handler, encoded_dir);
   const char *dir;
-  Lisp_Object handler;
-  Lisp_Object encoded_dir;
 
   CHECK_STRING (directory);
   directory = Fexpand_file_name (directory, Qnil);
 
   handler = Ffind_file_name_handler (directory, Qmake_directory_internal);
   if (!NILP (handler))
-    return call2 (handler, Qmake_directory_internal, directory);
+    EXIT_LISP_FRAME (call2 (handler, Qmake_directory_internal, directory));
 
   encoded_dir = ENCODE_FILE (directory);
 
@@ -2161,7 +2205,7 @@ DEFUN ("make-directory-internal", Fmake_directory_internal,
   if (mkdir (dir, 0777 & ~auto_saving_dir_umask) != 0)
     report_file_error ("Creating directory", directory);
 
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 DEFUN ("delete-directory-internal", Fdelete_directory_internal,
@@ -2169,8 +2213,9 @@ DEFUN ("delete-directory-internal", Fdelete_directory_internal,
        doc: /* Delete the directory named DIRECTORY.  Does not follow symlinks.  */)
   (Lisp_Object directory)
 {
+  ENTER_LISP_FRAME (directory);
+  LISP_LOCALS (encoded_dir);
   const char *dir;
-  Lisp_Object encoded_dir;
 
   CHECK_STRING (directory);
   directory = Fdirectory_file_name (Fexpand_file_name (directory, Qnil));
@@ -2180,7 +2225,7 @@ DEFUN ("delete-directory-internal", Fdelete_directory_internal,
   if (rmdir (dir) != 0)
     report_file_error ("Removing directory", directory);
 
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 DEFUN ("delete-file", Fdelete_file, Sdelete_file, 1, 2,
@@ -2198,8 +2243,8 @@ When called interactively, TRASH is t if no prefix argument is given.
 With a prefix argument, TRASH is nil.  */)
   (Lisp_Object filename, Lisp_Object trash)
 {
-  Lisp_Object handler;
-  Lisp_Object encoded_file;
+  ENTER_LISP_FRAME (filename, trash);
+  LISP_LOCALS (handler, encoded_file);
 
   if (!NILP (Ffile_directory_p (filename))
       && NILP (Ffile_symlink_p (filename)))
@@ -2210,16 +2255,16 @@ With a prefix argument, TRASH is nil.  */)
 
   handler = Ffind_file_name_handler (filename, Qdelete_file);
   if (!NILP (handler))
-    return call3 (handler, Qdelete_file, filename, trash);
+    EXIT_LISP_FRAME (call3 (handler, Qdelete_file, filename, trash));
 
   if (delete_by_moving_to_trash && !NILP (trash))
-    return call1 (Qmove_file_to_trash, filename);
+    EXIT_LISP_FRAME (call1 (Qmove_file_to_trash, filename));
 
   encoded_file = ENCODE_FILE (filename);
 
   if (unlink (SSDATA (encoded_file)) != 0 && errno != ENOENT)
     report_file_error ("Removing old name", filename);
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 static Lisp_Object
@@ -2234,11 +2279,12 @@ internal_delete_file_1 (Lisp_Object ignore)
 bool
 internal_delete_file (Lisp_Object filename)
 {
-  Lisp_Object tem;
+  ENTER_LISP_FRAME_T (bool, filename);
+  LISP_LOCALS (tem);
 
   tem = internal_condition_case_2 (Fdelete_file, filename, Qnil,
 				   Qt, internal_delete_file_1);
-  return NILP (tem);
+  EXIT_LISP_FRAME (NILP (tem));
 }
 
 /* Filesystems are case-sensitive on all supported systems except
@@ -2285,7 +2331,8 @@ DEFUN ("file-name-case-insensitive-p", Ffile_name_case_insensitive_p,
 The arg must be a string.  */)
   (Lisp_Object filename)
 {
-  Lisp_Object handler;
+  ENTER_LISP_FRAME (filename);
+  LISP_LOCALS (handler);
 
   CHECK_STRING (filename);
   filename = Fexpand_file_name (filename, Qnil);
@@ -2294,10 +2341,10 @@ The arg must be a string.  */)
      call the corresponding file handler.  */
   handler = Ffind_file_name_handler (filename, Qfile_name_case_insensitive_p);
   if (!NILP (handler))
-    return call2 (handler, Qfile_name_case_insensitive_p, filename);
+    EXIT_LISP_FRAME (call2 (handler, Qfile_name_case_insensitive_p, filename));
 
   filename = ENCODE_FILE (filename);
-  return file_name_case_insensitive_p (SSDATA (filename)) ? Qt : Qnil;
+  EXIT_LISP_FRAME (file_name_case_insensitive_p (SSDATA (filename)) ? Qt : Qnil);
 }
 
 DEFUN ("rename-file", Frename_file, Srename_file, 2, 3,
@@ -2314,8 +2361,8 @@ An integer third arg means request confirmation if NEWNAME already exists.
 This is what happens in interactive use with M-x.  */)
   (Lisp_Object file, Lisp_Object newname, Lisp_Object ok_if_already_exists)
 {
-  Lisp_Object handler;
-  Lisp_Object encoded_file, encoded_newname;
+  ENTER_LISP_FRAME (file, newname, ok_if_already_exists);
+  LISP_LOCALS (handler, encoded_file, encoded_newname, symlink_target);
 
   file = Fexpand_file_name (file, Qnil);
 
@@ -2342,8 +2389,8 @@ This is what happens in interactive use with M-x.  */)
   if (NILP (handler))
     handler = Ffind_file_name_handler (newname, Qrename_file);
   if (!NILP (handler))
-    return call4 (handler, Qrename_file,
-		  file, newname, ok_if_already_exists);
+    EXIT_LISP_FRAME (call4 (handler, Qrename_file,
+		  file, newname, ok_if_already_exists));
 
   encoded_file = ENCODE_FILE (file);
   encoded_newname = ENCODE_FILE (newname);
@@ -2357,7 +2404,7 @@ This is what happens in interactive use with M-x.  */)
       if (renameat_noreplace (AT_FDCWD, SSDATA (encoded_file),
 			      AT_FDCWD, SSDATA (encoded_newname))
 	  == 0)
-	return Qnil;
+	EXIT_LISP_FRAME (Qnil);
 
       rename_errno = errno;
       switch (rename_errno)
@@ -2378,7 +2425,7 @@ This is what happens in interactive use with M-x.  */)
   if (plain_rename)
     {
       if (rename (SSDATA (encoded_file), SSDATA (encoded_newname)) == 0)
-	return Qnil;
+	EXIT_LISP_FRAME (Qnil);
       rename_errno = errno;
       /* Don't prompt again.  */
       ok_if_already_exists = Qt;
@@ -2401,10 +2448,10 @@ This is what happens in interactive use with M-x.  */)
     call4 (Qcopy_directory, file, newname, Qt, Qnil);
   else
     {
-      Lisp_Object symlink_target
-	= (S_ISLNK (file_st.st_mode)
+      symlink_target = (S_ISLNK (file_st.st_mode)
 	   ? emacs_readlinkat (AT_FDCWD, SSDATA (encoded_file))
 	   : Qnil);
+
       if (!NILP (symlink_target))
 	Fmake_symbolic_link (symlink_target, newname, ok_if_already_exists);
       else
@@ -2417,7 +2464,7 @@ This is what happens in interactive use with M-x.  */)
     call2 (Qdelete_directory, file, Qt);
   else
     Fdelete_file (file, Qnil);
-  return unbind_to (count, Qnil);
+  EXIT_LISP_FRAME (unbind_to (count, Qnil));
 }
 
 DEFUN ("add-name-to-file", Fadd_name_to_file, Sadd_name_to_file, 2, 3,
@@ -2432,8 +2479,8 @@ An integer third arg means request confirmation if NEWNAME already exists.
 This is what happens in interactive use with M-x.  */)
   (Lisp_Object file, Lisp_Object newname, Lisp_Object ok_if_already_exists)
 {
-  Lisp_Object handler;
-  Lisp_Object encoded_file, encoded_newname;
+  ENTER_LISP_FRAME (file, newname, ok_if_already_exists);
+  LISP_LOCALS (handler, encoded_file, encoded_newname);
 
   file = Fexpand_file_name (file, Qnil);
   newname = expand_cp_target (file, newname);
@@ -2442,21 +2489,21 @@ This is what happens in interactive use with M-x.  */)
      call the corresponding file handler.  */
   handler = Ffind_file_name_handler (file, Qadd_name_to_file);
   if (!NILP (handler))
-    return call4 (handler, Qadd_name_to_file, file,
-		  newname, ok_if_already_exists);
+    EXIT_LISP_FRAME (call4 (handler, Qadd_name_to_file, file,
+		  newname, ok_if_already_exists));
 
   /* If the new name has special constructs in it,
      call the corresponding file handler.  */
   handler = Ffind_file_name_handler (newname, Qadd_name_to_file);
   if (!NILP (handler))
-    return call4 (handler, Qadd_name_to_file, file,
-		  newname, ok_if_already_exists);
+    EXIT_LISP_FRAME (call4 (handler, Qadd_name_to_file, file,
+		  newname, ok_if_already_exists));
 
   encoded_file = ENCODE_FILE (file);
   encoded_newname = ENCODE_FILE (newname);
 
   if (link (SSDATA (encoded_file), SSDATA (encoded_newname)) == 0)
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
 
   if (errno == EEXIST)
     {
@@ -2466,7 +2513,7 @@ This is what happens in interactive use with M-x.  */)
 				      INTEGERP (ok_if_already_exists), false);
       unlink (SSDATA (newname));
       if (link (SSDATA (encoded_file), SSDATA (encoded_newname)) == 0)
-	return Qnil;
+	EXIT_LISP_FRAME (Qnil);
     }
 
   report_file_error ("Adding new name", list2 (file, newname));
@@ -2485,8 +2532,8 @@ exists, and expand leading "~" or strip leading "/:" in TARGET.
 This happens for interactive use with M-x.  */)
   (Lisp_Object target, Lisp_Object linkname, Lisp_Object ok_if_already_exists)
 {
-  Lisp_Object handler;
-  Lisp_Object encoded_target, encoded_linkname;
+  ENTER_LISP_FRAME (target, linkname, ok_if_already_exists);
+  LISP_LOCALS (handler, encoded_target, encoded_linkname);
 
   CHECK_STRING (target);
   if (INTEGERP (ok_if_already_exists))
@@ -2502,14 +2549,14 @@ This happens for interactive use with M-x.  */)
      call the corresponding file handler.  */
   handler = Ffind_file_name_handler (linkname, Qmake_symbolic_link);
   if (!NILP (handler))
-    return call4 (handler, Qmake_symbolic_link, target,
-		  linkname, ok_if_already_exists);
+    EXIT_LISP_FRAME (call4 (handler, Qmake_symbolic_link, target,
+		  linkname, ok_if_already_exists));
 
   encoded_target = ENCODE_FILE (target);
   encoded_linkname = ENCODE_FILE (linkname);
 
   if (symlink (SSDATA (encoded_target), SSDATA (encoded_linkname)) == 0)
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
 
   if (errno == ENOSYS)
     xsignal1 (Qfile_error,
@@ -2523,7 +2570,7 @@ This happens for interactive use with M-x.  */)
 				      INTEGERP (ok_if_already_exists), false);
       unlink (SSDATA (encoded_linkname));
       if (symlink (SSDATA (encoded_target), SSDATA (encoded_linkname)) == 0)
-	return Qnil;
+	EXIT_LISP_FRAME (Qnil);
     }
 
   report_file_error ("Making symbolic link", list2 (target, linkname));
@@ -2536,8 +2583,9 @@ DEFUN ("file-name-absolute-p", Ffile_name_absolute_p, Sfile_name_absolute_p,
 On Unix, absolute file names start with `/'.  */)
   (Lisp_Object filename)
 {
+  ENTER_LISP_FRAME (filename);
   CHECK_STRING (filename);
-  return file_name_absolute_p (SSDATA (filename)) ? Qt : Qnil;
+  EXIT_LISP_FRAME (file_name_absolute_p (SSDATA (filename)) ? Qt : Qnil);
 }
 
 DEFUN ("file-exists-p", Ffile_exists_p, Sfile_exists_p, 1, 1, 0,
@@ -2547,8 +2595,8 @@ This returns nil for a symlink to a nonexistent file.
 Use `file-symlink-p' to test for such links.  */)
   (Lisp_Object filename)
 {
-  Lisp_Object absname;
-  Lisp_Object handler;
+  ENTER_LISP_FRAME (filename);
+  LISP_LOCALS (absname, handler, result);
 
   CHECK_STRING (filename);
   absname = Fexpand_file_name (filename, Qnil);
@@ -2558,14 +2606,15 @@ Use `file-symlink-p' to test for such links.  */)
   handler = Ffind_file_name_handler (absname, Qfile_exists_p);
   if (!NILP (handler))
     {
-      Lisp_Object result = call2 (handler, Qfile_exists_p, absname);
+      result = call2 (handler, Qfile_exists_p, absname);
+
       errno = 0;
-      return result;
+      EXIT_LISP_FRAME (result);
     }
 
   absname = ENCODE_FILE (absname);
 
-  return check_existing (SSDATA (absname)) ? Qt : Qnil;
+  EXIT_LISP_FRAME (check_existing (SSDATA (absname)) ? Qt : Qnil);
 }
 
 DEFUN ("file-executable-p", Ffile_executable_p, Sfile_executable_p, 1, 1, 0,
@@ -2575,8 +2624,8 @@ For a directory, this means you can access files in that directory.
 purpose, though.)  */)
   (Lisp_Object filename)
 {
-  Lisp_Object absname;
-  Lisp_Object handler;
+  ENTER_LISP_FRAME (filename);
+  LISP_LOCALS (absname, handler);
 
   CHECK_STRING (filename);
   absname = Fexpand_file_name (filename, Qnil);
@@ -2585,11 +2634,11 @@ purpose, though.)  */)
      call the corresponding file handler.  */
   handler = Ffind_file_name_handler (absname, Qfile_executable_p);
   if (!NILP (handler))
-    return call2 (handler, Qfile_executable_p, absname);
+    EXIT_LISP_FRAME (call2 (handler, Qfile_executable_p, absname));
 
   absname = ENCODE_FILE (absname);
 
-  return (check_executable (SSDATA (absname)) ? Qt : Qnil);
+  EXIT_LISP_FRAME ((check_executable (SSDATA (absname)) ? Qt : Qnil));
 }
 
 DEFUN ("file-readable-p", Ffile_readable_p, Sfile_readable_p, 1, 1, 0,
@@ -2597,8 +2646,8 @@ DEFUN ("file-readable-p", Ffile_readable_p, Sfile_readable_p, 1, 1, 0,
 See also `file-exists-p' and `file-attributes'.  */)
   (Lisp_Object filename)
 {
-  Lisp_Object absname;
-  Lisp_Object handler;
+  ENTER_LISP_FRAME (filename);
+  LISP_LOCALS (absname, handler);
 
   CHECK_STRING (filename);
   absname = Fexpand_file_name (filename, Qnil);
@@ -2607,19 +2656,19 @@ See also `file-exists-p' and `file-attributes'.  */)
      call the corresponding file handler.  */
   handler = Ffind_file_name_handler (absname, Qfile_readable_p);
   if (!NILP (handler))
-    return call2 (handler, Qfile_readable_p, absname);
+    EXIT_LISP_FRAME (call2 (handler, Qfile_readable_p, absname));
 
   absname = ENCODE_FILE (absname);
-  return (faccessat (AT_FDCWD, SSDATA (absname), R_OK, AT_EACCESS) == 0
-	  ? Qt : Qnil);
+  EXIT_LISP_FRAME ((faccessat (AT_FDCWD, SSDATA (absname), R_OK, AT_EACCESS) == 0
+	  ? Qt : Qnil));
 }
 
 DEFUN ("file-writable-p", Ffile_writable_p, Sfile_writable_p, 1, 1, 0,
        doc: /* Return t if file FILENAME can be written or created by you.  */)
   (Lisp_Object filename)
 {
-  Lisp_Object absname, dir, encoded;
-  Lisp_Object handler;
+  ENTER_LISP_FRAME (filename);
+  LISP_LOCALS (absname, dir, encoded, handler);
 
   CHECK_STRING (filename);
   absname = Fexpand_file_name (filename, Qnil);
@@ -2628,13 +2677,13 @@ DEFUN ("file-writable-p", Ffile_writable_p, Sfile_writable_p, 1, 1, 0,
      call the corresponding file handler.  */
   handler = Ffind_file_name_handler (absname, Qfile_writable_p);
   if (!NILP (handler))
-    return call2 (handler, Qfile_writable_p, absname);
+    EXIT_LISP_FRAME (call2 (handler, Qfile_writable_p, absname));
 
   encoded = ENCODE_FILE (absname);
   if (check_writable (SSDATA (encoded), W_OK))
-    return Qt;
+    EXIT_LISP_FRAME (Qt);
   if (errno != ENOENT)
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
 
   dir = Ffile_name_directory (absname);
   eassert (!NILP (dir));
@@ -2647,9 +2696,9 @@ DEFUN ("file-writable-p", Ffile_writable_p, Sfile_writable_p, 1, 1, 0,
   /* The read-only attribute of the parent directory doesn't affect
      whether a file or directory can be created within it.  Some day we
      should check ACLs though, which do affect this.  */
-  return file_directory_p (SSDATA (dir)) ? Qt : Qnil;
+  EXIT_LISP_FRAME (file_directory_p (SSDATA (dir)) ? Qt : Qnil);
 #else
-  return check_writable (SSDATA (dir), W_OK | X_OK) ? Qt : Qnil;
+  EXIT_LISP_FRAME (check_writable (SSDATA (dir), W_OK | X_OK) ? Qt : Qnil);
 #endif
 }
 
@@ -2659,7 +2708,8 @@ The second argument STRING is prepended to the error message.
 If there is no error, returns nil.  */)
   (Lisp_Object filename, Lisp_Object string)
 {
-  Lisp_Object handler, encoded_filename, absname;
+  ENTER_LISP_FRAME (filename, string);
+  LISP_LOCALS (handler, encoded_filename, absname);
 
   CHECK_STRING (filename);
   absname = Fexpand_file_name (filename, Qnil);
@@ -2670,14 +2720,14 @@ If there is no error, returns nil.  */)
      call the corresponding file handler.  */
   handler = Ffind_file_name_handler (absname, Qaccess_file);
   if (!NILP (handler))
-    return call3 (handler, Qaccess_file, absname, string);
+    EXIT_LISP_FRAME (call3 (handler, Qaccess_file, absname, string));
 
   encoded_filename = ENCODE_FILE (absname);
 
   if (faccessat (AT_FDCWD, SSDATA (encoded_filename), R_OK, AT_EACCESS) != 0)
     report_file_error (SSDATA (string), filename);
 
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 /* Relative to directory FD, return the symbolic link value of FILENAME.
@@ -2685,20 +2735,21 @@ If there is no error, returns nil.  */)
 Lisp_Object
 emacs_readlinkat (int fd, char const *filename)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (val);
   static struct allocator const emacs_norealloc_allocator =
     { xmalloc, NULL, xfree, memory_full };
-  Lisp_Object val;
   char readlink_buf[1024];
   char *buf = careadlinkat (fd, filename, readlink_buf, sizeof readlink_buf,
 			    &emacs_norealloc_allocator, readlinkat);
   if (!buf)
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
 
   val = build_unibyte_string (buf);
   if (buf != readlink_buf)
     xfree (buf);
   val = DECODE_FILE (val);
-  return val;
+  EXIT_LISP_FRAME (val);
 }
 
 DEFUN ("file-symlink-p", Ffile_symlink_p, Sfile_symlink_p, 1, 1, 0,
@@ -2709,7 +2760,8 @@ Otherwise it returns nil.
 This function does not check whether the link target exists.  */)
   (Lisp_Object filename)
 {
-  Lisp_Object handler;
+  ENTER_LISP_FRAME (filename);
+  LISP_LOCALS (handler);
 
   CHECK_STRING (filename);
   filename = Fexpand_file_name (filename, Qnil);
@@ -2718,11 +2770,11 @@ This function does not check whether the link target exists.  */)
      call the corresponding file handler.  */
   handler = Ffind_file_name_handler (filename, Qfile_symlink_p);
   if (!NILP (handler))
-    return call2 (handler, Qfile_symlink_p, filename);
+    EXIT_LISP_FRAME (call2 (handler, Qfile_symlink_p, filename));
 
   filename = ENCODE_FILE (filename);
 
-  return emacs_readlinkat (AT_FDCWD, SSDATA (filename));
+  EXIT_LISP_FRAME (emacs_readlinkat (AT_FDCWD, SSDATA (filename)));
 }
 
 DEFUN ("file-directory-p", Ffile_directory_p, Sfile_directory_p, 1, 1, 0,
@@ -2731,17 +2783,21 @@ Symbolic links to directories count as directories.
 See `file-symlink-p' to distinguish symlinks.  */)
   (Lisp_Object filename)
 {
-  Lisp_Object absname = expand_and_dir_to_file (filename);
+  ENTER_LISP_FRAME (filename);
+  LISP_LOCALS (absname, handler);
+  absname = expand_and_dir_to_file (filename);
+
 
   /* If the file name has special constructs in it,
      call the corresponding file handler.  */
-  Lisp_Object handler = Ffind_file_name_handler (absname, Qfile_directory_p);
+  handler = Ffind_file_name_handler (absname, Qfile_directory_p);
+
   if (!NILP (handler))
-    return call2 (handler, Qfile_directory_p, absname);
+    EXIT_LISP_FRAME (call2 (handler, Qfile_directory_p, absname));
 
   absname = ENCODE_FILE (absname);
 
-  return file_directory_p (SSDATA (absname)) ? Qt : Qnil;
+  EXIT_LISP_FRAME (file_directory_p (SSDATA (absname)) ? Qt : Qnil);
 }
 
 /* Return true if FILE is a directory or a symlink to a directory.  */
@@ -2768,8 +2824,8 @@ instead; then the value is t if the directory so specified exists and
 really is a readable and searchable directory.  */)
   (Lisp_Object filename)
 {
-  Lisp_Object absname;
-  Lisp_Object handler;
+  ENTER_LISP_FRAME (filename);
+  LISP_LOCALS (absname, handler, r);
 
   CHECK_STRING (filename);
   absname = Fexpand_file_name (filename, Qnil);
@@ -2779,7 +2835,8 @@ really is a readable and searchable directory.  */)
   handler = Ffind_file_name_handler (absname, Qfile_accessible_directory_p);
   if (!NILP (handler))
     {
-      Lisp_Object r = call2 (handler, Qfile_accessible_directory_p, absname);
+      r = call2 (handler, Qfile_accessible_directory_p, absname);
+
 
       /* Set errno in case the handler failed.  EACCES might be a lie
 	 (e.g., the directory might not exist, or be a regular file),
@@ -2791,11 +2848,11 @@ really is a readable and searchable directory.  */)
       if (!EQ (r, Qt))
 	errno = EACCES;
 
-      return r;
+      EXIT_LISP_FRAME (r);
     }
 
   absname = ENCODE_FILE (absname);
-  return file_accessible_directory_p (absname) ? Qt : Qnil;
+  EXIT_LISP_FRAME (file_accessible_directory_p (absname) ? Qt : Qnil);
 }
 
 /* If FILE is a searchable directory or a symlink to a
@@ -2804,6 +2861,7 @@ really is a readable and searchable directory.  */)
 bool
 file_accessible_directory_p (Lisp_Object file)
 {
+  ENTER_LISP_FRAME_T (bool, file);
 #ifdef DOS_NT
 # ifdef WINDOWSNT
   /* We need a special-purpose test because (a) NTFS security data is
@@ -2811,10 +2869,10 @@ file_accessible_directory_p (Lisp_Object file)
      accessing "DIR/.", used below on Posix hosts, doesn't work on
      Windows, because "DIR/." is normalized to just "DIR" before
      hitting the disk.  */
-  return (SBYTES (file) == 0
-	  || w32_accessible_directory_p (SSDATA (file), SBYTES (file)));
+  EXIT_LISP_FRAME ((SBYTES (file) == 0
+	  || w32_accessible_directory_p (SSDATA (file), SBYTES (file))));
 # else	/* MSDOS */
-  return file_directory_p (SSDATA (file));
+  EXIT_LISP_FRAME (file_directory_p (SSDATA (file)));
 # endif	 /* MSDOS */
 #else	 /* !DOS_NT */
   /* On POSIXish platforms, use just one system call; this avoids a
@@ -2848,7 +2906,7 @@ file_accessible_directory_p (Lisp_Object file)
   saved_errno = errno;
   SAFE_FREE ();
   errno = saved_errno;
-  return ok;
+  EXIT_LISP_FRAME (ok);
 #endif	/* !DOS_NT */
 }
 
@@ -2859,21 +2917,26 @@ Symbolic links to regular files count as regular files.
 See `file-symlink-p' to distinguish symlinks.  */)
   (Lisp_Object filename)
 {
+  ENTER_LISP_FRAME (filename);
+  LISP_LOCALS (absname, handler, tem);
   struct stat st;
-  Lisp_Object absname = expand_and_dir_to_file (filename);
+  absname = expand_and_dir_to_file (filename);
+
 
   /* If the file name has special constructs in it,
      call the corresponding file handler.  */
-  Lisp_Object handler = Ffind_file_name_handler (absname, Qfile_regular_p);
+  handler = Ffind_file_name_handler (absname, Qfile_regular_p);
+
   if (!NILP (handler))
-    return call2 (handler, Qfile_regular_p, absname);
+    EXIT_LISP_FRAME (call2 (handler, Qfile_regular_p, absname));
 
   absname = ENCODE_FILE (absname);
 
 #ifdef WINDOWSNT
   {
     int result;
-    Lisp_Object tem = Vw32_get_true_file_attributes;
+    tem = Vw32_get_true_file_attributes;
+
 
     /* Tell stat to use expensive method to get accurate info.  */
     Vw32_get_true_file_attributes = Qt;
@@ -2881,13 +2944,13 @@ See `file-symlink-p' to distinguish symlinks.  */)
     Vw32_get_true_file_attributes = tem;
 
     if (result < 0)
-      return Qnil;
-    return S_ISREG (st.st_mode) ? Qt : Qnil;
+      EXIT_LISP_FRAME (Qnil);
+    EXIT_LISP_FRAME (S_ISREG (st.st_mode) ? Qt : Qnil);
   }
 #else
   if (stat (SSDATA (absname), &st) < 0)
-    return Qnil;
-  return S_ISREG (st.st_mode) ? Qt : Qnil;
+    EXIT_LISP_FRAME (Qnil);
+  EXIT_LISP_FRAME (S_ISREG (st.st_mode) ? Qt : Qnil);
 #endif
 }
 
@@ -2902,15 +2965,23 @@ Return (nil nil nil nil) if the file is nonexistent or inaccessible,
 or if SELinux is disabled, or if Emacs lacks SELinux support.  */)
   (Lisp_Object filename)
 {
-  Lisp_Object user = Qnil, role = Qnil, type = Qnil, range = Qnil;
-  Lisp_Object absname = expand_and_dir_to_file (filename);
+  ENTER_LISP_FRAME (filename);
+  LISP_LOCALS (user, role, type, range, absname, handler);
+  user = Qnil;
+  role = Qnil;
+  type = Qnil;
+  range = Qnil;
+
+  absname = expand_and_dir_to_file (filename);
+
 
   /* If the file name has special constructs in it,
      call the corresponding file handler.  */
-  Lisp_Object handler = Ffind_file_name_handler (absname,
+  handler = Ffind_file_name_handler (absname,
 						 Qfile_selinux_context);
+
   if (!NILP (handler))
-    return call2 (handler, Qfile_selinux_context, absname);
+    EXIT_LISP_FRAME (call2 (handler, Qfile_selinux_context, absname));
 
   absname = ENCODE_FILE (absname);
 
@@ -2936,7 +3007,7 @@ or if SELinux is disabled, or if Emacs lacks SELinux support.  */)
     }
 #endif
 
-  return list4 (user, role, type, range);
+  EXIT_LISP_FRAME (list4 (user, role, type, range));
 }
 
 DEFUN ("set-file-selinux-context", Fset_file_selinux_context,
@@ -2951,14 +3022,17 @@ This function does nothing and returns nil if SELinux is disabled,
 or if Emacs was not compiled with SELinux support.  */)
   (Lisp_Object filename, Lisp_Object context)
 {
-  Lisp_Object absname;
-  Lisp_Object handler;
+  ENTER_LISP_FRAME (filename, context);
+  LISP_LOCALS (absname, handler, encoded_absname, user, role, type, range);
 #if HAVE_LIBSELINUX
-  Lisp_Object encoded_absname;
-  Lisp_Object user = CAR_SAFE (context);
-  Lisp_Object role = CAR_SAFE (CDR_SAFE (context));
-  Lisp_Object type = CAR_SAFE (CDR_SAFE (CDR_SAFE (context)));
-  Lisp_Object range = CAR_SAFE (CDR_SAFE (CDR_SAFE (CDR_SAFE (context))));
+  user = CAR_SAFE (context);
+
+  role = CAR_SAFE (CDR_SAFE (context));
+
+  type = CAR_SAFE (CDR_SAFE (CDR_SAFE (context)));
+
+  range = CAR_SAFE (CDR_SAFE (CDR_SAFE (CDR_SAFE (context))));
+
   security_context_t con;
   bool fail;
   int conlength;
@@ -2971,7 +3045,7 @@ or if Emacs was not compiled with SELinux support.  */)
      call the corresponding file handler.  */
   handler = Ffind_file_name_handler (absname, Qset_file_selinux_context);
   if (!NILP (handler))
-    return call3 (handler, Qset_file_selinux_context, absname, context);
+    EXIT_LISP_FRAME (call3 (handler, Qset_file_selinux_context, absname, context));
 
 #if HAVE_LIBSELINUX
   if (is_selinux_enabled ())
@@ -3014,14 +3088,14 @@ or if Emacs was not compiled with SELinux support.  */)
 
 	  context_free (parsed_con);
 	  freecon (con);
-	  return fail ? Qnil : Qt;
+	  EXIT_LISP_FRAME (fail ? Qnil : Qt);
 	}
       else
 	report_file_error ("Doing lgetfilecon", absname);
     }
 #endif
 
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 DEFUN ("file-acl", Ffile_acl, Sfile_acl, 1, 1, 0,
@@ -3032,16 +3106,21 @@ Return nil if file does not exist or is not accessible, or if Emacs
 was unable to determine the ACL entries.  */)
   (Lisp_Object filename)
 {
-  Lisp_Object acl_string = Qnil;
+  ENTER_LISP_FRAME (filename);
+  LISP_LOCALS (acl_string, absname, handler);
+  acl_string = Qnil;
+
 
 #if USE_ACL
-  Lisp_Object absname = expand_and_dir_to_file (filename);
+  absname = expand_and_dir_to_file (filename);
+
 
   /* If the file name has special constructs in it,
      call the corresponding file handler.  */
-  Lisp_Object handler = Ffind_file_name_handler (absname, Qfile_acl);
+  handler = Ffind_file_name_handler (absname, Qfile_acl);
+
   if (!NILP (handler))
-    return call2 (handler, Qfile_acl, absname);
+    EXIT_LISP_FRAME (call2 (handler, Qfile_acl, absname));
 
 # ifdef HAVE_ACL_SET_FILE
   absname = ENCODE_FILE (absname);
@@ -3051,13 +3130,13 @@ was unable to determine the ACL entries.  */)
 #  endif
   acl_t acl = acl_get_file (SSDATA (absname), ACL_TYPE_EXTENDED);
   if (acl == NULL)
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
 
   char *str = acl_to_text (acl, NULL);
   if (str == NULL)
     {
       acl_free (acl);
-      return Qnil;
+      EXIT_LISP_FRAME (Qnil);
     }
 
   acl_string = build_string (str);
@@ -3066,7 +3145,7 @@ was unable to determine the ACL entries.  */)
 # endif
 #endif
 
-  return acl_string;
+  EXIT_LISP_FRAME (acl_string);
 }
 
 DEFUN ("set-file-acl", Fset_file_acl, Sset_file_acl,
@@ -3081,11 +3160,10 @@ Setting ACL for local files requires Emacs to be built with ACL
 support.  */)
   (Lisp_Object filename, Lisp_Object acl_string)
 {
+  ENTER_LISP_FRAME (filename, acl_string);
+  LISP_LOCALS (absname, handler, encoded_absname);
 #if USE_ACL
-  Lisp_Object absname;
-  Lisp_Object handler;
 # ifdef HAVE_ACL_SET_FILE
-  Lisp_Object encoded_absname;
   acl_t acl;
   bool fail;
 # endif
@@ -3096,7 +3174,7 @@ support.  */)
      call the corresponding file handler.  */
   handler = Ffind_file_name_handler (absname, Qset_file_acl);
   if (!NILP (handler))
-    return call3 (handler, Qset_file_acl, absname, acl_string);
+    EXIT_LISP_FRAME (call3 (handler, Qset_file_acl, absname, acl_string));
 
 # ifdef HAVE_ACL_SET_FILE
   if (STRINGP (acl_string))
@@ -3106,7 +3184,7 @@ support.  */)
 	{
 	  if (acl_errno_valid (errno))
 	    report_file_error ("Converting ACL", absname);
-	  return Qnil;
+	  EXIT_LISP_FRAME (Qnil);
 	}
 
       encoded_absname = ENCODE_FILE (absname);
@@ -3118,12 +3196,12 @@ support.  */)
 	report_file_error ("Setting ACL", absname);
 
       acl_free (acl);
-      return fail ? Qnil : Qt;
+      EXIT_LISP_FRAME (fail ? Qnil : Qt);
     }
 # endif
 #endif
 
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 DEFUN ("file-modes", Ffile_modes, Sfile_modes, 1, 1, 0,
@@ -3131,21 +3209,25 @@ DEFUN ("file-modes", Ffile_modes, Sfile_modes, 1, 1, 0,
 Return nil, if file does not exist or is not accessible.  */)
   (Lisp_Object filename)
 {
+  ENTER_LISP_FRAME (filename);
+  LISP_LOCALS (absname, handler);
   struct stat st;
-  Lisp_Object absname = expand_and_dir_to_file (filename);
+  absname = expand_and_dir_to_file (filename);
+
 
   /* If the file name has special constructs in it,
      call the corresponding file handler.  */
-  Lisp_Object handler = Ffind_file_name_handler (absname, Qfile_modes);
+  handler = Ffind_file_name_handler (absname, Qfile_modes);
+
   if (!NILP (handler))
-    return call2 (handler, Qfile_modes, absname);
+    EXIT_LISP_FRAME (call2 (handler, Qfile_modes, absname));
 
   absname = ENCODE_FILE (absname);
 
   if (stat (SSDATA (absname), &st) < 0)
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
 
-  return make_number (st.st_mode & 07777);
+  EXIT_LISP_FRAME (make_number (st.st_mode & 07777));
 }
 
 DEFUN ("set-file-modes", Fset_file_modes, Sset_file_modes, 2, 2,
@@ -3158,8 +3240,8 @@ Interactively, mode bits are read by `read-file-modes', which accepts
 symbolic notation, like the `chmod' command from GNU Coreutils.  */)
   (Lisp_Object filename, Lisp_Object mode)
 {
-  Lisp_Object absname, encoded_absname;
-  Lisp_Object handler;
+  ENTER_LISP_FRAME (filename, mode);
+  LISP_LOCALS (absname, encoded_absname, handler);
 
   absname = Fexpand_file_name (filename, BVAR (current_buffer, directory));
   CHECK_NUMBER (mode);
@@ -3168,14 +3250,14 @@ symbolic notation, like the `chmod' command from GNU Coreutils.  */)
      call the corresponding file handler.  */
   handler = Ffind_file_name_handler (absname, Qset_file_modes);
   if (!NILP (handler))
-    return call3 (handler, Qset_file_modes, absname, mode);
+    EXIT_LISP_FRAME (call3 (handler, Qset_file_modes, absname, mode));
 
   encoded_absname = ENCODE_FILE (absname);
 
   if (chmod (SSDATA (encoded_absname), XINT (mode) & 07777) < 0)
     report_file_error ("Doing chmod", absname);
 
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 DEFUN ("set-default-file-modes", Fset_default_file_modes, Sset_default_file_modes, 1, 1, 0,
@@ -3192,6 +3274,7 @@ execute bit, even if the mask set by this function allows that bit
 by having the corresponding bit in the mask reset.  */)
   (Lisp_Object mode)
 {
+  ENTER_LISP_FRAME (mode);
   mode_t oldrealmask, oldumask, newumask;
   CHECK_NUMBER (mode);
   oldrealmask = realmask;
@@ -3203,7 +3286,7 @@ by having the corresponding bit in the mask reset.  */)
   unblock_input ();
 
   eassert (oldumask == oldrealmask);
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 DEFUN ("default-file-modes", Fdefault_file_modes, Sdefault_file_modes, 0, 0, 0,
@@ -3211,9 +3294,10 @@ DEFUN ("default-file-modes", Fdefault_file_modes, Sdefault_file_modes, 0, 0, 0,
 The value is an integer.  */)
   (void)
 {
-  Lisp_Object value;
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (value);
   XSETINT (value, (~ realmask) & 0777);
-  return value;
+  EXIT_LISP_FRAME (value);
 }
 
 
@@ -3225,8 +3309,8 @@ Use the current time if TIMESTAMP is nil.  TIMESTAMP is in the format of
 `current-time'. */)
   (Lisp_Object filename, Lisp_Object timestamp)
 {
-  Lisp_Object absname, encoded_absname;
-  Lisp_Object handler;
+  ENTER_LISP_FRAME (filename, timestamp);
+  LISP_LOCALS (absname, encoded_absname, handler);
   struct timespec t = lisp_time_argument (timestamp);
 
   absname = Fexpand_file_name (filename, BVAR (current_buffer, directory));
@@ -3235,7 +3319,7 @@ Use the current time if TIMESTAMP is nil.  TIMESTAMP is in the format of
      call the corresponding file handler.  */
   handler = Ffind_file_name_handler (absname, Qset_file_times);
   if (!NILP (handler))
-    return call3 (handler, Qset_file_times, absname, timestamp);
+    EXIT_LISP_FRAME (call3 (handler, Qset_file_times, absname, timestamp));
 
   encoded_absname = ENCODE_FILE (absname);
 
@@ -3245,13 +3329,13 @@ Use the current time if TIMESTAMP is nil.  TIMESTAMP is in the format of
 #ifdef MSDOS
         /* Setting times on a directory always fails.  */
         if (file_directory_p (SSDATA (encoded_absname)))
-          return Qnil;
+          EXIT_LISP_FRAME (Qnil);
 #endif
         report_file_error ("Setting file times", absname);
       }
   }
 
-  return Qt;
+  EXIT_LISP_FRAME (Qt);
 }
 
 #ifdef HAVE_SYNC
@@ -3271,34 +3355,39 @@ If FILE1 does not exist, the answer is nil;
 otherwise, if FILE2 does not exist, the answer is t.  */)
   (Lisp_Object file1, Lisp_Object file2)
 {
+  ENTER_LISP_FRAME (file1, file2);
+  LISP_LOCALS (absname1, absname2, handler);
   struct stat st1, st2;
 
   CHECK_STRING (file1);
   CHECK_STRING (file2);
 
-  Lisp_Object absname1 = expand_and_dir_to_file (file1);
-  Lisp_Object absname2 = expand_and_dir_to_file (file2);
+  absname1 = expand_and_dir_to_file (file1);
+
+  absname2 = expand_and_dir_to_file (file2);
+
 
   /* If the file name has special constructs in it,
      call the corresponding file handler.  */
-  Lisp_Object handler = Ffind_file_name_handler (absname1,
+  handler = Ffind_file_name_handler (absname1,
 						 Qfile_newer_than_file_p);
+
   if (NILP (handler))
     handler = Ffind_file_name_handler (absname2, Qfile_newer_than_file_p);
   if (!NILP (handler))
-    return call3 (handler, Qfile_newer_than_file_p, absname1, absname2);
+    EXIT_LISP_FRAME (call3 (handler, Qfile_newer_than_file_p, absname1, absname2));
 
   absname1 = ENCODE_FILE (absname1);
   absname2 = ENCODE_FILE (absname2);
 
   if (stat (SSDATA (absname1), &st1) < 0)
-    return Qnil;
+    EXIT_LISP_FRAME (Qnil);
 
   if (stat (SSDATA (absname2), &st2) < 0)
-    return Qt;
+    EXIT_LISP_FRAME (Qt);
 
-  return (timespec_cmp (get_stat_mtime (&st2), get_stat_mtime (&st1)) < 0
-	  ? Qt : Qnil);
+  EXIT_LISP_FRAME ((timespec_cmp (get_stat_mtime (&st2), get_stat_mtime (&st1)) < 0
+	  ? Qt : Qnil));
 }
 
 enum { READ_BUF_SIZE = MAX_ALLOCA };
@@ -3321,7 +3410,8 @@ enum { READ_BUF_SIZE = MAX_ALLOCA };
 static void
 decide_coding_unwind (Lisp_Object unwind_data)
 {
-  Lisp_Object multibyte, undo_list, buffer;
+  ENTER_LISP_FRAME (unwind_data);
+  LISP_LOCALS (multibyte, undo_list, buffer);
 
   multibyte = XCAR (unwind_data);
   unwind_data = XCDR (unwind_data);
@@ -3337,6 +3427,7 @@ decide_coding_unwind (Lisp_Object unwind_data)
   /* Now we are safe to change the buffer's multibyteness directly.  */
   bset_enable_multibyte_characters (current_buffer, multibyte);
   bset_undo_list (current_buffer, undo_list);
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Read from a non-regular file.  STATE is a Lisp_Save_Value
@@ -3347,13 +3438,14 @@ decide_coding_unwind (Lisp_Object unwind_data)
 static Lisp_Object
 read_non_regular (Lisp_Object state)
 {
+  ENTER_LISP_FRAME (state);
   int nbytes = emacs_read_quit (XSAVE_INTEGER (state, 0),
 				((char *) BEG_ADDR + PT_BYTE - BEG_BYTE
 				 + XSAVE_INTEGER (state, 1)),
 				XSAVE_INTEGER (state, 2));
   /* Fast recycle this object for the likely next call.  */
   free_misc (state);
-  return make_number (nbytes);
+  EXIT_LISP_FRAME (make_number (nbytes));
 }
 
 
@@ -3371,8 +3463,9 @@ read_non_regular_quit (Lisp_Object ignore)
 static off_t
 file_offset (Lisp_Object val)
 {
+  ENTER_LISP_FRAME_T (off_t, val);
   if (RANGED_INTEGERP (0, val, TYPE_MAXIMUM (off_t)))
-    return XINT (val);
+    EXIT_LISP_FRAME (XINT (val));
 
   if (FLOATP (val))
     {
@@ -3381,7 +3474,7 @@ file_offset (Lisp_Object val)
 	{
 	  off_t o = v;
 	  if (o == v)
-	    return o;
+	    EXIT_LISP_FRAME (o);
 	}
     }
 
@@ -3401,10 +3494,14 @@ time_error_value (int errnum)
 static Lisp_Object
 get_window_points_and_markers (void)
 {
-  Lisp_Object pt_marker = Fpoint_marker ();
-  Lisp_Object windows
-    = call3 (Qget_buffer_window_list, Fcurrent_buffer (), Qnil, Qt);
-  Lisp_Object window_markers = windows;
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (pt_marker, windows, window_markers, window_marker);
+  pt_marker = Fpoint_marker ();
+
+  windows = call3 (Qget_buffer_window_list, Fcurrent_buffer (), Qnil, Qt);
+
+  window_markers = windows;
+
   /* Window markers (and point) are handled specially: rather than move to
      just before or just after the modified text, we try to keep the
      markers at the same distance (bug#19161).
@@ -3414,23 +3511,29 @@ get_window_points_and_markers (void)
   for (; CONSP (windows); windows = XCDR (windows))
     if (WINDOWP (XCAR (windows)))
       {
-	Lisp_Object window_marker = XWINDOW (XCAR (windows))->pointm;
+	window_marker = XWINDOW (XCAR (windows))->pointm;
+
 	XSETCAR (windows,
 		 Fcons (window_marker, Fmarker_position (window_marker)));
       }
-  return Fcons (Fcons (pt_marker, Fpoint ()), window_markers);
+  EXIT_LISP_FRAME (Fcons (Fcons (pt_marker, Fpoint ()), window_markers));
 }
 
 static void
 restore_window_points (Lisp_Object window_markers, ptrdiff_t inserted,
 		       ptrdiff_t same_at_start, ptrdiff_t same_at_end)
 {
+  ENTER_LISP_FRAME (window_markers);
+  LISP_LOCALS (car, marker, oldpos);
   for (; CONSP (window_markers); window_markers = XCDR (window_markers))
     if (CONSP (XCAR (window_markers)))
       {
-	Lisp_Object car = XCAR (window_markers);
-	Lisp_Object marker = XCAR (car);
-	Lisp_Object oldpos = XCDR (car);
+	car = XCAR (window_markers);
+
+	marker = XCAR (car);
+
+	oldpos = XCDR (car);
+
 	if (MARKERP (marker) && INTEGERP (oldpos)
 	    && XINT (oldpos) > same_at_start
 	    && XINT (oldpos) < same_at_end)
@@ -3443,6 +3546,7 @@ restore_window_points (Lisp_Object window_markers, ptrdiff_t inserted,
 	    Fset_marker (marker, make_number (newpos), Qnil);
 	  }
       }
+  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Make sure the gap is at Z_BYTE.  This is required to treat buffer
@@ -3491,6 +3595,8 @@ In addition, this function decodes the inserted text from known formats
 by calling `format-decode', which see.  */)
   (Lisp_Object filename, Lisp_Object visit, Lisp_Object beg, Lisp_Object end, Lisp_Object replace)
 {
+  ENTER_LISP_FRAME (filename, visit, beg, end, replace);
+  LISP_LOCALS (handler, val, insval, orig_filename, old_undo, p, coding_system, old_Vdeactivate_mark, window_markers, workbuf, conversion_buffer, nbytes, unwind_data, tem);
   struct stat st;
   struct timespec mtime;
   int fd;
@@ -3499,8 +3605,6 @@ by calling `format-decode', which see.  */)
   off_t beg_offset, end_offset;
   int unprocessed;
   ptrdiff_t count = SPECPDL_INDEX ();
-  Lisp_Object handler, val, insval, orig_filename, old_undo;
-  Lisp_Object p;
   ptrdiff_t total = 0;
   bool not_regular = 0;
   int save_errno = 0;
@@ -3508,17 +3612,18 @@ by calling `format-decode', which see.  */)
   struct coding_system coding;
   bool replace_handled = false;
   bool set_coding_system = false;
-  Lisp_Object coding_system;
   bool read_quit = false;
   /* If the undo log only contains the insertion, there's no point
      keeping it.  It's typically when we first fill a file-buffer.  */
   bool empty_undo_list_p
     = (!NILP (visit) && NILP (BVAR (current_buffer, undo_list))
        && BEG == Z);
-  Lisp_Object old_Vdeactivate_mark = Vdeactivate_mark;
+  old_Vdeactivate_mark = Vdeactivate_mark;
+
   bool we_locked_file = false;
   ptrdiff_t fd_index;
-  Lisp_Object window_markers = Qnil;
+  window_markers = Qnil;
+
   /* same_at_start and same_at_end count bytes, because file access counts
      bytes and BEG and END count bytes.  */
   ptrdiff_t same_at_start = BEGV_BYTE;
@@ -3716,7 +3821,6 @@ by calling `format-decode', which see.  */)
 		{
 		  AUTO_STRING (name, " *code-converting-work*");
 		  struct buffer *prev = current_buffer;
-		  Lisp_Object workbuf;
 		  struct buffer *buf;
 
 		  record_unwind_current_buffer ();
@@ -3992,7 +4096,6 @@ by calling `format-decode', which see.  */)
       ptrdiff_t this_count = SPECPDL_INDEX ();
       bool multibyte
 	= ! NILP (BVAR (current_buffer, enable_multibyte_characters));
-      Lisp_Object conversion_buffer;
 
       conversion_buffer = code_conversion_save (1, multibyte);
 
@@ -4195,7 +4298,6 @@ by calling `format-decode', which see.  */)
 
 	if (not_regular)
 	  {
-	    Lisp_Object nbytes;
 
 	    /* Maybe make more room.  */
 	    if (gap_size < trytry)
@@ -4301,7 +4403,6 @@ by calling `format-decode', which see.  */)
 	     enable-multibyte-characters directly here without taking
 	     care of marker adjustment.  By this way, we can run Lisp
 	     program safely before decoding the inserted text.  */
-	  Lisp_Object unwind_data;
 	  ptrdiff_t count1 = SPECPDL_INDEX ();
 
 	  unwind_data = Fcons (BVAR (current_buffer, enable_multibyte_characters),
@@ -4551,7 +4652,8 @@ by calling `format-decode', which see.  */)
 	    {
 	      /* Adjust the last undo record for the size change during
 		 the format conversion.  */
-	      Lisp_Object tem = XCAR (old_undo);
+	      tem = XCAR (old_undo);
+
 	      if (CONSP (tem) && INTEGERP (XCAR (tem))
 		  && INTEGERP (XCDR (tem))
 		  && XFASTINT (XCDR (tem)) == PT + old_inserted)
@@ -4592,7 +4694,7 @@ by calling `format-decode', which see.  */)
   if (NILP (val))
     val = list2 (orig_filename, make_number (inserted));
 
-  return unbind_to (count, val);
+  EXIT_LISP_FRAME (unbind_to (count, val));
 }
 
 static Lisp_Object build_annotations (Lisp_Object, Lisp_Object);
@@ -4610,8 +4712,10 @@ choose_write_coding_system (Lisp_Object start, Lisp_Object end, Lisp_Object file
 			    Lisp_Object append, Lisp_Object visit, Lisp_Object lockname,
 			    struct coding_system *coding)
 {
-  Lisp_Object val;
-  Lisp_Object eol_parent = Qnil;
+  ENTER_LISP_FRAME (start, end, filename, append, visit, lockname);
+  LISP_LOCALS (val, eol_parent, coding_systems, spec, attrs, dflt);
+  eol_parent = Qnil;
+
 
   if (auto_saving
       && NILP (Fstring_equal (BVAR (current_buffer, filename),
@@ -4656,9 +4760,9 @@ choose_write_coding_system (Lisp_Object start, Lisp_Object end, Lisp_Object file
       if (NILP (val))
 	{
 	  /* Check file-coding-system-alist.  */
-	  Lisp_Object coding_systems
-	    = CALLN (Ffind_operation_coding_system, Qwrite_region, start, end,
+	  coding_systems = CALLN (Ffind_operation_coding_system, Qwrite_region, start, end,
 		     filename, append, visit, lockname);
+
 	  if (CONSP (coding_systems) && !NILP (XCDR (coding_systems)))
 	    val = XCDR (coding_systems);
 	}
@@ -4673,7 +4777,6 @@ choose_write_coding_system (Lisp_Object start, Lisp_Object end, Lisp_Object file
 
       if (! NILP (val) && ! force_raw_text)
 	{
-	  Lisp_Object spec, attrs;
 
 	  CHECK_CODING_SYSTEM (val);
 	  CHECK_CODING_SYSTEM_GET_SPEC (val, spec);
@@ -4699,7 +4802,8 @@ choose_write_coding_system (Lisp_Object start, Lisp_Object end, Lisp_Object file
 	 format, we use that of `buffer-file-coding-system'.  */
       if (! using_default_coding)
 	{
-	  Lisp_Object dflt = BVAR (&buffer_defaults, buffer_file_coding_system);
+	  dflt = BVAR (&buffer_defaults, buffer_file_coding_system);
+
 
 	  if (! NILP (dflt))
 	    val = coding_inherit_eol_type (val, dflt);
@@ -4716,7 +4820,7 @@ choose_write_coding_system (Lisp_Object start, Lisp_Object end, Lisp_Object file
 
   if (!STRINGP (start) && !NILP (BVAR (current_buffer, selective_display)))
     coding->mode |= CODING_MODE_SELECTIVE_DISPLAY;
-  return val;
+  EXIT_LISP_FRAME (val);
 }
 
 DEFUN ("write-region", Fwrite_region, Swrite_region, 3, 7,
@@ -4760,8 +4864,9 @@ This calls `write-region-annotate-functions' at the start, and
   (Lisp_Object start, Lisp_Object end, Lisp_Object filename, Lisp_Object append,
    Lisp_Object visit, Lisp_Object lockname, Lisp_Object mustbenew)
 {
-  return write_region (start, end, filename, append, visit, lockname, mustbenew,
-		       -1);
+  ENTER_LISP_FRAME (start, end, filename, append, visit, lockname, mustbenew);
+  EXIT_LISP_FRAME (write_region (start, end, filename, append, visit, lockname, mustbenew,
+		       -1));
 }
 
 /* Like Fwrite_region, except that if DESC is nonnegative, it is a file
@@ -4772,6 +4877,8 @@ write_region (Lisp_Object start, Lisp_Object end, Lisp_Object filename,
 	      Lisp_Object append, Lisp_Object visit, Lisp_Object lockname,
 	      Lisp_Object mustbenew, int desc)
 {
+  ENTER_LISP_FRAME (start, end, filename, append, visit, lockname, mustbenew);
+  LISP_LOCALS (handler, visit_file, annotations, encoded_filename, val, buf);
   int open_flags;
   int mode;
   off_t offset UNINIT;
@@ -4783,10 +4890,6 @@ write_region (Lisp_Object start, Lisp_Object end, Lisp_Object filename,
   struct timespec modtime;
   ptrdiff_t count = SPECPDL_INDEX ();
   ptrdiff_t count1 UNINIT;
-  Lisp_Object handler;
-  Lisp_Object visit_file;
-  Lisp_Object annotations;
-  Lisp_Object encoded_filename;
   bool visiting = (EQ (visit, Qt) || STRINGP (visit));
   bool quietly = !NILP (visit);
   bool file_locked = 0;
@@ -4825,7 +4928,6 @@ write_region (Lisp_Object start, Lisp_Object end, Lisp_Object filename,
 
   if (!NILP (handler))
     {
-      Lisp_Object val;
       val = call8 (handler, Qwrite_region, start, end,
 		   filename, append, visit, lockname, mustbenew);
 
@@ -4836,7 +4938,7 @@ write_region (Lisp_Object start, Lisp_Object end, Lisp_Object filename,
 	  bset_filename (current_buffer, visit_file);
 	}
 
-      return val;
+      EXIT_LISP_FRAME (val);
     }
 
   record_unwind_protect (save_restriction_restore, save_restriction_save ());
@@ -5048,7 +5150,8 @@ write_region (Lisp_Object start, Lisp_Object end, Lisp_Object filename,
   /* Call write-region-post-annotation-function. */
   while (CONSP (Vwrite_region_annotation_buffers))
     {
-      Lisp_Object buf = XCAR (Vwrite_region_annotation_buffers);
+      buf = XCAR (Vwrite_region_annotation_buffers);
+
       if (!NILP (Fbuffer_live_p (buf)))
   	{
   	  Fset_buffer (buf);
@@ -5097,7 +5200,7 @@ write_region (Lisp_Object start, Lisp_Object end, Lisp_Object filename,
 	  unlock_file (lockname);
 	}
 
-      return Qnil;
+      EXIT_LISP_FRAME (Qnil);
     }
 
   if (!auto_saving && !noninteractive)
@@ -5108,14 +5211,15 @@ write_region (Lisp_Object start, Lisp_Object end, Lisp_Object filename,
 			  : "Wrote %s"),
 			 visit_file, 1);
 
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 DEFUN ("car-less-than-car", Fcar_less_than_car, Scar_less_than_car, 2, 2, 0,
        doc: /* Return t if (car A) is numerically less than (car B).  */)
   (Lisp_Object a, Lisp_Object b)
 {
-  return arithcompare (Fcar (a), Fcar (b), ARITH_LESS);
+  ENTER_LISP_FRAME (a, b);
+  EXIT_LISP_FRAME (arithcompare (Fcar (a), Fcar (b), ARITH_LESS));
 }
 
 /* Build the complete list of annotations appropriate for writing out
@@ -5129,9 +5233,8 @@ DEFUN ("car-less-than-car", Fcar_less_than_car, Scar_less_than_car, 2, 2, 0,
 static Lisp_Object
 build_annotations (Lisp_Object start, Lisp_Object end)
 {
-  Lisp_Object annotations;
-  Lisp_Object p, res;
-  Lisp_Object original_buffer;
+  ENTER_LISP_FRAME (start, end);
+  LISP_LOCALS (annotations, p, res, original_buffer);
   int i;
   bool used_global = false;
 
@@ -5198,7 +5301,7 @@ build_annotations (Lisp_Object start, Lisp_Object end)
 	annotations = merge (annotations, res, Qcar_less_than_car);
     }
 
-  return annotations;
+  EXIT_LISP_FRAME (annotations);
 }
 
 
@@ -5217,7 +5320,8 @@ a_write (int desc, Lisp_Object string, ptrdiff_t pos,
 	 ptrdiff_t nchars, Lisp_Object *annot,
 	 struct coding_system *coding)
 {
-  Lisp_Object tem;
+  ENTER_LISP_FRAME_T (bool, string);
+  LISP_LOCALS (tem);
   ptrdiff_t nextpos;
   ptrdiff_t lastpos = pos + nchars;
 
@@ -5231,13 +5335,13 @@ a_write (int desc, Lisp_Object string, ptrdiff_t pos,
       /* If there are no more annotations in this range,
 	 output the rest of the range all at once.  */
       if (! (nextpos >= pos && nextpos <= lastpos))
-	return e_write (desc, string, pos, lastpos, coding);
+	EXIT_LISP_FRAME (e_write (desc, string, pos, lastpos, coding));
 
       /* Output buffer text up to the next annotation's position.  */
       if (nextpos > pos)
 	{
 	  if (!e_write (desc, string, pos, nextpos, coding))
-	    return 0;
+	    EXIT_LISP_FRAME (0);
 	  pos = nextpos;
 	}
       /* Output the annotation.  */
@@ -5245,11 +5349,11 @@ a_write (int desc, Lisp_Object string, ptrdiff_t pos,
       if (STRINGP (tem))
 	{
 	  if (!e_write (desc, tem, 0, SCHARS (tem), coding))
-	    return 0;
+	    EXIT_LISP_FRAME (0);
 	}
       *annot = Fcdr (*annot);
     }
-  return 1;
+  EXIT_LISP_FRAME (1);
 }
 
 /* Maximum number of characters that the next
@@ -5266,6 +5370,7 @@ static bool
 e_write (int desc, Lisp_Object string, ptrdiff_t start, ptrdiff_t end,
 	 struct coding_system *coding)
 {
+  ENTER_LISP_FRAME_T (bool, string);
   if (STRINGP (string))
     {
       start = 0;
@@ -5351,12 +5456,12 @@ e_write (int desc, Lisp_Object string, ptrdiff_t start, ptrdiff_t end,
 	      coding->raw_destination = 0;
 	    }
 	  if (coding->produced)
-	    return 0;
+	    EXIT_LISP_FRAME (0);
 	}
       start += coding->consumed_char;
     }
 
-  return 1;
+  EXIT_LISP_FRAME (1);
 }
 
 DEFUN ("verify-visited-file-modtime", Fverify_visited_file_modtime,
@@ -5367,21 +5472,21 @@ If BUF is omitted or nil, it defaults to the current buffer.
 See Info node `(elisp)Modification Time' for more details.  */)
   (Lisp_Object buf)
 {
+  ENTER_LISP_FRAME (buf);
+  LISP_LOCALS (handler, filename);
   struct buffer *b = decode_buffer (buf);
   struct stat st;
-  Lisp_Object handler;
-  Lisp_Object filename;
   struct timespec mtime;
 
-  if (!STRINGP (BVAR (b, filename))) return Qt;
-  if (b->modtime.tv_nsec == UNKNOWN_MODTIME_NSECS) return Qt;
+  if (!STRINGP (BVAR (b, filename))) EXIT_LISP_FRAME (Qt);
+  if (b->modtime.tv_nsec == UNKNOWN_MODTIME_NSECS) EXIT_LISP_FRAME (Qt);
 
   /* If the file name has special constructs in it,
      call the corresponding file handler.  */
   handler = Ffind_file_name_handler (BVAR (b, filename),
 				     Qverify_visited_file_modtime);
   if (!NILP (handler))
-    return call2 (handler, Qverify_visited_file_modtime, buf);
+    EXIT_LISP_FRAME (call2 (handler, Qverify_visited_file_modtime, buf));
 
   filename = ENCODE_FILE (BVAR (b, filename));
 
@@ -5391,8 +5496,8 @@ See Info node `(elisp)Modification Time' for more details.  */)
   if (timespec_cmp (mtime, b->modtime) == 0
       && (b->modtime_size < 0
 	  || st.st_size == b->modtime_size))
-    return Qt;
-  return Qnil;
+    EXIT_LISP_FRAME (Qt);
+  EXIT_LISP_FRAME (Qnil);
 }
 
 DEFUN ("visited-file-modtime", Fvisited_file_modtime,
@@ -5422,6 +5527,8 @@ An argument specifies the modification time value to use
 `visited-file-modtime'.  */)
   (Lisp_Object time_flag)
 {
+  ENTER_LISP_FRAME (time_flag);
+  LISP_LOCALS (filename, handler);
   if (!NILP (time_flag))
     {
       struct timespec mtime;
@@ -5438,9 +5545,7 @@ An argument specifies the modification time value to use
     }
   else
     {
-      register Lisp_Object filename;
       struct stat st;
-      Lisp_Object handler;
 
       filename = Fexpand_file_name (BVAR (current_buffer, filename), Qnil);
 
@@ -5449,7 +5554,7 @@ An argument specifies the modification time value to use
       handler = Ffind_file_name_handler (filename, Qset_visited_file_modtime);
       if (!NILP (handler))
 	/* The handler can find the file name the same way we did.  */
-	return call2 (handler, Qset_visited_file_modtime, Qnil);
+	EXIT_LISP_FRAME (call2 (handler, Qset_visited_file_modtime, Qnil));
 
       filename = ENCODE_FILE (filename);
 
@@ -5460,30 +5565,34 @@ An argument specifies the modification time value to use
         }
     }
 
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 static Lisp_Object
 auto_save_error (Lisp_Object error_val)
 {
+  ENTER_LISP_FRAME (error_val);
+  LISP_LOCALS (msg);
   auto_save_error_occurred = 1;
 
   ring_bell (XFRAME (selected_frame));
 
   AUTO_STRING (format, "Auto-saving %s: %s");
-  Lisp_Object msg = CALLN (Fformat, format, BVAR (current_buffer, name),
+  msg = CALLN (Fformat, format, BVAR (current_buffer, name),
 			   Ferror_message_string (error_val));
+
   call3 (intern ("display-warning"),
          intern ("auto-save"), msg, intern ("error"));
 
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 static Lisp_Object
 auto_save_1 (void)
 {
+  ENTER_LISP_FRAME ();
+  LISP_LOCALS (modes);
   struct stat st;
-  Lisp_Object modes;
 
   auto_save_mode_bits = 0666;
 
@@ -5499,10 +5608,9 @@ auto_save_1 (void)
 	auto_save_mode_bits = (XINT (modes) | 0600) & 0777;
     }
 
-  return
-    Fwrite_region (Qnil, Qnil, BVAR (current_buffer, auto_save_file_name), Qnil,
+  EXIT_LISP_FRAME (Fwrite_region (Qnil, Qnil, BVAR (current_buffer, auto_save_file_name), Qnil,
 		   NILP (Vauto_save_visited_file_name) ? Qlambda : Qt,
-		   Qnil, Qnil);
+		   Qnil, Qnil));
 }
 
 struct auto_save_unwind
@@ -5529,12 +5637,13 @@ do_auto_save_unwind (void *arg)
 static Lisp_Object
 do_auto_save_make_dir (Lisp_Object dir)
 {
-  Lisp_Object result;
+  ENTER_LISP_FRAME (dir);
+  LISP_LOCALS (result);
 
   auto_saving_dir_umask = 077;
   result = call2 (Qmake_directory, dir, Qt);
   auto_saving_dir_umask = 0;
-  return result;
+  EXIT_LISP_FRAME (result);
 }
 
 static Lisp_Object
@@ -5557,11 +5666,11 @@ A non-nil NO-MESSAGE argument means do not print any message if successful.
 A non-nil CURRENT-ONLY argument means save only current buffer.  */)
   (Lisp_Object no_message, Lisp_Object current_only)
 {
+  ENTER_LISP_FRAME (no_message, current_only);
+  LISP_LOCALS (tail, buf, hook, oquit, listfile, dir);
   struct buffer *old = current_buffer, *b;
-  Lisp_Object tail, buf, hook;
   bool auto_saved = 0;
   int do_handled_files;
-  Lisp_Object oquit;
   FILE *stream = NULL;
   ptrdiff_t count = SPECPDL_INDEX ();
   bool orig_minibuffer_auto_raise = minibuffer_auto_raise;
@@ -5590,7 +5699,6 @@ A non-nil CURRENT-ONLY argument means save only current buffer.  */)
 
   if (STRINGP (Vauto_save_list_file_name))
     {
-      Lisp_Object listfile;
 
       listfile = Fexpand_file_name (Vauto_save_list_file_name, Qnil);
 
@@ -5599,7 +5707,6 @@ A non-nil CURRENT-ONLY argument means save only current buffer.  */)
          that would leave Emacs in a strange state.  */
       if (!NILP (Vrun_hooks))
 	{
-	  Lisp_Object dir;
 	  dir = Ffile_name_directory (listfile);
 	  if (NILP (Ffile_directory_p (dir)))
 	    internal_condition_case_1 (do_auto_save_make_dir,
@@ -5738,7 +5845,7 @@ A non-nil CURRENT-ONLY argument means save only current buffer.  */)
 
   /* This restores the message-stack status.  */
   unbind_to (count, Qnil);
-  return Qnil;
+  EXIT_LISP_FRAME (Qnil);
 }
 
 DEFUN ("set-buffer-auto-saved", Fset_buffer_auto_saved,
@@ -5819,6 +5926,7 @@ On Posix systems, this function always returns non-nil, and has no
 effect except for flushing STREAM's data.  */)
   (Lisp_Object stream, Lisp_Object mode)
 {
+  ENTER_LISP_FRAME (stream, mode);
   FILE *fp = NULL;
   int binmode;
 
@@ -5836,7 +5944,7 @@ effect except for flushing STREAM's data.  */)
   if (fp != stdin)
     fflush_unlocked (fp);
 
-  return (set_binary_mode (fileno (fp), binmode) == O_BINARY) ? Qt : Qnil;
+  EXIT_LISP_FRAME ((set_binary_mode (fileno (fp), binmode) == O_BINARY) ? Qt : Qnil);
 }
 
 void
