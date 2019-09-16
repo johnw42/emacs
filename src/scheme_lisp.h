@@ -355,6 +355,7 @@ bool walk_lisp_frame_records (ptrdiff_t *pos,
 #endif
 
 #ifdef HAVE_CHEZ_SCHEME
+#pragma GCC diagnostic ignored "-Wunused-local-typedefs"
 #define ENTER_LISP_FRAME_T(type, ...)                                   \
   typedef type this_lisp_frame_type;                                    \
   ptrdiff_t orig_lisp_frame_record_count = lisp_frame_record_count;     \
