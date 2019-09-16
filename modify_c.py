@@ -6,40 +6,62 @@ import re
 import warnings
 
 
-# class Chunk:
-#     def __init__(self, data, start, stop):
-#         self.data = data
-#         self.start = start
-#         self.stop = stop
-
-#     def __str__(self):
-#         return self.data[self.start : self.stop].decode()
-
-#     def __repr__(self):
-#         return f"Chunk(..., {self.start}, {self.stop})"
-
-#     def match(self, regex):
-#         return re.compile(regex).match(self.data, self.start, self.stop)
-
-#     def find(self, needle, start, stop=None):
-#         if stop is None:
-#             stop = len(self.data)
-#         return self.data.find(needle, start, stop)
-
-#     def __getitem__(self, i):
-#         return self.data[i]
-
-#     def __eq__(self, other):
-#         if isinstance(other, bytes):
-#             return self.data[self.start : self.stop] == other
-#         return (
-#             self.data is other.data
-#             and self.start == other.start
-#             and self.stop == other.stop
-#         )
-
-
 RE_CACHE = {}
+
+
+def CompileRegex(pattern):
+    if pattern not in RE_CACHE:
+        RE_CACHE[pattern] = re.compile(pattern, re.MULTILINE | re.DOTALL)
+    return RE_CACHE[pattern]
+
+
+class Sexp:
+    def __init__(self, typ, *args):
+        self.type = typ
+        self.prev_token = None
+        self.next_token = None
+        self.prev_expr = None
+        self.next_expr = None
+        self.parent = None
+        if len(args) == 1:
+            children = args[0]
+            assert isinstance(children, list)
+            self.children = children
+            self.line = children[0].line
+            self.col = children[0].col
+            self.start = children[0].start
+            self.stop = children[-1].stop
+            for child in children:
+                assert child.parent is None
+            self.text = None
+            self.tokens = [t for c in children for t in c.tokens]
+        else:
+            start, line, col, text = args
+            assert isinstance(text, str)
+            self.start = start
+            self.line = line
+            self.col = col
+            self.stop = start + len(text)
+            self.text = text
+            self.children = []
+            self.tokens = [self]
+
+    def __repr__(self):
+        r = f"Sexp({repr(self.type)}, {self.start}, {self.line}, {self.col}, "
+        if self.text:
+            r += repr(self.text)
+        else:
+            r += "[...]"
+        return r + ")"
+
+
+def LinkExprs(exprs):
+    prev = None
+    for expr in exprs:
+        if prev:
+            prev.next_expr = expr
+            expr.prev_expr = prev
+        prev = expr
 
 
 class SourceFile:
@@ -50,6 +72,7 @@ class SourceFile:
     def Load(self):
         with open(self.path, "rt", encoding="Latin-1") as f:
             self.data = f.read()
+        self.Parse()
 
     def Save(self):
         data = self.data
@@ -103,6 +126,108 @@ class SourceFile:
                 raise IndexError("no previous line")
             return 0
 
+    def Tokenize(self):
+        data = self.data
+        line = 0
+        line_start = 0
+        prev_token = None
+        self.line_starts = [0]
+
+        def MakeToken(typ, start, stop):
+            nonlocal line, line_start, prev_token
+            for i in range(line_start, start):
+                if data[i] == "\n":
+                    line += 1
+                    line_start = i + 1
+                    self.line_starts.append(line_start)
+            token = Sexp(typ, start, line, start - line_start, data[start:stop])
+            if prev_token:
+                token.prev_token = prev_token
+                prev_token.next_token = token
+            prev_token = token
+            return token
+
+        i = 0
+        eof = len(data)
+        while i < eof:
+            # Skip whitespace and comments.
+            while i < eof:
+                m = self.Match(r"\s+", i)
+                if m:
+                    i = m.end()
+                if self.Match(r"/\*", i):
+                    i = self.MustFind(r"\*/", i + 2).end()
+                elif self.Match(r"//", i):
+                    i = self.MustFind(r"\n", i + 2).end()
+                else:
+                    break
+
+            if i >= eof:
+                break
+
+            # Tokenize preprocessor directives as a single token.
+            m = self.Match(r"^\s*#", i)
+            if m:
+                pp_start = m.start()
+                i = m.end()
+                while True:
+                    m = self.MustFind(r"(/\*)|(\\\n)|(\n)", i)
+                    if m[1]:
+                        i = self.MustFind(r"\*/", m.end()).end()
+                    elif m[2]:
+                        i = m.end()
+                    else:
+                        assert m[3]
+                        yield MakeToken("#", pp_start, m.end())
+                        i = m.end()
+                        break
+                continue
+
+            # Match identifier-like tokens.
+            m = self.Match(r"[a-zA-Z0-9_]+", i)
+            if m:
+                yield MakeToken("word", m.start(), m.end())
+                i = m.end()
+                continue
+
+            # Match string literals.
+            m = self.Match(r"'(\\.|[^'])*'", i) or self.Match(r'"(\\.|[^"])*"', i)
+            if m:
+                yield MakeToken(data[i], i, m.end())
+                i = m.end()
+                continue
+
+            yield MakeToken(data[i], i, i + 1)
+            i += 1
+
+    def Parse(self):
+        stack = [[]]
+        for token in self.Tokenize():
+            if token.type in "([{":
+                stack.append([token])
+            elif token.type in ")]}":
+                children = stack.pop()
+                children.append(token)
+                LinkExprs(children)
+                assert stack, token
+                stack[-1].append(Sexp("expr" + children[0].type, children))
+            else:
+                stack[-1].append(token)
+        assert len(stack) == 1
+        self.exprs = stack[0]
+        LinkExprs(self.exprs)
+
+    def ExprAt(self, pos):
+        def FindIn(exprs):
+            for i, expr in enumerate(exprs):
+                if expr.start == pos:
+                    return exprs, i
+                if expr.end > pos:
+                    return FindIn(expr.children)
+            raise Exception(f"no expr found at {pos}")
+
+        return FindIn(self.exprs)
+
     def NextLineStart(self, pos):
         return self.LineEnd(pos) + 1
 
@@ -116,36 +241,48 @@ class SourceFile:
             yield Chunk(self.data, offset, eol)
             offset = eol
 
+    def TranslateIndex(self, index):
+        if isinstance(index, slice):
+            if isinstance(index.start, Sexp):
+                return slice(index.start.start, index.stop.stop)
+            return index
+        elif isinstance(index, Sexp):
+            return slice(index.start, index.stop)
+        else:
+            return slice(index, index + 1)
+
     def __getitem__(self, i):
-        return self.data[i]
+        return self.data[self.TranslateIndex(i)]
 
     def __setitem__(self, index, val):
-        if not isinstance(index, slice):
-            index = slice(index, index + 1)
+        index = self.TranslateIndex(index)
         if self.data[index] == val:
             warnings.warn("no change")
         else:
             self.changes.append((index.start, index.stop, val))
 
-    def CompilePattern(self, pattern):
-        if pattern not in RE_CACHE:
-            RE_CACHE[pattern] = re.compile(pattern)
-        return RE_CACHE[pattern]
-
-    def match(self, pattern, start):
-        m = self.CompilePattern(pattern).match(self.data, start)
+    def Match(self, pattern, start):
+        if start < 0:
+            return None
+        m = CompileRegex(pattern).match(self.data, start)
         assert not m or m.end() >= start
         return m
 
-    def search(self, pattern, start):
-        m = self.CompilePattern(pattern).search(self.data, start)
+    def Search(self, pattern, start):
+        m = CompileRegex(pattern).search(self.data, start)
         assert not m or m.end() >= start
         return m
 
     def MustMatch(self, pattern, start):
-        m = self.match(pattern, start)
+        m = self.Match(pattern, start)
         if not m:
             raise Exception(f"no match at {self.path} offset {start}")
+        return m
+
+    def MustFind(self, pattern, start):
+        m = self.Search(pattern, start)
+        if not m:
+            raise Exception(f"no match at {self.path} starting at offset {start}")
         return m
 
     def ForwardExpr(self, pos):
@@ -153,7 +290,7 @@ class SourceFile:
         next_pos = self.NextMatchingDelimiter(pos)
         if next_pos is not None:
             return "other", pos, next_pos
-        m = self.match(r"[a-zA-Z0-9_]+", pos)
+        m = self.Match(r"[a-zA-Z0-9_]+", pos)
         if m:
             return "name", pos, m.end()
         return self.data[pos], pos, pos + 1
@@ -195,7 +332,7 @@ class SourceFile:
     def SkipSpaces(self, pos):
         data = self.data
         while True:
-            m = self.match(r"\s+", pos)
+            m = self.Match(r"\s+", pos)
             if m:
                 pos = m.end()
             # if data[pos : pos + 2] == "//":
@@ -211,116 +348,195 @@ class SourceFile:
         return self.data.index(text, pos)
 
 
-def ParseLocalVarDecl(f, start, stop):
-    if "(*cons)" in f[start:stop]:
-        return
-    while True:
-        m = f.match(r"\**", start)
-        pre_decl = m.group()
-        pos = m.end()
-        t, name_start, name_end = f.ForwardExpr(pos)
-        assert t == "name", (t, pos)
-        name = f[name_start:name_end]
-        expr_end = name_end
-        init_start = None
-        while True:
-            prev_expr_end = expr_end
-            t, expr_start, expr_end = f.ForwardExpr(expr_end)
-            assert expr_end <= stop + 1, (t, prev_expr_end, expr_start)
-            if t == "=":
-                post_decl = f[name_end:expr_start].strip()
-                init_start = expr_end
-            elif t in ",;":
-                if init_start is None:
-                    init_expr = None
-                    post_decl = f[name_end:expr_start].strip()
-                else:
-                    init_expr = f[init_start:expr_start].strip()
-                yield pre_decl, name, post_decl, init_expr
-                if t == ";":
-                    return
-                start = f.SkipSpaces(expr_end)
-                break
+def ParseLocalVarDecl(f, type_token):
+    # if "(*cons)" in f[f.start:stop]:
+    #     return
 
-    # for var in text.split(","):
-    #     var = var.strip()
-    #     init = None
-    #     if "=" in var:
-    #         var, init = (x.strip() for x in var.split("="))
-    #     yield var, init
-    yield text
+    token = type_token
+    if token.next_expr.type == "expr(":
+        # Ignore function pointers.
+        return
+    while token.type != ";":
+        token = token.next_expr
+        pre_decl = ""
+        if token.text == "*":
+            pre_decl += token.text
+            token = token.next_expr
+        assert token.type == "word"
+        name = token.text
+        post_decl = ""
+        token = token.next_expr
+        if token.type not in "=,;)":
+            post_decl_start = post_decl_end = token
+            while post_decl_end.next_expr.type not in "=,;)":
+                post_decl_end = post_decl_end.next_expr
+            post_decl = f[post_decl_start:post_decl_end]
+            token = post_decl_end.next_expr
+        init = None
+        if token.type == "=":
+            init_start = init_end = token.next_expr
+            while init_end.next_expr.type not in ",;)":
+                init_end = init_end.next_expr
+            init = f[init_start:init_end]
+            token = init_end.next_expr
+        assert token.type in ",;)", token
+        yield pre_decl, name, post_decl, init
 
 
-def ProcessFunction(f, open_brace_pos):
-    # print("candidate at", f.path, open_brace_pos)
-    name_start = f.PrevLineStart(open_brace_pos)
-    while f.match(r"^\S", name_start):
-        name_start = f.PrevLineStart(name_start)
-    m = f.match(r"([A-Za-z0-9_]+)\s*\(", name_start)
-    if not m:
+SAFE_FUNCTIONS = """
+    if for while emacs_abort eassert
+    XINT INTEGERP STRINGP
+    BVAR
+    CHAR_TABLE_REF CHAR_VALID_P
+""".split()
+
+
+def ProcessFunction(f, body_expr):
+    # Make sure we've actaully found a function.
+    args_expr = body_expr.prev_expr
+    if args_expr.type != "expr(":
         return
-    f_name = m.group(1)
-    print(f_name)
-    t_start = f.PrevLineStart(name_start)
-    if f_name == "record_event":
+    name_tok = args_expr.prev_expr
+    if name_tok.type == "word" or name_tok.col == 0:
+        is_defun = False
+        f_name = name_tok.text
+    elif name_tok.type == "expr(" and name_tok.prev_expr.text == "DEFUN":
+        is_defun = True
+        f_name = "DEFUN"
+    else:
         return
-    m = f.MustMatch(r"(?:(?:INLINE|static)\s+)?(\S.*)", t_start)
-    r_type = m.group(1)
-    close_brace_pos = f.NextMatchingDelimiter(open_brace_pos)
-    f.MustMatch(r"}\s", close_brace_pos - 1)
-    here = f.NextLineStart(open_brace_pos)
+
+    # Skip functions with no function calls.
+    for i in range(len(body_expr.tokens) - 1):
+        word, paren = body_expr.tokens[i : i + 2]
+        if (
+            word.type == "word"
+            and paren.type == "("
+            and word.text not in SAFE_FUNCTIONS
+        ):
+            break
+    else:
+        return
+
+    if is_defun:
+        r_type = "Lisp_Object"
+    else:
+        type_start = type_end = name_tok.prev_expr
+        while type_start.col != 0:
+            type_start = type_start.prev_expr
+        if type_start.text in ["INLINE", "static"]:
+            type_start = type_start.next_expr
+        r_type = f[type_start.start : type_end.stop]
+
+    lisp_args = []
+    has_varargs = False
+    for i in range(1, len(args_expr.tokens) - 1):
+        if (
+            args_expr.tokens[i].text == "Lisp_Object"
+            and args_expr.tokens[i + 1].type == "word"
+        ):
+            lisp_args.append(args_expr.tokens[i + 1].text)
+        elif list(t.text for t in args_expr.tokens[i : i + 5]) == [
+            "nargs",
+            ",",
+            "Lisp_Object",
+            "*",
+            "args",
+        ]:
+            has_varargs = True
+            break
+
+    macro_name = "ENTER_LISP_FRAME"
+    macro_args = list(lisp_args)
+    if has_varargs:
+        macro_name += "_VA"
+        macro_args[0:] = ["nargs", "args"]
+    if r_type not in ["Lisp_Object", "void"]:
+        macro_args[0:0] = [r_type]
+        macro_name += "_T"
+    entry_expr = macro_name + " (" + ", ".join(macro_args) + ")"
+
     local_vars = []
-    while here < close_brace_pos:
-        m = f.match(
-            r"(\s*)(for\s*\(\s*)?((?:(?:register|const)\s+)*Lisp_Object\s)", here
-        )
-        if m:
-            indent = m.group(1)
-            in_loop = m.group(2)
-            decl_start = m.start(3)
-            decl_end = f.index(";", m.end())
-            assign_exprs = []
-            for pre_decl, name, post_decl, init_expr in ParseLocalVarDecl(
-                f, m.end(), decl_end
-            ):
+    for token in body_expr.tokens:
+        if token.text != "Lisp_Object":
+            continue
+        decl_start = token
+        while decl_start.prev_expr.text in ["register", "const"]:
+            decl_start = decl_start.prev_token
+        context = f[f.line_starts[decl_start.line] : token.start]
+        m = re.match(r"(\s*)(for\s*\(\s*)?$", context)
+        if not m:
+            continue
+        indent = m[1]
+        in_loop = bool(m[2])
+        decl_end = token
+        while decl_end.text != ";":
+            decl_end = decl_end.next_expr
+        assign_exprs = []
+        if not all(
+            pre_decl or post_decl
+            for pre_decl, _, post_decl, _ in ParseLocalVarDecl(f, token)
+        ):
+            for pre_decl, name, post_decl, init_expr in ParseLocalVarDecl(f, token):
                 if pre_decl or post_decl:
-                    warnings.warn(f"pre_decl or post_decl in {f_name}")
-                    return
+                    assert not in_loop
+                    decl = "Lisp_Object " + pre_decl + name + post_decl
+                    if init_expr:
+                        decl += " = " + init_expr
+                    assign_exprs.append(decl)
+                    continue
                 if name not in local_vars:
                     local_vars.append(name)
                 if init_expr:
                     assign_exprs.append(name + " = " + init_expr)
-            if assign_exprs or in_loop:
+            if assign_exprs:
                 if in_loop:
-                    sep = ", "
+                    f[decl_start:decl_end] = ", ".join(assign_exprs) + ";\n"
                 else:
                     sep = ";\n" + indent
-                f[decl_start:decl_end] = sep.join(assign_exprs)
+                    f[decl_start:decl_end] = (";\n" + indent).join(assign_exprs) + ";\n"
             else:
-                f[f.BackToLineStart(decl_start) : f.NextLineStart(decl_end)] = ""
-            here = decl_end
-        here = f.NextLineStart(here)
-    if local_vars:
-        pos = f.NextLineStart(open_brace_pos)
-        f[pos:pos] = "  LISP_LOCALS(" + ", ".join(local_vars) + ");\n"
+                f[f.line_starts[decl_start.line] : f.NextLineStart(decl_end.stop)] = ""
+
+    is_lisp_func = local_vars or has_varargs or lisp_args
+    if is_lisp_func:
+        pos = body_expr.tokens[0].stop
+        to_insert = "\n  " + entry_expr + ";"
+        if local_vars:
+            to_insert += "\n  LISP_LOCALS (" + ", ".join(local_vars) + ");"
+        f[pos:pos] = to_insert
+        if r_type == "void":
+            pos = body_expr.tokens[-1].start
+            f[pos:pos] = "  EXIT_LISP_FRAME_VOID ();\n"
+            for token in body_expr.tokens:
+                if token.text == "return":
+                    f[token] = "EXIT_LISP_FRAME_VOID ()"
+        else:
+            for token in body_expr.tokens:
+                if token.text == "return":
+                    return_start = return_end = token.next_expr
+                    while return_end.next_expr.type != ";":
+                        return_end = return_end.next_expr
+                    f[token:return_end] = (
+                        "EXIT_LISP_FRAME (" + f[return_start:return_end] + ")"
+                    )
 
 
 def Main():
     os.chdir(sys.path[0])
-    for path in glob.glob("src/*.[ch]"):
+    # for path in ["src/window.h"]:
+    for path in sorted(glob.glob("src/*.[ch]")):
+        if path in ["src/scheme_lisp.c", "src/alloc.c"]:
+            continue
         print(path)
         f = SourceFile(path)
         f.Load()
-        here = 0
-        while not f.IsEof(here):
-            eol = f.LineEnd(here)
-            if f[here:eol] == "{":
-                ProcessFunction(f, here)
-            here = f.NextLineStart(eol)
+        for expr in f.exprs:
+            if expr.type == "expr{" and expr.col == 0:
+                ProcessFunction(f, expr)
         if f.HasChanges():
             print(path, "updated")
             f.Save()
-            sys.exit(1)
 
 
 Main()

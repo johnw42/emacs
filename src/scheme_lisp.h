@@ -315,10 +315,10 @@ bool may_be_valid (chez_ptr x);
 #define RESUME_GC()
 #define RETURN_RESUME_GC(...) return __VA_ARGS__
 
-#define ENTER_LISP_FRAME(...)                   \
+#define ENTER_LISP_FRAME(...)                    \
   ENTER_LISP_FRAME_T(Lisp_Object, __VA_ARGS__)
-#define ENTER_LISP_FRAME_VA(nargs, args)                        \
-  ENTER_LISP_FRAME_VA_T(Lisp_Object, nargs, args)
+#define ENTER_LISP_FRAME_VA(...)                 \
+  ENTER_LISP_FRAME_VA_T(Lisp_Object, __VA_ARGS__)
 #define EXIT_LISP_FRAME(expr)                                   \
   do                                                            \
     {                                                           \
@@ -359,10 +359,11 @@ bool walk_lisp_frame_records (ptrdiff_t *pos,
   typedef type this_lisp_frame_type;                                    \
   ptrdiff_t orig_lisp_frame_record_count = lisp_frame_record_count;     \
   SCHEME_ENTER_LISP_FRAME(__VA_ARGS__)
-#define ENTER_LISP_FRAME_VA_T(type, nargs, args)                        \
+#define ENTER_LISP_FRAME_VA_T(type, nargs, args, ...)                    \
   typedef type this_lisp_frame_type;                                    \
   ptrdiff_t orig_lisp_frame_record_count = lisp_frame_record_count;     \
-  push_lisp_local_array(true, args, nargs)
+  push_lisp_local_array(true, args, nargs)                              \
+  __VA_OPT__(; SCHEME_ENTER_LISP_FRAME (__VA_ARGS__))
 #define EXIT_LISP_FRAME_NO_RETURN()                             \
   do                                                            \
     {                                                           \
@@ -385,7 +386,7 @@ bool walk_lisp_frame_records (ptrdiff_t *pos,
 #else
 #define PUSH_LISP_LOCALS(...) ((void)0)
 #define ENTER_LISP_FRAME_T(type, ...) typedef type this_lisp_frame_type
-#define ENTER_LISP_FRAME_VA_T(type, nargs, args) ((void)0)
+#define ENTER_LISP_FRAME_VA_T(...) ((void)0)
 #define EXIT_LISP_FRAME_NO_RETURN() ((void)(this_lisp_frame_type *)0)
 #define LISP_LOCALS_DECL_1(n1) Lisp_Object n1
 #define LISP_LOCALS_ADDR_1(n1) ((void)0)
