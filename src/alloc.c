@@ -8806,8 +8806,8 @@ before_scheme_gc (void)
   /*   } */
 
   ptrdiff_t pos = 0, count, frames_found = 0, entries_found = 0;
-  union lisp_frame_record *records;
-  while (walk_lisp_frame_records (&pos, &records, &count))
+  Lisp_Object **pptr;
+  while (walk_lisp_stack (&pos, &pptr, &count))
     {
       eassert (count > 0);
       frames_found++;
@@ -8815,8 +8815,8 @@ before_scheme_gc (void)
       /* printf ("count: %ld\n", count); */
       for (ptrdiff_t i = 0; i < count; i++)
         {
-          analyze_scheme_ref_ptr (records[i].ptr, "walking stack in before_scheme_gc");
-          record_scheme_ref_ptr (records[i].ptr, rt_trace);
+          analyze_scheme_ref_ptr (pptr[i], "walking stack in before_scheme_gc");
+          record_scheme_ref_ptr (pptr[i], rt_trace);
           /* printf("found %p at %p\n", */
           /*        CHEZ(*records[count].ptr), */
           /*        records[count].ptr); */
@@ -9007,7 +9007,7 @@ union
 
 static size_t magic_refs[MAX_MAGIC_REFS] =
   {
-   0x40b4cdff
+   //0x40b4cdff
   };
 static size_t magic_ref_ptrs[MAX_MAGIC_REFS] =
   {

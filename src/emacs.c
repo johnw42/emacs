@@ -674,8 +674,6 @@ close_output_streams (void)
 int
 main (int argc, char **argv)
 {
-  ENTER_LISP_FRAME_T (int);
-  LISP_LOCALS (tem, tem2, old_log_max);
 #ifdef HAVE_CHEZ_SCHEME
   alloc_preinit ();
 #endif
@@ -781,6 +779,12 @@ main (int argc, char **argv)
   sort_args (argc, argv);
   argc = 0;
   while (argv[argc]) argc++;
+
+#ifdef HAVE_CHEZ_SCHEME
+  scheme_init ();
+#endif /* HAVE_CHEZ_SCHEME */
+  ENTER_LISP_FRAME_T (int);
+  LISP_LOCALS (tem, tem2, old_log_max);
 
   if (argmatch (argv, argc, "-version", "--version", 3, NULL, &skip_args))
     {
@@ -1212,10 +1216,6 @@ Using an Emacs configured with --with-x-toolkit=lucid does not have this problem
   noninteractive1 = noninteractive;
 
   /* Perform basic initializations (not merely interning symbols).  */
-
-#ifdef HAVE_CHEZ_SCHEME
-  scheme_init ();
-#endif /* HAVE_CHEZ_SCHEME */
 
   if (!initialized)
     {

@@ -3890,7 +3890,7 @@ struct handler
 
 #ifdef HAVE_CHEZ_SCHEME
   int disable_scheme_gc;
-  ptrdiff_t lisp_frame_record_count;
+  ptrdiff_t lisp_stack_size;
 #endif
 };
 

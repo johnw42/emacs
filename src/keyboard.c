@@ -1088,10 +1088,10 @@ command_loop (void)
 {
 #ifdef HAVE_STACK_OVERFLOW_HANDLING
   /* At least on GNU/Linux, saving signal mask is important here.  */
+  SAVE_LISP_FRAME_PTR();
   if (sigsetjmp (return_to_command_loop, 1) != 0)
     {
-      printf ("longjmp to command_loop\n");
-      gdb_break();
+      RESTORE_LISP_FRAME_PTR();
       /* Comes here from handle_sigsegv (see sysdep.c) and
 	 stack_overflow_handler (see w32fns.c).  */
 #ifdef WINDOWSNT
@@ -2629,10 +2629,10 @@ read_char (int commandflag, Lisp_Object map,
      it *must not* be in effect when we call redisplay.  */
 
   jmpcount = SPECPDL_INDEX ();
+  SAVE_LISP_FRAME_PTR();
   if (sys_setjmp (local_getcjmp))
     {
-      printf ("longjmp to read_char\n");
-      gdb_break();
+      RESTORE_LISP_FRAME_PTR();
       /* Handle quits while reading the keyboard.  */
       /* We must have saved the outer value of getcjmp here,
 	 so restore it now.  */

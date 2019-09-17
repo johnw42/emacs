@@ -6097,8 +6097,10 @@ png_load_body (struct frame *f, struct image *img, struct png_load_context *c)
 
   /* Set error jump-back.  We come back here when the PNG library
      detects an error.  */
+  SAVE_LISP_FRAME_PTR();
   if (FAST_SETJMP (PNG_JMPBUF (png_ptr)))
     {
+      RESTORE_LISP_FRAME_PTR();
     error:
       if (c->png_ptr)
 	png_destroy_read_struct (&c->png_ptr, &c->info_ptr, &c->end_info);

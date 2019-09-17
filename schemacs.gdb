@@ -45,27 +45,27 @@ end
 #   bsave
 # end
 
-break wrong_type_argument
-break _exit
+# break wrong_type_argument
+# break _exit
 
-break terminate_due_to_signal
-command
-up
-up
-end
+# break terminate_due_to_signal
+# command
+# up
+# up
+# end
 
 break gdb_break
 command
 up
 end
 
-break gdb_found_ref
-disable
-command
-bt 5
-up
-up
-end
+# break gdb_found_ref
+# disable
+# command
+# bt 5
+# up
+# up
+# end
 
 # break before_scheme_gc
 # command
@@ -82,6 +82,10 @@ end
 # record stop
 # cont
 # end
+
+define hook-run
+  set $n = 0
+end
 
 #source .breakpoints.gdb
 

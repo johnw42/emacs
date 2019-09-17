@@ -1167,62 +1167,69 @@ may_be_valid (chez_ptr x)
   return false;
 }
 
-static union lisp_frame_record *lisp_frame_records = NULL;
-static ptrdiff_t lisp_frame_record_capacity = 256;
-ptrdiff_t lisp_frame_record_count = 0;
+struct lisp_frame_record {
+  ptrdiff_t pointer_count;
+  Lisp_Object *ptrs[];
+};
+
+static Lisp_Object **lisp_stack = NULL;
+static ptrdiff_t lisp_stack_capacity = 0;
+ptrdiff_t lisp_stack_size = 0;
+
+#define LISP_STACK_FRAME_HEADER_WORDS 1
+#define DEBUG_MAX_FRAME_SIZE 100
+#define DEBUG_MAX_STACK_SIZE 5000
 
 static void
 lisp_frame_record_init (void)
 {
-  lisp_frame_records =
-    reallocarray (lisp_frame_records,
-                  lisp_frame_record_capacity,
-                  sizeof (union lisp_frame_record));
-  eassert (lisp_frame_records);
-  lisp_frame_records[0].sentinel = NULL;
-  lisp_frame_record_count = 1;
 }
 
 static void
-ensure_lisp_frame_record_capacity (ptrdiff_t n)
+ensure_lisp_stack_capacity (ptrdiff_t n)
 {
-  ptrdiff_t cap_needed = lisp_frame_record_count + n;
-  if (lisp_frame_record_capacity < cap_needed)
+  ptrdiff_t cap_needed = lisp_stack_size + n;
+  if (lisp_stack_capacity < cap_needed)
     {
-      ptrdiff_t new_cap = lisp_frame_record_capacity;
-      eassert (new_cap > 0);
+      ptrdiff_t new_cap = lisp_stack_capacity;
       while (new_cap < cap_needed)
-        new_cap *= 2;
+        if (new_cap == 0)
+          new_cap = 256;
+        else
+          new_cap *= 2;
       printf ("expanding to %ld\n", new_cap);
-      lisp_frame_records = reallocarray
-        (lisp_frame_records,
-         new_cap, sizeof (union lisp_frame_record));
-      eassert (lisp_frame_records);
-      lisp_frame_record_capacity = new_cap;
+      lisp_stack = reallocarray (lisp_stack,
+                                 new_cap,
+                                 sizeof (Lisp_Object **));
+      eassert (lisp_stack);
+      lisp_stack_capacity = new_cap;
     }
 }
 
 static uint64_t push_frame_counter = 0;
 
-#define LOWER_IN_STACK(a, b) ((void *)(a) > (void *)(b))
-
-// If the assertion fails, it probably means ENTER_LISP_FRAME* wasn't
-// paired correctly with EXIT_LISP_FRAME* somewhere.
 #define BEGIN_PUSH_FRAME(n)                                             \
-  ++push_frame_counter;                                                 \
-  eassert (n >= 0);                                                     \
-  ensure_lisp_frame_record_capacity (n + 1);                            \
-  void *old_sentinel = lisp_frame_records[lisp_frame_record_count - 1].sentinel; \
-  eassert (old_sentinel == NULL || !LOWER_IN_STACK (&old_sentinel, old_sentinel))
+  do {                                                                  \
+    ++push_frame_counter;                                               \
+    eassert (n >= 0);                                                   \
+    eassert (n <= DEBUG_MAX_FRAME_SIZE);                                 \
+    ensure_lisp_stack_capacity (n + LISP_STACK_FRAME_HEADER_WORDS);     \
+    if (lisp_stack_size != 0) {                                          \
+      ptrdiff_t prev_frame_size =                                       \
+        (ptrdiff_t) lisp_stack[lisp_stack_size - 1];                    \
+      eassert(prev_frame_size >= 0);                                    \
+      eassert(prev_frame_size <= DEBUG_MAX_FRAME_SIZE);                  \
+    }                                                                   \
+    eassert (lisp_stack_size >= 0);                                     \
+    eassert (lisp_stack_size <= DEBUG_MAX_STACK_SIZE);                   \
+  } while (0)
 
-  /* printf ("BEGIN_PUSH_FRAME: depth: %d; old sentinel: %p; new sentinel: %p\n", \ */
-  /*         (int)lisp_frame_record_count, old_sentinel, &old_sentinel);   \ */
-
-#define END_PUSH_FRAME(n)                                               \
-  lisp_frame_records[lisp_frame_record_count++].count = n;              \
-  lisp_frame_records[lisp_frame_record_count++].sentinel = &old_sentinel
-
-    /* printf ("END_PUSH_FRAME: depth: %d\n", (int)lisp_frame_record_count) */
+#define END_PUSH_FRAME(n)                                              \
+  do {                                                                 \
+    lisp_stack[lisp_stack_size++] = (Lisp_Object *) (ptrdiff_t) n;      \
+    eassert (lisp_stack_size >= 0);                                    \
+    eassert (lisp_stack_size <= DEBUG_MAX_STACK_SIZE);                  \
+  } while (0)
 
 
 void
@@ -1235,8 +1242,8 @@ push_lisp_locals(bool already_initialized, int n, ...)
     {
       Lisp_Object *ptr = va_arg(ap, Lisp_Object *);
       analyze_scheme_ref (*ptr, "in push_lisp_locals");
-      /* printf ("push_lisp_locals: pushing %p at %d\n", ptr, (int) lisp_frame_record_count); */
-      lisp_frame_records[lisp_frame_record_count++].ptr = ptr;
+      /* printf ("push_lisp_locals: pushing %p at %d\n", ptr, (int) lisp_stack_size); */
+      lisp_stack[lisp_stack_size++] = ptr;
       if (already_initialized)
         eassert (may_be_valid (CHEZ (*ptr)));
       else
@@ -1253,8 +1260,7 @@ push_lisp_local_array(bool already_initialized,
   BEGIN_PUSH_FRAME(n);
   for (int i = 0; i < n; i++)
     {
-      lisp_frame_records[lisp_frame_record_count++].ptr =
-        &ptr[i];
+      lisp_stack[lisp_stack_size++] = &ptr[i];
       if (already_initialized)
         eassert (may_be_valid (CHEZ (ptr[i])));
       else
@@ -1269,28 +1275,27 @@ push_lisp_local_array(bool already_initialized,
 // block.  Only the 'ptr' field of each record should be examined.
 // When there are no more records left, the return value is false.
 bool
-walk_lisp_frame_records (ptrdiff_t *pos,
-                         union lisp_frame_record **pptr,
-                         ptrdiff_t *count)
+walk_lisp_stack (ptrdiff_t *pos,
+                 Lisp_Object ***ppptr,
+                 ptrdiff_t *count)
 {
   eassert (*pos >= 0);
-  ptrdiff_t index = lisp_frame_record_count - *pos;
-  while (index > 2)
+  ptrdiff_t index = lisp_stack_size - *pos;
+  while (index > 1)
     {
-      --index;
-      ptrdiff_t ptr_count = lisp_frame_records[--index].count;
+      ptrdiff_t ptr_count = (ptrdiff_t) lisp_stack[--index];
       eassert (ptr_count >= 0);
-      eassert (ptr_count < 100);
+      eassert (ptr_count <= DEBUG_MAX_FRAME_SIZE);
       if (ptr_count > 0)
         {
-          *pptr = &lisp_frame_records[index - ptr_count];
+          *ppptr = &lisp_stack[index - ptr_count];
           *count = ptr_count;
           index -= ptr_count;
-          *pos = lisp_frame_record_count - index;
+          *pos = lisp_stack_size - index;
           return true;
         }
     }
-  *pptr = NULL;
+  *ppptr = NULL;
   *count = 0;
   *pos = -1;
   return false;
@@ -1304,13 +1309,13 @@ get_lisp_frame_ptrs (Lisp_Object **buf)
 {
   ptrdiff_t total = 0;
   ptrdiff_t pos = 0;
-  union lisp_frame_record *rec;
+  Lisp_Object **pptr;
   ptrdiff_t count;
-  while (walk_lisp_frame_records (&pos, &rec, &count))
+  while (walk_lisp_stack (&pos, &pptr, &count))
     {
       for (ptrdiff_t i = 0; i < count; i++)
         {
-          buf[total++] = rec[i].ptr;
+          buf[total++] = pptr[i];
         }
     }
   return total;
@@ -1369,7 +1374,7 @@ run_init_checks(void)
   eassert (memcmp (found, expected, sizeof expected) == 0);
 
   EXIT_LISP_FRAME_NO_RETURN();
-  eassert (lisp_frame_record_count == 1);
+  eassert (lisp_stack_size == 1);
 
   lisp_frame_record_init();
 

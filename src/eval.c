@@ -1174,29 +1174,27 @@ internal_catch (Lisp_Object tag,
 		Lisp_Object (*func) (Lisp_Object), Lisp_Object arg)
 {
   ENTER_LISP_FRAME (tag, arg);
+  LISP_LOCALS (val);
 
   /* This structure is made part of the chain `catchlist'.  */
   struct handler *c = push_handler (tag, CATCHER);
 
   /* Call FUNC.  */
+  SAVE_LISP_FRAME_PTR();
   if (! sys_setjmp (c->jmp))
     {
-      LISP_LOCALS (val);
       val = func (arg);
       eassert (handlerlist == c);
       handlerlist = c->next;
-      EXIT_LISP_FRAME (val);
     }
   else
     { /* Throw works by a longjmp that comes right here.  */
-      printf ("longjmp to internal_catch\n");
-      gdb_break();
-      LISP_LOCALS (val);
+      RESTORE_LISP_FRAME_PTR();
       val = handlerlist->val;
       clobbered_eassert (handlerlist == c);
       handlerlist = handlerlist->next;
-      EXIT_LISP_FRAME (val);
     }
+  EXIT_LISP_FRAME (val);
 }
 
 /* Unwind the specbind, catch, and handler stacks back to CATCH, and
@@ -1232,7 +1230,7 @@ unwind_to_catch (struct handler *catch, Lisp_Object value)
 #ifdef HAVE_CHEZ_SCHEME
   eassert (disable_scheme_gc >= catch->disable_scheme_gc);
   disable_scheme_gc = catch->disable_scheme_gc;
-  lisp_frame_record_count = catch->lisp_frame_record_count;
+  lisp_stack_size = catch->lisp_stack_size;
 #endif
 
   do
@@ -1381,10 +1379,10 @@ internal_lisp_condition_case (Lisp_Object var, Lisp_Object bodyform,
       if (!CONSP (condition))
 	condition = list1 (condition);
       struct handler *c = push_handler (condition, CONDITION_CASE);
+      SAVE_LISP_FRAME_PTR();
       if (sys_setjmp (c->jmp))
 	{
-          printf ("longjmp to internal_lisp_condition_case\n");
-          gdb_break();
+          RESTORE_LISP_FRAME_PTR();
 	  val = handlerlist->val;
 
 	  Lisp_Object volatile *chosen_clause = clauses;
@@ -1439,10 +1437,10 @@ internal_condition_case (Lisp_Object (*bfun) (void), Lisp_Object handlers,
   ENTER_LISP_FRAME (handlers);
   LISP_LOCALS (val);
   struct handler *c = push_handler (handlers, CONDITION_CASE);
+  SAVE_LISP_FRAME_PTR();
   if (sys_setjmp (c->jmp))
     {
-      printf ("longjmp to internal_condition_case\n");
-      gdb_break();
+      RESTORE_LISP_FRAME_PTR();
       val = handlerlist->val;
 
       clobbered_eassert (handlerlist == c);
@@ -1469,10 +1467,10 @@ internal_condition_case_1 (Lisp_Object (*bfun) (Lisp_Object), Lisp_Object arg,
   ENTER_LISP_FRAME (arg, handlers);
   LISP_LOCALS (val);
   struct handler *c = push_handler (handlers, CONDITION_CASE);
+  SAVE_LISP_FRAME_PTR();
   if (sys_setjmp (c->jmp))
     {
-      printf ("longjmp to internal_condition_case_1\n");
-      gdb_break();
+      RESTORE_LISP_FRAME_PTR();
       val = handlerlist->val;
 
       clobbered_eassert (handlerlist == c);
@@ -1502,10 +1500,10 @@ internal_condition_case_2 (Lisp_Object (*bfun) (Lisp_Object, Lisp_Object),
   ENTER_LISP_FRAME (arg1, arg2, handlers);
   LISP_LOCALS (val);
   struct handler *c = push_handler (handlers, CONDITION_CASE);
+  SAVE_LISP_FRAME_PTR();
   if (sys_setjmp (c->jmp))
     {
-      printf ("longjmp to internal_condition_case_2\n");
-      gdb_break();
+      RESTORE_LISP_FRAME_PTR();
       val = handlerlist->val;
 
       clobbered_eassert (handlerlist == c);
@@ -1537,10 +1535,10 @@ internal_condition_case_n (Lisp_Object (*bfun) (ptrdiff_t, Lisp_Object *),
   ENTER_LISP_FRAME_VA (nargs, args);
   LISP_LOCALS (val);
   struct handler *c = push_handler (handlers, CONDITION_CASE);
+  SAVE_LISP_FRAME_PTR();
   if (sys_setjmp (c->jmp))
     {
-      printf ("longjmp to internal_condition_case_n\n");
-      gdb_break();
+      RESTORE_LISP_FRAME_PTR();
       val = handlerlist->val;
 
       clobbered_eassert (handlerlist == c);
@@ -1592,7 +1590,7 @@ push_handler_nosignal (Lisp_Object tag_ch_val, enum handlertype handlertype)
   c->interrupt_input_blocked = interrupt_input_blocked;
 #ifdef HAVE_CHEZ_SCHEME
   c->disable_scheme_gc = disable_scheme_gc;
-  c->lisp_frame_record_count = lisp_frame_record_count;
+  c->lisp_stack_size = lisp_stack_size;
 #endif
   handlerlist = c;
   EXIT_LISP_FRAME (c);

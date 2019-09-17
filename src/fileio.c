@@ -257,7 +257,6 @@ report_file_notify_error (const char *string, Lisp_Object name)
 
 
   xsignal (Qfile_notify_error, Fcons (build_string (string), errdata));
-  EXIT_LISP_FRAME_VOID ();
 }
 
 void

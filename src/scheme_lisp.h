@@ -338,38 +338,32 @@ bool may_be_valid (chez_ptr x);
 
 #ifdef HAVE_CHEZ_SCHEME
 
-extern ptrdiff_t lisp_frame_record_count;
-
-union lisp_frame_record {
-  ptrdiff_t count;
-  Lisp_Object *ptr;
-  void *sentinel;
-};
+extern ptrdiff_t lisp_stack_size;
 
 void push_lisp_locals(bool already_initialized, int n, ...);
 void push_lisp_local_array(bool already_initialized, Lisp_Object *ptr, ptrdiff_t n);
 void pop_lisp_locals(int n);
-bool walk_lisp_frame_records (ptrdiff_t *pos,
-                              union lisp_frame_record **ptr,
-                              ptrdiff_t *count);
+bool walk_lisp_stack (ptrdiff_t *pos,
+                      Lisp_Object ***ppptr,
+                      ptrdiff_t *count);
 #endif
 
 #ifdef HAVE_CHEZ_SCHEME
 #pragma GCC diagnostic ignored "-Wunused-local-typedefs"
 #define ENTER_LISP_FRAME_T(type, ...)                                   \
   typedef type this_lisp_frame_type;                                    \
-  ptrdiff_t orig_lisp_frame_record_count = lisp_frame_record_count;     \
+  ptrdiff_t orig_lisp_stack_size = lisp_stack_size;     \
   SCHEME_ENTER_LISP_FRAME(__VA_ARGS__)
 #define ENTER_LISP_FRAME_VA_T(type, nargs, args, ...)                    \
   typedef type this_lisp_frame_type;                                    \
-  ptrdiff_t orig_lisp_frame_record_count = lisp_frame_record_count;     \
+  ptrdiff_t orig_lisp_stack_size = lisp_stack_size;     \
   push_lisp_local_array(true, args, nargs)                              \
   __VA_OPT__(; SCHEME_ENTER_LISP_FRAME (__VA_ARGS__))
 #define EXIT_LISP_FRAME_NO_RETURN()                             \
   do                                                            \
     {                                                           \
       ((void)(this_lisp_frame_type *)0);                        \
-      lisp_frame_record_count = orig_lisp_frame_record_count;   \
+      lisp_stack_size = orig_lisp_stack_size;   \
     }                                                           \
   while (0)
 #define PUSH_LISP_LOCALS(...) push_lisp_locals (__VA_ARGS__)
@@ -384,6 +378,8 @@ bool walk_lisp_frame_records (ptrdiff_t *pos,
   Lisp_Object *name;                            \
   SAFE_ALLOCA_LISP(name, name##_size);          \
   push_lisp_local_array(false, name, name##_size)
+#define SAVE_LISP_FRAME_PTR() ptrdiff_t saved_lisp_stack_size = lisp_stack_size
+#define RESTORE_LISP_FRAME_PTR() (gdb_break(), lisp_stack_size = saved_lisp_stack_size)
 #else
 #define PUSH_LISP_LOCALS(...) ((void)0)
 #define ENTER_LISP_FRAME_T(type, ...) typedef type this_lisp_frame_type
@@ -395,6 +391,8 @@ bool walk_lisp_frame_records (ptrdiff_t *pos,
 #define LISP_LOCAL_ALLOCA(name, size) \
   Lisp_Object *name;                  \
   SAFE_ALLOCA_LISP(name, size)
+#define SAVE_LISP_FRAME_PTR() ((void)0)
+#define RESTORE_LISP_FRAME_PTR() ((void)0)
 #endif
 
 #ifdef HAVE_CHEZ_SCHEME
