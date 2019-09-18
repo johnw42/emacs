@@ -59,8 +59,7 @@ enum composition_method {
 INLINE bool
 composition_registered_p (Lisp_Object prop)
 {
-  ENTER_LISP_FRAME_T (bool, prop);
-  EXIT_LISP_FRAME (INTEGERP (XCAR (prop)));
+  return INTEGERP (XCAR (prop));
 }
 
 /* Return ID number of the already registered composition.  */
@@ -207,19 +206,18 @@ extern void compose_text (ptrdiff_t, ptrdiff_t, Lisp_Object, Lisp_Object,
 INLINE enum composition_method
 composition_method (Lisp_Object prop)
 {
-  ENTER_LISP_FRAME_T (enum composition_method, prop);
   LISP_LOCALS (temp);
   if (composition_registered_p (prop))
-    EXIT_LISP_FRAME (composition_table[COMPOSITION_ID (prop)]->method);
+    return composition_table[COMPOSITION_ID (prop)]->method;
   else
     {
       temp = XCDR (XCAR (prop));
 
-      EXIT_LISP_FRAME ((NILP (temp)
+      return (NILP (temp)
 	      ? COMPOSITION_RELATIVE
 	      : INTEGERP (temp) || STRINGP (temp)
 	      ? COMPOSITION_WITH_ALTCHARS
-	      : COMPOSITION_WITH_RULE_ALTCHARS));
+	      : COMPOSITION_WITH_RULE_ALTCHARS);
     }
 }
 
@@ -229,8 +227,7 @@ composition_method (Lisp_Object prop)
 INLINE bool
 composition_valid_p (ptrdiff_t start, ptrdiff_t end, Lisp_Object prop)
 {
-  ENTER_LISP_FRAME_T (bool, prop);
-  EXIT_LISP_FRAME ((CONSP (prop)
+  return (CONSP (prop)
 	  && (composition_registered_p (prop)
 	      ? (COMPOSITION_ID (prop) >= 0
 		 && COMPOSITION_ID (prop) <= n_compositions
@@ -241,7 +238,7 @@ composition_valid_p (ptrdiff_t start, ptrdiff_t end, Lisp_Object prop)
 		      || VECTORP (XCDR (XCAR (prop)))
 		      || INTEGERP (XCDR (XCAR (prop)))
 		      || CONSP (XCDR (XCAR (prop))))))
-	  && COMPOSITION_LENGTH (prop) == end - start));
+	  && COMPOSITION_LENGTH (prop) == end - start);
 }
 
 /* Macros for lispy glyph-string.  This is completely different from
@@ -267,8 +264,7 @@ composition_valid_p (ptrdiff_t start, ptrdiff_t end, Lisp_Object prop)
 INLINE Lisp_Object *
 lgstring_glyph_addr (Lisp_Object lgs, ptrdiff_t idx)
 {
-  ENTER_LISP_FRAME_T (Lisp_Object *, lgs);
-  EXIT_LISP_FRAME (aref_addr (lgs, idx + 2));
+  return aref_addr (lgs, idx + 2);
 }
 
 /* Vector size of Lispy glyph.  */

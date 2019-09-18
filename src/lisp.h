@@ -697,8 +697,7 @@ extern double extract_float (Lisp_Object);
 INLINE EMACS_INT
 (XLI) (Lisp_Object o)
 {
-  ENTER_LISP_FRAME_T (EMACS_INT, o);
-  EXIT_LISP_FRAME (lisp_h_XLI (o));
+  return lisp_h_XLI (o);
 }
 
 INLINE Lisp_Object
@@ -716,12 +715,11 @@ enum Lisp_Type XTYPE (Lisp_Object a);
 INLINE enum Lisp_Type
 (XTYPE) (Lisp_Object a)
 {
-  ENTER_LISP_FRAME_T (enum Lisp_Type, a);
 #if USE_LSB_TAG
-  EXIT_LISP_FRAME (lisp_h_XTYPE (a));
+  return lisp_h_XTYPE (a);
 #else
   EMACS_UINT i = XLI (a);
-  EXIT_LISP_FRAME (USE_LSB_TAG ? i & ~VALMASK : i >> VALBITS);
+  return USE_LSB_TAG ? i & ~VALMASK : i >> VALBITS;
 #endif
 }
 #endif /* not HAVE_CHEZ_SCHEME */
@@ -729,9 +727,8 @@ INLINE enum Lisp_Type
 INLINE void
 (CHECK_TYPE) (int ok, Lisp_Object predicate, Lisp_Object x)
 {
-  ENTER_LISP_FRAME (predicate, x);
   lisp_h_CHECK_TYPE (ok, predicate, x);
-  EXIT_LISP_FRAME_VOID ();
+  return ;
 }
 
 /* Extract A's pointer value, assuming A's type is TYPE.  */
@@ -740,12 +737,11 @@ INLINE void
 INLINE void *
 (XUNTAG) (Lisp_Object a, int type)
 {
-  ENTER_LISP_FRAME_T (void *, a);
 #if USE_LSB_TAG
-  EXIT_LISP_FRAME (lisp_h_XUNTAG (a, type));
+  return lisp_h_XUNTAG (a, type);
 #else
   intptr_t i = USE_LSB_TAG ? XLI (a) - type : XLI (a) & VALMASK;
-  EXIT_LISP_FRAME ((void *) i);
+  return (void *) i;
 #endif
 }
 #endif /* not HAVE_CHEZ_SCHEME */
@@ -979,8 +975,7 @@ verify (alignof (union vectorlike_header) % GCALIGNMENT == 0);
 INLINE bool
 (SYMBOLP) (Lisp_Object x)
 {
-  ENTER_LISP_FRAME_T (bool, x);
-  EXIT_LISP_FRAME (lisp_h_SYMBOLP (x));
+  return lisp_h_SYMBOLP (x);
 }
 
 #ifdef HAVE_CHEZ_SCHEME
@@ -989,14 +984,13 @@ struct Lisp_Symbol * (XSYMBOL) (Lisp_Object a);
 INLINE struct Lisp_Symbol *
 (XSYMBOL) (Lisp_Object a)
 {
-  ENTER_LISP_FRAME_T (struct Lisp_Symbol *, a);
 #if USE_LSB_TAG
-  EXIT_LISP_FRAME (lisp_h_XSYMBOL (a));
+  return lisp_h_XSYMBOL (a);
 #else
   eassert (SYMBOLP (a));
   intptr_t i = (intptr_t) XUNTAG (a, Lisp_Symbol);
   void *p = (char *) lispsym + i;
-  EXIT_LISP_FRAME (p);
+  return p;
 #endif
 }
 #endif /* not HAVE_CHEZ_SCHEME */
@@ -1007,12 +1001,11 @@ INLINE struct Lisp_Symbol *
 INLINE Lisp_Object
 make_lisp_symbol (struct Lisp_Symbol *sym)
 {
-  ENTER_LISP_FRAME ();
   LISP_LOCALS (a);
   a = XIL (TAG_SYMOFFSET ((char *) sym - (char *) lispsym));
 
   eassert (XSYMBOL (a) == sym);
-  EXIT_LISP_FRAME (a);
+  return a;
 }
 
 INLINE Lisp_Object
@@ -1028,9 +1021,8 @@ builtin_lisp_symbol (int index)
 INLINE void
 (CHECK_SYMBOL) (Lisp_Object x)
 {
-  ENTER_LISP_FRAME (x);
   lisp_h_CHECK_SYMBOL (x);
-  EXIT_LISP_FRAME_VOID ();
+  return ;
 }
 
 /* In the size word of a vector, this bit means the vector has been marked.  */
@@ -1124,17 +1116,15 @@ INLINE Lisp_Object
 INLINE EMACS_INT
 (XINT) (Lisp_Object a)
 {
-  ENTER_LISP_FRAME_T (EMACS_INT, a);
-  EXIT_LISP_FRAME (lisp_h_XINT (a));
+  return lisp_h_XINT (a);
 }
 
 INLINE EMACS_INT
 (XFASTINT) (Lisp_Object a)
 {
-  ENTER_LISP_FRAME_T (EMACS_INT, a);
   EMACS_INT n = lisp_h_XFASTINT (a);
   eassume (0 <= n);
-  EXIT_LISP_FRAME (n);
+  return n;
 }
 
 #else /* ! USE_LSB_TAG */
@@ -1167,14 +1157,13 @@ make_number (EMACS_INT n)
 INLINE EMACS_INT
 XINT (Lisp_Object a)
 {
-  ENTER_LISP_FRAME_T (EMACS_INT, a);
   EMACS_INT i = XLI (a);
   if (! USE_LSB_TAG)
     {
       EMACS_UINT u = i;
       i = u << INTTYPEBITS;
     }
-  EXIT_LISP_FRAME (i >> INTTYPEBITS);
+  return i >> INTTYPEBITS;
 }
 
 /* Like XINT (A), but may be faster.  A must be nonnegative.
@@ -1183,11 +1172,10 @@ XINT (Lisp_Object a)
 INLINE EMACS_INT
 XFASTINT (Lisp_Object a)
 {
-  ENTER_LISP_FRAME_T (EMACS_INT, a);
   EMACS_INT int0 = Lisp_Int0;
   EMACS_INT n = USE_LSB_TAG ? XINT (a) : XLI (a) - (int0 << VALBITS);
   eassume (0 <= n);
-  EXIT_LISP_FRAME (n);
+  return n;
 }
 
 #endif /* ! USE_LSB_TAG */
@@ -1196,12 +1184,11 @@ XFASTINT (Lisp_Object a)
 INLINE EMACS_UINT
 XUINT (Lisp_Object a)
 {
-  ENTER_LISP_FRAME_T (EMACS_UINT, a);
 #ifdef HAVE_CHEZ_SCHEME
-  EXIT_LISP_FRAME ((EMACS_UINT) XINT(a));
+  return (EMACS_UINT) XINT(a);
 #else /* not HAVE_CHEZ_SCHEME */
   EMACS_UINT i = XLI (a);
-  EXIT_LISP_FRAME (USE_LSB_TAG ? i >> INTTYPEBITS : i & INTMASK);
+  return USE_LSB_TAG ? i >> INTTYPEBITS : i & INTMASK;
 #endif /* not HAVE_CHEZ_SCHEME */
 }
 
@@ -1212,8 +1199,7 @@ XUINT (Lisp_Object a)
 INLINE EMACS_INT
 (XHASH) (Lisp_Object a)
 {
-  ENTER_LISP_FRAME_T (EMACS_INT, a);
-  EXIT_LISP_FRAME (lisp_h_XHASH (a));
+  return lisp_h_XHASH (a);
 }
 
 /* Like make_number (N), but may be faster.  N must be in nonnegative range.  */
@@ -1234,8 +1220,7 @@ make_natnum (EMACS_INT n)
 INLINE bool
 (EQ) (Lisp_Object x, Lisp_Object y)
 {
-  ENTER_LISP_FRAME_T (bool, x, y);
-  EXIT_LISP_FRAME (lisp_h_EQ (x, y));
+  return lisp_h_EQ (x, y);
 }
 
 /* True if the possibly-unsigned integer I doesn't fit in a Lisp fixnum.  */
@@ -1255,20 +1240,18 @@ clip_to_bounds (ptrdiff_t lower, EMACS_INT num, ptrdiff_t upper)
 INLINE Lisp_Object
 make_lisp_ptr (void *ptr, enum Lisp_Type type)
 {
-  ENTER_LISP_FRAME ();
   LISP_LOCALS (a);
   a = XIL (TAG_PTR (type, ptr));
 
   eassert (XTYPE (a) == type && XUNTAG (a, type) == ptr);
-  EXIT_LISP_FRAME (a);
+  return a;
 }
 #endif /* not HAVE_CHEZ_SCHEME */
 
 INLINE bool
 (INTEGERP) (Lisp_Object x)
 {
-  ENTER_LISP_FRAME_T (bool, x);
-  EXIT_LISP_FRAME (lisp_h_INTEGERP (x));
+  return lisp_h_INTEGERP (x);
 }
 
 #ifdef HAVE_CHEZ_SCHEME
@@ -1276,12 +1259,11 @@ INLINE bool
 INLINE Lisp_Object
 vectorlike_lisp_obj (void *vptr)
 {
-  ENTER_LISP_FRAME ();
   LISP_LOCALS (obj);
   obj = ((union vectorlike_header *) vptr)->s.scheme_obj;
 
   eassert (chez_vectorp (CHEZ (obj)));
-  EXIT_LISP_FRAME (obj);
+  return obj;
 }
 
 #else /* not HAVE_CHEZ_SCHEME */
@@ -1379,19 +1361,17 @@ INLINE Lisp_Object vectorlike_lisp_obj(void *vptr)
 INLINE void *
 XINTPTR (Lisp_Object a)
 {
-  ENTER_LISP_FRAME_T (void *, a);
-  EXIT_LISP_FRAME (XUNTAG (a, Lisp_Int0));
+  return XUNTAG (a, Lisp_Int0);
 }
 
 INLINE Lisp_Object
 make_pointer_integer (void *p)
 {
-  ENTER_LISP_FRAME ();
   LISP_LOCALS (a);
   a = XIL (TAG_PTR (Lisp_Int0, p));
 
   eassert (INTEGERP (a) && XINTPTR (a) == p);
-  EXIT_LISP_FRAME (a);
+  return a;
 }
 #endif /* not HAVE_CHEZ_SCHEME */
 
@@ -1427,31 +1407,27 @@ verify (alignof (struct Lisp_Cons) % GCALIGNMENT == 0);
 INLINE bool
 (NILP) (Lisp_Object x)
 {
-  ENTER_LISP_FRAME_T (bool, x);
-  EXIT_LISP_FRAME (lisp_h_NILP (x));
+  return lisp_h_NILP (x);
 }
 
 INLINE bool
 (CONSP) (Lisp_Object x)
 {
-  ENTER_LISP_FRAME_T (bool, x);
-  EXIT_LISP_FRAME (lisp_h_CONSP (x));
+  return lisp_h_CONSP (x);
 }
 
 INLINE void
 CHECK_CONS (Lisp_Object x)
 {
-  ENTER_LISP_FRAME (x);
   CHECK_TYPE (CONSP (x), Qconsp, x);
-  EXIT_LISP_FRAME_VOID ();
+  return ;
 }
 
 #ifndef HAVE_CHEZ_SCHEME
 INLINE struct Lisp_Cons *
 (XCONS) (Lisp_Object a)
 {
-  ENTER_LISP_FRAME_T (struct Lisp_Cons *, a);
-  EXIT_LISP_FRAME (lisp_h_XCONS (a));
+  return lisp_h_XCONS (a);
 }
 
 /* Take the car or cdr of something known to be a cons cell.  */
@@ -1464,14 +1440,12 @@ INLINE struct Lisp_Cons *
 INLINE Lisp_Object *
 xcar_addr (Lisp_Object c)
 {
-  ENTER_LISP_FRAME_T (Lisp_Object *, c);
-  EXIT_LISP_FRAME (&XCONS (c)->u.s.car);
+  return &XCONS (c)->u.s.car;
 }
 INLINE Lisp_Object *
 xcdr_addr (Lisp_Object c)
 {
-  ENTER_LISP_FRAME_T (Lisp_Object *, c);
-  EXIT_LISP_FRAME (&XCONS (c)->u.s.u.cdr);
+  return &XCONS (c)->u.s.u.cdr;
 }
 #endif /* not HAVE_CHEZ_SCHEME */
 
@@ -1480,15 +1454,13 @@ xcdr_addr (Lisp_Object c)
 INLINE Lisp_Object
 (XCAR) (Lisp_Object c)
 {
-  ENTER_LISP_FRAME (c);
-  EXIT_LISP_FRAME (lisp_h_XCAR (c));
+  return lisp_h_XCAR (c);
 }
 
 INLINE Lisp_Object
 (XCDR) (Lisp_Object c)
 {
-  ENTER_LISP_FRAME (c);
-  EXIT_LISP_FRAME (lisp_h_XCDR (c));
+  return lisp_h_XCDR (c);
 }
 
 /* Use these to set the fields of a cons cell.
@@ -1498,60 +1470,52 @@ INLINE Lisp_Object
 INLINE void
 XSETCAR (Lisp_Object c, Lisp_Object n)
 {
-  ENTER_LISP_FRAME (c, n);
 #ifdef HAVE_CHEZ_SCHEME
   chez_set_car (CHEZ (c), CHEZ (n));
 #else /* not HAVE_CHEZ_SCHEME */
   *xcar_addr (c) = n;
 #endif /* not HAVE_CHEZ_SCHEME */
-  EXIT_LISP_FRAME_VOID ();
 }
 INLINE void
 XSETCDR (Lisp_Object c, Lisp_Object n)
 {
-  ENTER_LISP_FRAME (c, n);
 #ifdef HAVE_CHEZ_SCHEME
   chez_set_cdr (CHEZ(c), CHEZ(n));
 #else /* not HAVE_CHEZ_SCHEME */
   *xcdr_addr (c) = n;
 #endif /* not HAVE_CHEZ_SCHEME */
-  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Take the car or cdr of something whose type is not known.  */
 INLINE Lisp_Object
 CAR (Lisp_Object c)
 {
-  ENTER_LISP_FRAME (c);
   if (CONSP (c))
-    EXIT_LISP_FRAME (XCAR (c));
+    return XCAR (c);
   if (!NILP (c))
     wrong_type_argument (Qlistp, c);
-  EXIT_LISP_FRAME (Qnil);
+  return Qnil;
 }
 INLINE Lisp_Object
 CDR (Lisp_Object c)
 {
-  ENTER_LISP_FRAME (c);
   if (CONSP (c))
-    EXIT_LISP_FRAME (XCDR (c));
+    return XCDR (c);
   if (!NILP (c))
     wrong_type_argument (Qlistp, c);
-  EXIT_LISP_FRAME (Qnil);
+  return Qnil;
 }
 
 /* Take the car or cdr of something whose type is not known.  */
 INLINE Lisp_Object
 CAR_SAFE (Lisp_Object c)
 {
-  ENTER_LISP_FRAME (c);
-  EXIT_LISP_FRAME (CONSP (c) ? XCAR (c) : Qnil);
+  return CONSP (c) ? XCAR (c) : Qnil;
 }
 INLINE Lisp_Object
 CDR_SAFE (Lisp_Object c)
 {
-  ENTER_LISP_FRAME (c);
-  EXIT_LISP_FRAME (CONSP (c) ? XCDR (c) : Qnil);
+  return CONSP (c) ? XCDR (c) : Qnil;
 }
 
 /* In a string or vector, the sign bit of u.s.size is the gc mark bit.  */
@@ -1584,31 +1548,27 @@ verify (alignof (struct Lisp_String) % GCALIGNMENT == 0);
 INLINE bool
 STRINGP (Lisp_Object x)
 {
-  ENTER_LISP_FRAME_T (bool, x);
 #ifdef HAVE_CHEZ_SCHEME
-  EXIT_LISP_FRAME (SCHEME_VECTORP (x, scheme_string_symbol));
+  return SCHEME_VECTORP (x, scheme_string_symbol);
 #else /* not HAVE_CHEZ_SCHEME */
-  EXIT_LISP_FRAME (XTYPE (x) == Lisp_String);
+  return XTYPE (x) == Lisp_String;
 #endif /* not HAVE_CHEZ_SCHEME */
 }
 
 INLINE void
 CHECK_STRING (Lisp_Object x)
 {
-  ENTER_LISP_FRAME (x);
   CHECK_TYPE (STRINGP (x), Qstringp, x);
-  EXIT_LISP_FRAME_VOID ();
 }
 
 INLINE struct Lisp_String *
 XSTRING (Lisp_Object a)
 {
-  ENTER_LISP_FRAME_T (struct Lisp_String *, a);
   eassert (STRINGP (a));
 #ifdef HAVE_CHEZ_SCHEME
-  EXIT_LISP_FRAME (scheme_malloc_ptr (UNCHEZ (chez_vector_ref (CHEZ (a), 1))));
+  return scheme_malloc_ptr (UNCHEZ (chez_vector_ref (CHEZ (a), 1)));
 #else /* not HAVE_CHEZ_SCHEME */
-  EXIT_LISP_FRAME (XUNTAG (a, Lisp_String));
+  return XUNTAG (a, Lisp_String);
 #endif /* not HAVE_CHEZ_SCHEME */
 }
 
@@ -1616,8 +1576,7 @@ XSTRING (Lisp_Object a)
 INLINE bool
 STRING_MULTIBYTE (Lisp_Object str)
 {
-  ENTER_LISP_FRAME_T (bool, str);
-  EXIT_LISP_FRAME (0 <= XSTRING (str)->u.s.size_byte);
+  return 0 <= XSTRING (str)->u.s.size_byte;
 }
 
 /* An upper bound on the number of bytes in a Lisp string, not
@@ -1660,37 +1619,31 @@ STRING_MULTIBYTE (Lisp_Object str)
 INLINE unsigned char *
 SDATA (Lisp_Object string)
 {
-  ENTER_LISP_FRAME_T (unsigned char *, string);
-  EXIT_LISP_FRAME (XSTRING (string)->u.s.data);
+  return XSTRING (string)->u.s.data;
 }
 INLINE char *
 SSDATA (Lisp_Object string)
 {
-  ENTER_LISP_FRAME_T (char *, string);
   /* Avoid "differ in sign" warnings.  */
-  EXIT_LISP_FRAME ((char *) SDATA (string));
+  return (char *) SDATA (string);
 }
 INLINE unsigned char
 SREF (Lisp_Object string, ptrdiff_t index)
 {
-  ENTER_LISP_FRAME_T (unsigned char, string);
-  EXIT_LISP_FRAME (SDATA (string)[index]);
+  return SDATA (string)[index];
 }
 INLINE void
 SSET (Lisp_Object string, ptrdiff_t index, unsigned char new)
 {
-  ENTER_LISP_FRAME (string);
   SDATA (string)[index] = new;
-  EXIT_LISP_FRAME_VOID ();
 }
 
 INLINE ptrdiff_t
 SCHARS (Lisp_Object string)
 {
-  ENTER_LISP_FRAME_T (ptrdiff_t, string);
   ptrdiff_t nchars = XSTRING (string)->u.s.size;
   eassume (0 <= nchars);
-  EXIT_LISP_FRAME (nchars);
+  return nchars;
 }
 
 #ifdef GC_CHECK_STRING_BYTES
@@ -1711,21 +1664,18 @@ STRING_BYTES (struct Lisp_String *s)
 INLINE ptrdiff_t
 SBYTES (Lisp_Object string)
 {
-  ENTER_LISP_FRAME_T (ptrdiff_t, string);
-  EXIT_LISP_FRAME (STRING_BYTES (XSTRING (string)));
+  return STRING_BYTES (XSTRING (string));
 }
 
 INLINE void
 STRING_SET_CHARS (Lisp_Object string, ptrdiff_t newsize)
 {
-  ENTER_LISP_FRAME (string);
   /* This function cannot change the size of data allocated for the
      string when it was created.  */
   eassert (STRING_MULTIBYTE (string)
 	   ? 0 <= newsize && newsize <= SBYTES (string)
 	   : newsize == SCHARS (string));
   XSTRING (string)->u.s.size = newsize;
-  EXIT_LISP_FRAME_VOID ();
 }
 
 /* A regular vector is just a header plus an array of Lisp_Objects.  */
@@ -1739,8 +1689,7 @@ struct Lisp_Vector
 INLINE bool
 (VECTORLIKEP) (Lisp_Object x)
 {
-  ENTER_LISP_FRAME_T (bool, x);
-  EXIT_LISP_FRAME (lisp_h_VECTORLIKEP (x));
+  return lisp_h_VECTORLIKEP (x);
 }
 
 INLINE bool
@@ -1821,9 +1770,8 @@ xv_size (struct Lisp_Vector *v)
 INLINE struct Lisp_Vector *
 XVECTOR (Lisp_Object a)
 {
-  ENTER_LISP_FRAME_T (struct Lisp_Vector *, a);
   eassert (VECTORLIKEP (a));
-  EXIT_LISP_FRAME (XUNTAG_VECTORLIKE (a));
+  return XUNTAG_VECTORLIKE (a);
 }
 
 INLINE int
@@ -1891,8 +1839,7 @@ vector_cmp (Lisp_Object v1,
             Lisp_Object v2,
             size_t count)
 {
-  ENTER_LISP_FRAME_T (int, v1, v2);
-  EXIT_LISP_FRAME (xvector_cmp (XVECTOR (v1), XVECTOR (v2), count));
+  return xvector_cmp (XVECTOR (v1), XVECTOR (v2), count);
 }
 
 INLINE void
@@ -1900,9 +1847,7 @@ vector_copy (Lisp_Object v1,
              Lisp_Object v2,
              size_t count)
 {
-  ENTER_LISP_FRAME (v1, v2);
   xvector_copy (XVECTOR (v1), XVECTOR (v2), count);
-  EXIT_LISP_FRAME_VOID ();
 }
 
 INLINE void
@@ -1910,9 +1855,7 @@ vector_copy_out (Lisp_Object *objs,
                  Lisp_Object vec,
                  size_t count)
 {
-  ENTER_LISP_FRAME (vec);
   xvector_copy_out(objs, XVECTOR (vec), count);
-  EXIT_LISP_FRAME_VOID ();
 }
 
 
@@ -1921,9 +1864,7 @@ vector_copy_in (Lisp_Object vec,
                 Lisp_Object *objs,
                 size_t count)
 {
-  ENTER_LISP_FRAME (vec);
   xvector_copy_in(XVECTOR (vec), objs, count);
-  EXIT_LISP_FRAME_VOID ();
 }
 
 INLINE void
@@ -1931,9 +1872,7 @@ vector_qsort (Lisp_Object vec,
               size_t nmemb,
               int (*compar)(const void *, const void *))
 {
-  ENTER_LISP_FRAME (vec);
   xvector_qsort(XVECTOR (vec), nmemb, compar);
-  EXIT_LISP_FRAME_VOID ();
 }
 
 INLINE Lisp_Object
@@ -1942,36 +1881,32 @@ call_with_vector_slice (Lisp_Object (*f)(ptrdiff_t, Lisp_Object *),
                         ptrdiff_t i,
                         ptrdiff_t j)
 {
-  ENTER_LISP_FRAME (vector);
   struct Lisp_Vector *xv = XVECTOR (vector);
   if (j < 0)
     j = xv_size (xv);
-  EXIT_LISP_FRAME ((*f)(j - i, xv_ref_addr (xv, i)));
+  return (*f)(j - i, xv_ref_addr (xv, i));
 }
 
 INLINE Lisp_Object
 call_with_vector_args (Lisp_Object (*f)(ptrdiff_t, Lisp_Object *),
                        Lisp_Object vector)
 {
-  ENTER_LISP_FRAME (vector);
-  EXIT_LISP_FRAME (call_with_vector_slice (f, vector, 0, -1));
+  return call_with_vector_slice (f, vector, 0, -1);
 }
 
 INLINE ptrdiff_t
 ASIZE (Lisp_Object array)
 {
-  ENTER_LISP_FRAME_T (ptrdiff_t, array);
   ptrdiff_t size = xv_size (XVECTOR (array));
   eassume (0 <= size);
-  EXIT_LISP_FRAME (size);
+  return size;
 }
 
 /* Gets the number of Lisp_Object pointers in a pseudovector. */
 INLINE ptrdiff_t
 PVSIZE (Lisp_Object pv)
 {
-  ENTER_LISP_FRAME_T (ptrdiff_t, pv);
-  EXIT_LISP_FRAME (ASIZE (pv) & PSEUDOVECTOR_SIZE_MASK);
+  return ASIZE (pv) & PSEUDOVECTOR_SIZE_MASK;
 }
 
 /* Like PVSIZE, but safe for use using GC. */
@@ -1987,17 +1922,13 @@ pvsize_from_header (union vectorlike_header *header)
 INLINE bool
 VECTORP (Lisp_Object x)
 {
-  ENTER_LISP_FRAME_T (bool, x);
-  EXIT_LISP_FRAME (VECTORLIKEP (x) && ! (ASIZE (x) & PSEUDOVECTOR_FLAG));
+  return VECTORLIKEP (x) && ! (ASIZE (x) & PSEUDOVECTOR_FLAG);
 }
 
 INLINE void
 CHECK_VECTOR (Lisp_Object x)
 {
-  ENTER_LISP_FRAME (x);
   CHECK_TYPE (VECTORP (x), Qvectorp, x);
-
-  EXIT_LISP_FRAME_VOID ();
 }
 
 /* A pseudovector is like a vector, but has other non-Lisp components.  */
@@ -2025,14 +1956,13 @@ PSEUDOVECTOR_TYPEP (union vectorlike_header *a, enum pvec_type code)
 INLINE bool
 PSEUDOVECTORP (Lisp_Object a, int code)
 {
-  ENTER_LISP_FRAME_T (bool, a);
   if (! VECTORLIKEP (a))
-    EXIT_LISP_FRAME (false);
+    return false;
   else
     {
       /* Converting to union vectorlike_header * avoids aliasing issues.  */
       union vectorlike_header *h = XUNTAG_VECTORLIKE (a);
-      EXIT_LISP_FRAME (PSEUDOVECTOR_TYPEP (h, code));
+      return PSEUDOVECTOR_TYPEP (h, code);
     }
 }
 
@@ -2083,47 +2013,40 @@ bool_vector_bytes (EMACS_INT size)
 INLINE bool
 BOOL_VECTOR_P (Lisp_Object a)
 {
-  ENTER_LISP_FRAME_T (bool, a);
-  EXIT_LISP_FRAME (PSEUDOVECTORP (a, PVEC_BOOL_VECTOR));
+  return PSEUDOVECTORP (a, PVEC_BOOL_VECTOR);
 }
 
 INLINE void
 CHECK_BOOL_VECTOR (Lisp_Object x)
 {
-  ENTER_LISP_FRAME (x);
   CHECK_TYPE (BOOL_VECTOR_P (x), Qbool_vector_p, x);
-  EXIT_LISP_FRAME_VOID ();
 }
 
 INLINE struct Lisp_Bool_Vector *
 XBOOL_VECTOR (Lisp_Object a)
 {
-  ENTER_LISP_FRAME_T (struct Lisp_Bool_Vector *, a);
   eassert (BOOL_VECTOR_P (a));
-  EXIT_LISP_FRAME (XUNTAG_VECTORLIKE (a));
+  return XUNTAG_VECTORLIKE (a);
 }
 
 INLINE EMACS_INT
 bool_vector_size (Lisp_Object a)
 {
-  ENTER_LISP_FRAME_T (EMACS_INT, a);
   EMACS_INT size = XBOOL_VECTOR (a)->size;
   eassume (0 <= size);
-  EXIT_LISP_FRAME (size);
+  return size;
 }
 
 INLINE bits_word *
 bool_vector_data (Lisp_Object a)
 {
-  ENTER_LISP_FRAME_T (bits_word *, a);
-  EXIT_LISP_FRAME (XBOOL_VECTOR (a)->data);
+  return XBOOL_VECTOR (a)->data;
 }
 
 INLINE unsigned char *
 bool_vector_uchar_data (Lisp_Object a)
 {
-  ENTER_LISP_FRAME_T (unsigned char *, a);
-  EXIT_LISP_FRAME ((unsigned char *) bool_vector_data (a));
+  return (unsigned char *) bool_vector_data (a);
 }
 
 /* True if A's Ith bit is set.  */
@@ -2131,17 +2054,15 @@ bool_vector_uchar_data (Lisp_Object a)
 INLINE bool
 bool_vector_bitref (Lisp_Object a, EMACS_INT i)
 {
-  ENTER_LISP_FRAME_T (bool, a);
   eassume (0 <= i && i < bool_vector_size (a));
-  EXIT_LISP_FRAME (!! (bool_vector_uchar_data (a)[i / BOOL_VECTOR_BITS_PER_CHAR]
-	     & (1 << (i % BOOL_VECTOR_BITS_PER_CHAR))));
+  return !! (bool_vector_uchar_data (a)[i / BOOL_VECTOR_BITS_PER_CHAR]
+	     & (1 << (i % BOOL_VECTOR_BITS_PER_CHAR)));
 }
 
 INLINE Lisp_Object
 bool_vector_ref (Lisp_Object a, EMACS_INT i)
 {
-  ENTER_LISP_FRAME (a);
-  EXIT_LISP_FRAME (bool_vector_bitref (a, i) ? Qt : Qnil);
+  return bool_vector_bitref (a, i) ? Qt : Qnil;
 }
 
 /* Set A's Ith bit to B.  */
@@ -2149,7 +2070,6 @@ bool_vector_ref (Lisp_Object a, EMACS_INT i)
 INLINE void
 bool_vector_set (Lisp_Object a, EMACS_INT i, bool b)
 {
-  ENTER_LISP_FRAME (a);
   unsigned char *addr;
 
   eassume (0 <= i && i < bool_vector_size (a));
@@ -2159,7 +2079,6 @@ bool_vector_set (Lisp_Object a, EMACS_INT i, bool b)
     *addr |= 1 << (i % BOOL_VECTOR_BITS_PER_CHAR);
   else
     *addr &= ~ (1 << (i % BOOL_VECTOR_BITS_PER_CHAR));
-  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Conveniences for dealing with Lisp arrays.  */
@@ -2167,45 +2086,36 @@ bool_vector_set (Lisp_Object a, EMACS_INT i, bool b)
 INLINE Lisp_Object
 AREF (Lisp_Object array, ptrdiff_t idx)
 {
-  ENTER_LISP_FRAME (array);
-  EXIT_LISP_FRAME (xv_ref (XVECTOR (array), idx));
+  return xv_ref (XVECTOR (array), idx);
 }
 
 INLINE Lisp_Object *
 aref_addr (Lisp_Object array, ptrdiff_t idx)
 {
-  ENTER_LISP_FRAME_T (Lisp_Object *, array);
-  EXIT_LISP_FRAME (xv_ref_addr (XVECTOR (array), idx));
+  return xv_ref_addr (XVECTOR (array), idx);
 }
 
 INLINE ptrdiff_t
 gc_asize (Lisp_Object array)
 {
-  ENTER_LISP_FRAME_T (ptrdiff_t, array);
   /* Like ASIZE, but also can be used in the garbage collector.  */
-  EXIT_LISP_FRAME (XVECTOR (array)->header.size & ~ARRAY_MARK_FLAG);
+  return XVECTOR (array)->header.size & ~ARRAY_MARK_FLAG;
 }
 
 INLINE void
 ASET (Lisp_Object array, ptrdiff_t idx, Lisp_Object val)
 {
-  ENTER_LISP_FRAME (array, val);
   eassert (0 <= idx && idx < ASIZE (array));
-  (void) XLI(val);
   XVECTOR (array)->contents[idx] = val;
-  EXIT_LISP_FRAME_VOID ();
 }
 
 INLINE void
 gc_aset (Lisp_Object array, ptrdiff_t idx, Lisp_Object val)
 {
-  ENTER_LISP_FRAME (array, val);
   /* Like ASET, but also can be used in the garbage collector:
      sweep_weak_table calls set_hash_key etc. while the table is marked.  */
   eassert (0 <= idx && idx < gc_asize (array));
-  (void) XLI(val);
   XVECTOR (array)->contents[idx] = val;
-  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Clear the object addressed by P, with size NBYTES, so that all its
@@ -2224,18 +2134,15 @@ verify (XLI_BUILTIN_LISPSYM (iQnil) == 0);
 INLINE void
 set_nil (Lisp_Object *p, ptrdiff_t n)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (nil);
 #ifdef NIL_IS_ZERO
   memzero (p, n * sizeof (Lisp_Object));
 #else
   eassert (0 <= n);
-  nil = Qnil;
+  Lisp_Object nil = Qnil;
 
   for (ptrdiff_t i = 0; i < n; i++)
     p[i] = nil;
 #endif
-  EXIT_LISP_FRAME_VOID ();
 }
 
 INLINE void
@@ -2341,23 +2248,20 @@ struct Lisp_Char_Table
 INLINE bool
 CHAR_TABLE_P (Lisp_Object a)
 {
-  ENTER_LISP_FRAME_T (bool, a);
-  EXIT_LISP_FRAME (PSEUDOVECTORP (a, PVEC_CHAR_TABLE));
+  return PSEUDOVECTORP (a, PVEC_CHAR_TABLE);
 }
 
 INLINE struct Lisp_Char_Table *
 XCHAR_TABLE (Lisp_Object a)
 {
-  ENTER_LISP_FRAME_T (struct Lisp_Char_Table *, a);
   eassert (CHAR_TABLE_P (a));
-  EXIT_LISP_FRAME (XUNTAG_VECTORLIKE (a));
+  return XUNTAG_VECTORLIKE (a);
 }
 
 INLINE ptrdiff_t
 CHAR_TABLE_SIZE (Lisp_Object a)
 {
-  ENTER_LISP_FRAME_T (ptrdiff_t, a);
-  EXIT_LISP_FRAME (XCHAR_TABLE (a)->header.size);
+  return XCHAR_TABLE (a)->header.size;
 }
 
 struct Lisp_Sub_Char_Table
@@ -2384,23 +2288,20 @@ struct Lisp_Sub_Char_Table
 INLINE bool
 SUB_CHAR_TABLE_P (Lisp_Object a)
 {
-  ENTER_LISP_FRAME_T (bool, a);
-  EXIT_LISP_FRAME (PSEUDOVECTORP (a, PVEC_SUB_CHAR_TABLE));
+  return PSEUDOVECTORP (a, PVEC_SUB_CHAR_TABLE);
 }
 
 INLINE struct Lisp_Sub_Char_Table *
 XSUB_CHAR_TABLE (Lisp_Object a)
 {
-  ENTER_LISP_FRAME_T (struct Lisp_Sub_Char_Table *, a);
   eassert (SUB_CHAR_TABLE_P (a));
-  EXIT_LISP_FRAME (XUNTAG_VECTORLIKE (a));
+  return XUNTAG_VECTORLIKE (a);
 }
 
 INLINE Lisp_Object
 CHAR_TABLE_REF_ASCII (Lisp_Object ct, ptrdiff_t idx)
 {
-  ENTER_LISP_FRAME (ct);
-  LISP_LOCALS (val);
+  Lisp_Object val;
   struct Lisp_Char_Table *tbl = NULL;
   do
     {
@@ -2412,7 +2313,7 @@ CHAR_TABLE_REF_ASCII (Lisp_Object ct, ptrdiff_t idx)
     }
   while (NILP (val) && ! NILP (PV_LISP_FIELD_REF (tbl, parent)));
 
-  EXIT_LISP_FRAME (val);
+  return val;
 }
 
 /* Almost equivalent to Faref (CT, IDX) with optimization for ASCII
@@ -2420,10 +2321,9 @@ CHAR_TABLE_REF_ASCII (Lisp_Object ct, ptrdiff_t idx)
 INLINE Lisp_Object
 CHAR_TABLE_REF (Lisp_Object ct, int idx)
 {
-  ENTER_LISP_FRAME (ct);
-  EXIT_LISP_FRAME ((ASCII_CHAR_P (idx)
+  return (ASCII_CHAR_P (idx)
 	  ? CHAR_TABLE_REF_ASCII (ct, idx)
-	  : char_table_ref (ct, idx)));
+	  : char_table_ref (ct, idx));
 }
 
 /* Equivalent to Faset (CT, IDX, VAL) with optimization for ASCII and
@@ -2431,12 +2331,10 @@ CHAR_TABLE_REF (Lisp_Object ct, int idx)
 INLINE void
 CHAR_TABLE_SET (Lisp_Object ct, int idx, Lisp_Object val)
 {
-  ENTER_LISP_FRAME (ct, val);
   if (ASCII_CHAR_P (idx) && SUB_CHAR_TABLE_P (PV_LISP_FIELD_REF (XCHAR_TABLE (ct), ascii)))
     set_sub_char_table_contents (PV_LISP_FIELD_REF (XCHAR_TABLE (ct), ascii), idx, val);
   else
     char_table_set (ct, idx, val);
-  EXIT_LISP_FRAME_VOID ();
 }
 
 /* This structure describes a built-in function.
@@ -2473,16 +2371,14 @@ struct Lisp_Subr
 INLINE bool
 SUBRP (Lisp_Object a)
 {
-  ENTER_LISP_FRAME_T (bool, a);
-  EXIT_LISP_FRAME (PSEUDOVECTORP (a, PVEC_SUBR));
+  return PSEUDOVECTORP (a, PVEC_SUBR);
 }
 
 INLINE struct Lisp_Subr *
 XSUBR (Lisp_Object a)
 {
-  ENTER_LISP_FRAME_T (struct Lisp_Subr *, a);
   eassert (SUBRP (a));
-  EXIT_LISP_FRAME (XUNTAG_VECTORLIKE (a));
+  return XUNTAG_VECTORLIKE (a);
 }
 
 enum char_table_specials
@@ -2567,10 +2463,7 @@ SYMBOL_FWD (struct Lisp_Symbol *sym)
 INLINE void
 (SET_SYMBOL_VAL) (struct Lisp_Symbol *sym, Lisp_Object v)
 {
-  ENTER_LISP_FRAME (v);
-  (void) XLI(v);
   lisp_h_SET_SYMBOL_VAL (sym, v);
-  EXIT_LISP_FRAME_VOID ();
 }
 
 INLINE void
@@ -2595,8 +2488,7 @@ SET_SYMBOL_FWD (struct Lisp_Symbol *sym, union Lisp_Fwd *v)
 INLINE Lisp_Object
 SYMBOL_NAME (Lisp_Object sym)
 {
-  ENTER_LISP_FRAME (sym);
-  EXIT_LISP_FRAME (XSYMBOL (sym)->u.s.name);
+  return XSYMBOL (sym)->u.s.name;
 }
 
 /* Value is true if SYM is an interned symbol.  */
@@ -2604,8 +2496,7 @@ SYMBOL_NAME (Lisp_Object sym)
 INLINE bool
 SYMBOL_INTERNED_P (Lisp_Object sym)
 {
-  ENTER_LISP_FRAME_T (bool, sym);
-  EXIT_LISP_FRAME (XSYMBOL (sym)->u.s.interned != SYMBOL_UNINTERNED);
+  return XSYMBOL (sym)->u.s.interned != SYMBOL_UNINTERNED;
 }
 
 /* Value is true if SYM is interned in initial_obarray.  */
@@ -2613,8 +2504,7 @@ SYMBOL_INTERNED_P (Lisp_Object sym)
 INLINE bool
 SYMBOL_INTERNED_IN_INITIAL_OBARRAY_P (Lisp_Object sym)
 {
-  ENTER_LISP_FRAME_T (bool, sym);
-  EXIT_LISP_FRAME (XSYMBOL (sym)->u.s.interned == SYMBOL_INTERNED_IN_INITIAL_OBARRAY);
+  return XSYMBOL (sym)->u.s.interned == SYMBOL_INTERNED_IN_INITIAL_OBARRAY;
 }
 
 /* Value is non-zero if symbol cannot be changed through a simple set,
@@ -2624,8 +2514,7 @@ SYMBOL_INTERNED_IN_INITIAL_OBARRAY_P (Lisp_Object sym)
 INLINE int
 (SYMBOL_TRAPPED_WRITE_P) (Lisp_Object sym)
 {
-  ENTER_LISP_FRAME_T (int, sym);
-  EXIT_LISP_FRAME (lisp_h_SYMBOL_TRAPPED_WRITE_P (sym));
+  return lisp_h_SYMBOL_TRAPPED_WRITE_P (sym);
 }
 
 /* Value is non-zero if symbol cannot be changed at all, i.e. it's a
@@ -2636,8 +2525,7 @@ INLINE int
 INLINE int
 (SYMBOL_CONSTANT_P) (Lisp_Object sym)
 {
-  ENTER_LISP_FRAME_T (int, sym);
-  EXIT_LISP_FRAME (lisp_h_SYMBOL_CONSTANT_P (sym));
+  return lisp_h_SYMBOL_CONSTANT_P (sym);
 }
 
 /* Placeholder for make-docfile to process.  The actual symbol
@@ -2736,16 +2624,14 @@ struct Lisp_Hash_Table
 INLINE bool
 HASH_TABLE_P (Lisp_Object a)
 {
-  ENTER_LISP_FRAME_T (bool, a);
-  EXIT_LISP_FRAME (PSEUDOVECTORP (a, PVEC_HASH_TABLE));
+  return PSEUDOVECTORP (a, PVEC_HASH_TABLE);
 }
 
 INLINE struct Lisp_Hash_Table *
 XHASH_TABLE (Lisp_Object a)
 {
-  ENTER_LISP_FRAME_T (struct Lisp_Hash_Table *, a);
   eassert (HASH_TABLE_P (a));
-  EXIT_LISP_FRAME (XUNTAG_VECTORLIKE (a));
+  return XUNTAG_VECTORLIKE (a);
 }
 
 #define XSET_HASH_TABLE(VAR, PTR) \
@@ -2833,23 +2719,20 @@ struct Lisp_Misc_Any		/* Supertype of all Misc types.  */
 INLINE bool
 (MISCP) (Lisp_Object x)
 {
-  ENTER_LISP_FRAME_T (bool, x);
-  EXIT_LISP_FRAME (lisp_h_MISCP (x));
+  return lisp_h_MISCP (x);
 }
 
 INLINE struct Lisp_Misc_Any *
 XMISCANY (Lisp_Object a)
 {
-  ENTER_LISP_FRAME_T (struct Lisp_Misc_Any *, a);
   eassert (MISCP (a));
-  EXIT_LISP_FRAME (XUNTAG_MISC (a));
+  return XUNTAG_MISC (a);
 }
 
 INLINE enum Lisp_Misc_Type
 XMISCTYPE (Lisp_Object a)
 {
-  ENTER_LISP_FRAME_T (enum Lisp_Misc_Type, a);
-  EXIT_LISP_FRAME (XMISCANY (a)->type);
+  return XMISCANY (a)->type;
 }
 
 struct Lisp_Marker
@@ -3006,16 +2889,14 @@ struct Lisp_Save_Value
 INLINE bool
 SAVE_VALUEP (Lisp_Object x)
 {
-  ENTER_LISP_FRAME_T (bool, x);
-  EXIT_LISP_FRAME (MISCP (x) && XMISCTYPE (x) == Lisp_Misc_Save_Value);
+  return MISCP (x) && XMISCTYPE (x) == Lisp_Misc_Save_Value;
 }
 
 INLINE struct Lisp_Save_Value *
 XSAVE_VALUE (Lisp_Object a)
 {
-  ENTER_LISP_FRAME_T (struct Lisp_Save_Value *, a);
   eassert (SAVE_VALUEP (a));
-  EXIT_LISP_FRAME (XUNTAG_MISC (a));
+  return XUNTAG_MISC (a);
 }
 
 /* Return the type of V's Nth saved value.  */
@@ -3031,24 +2912,20 @@ save_type (struct Lisp_Save_Value *v, int n)
 INLINE void *
 XSAVE_POINTER (Lisp_Object obj, int n)
 {
-  ENTER_LISP_FRAME_T (void *, obj);
   eassert (save_type (XSAVE_VALUE (obj), n) == SAVE_POINTER);
-  EXIT_LISP_FRAME (XSAVE_VALUE (obj)->data[n].pointer);
+  return XSAVE_VALUE (obj)->data[n].pointer;
 }
 INLINE void
 set_save_pointer (Lisp_Object obj, int n, void *val)
 {
-  ENTER_LISP_FRAME (obj);
   eassert (save_type (XSAVE_VALUE (obj), n) == SAVE_POINTER);
   XSAVE_VALUE (obj)->data[n].pointer = val;
-  EXIT_LISP_FRAME_VOID ();
 }
 INLINE voidfuncptr
 XSAVE_FUNCPOINTER (Lisp_Object obj, int n)
 {
-  ENTER_LISP_FRAME_T (voidfuncptr, obj);
   eassert (save_type (XSAVE_VALUE (obj), n) == SAVE_FUNCPOINTER);
-  EXIT_LISP_FRAME (XSAVE_VALUE (obj)->data[n].funcpointer);
+  return XSAVE_VALUE (obj)->data[n].funcpointer;
 }
 
 /* Likewise for the saved integer.  */
@@ -3056,17 +2933,14 @@ XSAVE_FUNCPOINTER (Lisp_Object obj, int n)
 INLINE ptrdiff_t
 XSAVE_INTEGER (Lisp_Object obj, int n)
 {
-  ENTER_LISP_FRAME_T (ptrdiff_t, obj);
   eassert (save_type (XSAVE_VALUE (obj), n) == SAVE_INTEGER);
-  EXIT_LISP_FRAME (XSAVE_VALUE (obj)->data[n].integer);
+  return XSAVE_VALUE (obj)->data[n].integer;
 }
 INLINE void
 set_save_integer (Lisp_Object obj, int n, ptrdiff_t val)
 {
-  ENTER_LISP_FRAME (obj);
   eassert (save_type (XSAVE_VALUE (obj), n) == SAVE_INTEGER);
   XSAVE_VALUE (obj)->data[n].integer = val;
-  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Extract Nth saved object.  */
@@ -3074,9 +2948,8 @@ set_save_integer (Lisp_Object obj, int n, ptrdiff_t val)
 INLINE Lisp_Object
 XSAVE_OBJECT (Lisp_Object obj, int n)
 {
-  ENTER_LISP_FRAME (obj);
   eassert (save_type (XSAVE_VALUE (obj), n) == SAVE_OBJECT);
-  EXIT_LISP_FRAME (XSAVE_VALUE (obj)->data[n].object);
+  return XSAVE_VALUE (obj)->data[n].object;
 }
 
 #ifdef HAVE_MODULES
@@ -3107,16 +2980,14 @@ struct Lisp_Finalizer
 INLINE bool
 FINALIZERP (Lisp_Object x)
 {
-  ENTER_LISP_FRAME_T (bool, x);
-  EXIT_LISP_FRAME (MISCP (x) && XMISCTYPE (x) == Lisp_Misc_Finalizer);
+  return MISCP (x) && XMISCTYPE (x) == Lisp_Misc_Finalizer;
 }
 
 INLINE struct Lisp_Finalizer *
 XFINALIZER (Lisp_Object a)
 {
-  ENTER_LISP_FRAME_T (struct Lisp_Finalizer *, a);
   eassert (FINALIZERP (a));
-  EXIT_LISP_FRAME (XUNTAG_MISC (a));
+  return XUNTAG_MISC (a);
 }
 
 /* A miscellaneous object, when it's on the free list.  */
@@ -3145,57 +3016,50 @@ union Lisp_Misc
 INLINE union Lisp_Misc *
 XMISC (Lisp_Object a)
 {
-  ENTER_LISP_FRAME_T (union Lisp_Misc *, a);
 #ifdef HAVE_CHEZ_SCHEME
   eassert (MISCP (a));
 #endif /* HAVE_CHEZ_SCHEME */
-  EXIT_LISP_FRAME (XUNTAG_MISC (a));
+ return XUNTAG_MISC (a);
 }
 
 INLINE bool
 (MARKERP) (Lisp_Object x)
 {
-  ENTER_LISP_FRAME_T (bool, x);
-  EXIT_LISP_FRAME (lisp_h_MARKERP (x));
+  return lisp_h_MARKERP (x);
 }
 
 INLINE struct Lisp_Marker *
 XMARKER (Lisp_Object a)
 {
-  ENTER_LISP_FRAME_T (struct Lisp_Marker *, a);
   eassert (MARKERP (a));
-  EXIT_LISP_FRAME (XUNTAG_MISC (a));
+  return XUNTAG_MISC (a);
 }
 
 INLINE bool
 OVERLAYP (Lisp_Object x)
 {
-  ENTER_LISP_FRAME_T (bool, x);
-  EXIT_LISP_FRAME (MISCP (x) && XMISCTYPE (x) == Lisp_Misc_Overlay);
+ return MISCP (x) && XMISCTYPE (x) == Lisp_Misc_Overlay;
 }
 
 INLINE struct Lisp_Overlay *
 XOVERLAY (Lisp_Object a)
 {
-  ENTER_LISP_FRAME_T (struct Lisp_Overlay *, a);
   eassert (OVERLAYP (a));
-  EXIT_LISP_FRAME (XUNTAG_MISC (a));
+  return XUNTAG_MISC (a);
 }
 
 #ifdef HAVE_MODULES
 INLINE bool
 USER_PTRP (Lisp_Object x)
 {
-  ENTER_LISP_FRAME_T (bool, x);
-  EXIT_LISP_FRAME (MISCP (x) && XMISCTYPE (x) == Lisp_Misc_User_Ptr);
+  return MISCP (x) && XMISCTYPE (x) == Lisp_Misc_User_Ptr;
 }
 
 INLINE struct Lisp_User_Ptr *
 XUSER_PTR (Lisp_Object a)
 {
-  ENTER_LISP_FRAME_T (struct Lisp_User_Ptr *, a);
   eassert (USER_PTRP (a));
-  EXIT_LISP_FRAME (XUNTAG_MISC (a));
+  return XUNTAG_MISC (a);
 }
 #endif
 
@@ -3334,29 +3198,26 @@ struct Lisp_Float
 INLINE bool
 (FLOATP) (Lisp_Object x)
 {
-  ENTER_LISP_FRAME_T (bool, x);
-  EXIT_LISP_FRAME (lisp_h_FLOATP (x));
+  return  lisp_h_FLOATP (x);
 }
 
 #ifndef HAVE_CHEZ_SCHEME
 INLINE struct Lisp_Float *
 XFLOAT (Lisp_Object a)
 {
-  ENTER_LISP_FRAME_T (struct Lisp_Float *, a);
   eassert (FLOATP (a));
-  EXIT_LISP_FRAME (XUNTAG (a, Lisp_Float));
+  return XUNTAG (a, Lisp_Float);
 }
 #endif /* not HAVE_CHEZ_SCHEME */
 
 INLINE double
 XFLOAT_DATA (Lisp_Object f)
 {
-  ENTER_LISP_FRAME_T (double, f);
 #ifdef HAVE_CHEZ_SCHEME
   eassert (FLOATP (f));
-  EXIT_LISP_FRAME (chez_flonum_value (CHEZ (f)));
+  return chez_flonum_value (CHEZ (f));
 #else /* not HAVE_CHEZ_SCHEME */
-  EXIT_LISP_FRAME (XFLOAT (f)->u.data);
+  return XFLOAT (f)->u.data;
 #endif /* not HAVE_CHEZ_SCHEME */
 }
 
@@ -3419,8 +3280,7 @@ enum char_bits
 INLINE bool
 NUMBERP (Lisp_Object x)
 {
-  ENTER_LISP_FRAME_T (bool, x);
-  EXIT_LISP_FRAME (INTEGERP (x) || FLOATP (x));
+  return INTEGERP (x) || FLOATP (x);
 }
 INLINE bool
 NATNUMP (Lisp_Object x)
@@ -3442,8 +3302,7 @@ RANGED_INTEGERP (intmax_t lo, Lisp_Object x, intmax_t hi)
 INLINE bool
 AUTOLOADP (Lisp_Object x)
 {
-  ENTER_LISP_FRAME_T (bool, x);
-  EXIT_LISP_FRAME (CONSP (x) && EQ (Qautoload, XCAR (x)));
+  return CONSP (x) && EQ (Qautoload, XCAR (x));
 }
 
 
@@ -3452,109 +3311,88 @@ AUTOLOADP (Lisp_Object x)
 INLINE bool
 WINDOW_CONFIGURATIONP (Lisp_Object a)
 {
-  ENTER_LISP_FRAME_T (bool, a);
-  EXIT_LISP_FRAME (PSEUDOVECTORP (a, PVEC_WINDOW_CONFIGURATION));
+  return PSEUDOVECTORP (a, PVEC_WINDOW_CONFIGURATION);
 }
 
 INLINE bool
 COMPILEDP (Lisp_Object a)
 {
-  ENTER_LISP_FRAME_T (bool, a);
-  EXIT_LISP_FRAME (PSEUDOVECTORP (a, PVEC_COMPILED));
+  return PSEUDOVECTORP (a, PVEC_COMPILED);
 }
 
 INLINE bool
 FRAMEP (Lisp_Object a)
 {
-  ENTER_LISP_FRAME_T (bool, a);
-  EXIT_LISP_FRAME (PSEUDOVECTORP (a, PVEC_FRAME));
+  return PSEUDOVECTORP (a, PVEC_FRAME);
 }
 
 INLINE bool
 RECORDP (Lisp_Object a)
 {
-  ENTER_LISP_FRAME_T (bool, a);
-  EXIT_LISP_FRAME (PSEUDOVECTORP (a, PVEC_RECORD));
+  return PSEUDOVECTORP (a, PVEC_RECORD);
 }
 
 INLINE void
 CHECK_RECORD (Lisp_Object x)
 {
-  ENTER_LISP_FRAME (x);
   CHECK_TYPE (RECORDP (x), Qrecordp, x);
-  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Test for image (image . spec)  */
 INLINE bool
 IMAGEP (Lisp_Object x)
 {
-  ENTER_LISP_FRAME_T (bool, x);
-  EXIT_LISP_FRAME (CONSP (x) && EQ (XCAR (x), Qimage));
+  return CONSP (x) && EQ (XCAR (x), Qimage);
 }
 /* Array types.  */
 INLINE bool
 ARRAYP (Lisp_Object x)
 {
-  ENTER_LISP_FRAME_T (bool, x);
-  EXIT_LISP_FRAME (VECTORP (x) || STRINGP (x) || CHAR_TABLE_P (x) || BOOL_VECTOR_P (x));
+  return VECTORP (x) || STRINGP (x) || CHAR_TABLE_P (x) || BOOL_VECTOR_P (x);
 }
 
 INLINE void
 CHECK_LIST (Lisp_Object x)
 {
-  ENTER_LISP_FRAME (x);
   CHECK_TYPE (CONSP (x) || NILP (x), Qlistp, x);
-  EXIT_LISP_FRAME_VOID ();
 }
 
 INLINE void
 CHECK_LIST_END (Lisp_Object x, Lisp_Object y)
 {
-  ENTER_LISP_FRAME (x, y);
   CHECK_TYPE (NILP (x), Qlistp, y);
-  EXIT_LISP_FRAME_VOID ();
 }
 
 INLINE void
 (CHECK_NUMBER) (Lisp_Object x)
 {
-  ENTER_LISP_FRAME (x);
   lisp_h_CHECK_NUMBER (x);
-  EXIT_LISP_FRAME_VOID ();
 }
 
 INLINE void
 CHECK_STRING_CAR (Lisp_Object x)
 {
-  ENTER_LISP_FRAME (x);
   CHECK_TYPE (STRINGP (XCAR (x)), Qstringp, XCAR (x));
-  EXIT_LISP_FRAME_VOID ();
 }
 /* This is a bit special because we always need size afterwards.  */
 INLINE ptrdiff_t
 CHECK_VECTOR_OR_STRING (Lisp_Object x)
 {
-  ENTER_LISP_FRAME_T (ptrdiff_t, x);
   if (VECTORP (x))
-    EXIT_LISP_FRAME (ASIZE (x));
+    return ASIZE (x);
   if (STRINGP (x))
-    EXIT_LISP_FRAME (SCHARS (x));
+    return SCHARS (x);
   wrong_type_argument (Qarrayp, x);
 }
 INLINE void
 CHECK_ARRAY (Lisp_Object x, Lisp_Object predicate)
 {
-  ENTER_LISP_FRAME (x, predicate);
   CHECK_TYPE (ARRAYP (x), predicate, x);
-  EXIT_LISP_FRAME_VOID ();
 }
 INLINE void
 CHECK_NATNUM (Lisp_Object x)
 {
-  ENTER_LISP_FRAME (x);
   CHECK_TYPE (NATNUMP (x), Qwholenump, x);
-  EXIT_LISP_FRAME_VOID ();
 }
 
 #define CHECK_RANGED_INTEGER(x, lo, hi)					\
@@ -3587,16 +3425,13 @@ CHECK_NATNUM (Lisp_Object x)
 INLINE double
 XFLOATINT (Lisp_Object n)
 {
-  ENTER_LISP_FRAME_T (double, n);
-  EXIT_LISP_FRAME (FLOATP (n) ? XFLOAT_DATA (n) : XINT (n));
+  return FLOATP (n) ? XFLOAT_DATA (n) : XINT (n);
 }
 
 INLINE void
 CHECK_NUMBER_OR_FLOAT (Lisp_Object x)
 {
-  ENTER_LISP_FRAME (x);
   CHECK_TYPE (NUMBERP (x), Qnumberp, x);
-  EXIT_LISP_FRAME_VOID ();
 }
 
 #define CHECK_NUMBER_OR_FLOAT_COERCE_MARKER(x)				\
@@ -3612,25 +3447,17 @@ CHECK_NUMBER_OR_FLOAT (Lisp_Object x)
 INLINE void
 CHECK_NUMBER_CAR (Lisp_Object x)
 {
-  ENTER_LISP_FRAME (x);
-  LISP_LOCALS (tmp);
-  tmp = XCAR (x);
-
+  Lisp_Object tmp = XCAR (x);
   CHECK_NUMBER (tmp);
   XSETCAR (x, tmp);
-  EXIT_LISP_FRAME_VOID ();
 }
 
 INLINE void
 CHECK_NUMBER_CDR (Lisp_Object x)
 {
-  ENTER_LISP_FRAME (x);
-  LISP_LOCALS (tmp);
-  tmp = XCDR (x);
-
+  Lisp_Object tmp = XCDR (x);
   CHECK_NUMBER (tmp);
   XSETCDR (x, tmp);
-  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Define a built-in function for calling from Lisp.
@@ -3929,10 +3756,8 @@ struct frame;
 INLINE void
 vcopy (Lisp_Object v, ptrdiff_t offset, Lisp_Object *args, ptrdiff_t count)
 {
-  ENTER_LISP_FRAME (v);
   eassert (0 <= offset && 0 <= count && offset + count <= ASIZE (v));
   memcpy (XVECTOR (v)->contents + offset, args, count * sizeof *args);
-  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Functions to modify hash tables.  */
@@ -3940,19 +3765,13 @@ vcopy (Lisp_Object v, ptrdiff_t offset, Lisp_Object *args, ptrdiff_t count)
 INLINE void
 set_hash_key_slot (struct Lisp_Hash_Table *h, ptrdiff_t idx, Lisp_Object val)
 {
-  ENTER_LISP_FRAME (val);
-  (void) XLI(val);
   gc_aset (h->key_and_value, 2 * idx, val);
-  EXIT_LISP_FRAME_VOID ();
 }
 
 INLINE void
 set_hash_value_slot (struct Lisp_Hash_Table *h, ptrdiff_t idx, Lisp_Object val)
 {
-  ENTER_LISP_FRAME (val);
-  (void) XLI(val);
   gc_aset (h->key_and_value, 2 * idx + 1, val);
-  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Use these functions to set Lisp_Object
@@ -3961,39 +3780,27 @@ set_hash_value_slot (struct Lisp_Hash_Table *h, ptrdiff_t idx, Lisp_Object val)
 INLINE void
 set_symbol_function (Lisp_Object sym, Lisp_Object function)
 {
-  ENTER_LISP_FRAME (sym, function);
-  (void) XLI(function);
-  /* if (EQ (sym, Qpcase) && !NILP (function)) */
-  /*   abort(); */
   XSYMBOL (sym)->u.s.function = function;
-  EXIT_LISP_FRAME_VOID ();
 }
 
 INLINE void
 set_symbol_plist (Lisp_Object sym, Lisp_Object plist)
 {
-  ENTER_LISP_FRAME (sym, plist);
-  (void) XLI(plist);
   XSYMBOL (sym)->u.s.plist = plist;
-  EXIT_LISP_FRAME_VOID ();
 }
 
 INLINE void
 set_symbol_next (Lisp_Object sym, struct Lisp_Symbol *next)
 {
-  ENTER_LISP_FRAME (sym);
 #ifndef HAVE_CHEZ_SCHEME
   XSYMBOL (sym)->u.s.next = next;
 #endif /* not HAVE_CHEZ_SCHEME */
-  EXIT_LISP_FRAME_VOID ();
 }
 
 INLINE void
 make_symbol_constant (Lisp_Object sym)
 {
-  ENTER_LISP_FRAME (sym);
   XSYMBOL (sym)->u.s.trapped_write = SYMBOL_NOWRITE;
-  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Buffer-local variable access functions.  */
@@ -4010,10 +3817,8 @@ blv_found (struct Lisp_Buffer_Local_Value *blv)
 INLINE void
 set_overlay_plist (Lisp_Object overlay, Lisp_Object plist)
 {
-  ENTER_LISP_FRAME (overlay, plist);
   (void) XLI(plist);
   XOVERLAY (overlay)->plist = plist;
-  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Get text properties of S.  */
@@ -4021,8 +3826,7 @@ set_overlay_plist (Lisp_Object overlay, Lisp_Object plist)
 INLINE INTERVAL
 string_intervals (Lisp_Object s)
 {
-  ENTER_LISP_FRAME_T (INTERVAL, s);
-  EXIT_LISP_FRAME (XSTRING (s)->u.s.intervals);
+  return  XSTRING (s)->u.s.intervals;
 }
 
 /* Set text properties of S to I.  */
@@ -4030,9 +3834,7 @@ string_intervals (Lisp_Object s)
 INLINE void
 set_string_intervals (Lisp_Object s, INTERVAL i)
 {
-  ENTER_LISP_FRAME (s);
   XSTRING (s)->u.s.intervals = i;
-  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Set a Lisp slot in TABLE to VAL.  Most code should use this instead
@@ -4041,18 +3843,14 @@ set_string_intervals (Lisp_Object s, INTERVAL i)
 INLINE void
 set_char_table_defalt (Lisp_Object table, Lisp_Object val)
 {
-  ENTER_LISP_FRAME (table, val);
   (void) XLI(val);
   PV_LISP_FIELD_SET (XCHAR_TABLE (table), defalt, val);
-  EXIT_LISP_FRAME_VOID ();
 }
 INLINE void
 set_char_table_purpose (Lisp_Object table, Lisp_Object val)
 {
-  ENTER_LISP_FRAME (table, val);
   (void) XLI(val);
   PV_LISP_FIELD_SET (XCHAR_TABLE (table), purpose, val);
-  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Set different slots in (sub)character tables.  */
@@ -4060,30 +3858,24 @@ set_char_table_purpose (Lisp_Object table, Lisp_Object val)
 INLINE void
 set_char_table_extras (Lisp_Object table, ptrdiff_t idx, Lisp_Object val)
 {
-  ENTER_LISP_FRAME (table, val);
   eassert (0 <= idx && idx < CHAR_TABLE_EXTRA_SLOTS (XCHAR_TABLE (table)));
   (void) XLI(val);
   XCHAR_TABLE (table)->extras[idx] = val;
-  EXIT_LISP_FRAME_VOID ();
 }
 
 INLINE void
 set_char_table_contents (Lisp_Object table, ptrdiff_t idx, Lisp_Object val)
 {
-  ENTER_LISP_FRAME (table, val);
   eassert (0 <= idx && idx < (1 << CHARTAB_SIZE_BITS_0));
   (void) XLI(val);
   XCHAR_TABLE (table)->contents[idx] = val;
-  EXIT_LISP_FRAME_VOID ();
 }
 
 INLINE void
 set_sub_char_table_contents (Lisp_Object table, ptrdiff_t idx, Lisp_Object val)
 {
-  ENTER_LISP_FRAME (table, val);
   (void) XLI(val);
   XSUB_CHAR_TABLE (table)->contents[idx] = val;
-  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Defined in data.c.  */
@@ -4432,13 +4224,10 @@ extern struct Lisp_Vector *allocate_vector (EMACS_INT);
 INLINE Lisp_Object
 make_uninit_vector (ptrdiff_t size)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (v);
-  struct Lisp_Vector *p;
-
-  p = allocate_vector (size);
+  struct Lisp_Vector *p = allocate_vector (size);
+  Lisp_Object v;
   XSETVECTOR (v, p);
-  EXIT_LISP_FRAME (v);
+  return v;
 }
 
 /* Like above, but special for sub char-tables.  */
@@ -4446,16 +4235,12 @@ make_uninit_vector (ptrdiff_t size)
 INLINE Lisp_Object
 make_uninit_sub_char_table (int depth, int min_char)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (v);
   int slots = SUB_CHAR_TABLE_OFFSET + chartab_size[depth];
-  v = make_uninit_vector (slots);
-
-
+  Lisp_Object v = make_uninit_vector (slots);
   XSETPVECTYPE (XVECTOR (v), PVEC_SUB_CHAR_TABLE);
   XSUB_CHAR_TABLE (v)->depth = depth;
   XSUB_CHAR_TABLE (v)->min_char = min_char;
-  EXIT_LISP_FRAME (v);
+  return v;
 }
 
 extern struct Lisp_Vector *allocate_pseudovector (int, int, int,
@@ -4584,10 +4369,8 @@ extern Lisp_Object oblookup (Lisp_Object, const char *, ptrdiff_t, ptrdiff_t);
 INLINE void
 LOADHIST_ATTACH (Lisp_Object x)
 {
-  ENTER_LISP_FRAME (x);
   if (initialized)
     Vcurrent_load_list = Fcons (x, Vcurrent_load_list);
-  EXIT_LISP_FRAME_VOID ();
 }
 extern int openp (Lisp_Object, Lisp_Object, Lisp_Object,
                   Lisp_Object *, Lisp_Object, bool);
@@ -4638,7 +4421,6 @@ extern Lisp_Object quit (void);
 INLINE _Noreturn void
 xsignal (Lisp_Object error_symbol, Lisp_Object data)
 {
-  ENTER_LISP_FRAME (error_symbol, data);
   printf ("xsignal\n");
   Fsignal (error_symbol, data);
 }
@@ -4740,16 +4522,14 @@ struct Lisp_Module_Function
 INLINE bool
 MODULE_FUNCTIONP (Lisp_Object o)
 {
-  ENTER_LISP_FRAME_T (bool, o);
-  EXIT_LISP_FRAME (PSEUDOVECTORP (o, PVEC_MODULE_FUNCTION));
+  return PSEUDOVECTORP (o, PVEC_MODULE_FUNCTION);
 }
 
 INLINE struct Lisp_Module_Function *
 XMODULE_FUNCTION (Lisp_Object o)
 {
-  ENTER_LISP_FRAME_T (struct Lisp_Module_Function *, o);
   eassert (MODULE_FUNCTIONP (o));
-  EXIT_LISP_FRAME (XUNTAG_VECTORLIKE (o));
+  return XUNTAG_VECTORLIKE (o);
 }
 
 #ifdef HAVE_MODULES
@@ -4852,15 +4632,13 @@ extern ptrdiff_t fast_string_match_internal (Lisp_Object, Lisp_Object,
 INLINE ptrdiff_t
 fast_string_match (Lisp_Object regexp, Lisp_Object string)
 {
-  ENTER_LISP_FRAME_T (ptrdiff_t, regexp, string);
-  EXIT_LISP_FRAME (fast_string_match_internal (regexp, string, Qnil));
+  return fast_string_match_internal (regexp, string, Qnil);
 }
 
 INLINE ptrdiff_t
 fast_string_match_ignore_case (Lisp_Object regexp, Lisp_Object string)
 {
-  ENTER_LISP_FRAME_T (ptrdiff_t, regexp, string);
-  EXIT_LISP_FRAME (fast_string_match_internal (regexp, string, Vascii_canon_table));
+  return fast_string_match_internal (regexp, string, Vascii_canon_table);
 }
 
 extern ptrdiff_t fast_c_string_match_ignore_case (Lisp_Object, const char *,
@@ -5281,10 +5059,9 @@ Lisp_Object *xnalloc (size_t size);
 INLINE char *
 lispstpcpy (char *dest, Lisp_Object string)
 {
-  ENTER_LISP_FRAME_T (char *, string);
   ptrdiff_t len = SBYTES (string);
   memcpy (dest, SDATA (string), len + 1);
-  EXIT_LISP_FRAME (dest + len);
+  return dest + len;
 }
 
 extern void xputenv (const char *);

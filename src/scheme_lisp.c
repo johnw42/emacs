@@ -1231,7 +1231,7 @@ static uint64_t push_frame_counter = 0;
     eassert (lisp_stack_size <= DEBUG_MAX_STACK_SIZE);                  \
   } while (0)
 
-
+#if 0
 void
 push_lisp_locals(bool already_initialized, int n, ...)
 {
@@ -1251,6 +1251,52 @@ push_lisp_locals(bool already_initialized, int n, ...)
     }
   va_end(ap);
   END_PUSH_FRAME(n);
+}
+#endif
+
+void
+enter_lisp_frame (struct func_frame_info *fi, Lisp_Object *base)
+{
+  // TODO
+}
+
+void
+record_lisp_locals (struct func_frame_info *fi, size_t n, ...)
+{
+  va_list ap;
+  va_start (ap, n);
+  for (size_t i = 0; i < n; i++)
+    {
+      ptrdiff_t offset = va_arg (ap, ptrdiff_t);
+      eassert (offset % sizeof (Lisp_Object) == 0);
+      if (fi->bit_mask == 0)
+        {
+          fi->start_offset = offset;
+          fi->bit_mask = 1;
+        }
+      else
+        {
+          ptrdiff_t shift = offset - fi->start_offset;
+          if (shift > 0)
+            {
+              uint64_t new_bit = (uint64_t) 1 << shift;
+              eassert (new_bit);
+              eassert ((fi->bit_mask & new_bit) == 0);
+              fi->bit_mask |= new_bit;
+            }
+          else if (shift < 0)
+            {
+              uint64_t new_mask = fi->bit_mask << (-shift);
+              eassert (new_mask >> (-shift) == fi->bit_mask);
+              eassert ((new_mask & 1) == 0);
+              new_mask |= 1;
+              fi->start_offset = offset;
+              fi->bit_mask = new_mask;
+            }
+          else
+            emacs_abort ();
+        }
+    }
 }
 
 void
@@ -1279,6 +1325,7 @@ walk_lisp_stack (ptrdiff_t *pos,
                  Lisp_Object ***ppptr,
                  ptrdiff_t *count)
 {
+#if 0
   eassert (*pos >= 0);
   ptrdiff_t index = lisp_stack_size - *pos;
   while (index > 1)
@@ -1295,6 +1342,7 @@ walk_lisp_stack (ptrdiff_t *pos,
           return true;
         }
     }
+#endif
   *ppptr = NULL;
   *count = 0;
   *pos = -1;

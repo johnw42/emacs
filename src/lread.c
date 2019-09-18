@@ -1263,8 +1263,6 @@ Return t if the file exists and loads successfully.  */)
 	handler = Ffind_file_name_handler (found, Qload);
       if (! NILP (handler))
         {
-          ENTER_LISP_FRAME ();
-          LISP_LOCALS (val);
           val = call5 (handler, Qload, found, noerror, nomessage, Qt);
           RESUME_GC();
           do_scheme_gc();

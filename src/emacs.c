@@ -1741,7 +1741,7 @@ Using an Emacs configured with --with-x-toolkit=lucid does not have this problem
   Frecursive_edit ();
 
   /* NOTREACHED */
-  EXIT_LISP_FRAME (0);
+  return 0;
 }
 
 /* Sort the args so we can find the most important ones

@@ -195,29 +195,25 @@ struct thread_state
 INLINE bool
 THREADP (Lisp_Object a)
 {
-  ENTER_LISP_FRAME_T (bool, a);
-  EXIT_LISP_FRAME (PSEUDOVECTORP (a, PVEC_THREAD));
+  return PSEUDOVECTORP (a, PVEC_THREAD);
 }
 
 INLINE void
 CHECK_THREAD (Lisp_Object x)
 {
-  ENTER_LISP_FRAME (x);
   CHECK_TYPE (THREADP (x), Qthreadp, x);
-  EXIT_LISP_FRAME_VOID ();
 }
 
 INLINE struct thread_state *
 XTHREAD (Lisp_Object a)
 {
-  ENTER_LISP_FRAME_T (struct thread_state *, a);
   eassert (THREADP (a));
 #ifdef HAVE_CHEZ_SCHEME
   struct thread_state *p = XUNTAG_VECTORLIKE (a);
   //scheme_check_ptr(p, "thread");
-  EXIT_LISP_FRAME (p);
+  return p;
 #else /* not HAVE_CHEZ_SCHEME */
-  EXIT_LISP_FRAME (XUNTAG_VECTORLIKE (a));
+  return XUNTAG_VECTORLIKE (a);
 #endif /* not HAVE_CHEZ_SCHEME */
 }
 
@@ -252,24 +248,20 @@ struct Lisp_Mutex
 INLINE bool
 MUTEXP (Lisp_Object a)
 {
-  ENTER_LISP_FRAME_T (bool, a);
-  EXIT_LISP_FRAME (PSEUDOVECTORP (a, PVEC_MUTEX));
+  return PSEUDOVECTORP (a, PVEC_MUTEX);
 }
 
 INLINE void
 CHECK_MUTEX (Lisp_Object x)
 {
-  ENTER_LISP_FRAME (x);
   CHECK_TYPE (MUTEXP (x), Qmutexp, x);
-  EXIT_LISP_FRAME_VOID ();
 }
 
 INLINE struct Lisp_Mutex *
 XMUTEX (Lisp_Object a)
 {
-  ENTER_LISP_FRAME_T (struct Lisp_Mutex *, a);
   eassert (MUTEXP (a));
-  EXIT_LISP_FRAME (XUNTAG_VECTORLIKE (a));
+  return XUNTAG_VECTORLIKE (a);
 }
 
 /* A condition variable as a lisp object.  */
@@ -290,24 +282,20 @@ struct Lisp_CondVar
 INLINE bool
 CONDVARP (Lisp_Object a)
 {
-  ENTER_LISP_FRAME_T (bool, a);
-  EXIT_LISP_FRAME (PSEUDOVECTORP (a, PVEC_CONDVAR));
+  return PSEUDOVECTORP (a, PVEC_CONDVAR);
 }
 
 INLINE void
 CHECK_CONDVAR (Lisp_Object x)
 {
-  ENTER_LISP_FRAME (x);
   CHECK_TYPE (CONDVARP (x), Qcondition_variable_p, x);
-  EXIT_LISP_FRAME_VOID ();
 }
 
 INLINE struct Lisp_CondVar *
 XCONDVAR (Lisp_Object a)
 {
-  ENTER_LISP_FRAME_T (struct Lisp_CondVar *, a);
   eassert (CONDVARP (a));
-  EXIT_LISP_FRAME (XUNTAG_VECTORLIKE (a));
+  return XUNTAG_VECTORLIKE (a);
 }
 
 extern struct thread_state *current_thread;

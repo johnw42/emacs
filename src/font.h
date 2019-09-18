@@ -417,56 +417,49 @@ struct font_bitmap
 INLINE bool
 FONTP (Lisp_Object x)
 {
-  ENTER_LISP_FRAME_T (bool, x);
-  EXIT_LISP_FRAME (PSEUDOVECTORP (x, PVEC_FONT));
+  return PSEUDOVECTORP (x, PVEC_FONT);
 }
 
 /* True iff X is font-spec.  */
 INLINE bool
 FONT_SPEC_P (Lisp_Object x)
 {
-  ENTER_LISP_FRAME_T (bool, x);
-  EXIT_LISP_FRAME (FONTP (x) && PVSIZE (x) == FONT_SPEC_MAX);
+  return FONTP (x) && PVSIZE (x) == FONT_SPEC_MAX;
 }
 
 /* Like FONT_SPEC_P, but can be used in the garbage collector.  */
 INLINE bool
 GC_FONT_SPEC_P (Lisp_Object x)
 {
-  ENTER_LISP_FRAME_T (bool, x);
-  EXIT_LISP_FRAME (FONTP (x) && gc_pvsize(x) == FONT_SPEC_MAX);
+  return FONTP (x) && gc_pvsize(x) == FONT_SPEC_MAX;
 }
 
 /* True iff X is font-entity.  */
 INLINE bool
 FONT_ENTITY_P (Lisp_Object x)
 {
-  ENTER_LISP_FRAME_T (bool, x);
-  EXIT_LISP_FRAME (FONTP (x) && PVSIZE (x) == FONT_ENTITY_MAX);
+  return FONTP (x) && PVSIZE (x) == FONT_ENTITY_MAX;
 }
 
 /* Like FONT_ENTITY_P, but can be used in the garbage collector.  */
 INLINE bool
 GC_FONT_ENTITY_P (Lisp_Object x)
 {
-  ENTER_LISP_FRAME_T (bool, x);
-  EXIT_LISP_FRAME (FONTP (x) && gc_pvsize (x) == FONT_ENTITY_MAX);
+  return FONTP (x) && gc_pvsize (x) == FONT_ENTITY_MAX;
 }
 
 /* True iff X is font-object.  */
 INLINE bool
 FONT_OBJECT_P (Lisp_Object x)
 {
-  ENTER_LISP_FRAME_T (bool, x);
-  EXIT_LISP_FRAME (FONTP (x) && PVSIZE (x) == FONT_OBJECT_MAX);
+  return FONTP (x) && PVSIZE (x) == FONT_OBJECT_MAX;
 }
 
 /* Like FONT_OBJECT_P, but can be used in the garbage collector.  */
 INLINE bool
 GC_FONT_OBJECT_P (Lisp_Object x)
 {
-  ENTER_LISP_FRAME_T (bool, x);
-  EXIT_LISP_FRAME (FONTP (x) && gc_pvsize (x) == FONT_OBJECT_MAX);
+  return FONTP (x) && gc_pvsize (x) == FONT_OBJECT_MAX;
 }
 
 /* Type checking functions for various font-related objects.  */
@@ -474,33 +467,25 @@ GC_FONT_OBJECT_P (Lisp_Object x)
 INLINE void
 CHECK_FONT (Lisp_Object x)
 {
-  ENTER_LISP_FRAME (x);
   CHECK_TYPE (FONTP (x), Qfont, x);
-  EXIT_LISP_FRAME_VOID ();
 }
 
 INLINE void
 CHECK_FONT_SPEC (Lisp_Object x)
 {
-  ENTER_LISP_FRAME (x);
   CHECK_TYPE (FONT_SPEC_P (x), Qfont_spec, x);
-  EXIT_LISP_FRAME_VOID ();
 }
 
 INLINE void
 CHECK_FONT_ENTITY (Lisp_Object x)
 {
-  ENTER_LISP_FRAME (x);
   CHECK_TYPE (FONT_ENTITY_P (x), Qfont_entity, x);
-  EXIT_LISP_FRAME_VOID ();
 }
 
 INLINE void
 CHECK_FONT_OBJECT (Lisp_Object x)
 {
-  ENTER_LISP_FRAME (x);
   CHECK_TYPE (FONT_OBJECT_P (x), Qfont_object, x);
-  EXIT_LISP_FRAME_VOID ();
 }
 
 /* C pointer extraction functions for various font-related objects.  */
@@ -508,49 +493,43 @@ CHECK_FONT_OBJECT (Lisp_Object x)
 INLINE struct font_spec *
 XFONT_SPEC (Lisp_Object p)
 {
-  ENTER_LISP_FRAME_T (struct font_spec *, p);
   eassert (FONT_SPEC_P (p));
-  EXIT_LISP_FRAME (XUNTAG_VECTORLIKE (p));
+  return XUNTAG_VECTORLIKE (p);
 }
 
 INLINE struct font_spec *
 GC_XFONT_SPEC (Lisp_Object p)
 {
-  ENTER_LISP_FRAME_T (struct font_spec *, p);
   eassert (GC_FONT_SPEC_P (p));
-  EXIT_LISP_FRAME (XUNTAG_VECTORLIKE (p));
+  return XUNTAG_VECTORLIKE (p);
 }
 
 INLINE struct font_entity *
 XFONT_ENTITY (Lisp_Object p)
 {
-  ENTER_LISP_FRAME_T (struct font_entity *, p);
   eassert (FONT_ENTITY_P (p));
-  EXIT_LISP_FRAME (XUNTAG_VECTORLIKE (p));
+  return XUNTAG_VECTORLIKE (p);
 }
 
 INLINE struct font_entity *
 GC_XFONT_ENTITY (Lisp_Object p)
 {
-  ENTER_LISP_FRAME_T (struct font_entity *, p);
   eassert (GC_FONT_ENTITY_P (p));
-  EXIT_LISP_FRAME (XUNTAG_VECTORLIKE (p));
+  return XUNTAG_VECTORLIKE (p);
 }
 
 INLINE struct font *
 XFONT_OBJECT (Lisp_Object p)
 {
-  ENTER_LISP_FRAME_T (struct font *, p);
   eassert (FONT_OBJECT_P (p));
-  EXIT_LISP_FRAME (XUNTAG_VECTORLIKE (p));
+  return XUNTAG_VECTORLIKE (p);
 }
 
 INLINE struct font *
 GC_XFONT_OBJECT (Lisp_Object p)
 {
-  ENTER_LISP_FRAME_T (struct font *, p);
   eassert (GC_FONT_OBJECT_P (p));
-  EXIT_LISP_FRAME (XUNTAG_VECTORLIKE (p));
+  return XUNTAG_VECTORLIKE (p);
 }
 
 #define XSETFONT(a, b) (XSETPSEUDOVECTOR (a, b, PVEC_FONT))
@@ -558,9 +537,8 @@ GC_XFONT_OBJECT (Lisp_Object p)
 INLINE struct font *
 CHECK_FONT_GET_OBJECT (Lisp_Object x)
 {
-  ENTER_LISP_FRAME_T (struct font *, x);
   CHECK_FONT_OBJECT (x);
-  EXIT_LISP_FRAME (XFONT_OBJECT (x));
+  return XFONT_OBJECT (x);
 }
 
 /* Number of pt per inch (from the TeXbook).  */

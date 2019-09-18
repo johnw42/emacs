@@ -305,17 +305,15 @@ INLINE int GLYPH_FACE (GLYPH glyph) { return glyph.face_id; }
 INLINE int
 GLYPH_CODE_CHAR (Lisp_Object gc)
 {
-  ENTER_LISP_FRAME_T (int, gc);
-  EXIT_LISP_FRAME ((CONSP (gc)
+  return (CONSP (gc)
 	  ? XINT (XCAR (gc))
-	  : XINT (gc) & MAX_CHAR));
+	  : XINT (gc) & MAX_CHAR);
 }
 
 INLINE int
 GLYPH_CODE_FACE (Lisp_Object gc)
 {
-  ENTER_LISP_FRAME_T (int, gc);
-  EXIT_LISP_FRAME (CONSP (gc) ? XINT (XCDR (gc)) : XINT (gc) >> CHARACTERBITS);
+  return CONSP (gc) ? XINT (XCDR (gc)) : XINT (gc) >> CHARACTERBITS;
 }
 
 #define SET_GLYPH_FROM_GLYPH_CODE(glyph, gc)				\
@@ -1825,11 +1823,10 @@ INLINE int
 FACE_FOR_CHAR (struct frame *f, struct face *face, int character,
 	       ptrdiff_t pos, Lisp_Object object)
 {
-  ENTER_LISP_FRAME_T (int, object);
 #ifdef HAVE_WINDOW_SYSTEM
-  EXIT_LISP_FRAME (face_for_char (f, face, character, pos, object));
+  return face_for_char (f, face, character, pos, object);
 #else
-  EXIT_LISP_FRAME (face->id);
+  return face->id;
 #endif
 }
 
@@ -1847,15 +1844,14 @@ GLYPH_CHAR_VALID_P (GLYPH g)
 INLINE bool
 GLYPH_CODE_P (Lisp_Object gc)
 {
-  ENTER_LISP_FRAME_T (bool, gc);
-  EXIT_LISP_FRAME ((CONSP (gc)
+  return (CONSP (gc)
 	  ? (CHARACTERP (XCAR (gc))
 	     && RANGED_INTEGERP (0, XCDR (gc), MAX_FACE_ID))
 	  : (RANGED_INTEGERP
 	     (0, gc,
 	      (MAX_FACE_ID < TYPE_MAXIMUM (EMACS_INT) >> CHARACTERBITS
 	       ? ((EMACS_INT) MAX_FACE_ID << CHARACTERBITS) | MAX_CHAR
-	       : TYPE_MAXIMUM (EMACS_INT))))));
+	       : TYPE_MAXIMUM (EMACS_INT)))));
 }
 
 /* True means face attributes have been changed since the last

@@ -2153,6 +2153,7 @@ it defines a macro.  */)
   (Lisp_Object fundef, Lisp_Object funname, Lisp_Object macro_only)
 {
   ENTER_LISP_FRAME (fundef, funname, macro_only);
+  LISP_LOCALS (kind, fun);
   ptrdiff_t count = SPECPDL_INDEX ();
 
   if (!CONSP (fundef) || !EQ (Qautoload, XCAR (fundef)))
@@ -2160,7 +2161,6 @@ it defines a macro.  */)
 
   if (EQ (macro_only, Qmacro))
     {
-      LISP_LOCALS (kind);
       kind = Fnth (make_number (4), fundef);
       if (! (EQ (kind, Qt) || EQ (kind, Qmacro)))
 	EXIT_LISP_FRAME (fundef);
@@ -2199,7 +2199,6 @@ it defines a macro.  */)
     EXIT_LISP_FRAME (Qnil);
   else
     {
-      LISP_LOCALS (fun);
       fun = Findirect_function (funname, Qnil);
 
       if (!NILP (Fequal (fun, fundef)))

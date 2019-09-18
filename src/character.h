@@ -701,13 +701,12 @@ extern bool blankp (int);
 INLINE int
 char_table_translate (Lisp_Object obj, int ch)
 {
-  ENTER_LISP_FRAME_T (int, obj);
   /* This internal function is expected to be called with valid arguments,
      so there is an eassert instead of CHECK_xxx for the sake of speed.  */
   eassert (CHAR_VALID_P (ch));
   eassert (CHAR_TABLE_P (obj));
   obj = CHAR_TABLE_REF (obj, ch);
-  EXIT_LISP_FRAME (CHARACTERP (obj) ? XINT (obj) : ch);
+  return CHARACTERP (obj) ? XINT (obj) : ch;
 }
 
 #if defined __GNUC__ && !defined __STRICT_ANSI__

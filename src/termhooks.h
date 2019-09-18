@@ -662,16 +662,14 @@ struct terminal
 INLINE bool
 TERMINALP (Lisp_Object a)
 {
-  ENTER_LISP_FRAME_T (bool, a);
-  EXIT_LISP_FRAME (PSEUDOVECTORP (a, PVEC_TERMINAL));
+  return PSEUDOVECTORP (a, PVEC_TERMINAL);
 }
 
 INLINE struct terminal *
 XTERMINAL (Lisp_Object a)
 {
-  ENTER_LISP_FRAME_T (struct terminal *, a);
   eassert (TERMINALP (a));
-  EXIT_LISP_FRAME (XUNTAG_VECTORLIKE (a));
+  return XUNTAG_VECTORLIKE (a);
 }
 
 /* Most code should use these functions to set Lisp fields in struct
@@ -679,16 +677,12 @@ XTERMINAL (Lisp_Object a)
 INLINE void
 tset_charset_list (struct terminal *t, Lisp_Object val)
 {
-  ENTER_LISP_FRAME (val);
   PV_LISP_FIELD_SET(t, charset_list, val);
-  EXIT_LISP_FRAME_VOID ();
 }
 INLINE void
 tset_selection_alist (struct terminal *t, Lisp_Object val)
 {
-  ENTER_LISP_FRAME (val);
   PV_LISP_FIELD_SET(t, Vselection_alist, val);
-  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Chain of all terminal devices currently in use.  */
