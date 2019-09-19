@@ -387,7 +387,9 @@ access_keymap_1 (Lisp_Object map, Lisp_Object idx,
 		 bool t_ok, bool noinherit, bool autoload)
 {
   ENTER_LISP_FRAME (map, idx);
-  LISP_LOCALS (event_meta_binding, event_meta_map, tail, t_binding, retval, retval_tail, val, binding, submap, parent_entry, key);
+  LISP_LOCALS (event_meta_binding, event_meta_map, tail, t_binding,
+               retval, retval_tail, val, binding, submap, parent_entry,
+               key);
   /* If idx is a list (some sort of mouse click, perhaps?),
      the index we want to use is the car of the list, which
      ought to be a symbol.  */

@@ -120,7 +120,9 @@ static void
 kqueue_compare_dir_list (Lisp_Object watch_object)
 {
   ENTER_LISP_FRAME (watch_object);
-  LISP_LOCALS (dir, pending_dl, deleted_dl, old_directory_files, old_dl, new_directory_files, new_dl, dl, old_entry, new_entry, dl1, entry, size);
+  LISP_LOCALS (dir, pending_dl, deleted_dl, old_directory_files,
+               old_dl, new_directory_files, new_dl, dl, old_entry,
+               new_entry, dl1, entry, size);
 
   dir = XCAR (XCDR (watch_object));
   pending_dl = Qnil;

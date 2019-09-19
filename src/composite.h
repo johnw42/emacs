@@ -206,12 +206,11 @@ extern void compose_text (ptrdiff_t, ptrdiff_t, Lisp_Object, Lisp_Object,
 INLINE enum composition_method
 composition_method (Lisp_Object prop)
 {
-  LISP_LOCALS (temp);
   if (composition_registered_p (prop))
     return composition_table[COMPOSITION_ID (prop)]->method;
   else
     {
-      temp = XCDR (XCAR (prop));
+      Lisp_Object temp = XCDR (XCAR (prop));
 
       return (NILP (temp)
 	      ? COMPOSITION_RELATIVE

@@ -1515,9 +1515,9 @@ appended.  By default, FONT-SPEC overrides the previous settings.  */)
   (Lisp_Object name, Lisp_Object target, Lisp_Object font_spec, Lisp_Object frame, Lisp_Object add)
 {
   ENTER_LISP_FRAME (name, target, font_spec, frame, add);
-  LISP_LOCALS (fontset, font_def, registry, family, range_list, fontname);
-  LISP_LOCALS (spec, encoding, repertory, from, to, script_list, val);
-  LISP_LOCALS (arg, tail, fr, font_object);
+  LISP_LOCALS (fontset, font_def, registry, family, range_list,
+               fontname, spec, encoding, repertory, from, to,
+               script_list, val, arg, tail, fr, font_object);
   struct charset *charset = NULL;
   bool ascii_changed = 0;
 

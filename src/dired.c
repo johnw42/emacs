@@ -474,7 +474,8 @@ file_name_completion (Lisp_Object file, Lisp_Object dirname, bool all_flag,
 		      Lisp_Object predicate)
 {
   ENTER_LISP_FRAME (file, dirname, predicate);
-  LISP_LOCALS (bestmatch, tem, elt, name, encoded_file, encoded_dir, file_encoding, regexps, table, zero, cmp);
+  LISP_LOCALS (bestmatch, tem, elt, name, encoded_file, encoded_dir,
+               file_encoding, regexps, table, zero, cmp);
   ptrdiff_t bestmatchsize = 0;
   int matchcount = 0;
   /* If ALL_FLAG is 1, BESTMATCH is the list of all matches, decoded.

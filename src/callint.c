@@ -275,8 +275,9 @@ invoke it.  If KEYS is omitted or nil, the return value of
   (Lisp_Object function, Lisp_Object record_flag, Lisp_Object keys)
 {
   ENTER_LISP_FRAME (function, record_flag, keys);
-  LISP_LOCALS (specs, filter_specs, teml, up_event, enable, prefix_arg, save_this_command, save_last_command, save_this_original_command, save_real_this_command, form, input, funval, values);
-  LISP_LOCALS (this_cmd, result, event, w, tem2, val);
+  LISP_LOCALS (specs, filter_specs, teml, up_event, enable, prefix_arg,
+               save_this_command, save_last_command, save_this_original_command, save_real_this_command, form, input, funval, values,
+               this_cmd, result, event, w, tem2, val);
   /* `args' will contain the array of arguments to pass to the function.
      `visargs' will contain the same list but in a nicer form, so that if we
      pass it to Fformat_message it will be understandable to a human.  */

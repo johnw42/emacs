@@ -2437,7 +2437,7 @@ scheme_allocate (ptrdiff_t nbytes, chez_ptr sym, Lisp_Object *vec_ptr)
   /* chez_ptr eph = SCHEME_FPTR_CALL(ephemeron_cons, vec, chez_false); */
 
   scheme_track (UNCHEZ (vec));
-  SCHEME_FPTR_CALL(save_origin, vec);
+  (void) SCHEME_FPTR_CALL(save_origin, vec);
   SCHEME_PV_ADDR_SET(vec, CHEZ (addr));
   //SCHEME_PV_EPHEMERON_SET(vec, eph);
   *vec_ptr = UNCHEZ (vec);
@@ -8783,6 +8783,13 @@ resume_scheme_gc (void)
   /*   Fgarbage_collect(); */
 }
 
+static void
+walk_lisp_stack_callback (void *data, Lisp_Object *ptr)
+{
+  analyze_scheme_ref_ptr (ptr, "walking stack in before_scheme_gc");
+  record_scheme_ref_ptr (ptr, rt_trace);
+}
+
 int
 before_scheme_gc (void)
 {
@@ -8805,24 +8812,7 @@ before_scheme_gc (void)
   /*       memgrep(magic_refs[i], 0, 8); */
   /*   } */
 
-  ptrdiff_t pos = 0, count, frames_found = 0, entries_found = 0;
-  Lisp_Object **pptr;
-  while (walk_lisp_stack (&pos, &pptr, &count))
-    {
-      eassert (count > 0);
-      frames_found++;
-      entries_found += count;
-      /* printf ("count: %ld\n", count); */
-      for (ptrdiff_t i = 0; i < count; i++)
-        {
-          analyze_scheme_ref_ptr (pptr[i], "walking stack in before_scheme_gc");
-          record_scheme_ref_ptr (pptr[i], rt_trace);
-          /* printf("found %p at %p\n", */
-          /*        CHEZ(*records[count].ptr), */
-          /*        records[count].ptr); */
-        }
-    }
-  printf ("found %ld entries in %ld frames\n", entries_found, frames_found);
+  walk_lisp_stack (NULL, walk_lisp_stack_callback);
 
   // TODO(jrw): Should not be necessary because globals are always
   // referenced through symbols.

@@ -10134,8 +10134,11 @@ usage: (define-coding-system-internal ...)  */)
   (ptrdiff_t nargs, Lisp_Object *args)
 {
   ENTER_LISP_FRAME_VA (nargs, args);
-  LISP_LOCALS (name, spec_vec, attrs, eol_type, aliases, coding_type, charset_list, safe_charsets, tail, val, tmp, tmp2, valids, bom, endian);
-  LISP_LOCALS (initial, reg_usage, request, flags, tmp1, this_spec, this_name, this_aliases, this_eol_type);
+  LISP_LOCALS (name, spec_vec, attrs, eol_type, aliases, coding_type,
+               charset_list, safe_charsets, tail, val, tmp, tmp2,
+               valids, bom, endian, initial, reg_usage, request,
+               flags, tmp1, this_spec, this_name, this_aliases,
+               this_eol_type);
   enum coding_category category;
   int max_charset_id = 0;
   int i;

@@ -381,9 +381,9 @@ error !;
 #define lisp_h_VECTORLIKEP(x) SCHEME_VECTORP(x, scheme_vectorlike_symbol)
 #define lisp_h_XCAR(c) (eassert (chez_pairp (CHEZ (c))), UNCHEZ (chez_car (CHEZ (c))))
 #define lisp_h_XCDR(c) (eassert (chez_pairp (CHEZ (c))), UNCHEZ (chez_cdr (CHEZ (c))))
-#define lisp_h_make_number(n) UNCHEZ (chez_integer (n))
+#define lisp_h_make_number(n) UNCHEZ (chez_fixnum (n))
 # define lisp_h_XFASTINT(a) XINT (a)
-# define lisp_h_XINT(a) chez_integer_value (CHEZ(a))
+# define lisp_h_XINT(a) chez_fixnum_value (CHEZ(a))
 #define lisp_h_XHASH(a) SCHEME_FPTR_CALL (eq_hash, CHEZ (a))
 #define lisp_h_check_cons_list() ((void) 0)
 
@@ -1240,9 +1240,7 @@ clip_to_bounds (ptrdiff_t lower, EMACS_INT num, ptrdiff_t upper)
 INLINE Lisp_Object
 make_lisp_ptr (void *ptr, enum Lisp_Type type)
 {
-  LISP_LOCALS (a);
-  a = XIL (TAG_PTR (type, ptr));
-
+  Lisp_Object a = XIL (TAG_PTR (type, ptr));
   eassert (XTYPE (a) == type && XUNTAG (a, type) == ptr);
   return a;
 }
@@ -1259,9 +1257,7 @@ INLINE bool
 INLINE Lisp_Object
 vectorlike_lisp_obj (void *vptr)
 {
-  LISP_LOCALS (obj);
-  obj = ((union vectorlike_header *) vptr)->s.scheme_obj;
-
+  Lisp_Object obj = ((union vectorlike_header *) vptr)->s.scheme_obj;
   eassert (chez_vectorp (CHEZ (obj)));
   return obj;
 }

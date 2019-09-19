@@ -1,5 +1,7 @@
 // Only include via lisp.h!
 
+#include "pp_foldmap.h"
+
 #ifdef HAVE_CHEZ_SCHEME
 extern void *chez_saved_bp;
 
@@ -79,18 +81,28 @@ extern uint64_t gdb_misc_val;
 extern unsigned gdb_flags;
 extern int gdb_hit_count;
 
-#define SCHEME_FPTR_DEF(name, rtype, ...) \
+#define SCHEME_FPTR_DEF(name, rtype, ...)                                \
+  extern rtype scheme_fptr_result_##name;                                \
   extern rtype (*scheme_fptr_##name)(const char *, int, __VA_ARGS__)
 #include "scheme_fptr.h"
 
-void do_chez_preamble (void);
+void do_chez_prolog (void);
+
+/* #define SCHEME_FPTR_CALL(name, ...)                             \ */
+/*   (last_scheme_function = #name,                                \ */
+/*     last_scheme_call_file = __FILE__,                           \ */
+/*     last_scheme_call_line = __LINE__,                           \ */
+/*     do_chez_prolog(),                                           \ */
+/*     scheme_fptr_result_##name =                                 \ */
+/*     scheme_fptr_##name(__FILE__, __LINE__, __VA_ARGS__),        \ */
+/*     CHEZ_EPILOG,                                                \ */
+/*     scheme_fptr_result_##name) */
 
 #define SCHEME_FPTR_CALL(name, ...)                             \
   (last_scheme_function = #name,                                \
    last_scheme_call_file = __FILE__,                            \
    last_scheme_call_line = __LINE__,                            \
-   do_chez_preamble(),                                          \
-   (*scheme_fptr_##name)(__FILE__, __LINE__, __VA_ARGS__))
+   scheme_fptr_##name(__FILE__, __LINE__, __VA_ARGS__))
 
 extern chez_ptr scheme_vectorlike_symbol;
 extern chez_ptr scheme_misc_symbol;
@@ -101,6 +113,7 @@ extern chez_iptr scheme_fixnum_width;
 extern const char *last_scheme_function;
 extern const char *last_scheme_call_file;
 extern int last_scheme_call_line;
+extern size_t scheme_call_count;
 extern chez_ptr scheme_guardian;
 
 #define SCHEME_PV_TAG(pv) chez_vector_ref(pv, 0)
@@ -240,76 +253,6 @@ bool mark_and_enqueue (Lisp_Object obj);
 bool may_be_valid (chez_ptr x);
 #endif
 
-#define PP_NARG(...)                                         \
-  PP_ARG_N(__VA_ARGS__,63,62,61,60,                          \
-           59,58,57,56,55,54,53,52,51,50,                    \
-           49,48,47,46,45,44,43,42,41,40,                    \
-           39,38,37,36,35,34,33,32,31,30,                    \
-           29,28,27,26,25,24,23,22,21,20,                    \
-           19,18,17,16,15,14,13,12,11,10,                    \
-           9,8,7,6,5,4,3,2,1,0)
-#define PP_ARG_N( \
-          _1, _2, _3, _4, _5, _6, _7, _8, _9,_10, \
-         _11,_12,_13,_14,_15,_16,_17,_18,_19,_20, \
-         _21,_22,_23,_24,_25,_26,_27,_28,_29,_30, \
-         _31,_32,_33,_34,_35,_36,_37,_38,_39,_40, \
-         _41,_42,_43,_44,_45,_46,_47,_48,_49,_50, \
-         _51,_52,_53,_54,_55,_56,_57,_58,_59,_60, \
-         _61,_62,_63,N,...) N
-
-#define SCHEME_INIT_LISP_FRAME_INFO(...)                                 \
-  LISP_LOCALS_SELECT (__VA_ARGS__ __VA_OPT__(,), LISP_LOCALS_RECORD_16, LISP_LOCALS_RECORD_15, LISP_LOCALS_RECORD_14, LISP_LOCALS_RECORD_13, LISP_LOCALS_RECORD_12, LISP_LOCALS_RECORD_11, LISP_LOCALS_RECORD_10, LISP_LOCALS_RECORD_9, LISP_LOCALS_RECORD_8, LISP_LOCALS_RECORD_7, LISP_LOCALS_RECORD_6, LISP_LOCALS_RECORD_5, LISP_LOCALS_RECORD_4, LISP_LOCALS_RECORD_3, LISP_LOCALS_RECORD_2, LISP_LOCALS_RECORD_1, LISP_LOCALS_RECORD_0) (__VA_ARGS__)
-#define LISP_LOCALS(...) \
-  LISP_LOCALS_SELECT (__VA_ARGS__ __VA_OPT__(,), LISP_LOCALS_DECL_16, LISP_LOCALS_DECL_15, LISP_LOCALS_DECL_14, LISP_LOCALS_DECL_13, LISP_LOCALS_DECL_12, LISP_LOCALS_DECL_11, LISP_LOCALS_DECL_10, LISP_LOCALS_DECL_9, LISP_LOCALS_DECL_8, LISP_LOCALS_DECL_7, LISP_LOCALS_DECL_6, LISP_LOCALS_DECL_5, LISP_LOCALS_DECL_4, LISP_LOCALS_DECL_3, LISP_LOCALS_DECL_2, LISP_LOCALS_DECL_1, LISP_LOCALS_DECL_0) (__VA_ARGS__)
-#define LISP_LOCALS_SELECT(_0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16, macro, ...) macro
-#define LISP_LOCALS_DECL_16(n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12, n13, n14, n15, n16) LISP_LOCALS_DECL_1(n1); LISP_LOCALS_DECL_15 (n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12, n13, n14, n15, n16)
-#define LISP_LOCALS_OFFSETS_16(n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12, n13, n14, n15, n16) LISP_LOCALS_OFFSETS_1(n1), LISP_LOCALS_OFFSETS_15 (n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12, n13, n14, n15, n16)
-#define LISP_LOCALS_DECL_15(n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12, n13, n14, n15) LISP_LOCALS_DECL_1(n1); LISP_LOCALS_DECL_14 (n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12, n13, n14, n15)
-#define LISP_LOCALS_OFFSETS_15(n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12, n13, n14, n15) LISP_LOCALS_OFFSETS_1(n1), LISP_LOCALS_OFFSETS_14 (n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12, n13, n14, n15)
-#define LISP_LOCALS_DECL_14(n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12, n13, n14) LISP_LOCALS_DECL_1(n1); LISP_LOCALS_DECL_13 (n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12, n13, n14)
-#define LISP_LOCALS_OFFSETS_14(n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12, n13, n14) LISP_LOCALS_OFFSETS_1(n1), LISP_LOCALS_OFFSETS_13 (n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12, n13, n14)
-#define LISP_LOCALS_DECL_13(n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12, n13) LISP_LOCALS_DECL_1(n1); LISP_LOCALS_DECL_12 (n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12, n13)
-#define LISP_LOCALS_OFFSETS_13(n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12, n13) LISP_LOCALS_OFFSETS_1(n1), LISP_LOCALS_OFFSETS_12 (n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12, n13)
-#define LISP_LOCALS_DECL_12(n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12) LISP_LOCALS_DECL_1(n1); LISP_LOCALS_DECL_11 (n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12)
-#define LISP_LOCALS_OFFSETS_12(n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12) LISP_LOCALS_OFFSETS_1(n1), LISP_LOCALS_OFFSETS_11 (n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12)
-#define LISP_LOCALS_DECL_11(n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11) LISP_LOCALS_DECL_1(n1); LISP_LOCALS_DECL_10 (n2, n3, n4, n5, n6, n7, n8, n9, n10, n11)
-#define LISP_LOCALS_OFFSETS_11(n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11) LISP_LOCALS_OFFSETS_1(n1), LISP_LOCALS_OFFSETS_10 (n2, n3, n4, n5, n6, n7, n8, n9, n10, n11)
-#define LISP_LOCALS_DECL_10(n1, n2, n3, n4, n5, n6, n7, n8, n9, n10) LISP_LOCALS_DECL_1(n1); LISP_LOCALS_DECL_9 (n2, n3, n4, n5, n6, n7, n8, n9, n10)
-#define LISP_LOCALS_OFFSETS_10(n1, n2, n3, n4, n5, n6, n7, n8, n9, n10) LISP_LOCALS_OFFSETS_1(n1), LISP_LOCALS_OFFSETS_9 (n2, n3, n4, n5, n6, n7, n8, n9, n10)
-#define LISP_LOCALS_DECL_9(n1, n2, n3, n4, n5, n6, n7, n8, n9) LISP_LOCALS_DECL_1(n1); LISP_LOCALS_DECL_8 (n2, n3, n4, n5, n6, n7, n8, n9)
-#define LISP_LOCALS_OFFSETS_9(n1, n2, n3, n4, n5, n6, n7, n8, n9) LISP_LOCALS_OFFSETS_1(n1), LISP_LOCALS_OFFSETS_8 (n2, n3, n4, n5, n6, n7, n8, n9)
-#define LISP_LOCALS_DECL_8(n1, n2, n3, n4, n5, n6, n7, n8) LISP_LOCALS_DECL_1(n1); LISP_LOCALS_DECL_7 (n2, n3, n4, n5, n6, n7, n8)
-#define LISP_LOCALS_OFFSETS_8(n1, n2, n3, n4, n5, n6, n7, n8) LISP_LOCALS_OFFSETS_1(n1), LISP_LOCALS_OFFSETS_7 (n2, n3, n4, n5, n6, n7, n8)
-#define LISP_LOCALS_DECL_7(n1, n2, n3, n4, n5, n6, n7) LISP_LOCALS_DECL_1(n1); LISP_LOCALS_DECL_6 (n2, n3, n4, n5, n6, n7)
-#define LISP_LOCALS_OFFSETS_7(n1, n2, n3, n4, n5, n6, n7) LISP_LOCALS_OFFSETS_1(n1), LISP_LOCALS_OFFSETS_6 (n2, n3, n4, n5, n6, n7)
-#define LISP_LOCALS_DECL_6(n1, n2, n3, n4, n5, n6) LISP_LOCALS_DECL_1(n1); LISP_LOCALS_DECL_5 (n2, n3, n4, n5, n6)
-#define LISP_LOCALS_OFFSETS_6(n1, n2, n3, n4, n5, n6) LISP_LOCALS_OFFSETS_1(n1), LISP_LOCALS_OFFSETS_5 (n2, n3, n4, n5, n6)
-#define LISP_LOCALS_DECL_5(n1, n2, n3, n4, n5) LISP_LOCALS_DECL_1(n1); LISP_LOCALS_DECL_4 (n2, n3, n4, n5)
-#define LISP_LOCALS_OFFSETS_5(n1, n2, n3, n4, n5) LISP_LOCALS_OFFSETS_1(n1), LISP_LOCALS_OFFSETS_4 (n2, n3, n4, n5)
-#define LISP_LOCALS_DECL_4(n1, n2, n3,  n4) LISP_LOCALS_DECL_1(n1); LISP_LOCALS_DECL_3 (n2, n3, n4)
-#define LISP_LOCALS_OFFSETS_4(n1, n2, n3, n4) LISP_LOCALS_OFFSETS_1(n1), LISP_LOCALS_OFFSETS_3 (n2, n3, n4)
-#define LISP_LOCALS_DECL_3(n1, n2, n3) LISP_LOCALS_DECL_1(n1); LISP_LOCALS_DECL_2 (n2, n3)
-#define LISP_LOCALS_OFFSETS_3(n1, n2, n3) LISP_LOCALS_OFFSETS_1(n1), LISP_LOCALS_OFFSETS_2 (n2, n3)
-#define LISP_LOCALS_DECL_2(n1, n2) LISP_LOCALS_DECL_1(n1); LISP_LOCALS_DECL_1 (n2)
-#define LISP_LOCALS_OFFSETS_2(n1, n2) LISP_LOCALS_OFFSETS_1(n1), LISP_LOCALS_OFFSETS_1 (n2)
-#define LISP_LOCALS_RECORD_16(n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12, n13, n14, n15, n16) RECORD_LISP_LOCALS (16, LISP_LOCALS_OFFSETS_16 (n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12, n13, n14, n15, n16))
-#define LISP_LOCALS_RECORD_15(n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12, n13, n14, n15) RECORD_LISP_LOCALS (15, LISP_LOCALS_OFFSETS_15 (n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12, n13, n14, n15))
-#define LISP_LOCALS_RECORD_14(n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12, n13, n14) RECORD_LISP_LOCALS (14, LISP_LOCALS_OFFSETS_14 (n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12, n13, n14))
-#define LISP_LOCALS_RECORD_13(n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12, n13) RECORD_LISP_LOCALS (13, LISP_LOCALS_OFFSETS_13 (n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12, n13))
-#define LISP_LOCALS_RECORD_12(n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12) RECORD_LISP_LOCALS (12, LISP_LOCALS_OFFSETS_12 (n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12))
-#define LISP_LOCALS_RECORD_11(n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11) RECORD_LISP_LOCALS (11, LISP_LOCALS_OFFSETS_11 (n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11))
-#define LISP_LOCALS_RECORD_10(n1, n2, n3, n4, n5, n6, n7, n8, n9, n10) RECORD_LISP_LOCALS (10, LISP_LOCALS_OFFSETS_10 (n1, n2, n3, n4, n5, n6, n7, n8, n9, n10))
-#define LISP_LOCALS_RECORD_9(n1, n2, n3, n4, n5, n6, n7, n8, n9) RECORD_LISP_LOCALS (9, LISP_LOCALS_OFFSETS_9 (n1, n2, n3, n4, n5, n6, n7, n8, n9))
-#define LISP_LOCALS_RECORD_8(n1, n2, n3, n4, n5, n6, n7, n8) RECORD_LISP_LOCALS (8, LISP_LOCALS_OFFSETS_8 (n1, n2, n3, n4, n5, n6, n7, n8))
-#define LISP_LOCALS_RECORD_7(n1, n2, n3, n4, n5, n6, n7) RECORD_LISP_LOCALS (7, LISP_LOCALS_OFFSETS_7 (n1, n2, n3, n4, n5, n6, n7))
-#define LISP_LOCALS_RECORD_6(n1, n2, n3, n4, n5, n6) RECORD_LISP_LOCALS (6, LISP_LOCALS_OFFSETS_6 (n1, n2, n3, n4, n5, n6))
-#define LISP_LOCALS_RECORD_5(n1, n2, n3, n4, n5) RECORD_LISP_LOCALS (5, LISP_LOCALS_OFFSETS_5 (n1, n2, n3, n4, n5))
-#define LISP_LOCALS_RECORD_4(n1, n2, n3, n4) RECORD_LISP_LOCALS (4, LISP_LOCALS_OFFSETS_4 (n1, n2, n3, n4))
-#define LISP_LOCALS_RECORD_3(n1, n2, n3) RECORD_LISP_LOCALS (3, LISP_LOCALS_OFFSETS_3 (n1, n2, n3))
-#define LISP_LOCALS_RECORD_2(n1, n2) RECORD_LISP_LOCALS (2, LISP_LOCALS_OFFSETS_2 (n1, n2))
-#define LISP_LOCALS_RECORD_1(n1) RECORD_LISP_LOCALS (1, LISP_LOCALS_OFFSETS_1 (n1))
-#define LISP_LOCALS_RECORD_0()
-
 // TODO(jrw)
 #define SUSPEND_GC()
 #define RESUME_GC()
@@ -335,6 +278,8 @@ bool may_be_valid (chez_ptr x);
     }                                                           \
   while (0)
 
+#define LISP_LOCAL_OFFSET_BYTES 16
+#define MAX_LISP_LOCAL_OFFSET LISP_LOCAL_OFFSET_BYTES * 8
 
 #ifdef HAVE_CHEZ_SCHEME
 struct func_frame_info {
@@ -342,7 +287,8 @@ struct func_frame_info {
   const char *func_name;
 #endif
   ptrdiff_t start_offset;
-  uint64_t bit_mask;
+  uint8_t bit_mask[LISP_LOCAL_OFFSET_BYTES];
+  uint8_t init_mask[LISP_LOCAL_OFFSET_BYTES];
 };
 
 #ifdef ENABLE_CHECKING
@@ -354,12 +300,10 @@ struct func_frame_info {
 extern ptrdiff_t lisp_stack_size;
 
 void enter_lisp_frame (struct func_frame_info *fi, Lisp_Object *base);
-void record_lisp_locals (struct func_frame_info *fi, size_t n, ...);
+void record_lisp_locals (struct func_frame_info *fi, bool need_init, void *base, size_t n, ...);
 void push_lisp_local_array(bool already_initialized, Lisp_Object *ptr, ptrdiff_t n);
 void pop_lisp_locals(int n);
-bool walk_lisp_stack (ptrdiff_t *pos,
-                      Lisp_Object ***ppptr,
-                      ptrdiff_t *count);
+void walk_lisp_stack (void (*f)(void *, Lisp_Object *), void *);
 #endif
 
 #ifdef HAVE_CHEZ_SCHEME
@@ -370,30 +314,33 @@ bool walk_lisp_stack (ptrdiff_t *pos,
 #define ENTER_LISP_FRAME_T(type, ...)                                   \
   static bool is_this_func_frame_info_init = false;                     \
   static struct func_frame_info this_func_frame_info = FUNC_FRAME_INFO_INIT; \
-  bool was_this_func_frame_info_init = is_this_func_frame_info_init;    \
+  static bool was_this_func_frame_info_init;                            \
+  was_this_func_frame_info_init = is_this_func_frame_info_init;         \
   typedef type this_lisp_frame_type;                                    \
   (void) (this_lisp_frame_type *) 0;                                    \
   ptrdiff_t orig_lisp_stack_size = lisp_stack_size;                     \
   Lisp_Object dummy_lisp_var;                                           \
+  SCHEME_ANALYZE_LISP_FRAME(false __VA_OPT__(, __VA_ARGS__));           \
+  enter_lisp_frame(&this_func_frame_info, &dummy_lisp_var)
+#define ENTER_LISP_FRAME_VA_T(type, nargs, args, ...)                   \
+  ENTER_LISP_FRAME_T (type __VA_OPT__(, __VA_ARGS__));                 \
+  push_lisp_local_array (true, args, nargs)
+#define LISP_LOCALS(...)                                                \
+  Lisp_Object __VA_ARGS__;                                              \
+  SCHEME_ANALYZE_LISP_FRAME (true __VA_OPT__(, __VA_ARGS__))
+#define SCHEME_ANALYZE_LISP_FRAME(need_init, ...)                       \
   if (!was_this_func_frame_info_init)                                   \
     {                                                                   \
       is_this_func_frame_info_init = true;                              \
-      SCHEME_INIT_LISP_FRAME_INFO (__VA_ARGS__);                         \
-    }                                                                   \
-  enter_lisp_frame(&this_func_frame_info, &dummy_lisp_var)
-#define ENTER_LISP_FRAME_VA_T(type, nargs, args, ...)                    \
-  ENTER_LISP_FRAME_T (type, __VA_ARGS__);                                  \
-  push_lisp_local_array (true, args, nargs)
-#define RECORD_LISP_LOCALS(n, ...)                               \
-  record_lisp_locals (&this_func_frame_info, n, __VA_ARGS__)
-#define EXIT_LISP_FRAME_NO_RETURN()                             \
-  do                                                            \
-    {                                                           \
-      lisp_stack_size = orig_lisp_stack_size;                   \
-    }                                                           \
-  while (0)
-#define LISP_LOCALS_DECL_1(n1) Lisp_Object n1 = make_number(0)
-#define LISP_LOCALS_OFFSETS_1(n1) ((char *) &dummy_lisp_var - (char *) &n1)
+      __VA_OPT__ (record_lisp_locals                                    \
+                  (&this_func_frame_info, need_init,                    \
+                   &dummy_lisp_var,                                     \
+                   PP_NARGS (__VA_ARGS__),                              \
+                   PP_MAP_COMMA (LISP_LOCAL_ADDR, __VA_ARGS__)));       \
+    }
+#define LISP_LOCAL_ADDR(var) &var
+#define EXIT_LISP_FRAME_NO_RETURN()             \
+  (lisp_stack_size = orig_lisp_stack_size)
 #define LISP_LOCAL_ARRAY(name, size) \
   Lisp_Object name[size];            \
   push_lisp_local_array(false, name, size)
@@ -408,9 +355,7 @@ bool walk_lisp_stack (ptrdiff_t *pos,
 #define PUSH_LISP_LOCALS(...) ((void)0)
 #define ENTER_LISP_FRAME_T(type, ...) typedef type this_lisp_frame_type
 #define ENTER_LISP_FRAME_VA_T(...) ((void)0)
-#define EXIT_LISP_FRAME_NO_RETURN() ((void)(this_lisp_frame_type *)0)
-#define LISP_LOCALS_DECL_1(n1) Lisp_Object n1
-#define LISP_LOCALS_ADDR_1(n1) ((void)0)
+#define EXIT_LISP_FRAME_NO_RETURN() ((void)0)
 #define LISP_LOCAL_ARRAY(name, size) Lisp_Object name[size]
 #define LISP_LOCAL_ALLOCA(name, size) \
   Lisp_Object *name;                  \

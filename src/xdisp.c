@@ -31141,7 +31141,8 @@ note_mode_line_or_margin_highlight (Lisp_Object window, int x, int y,
 				    enum window_part area)
 {
   ENTER_LISP_FRAME (window);
-  LISP_LOCALS (pointer, string, object, mouse_face, help, image_map, hotspot, plist, default_help, map, b, e);
+  LISP_LOCALS (pointer, string, object, mouse_face, help, image_map,
+               hotspot, plist, default_help, map, b, e);
   struct window *w = XWINDOW (window);
   struct frame *f = XFRAME (w->frame);
   Mouse_HLInfo *hlinfo = MOUSE_HL_INFO (f);
@@ -31460,9 +31461,9 @@ void
 note_mouse_highlight (struct frame *f, int x, int y)
 {
   ENTER_LISP_FRAME ();
-  LISP_LOCALS (window, pointer, object, mouse_face, position, image_map);
-  LISP_LOCALS (hotspot, plist, overlay, s, e, before, after, before_string);
-  LISP_LOCALS (after_string, lim1, lim2, help, obj);
+  LISP_LOCALS (window, pointer, object, mouse_face, position, image_map,
+               hotspot, plist, overlay, s, e, before, after, before_string,
+               after_string, lim1, lim2, help, obj);
   Mouse_HLInfo *hlinfo = MOUSE_HL_INFO (f);
   enum window_part part = ON_NOTHING;
   struct window *w;

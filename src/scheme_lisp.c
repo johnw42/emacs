@@ -34,17 +34,20 @@ chez_iptr scheme_fixnum_width;
 const char *last_scheme_function;
 const char *last_scheme_call_file;
 int last_scheme_call_line;
+size_t scheme_call_count;
 chez_ptr scheme_guardian;
 
 uint64_t gdb_misc_val = 0;
 unsigned gdb_flags = 0;
 
-#define SCHEME_FPTR_DEF(name, rtype, ...) \
+#define SCHEME_FPTR_DEF(name, rtype, ...)                                \
+  rtype scheme_fptr_result_##name;                                       \
   rtype (*scheme_fptr_##name)(const char *, int, __VA_ARGS__) = 0
 #include "scheme_fptr.h"
 
-void do_chez_preamble (void)
+void do_chez_prolog (void)
 {
+  CHEZ_PROLOG;
 }
 
 
@@ -92,6 +95,8 @@ scheme_sigaction (int sig, siginfo_t *info, void *ucontext)
   sigemptyset (&set);
   sigaddset (&set, sig);
   sigprocmask (SIG_UNBLOCK, &set, (sigset_t *) 0);
+
+  printf("called scheme_sigaction\n");
 
   // Both versions seem to have the same effect.
   if (chez_saved_bp)
@@ -166,7 +171,7 @@ void scheme_init(void) {
 static void
 print_origin(Lisp_Object obj)
 {
-  SCHEME_FPTR_CALL(print_origin, CHEZ (obj));
+  (void) SCHEME_FPTR_CALL(print_origin, CHEZ (obj));
 }
 
 // Converts a symbol or Scheme string to a Lisp string.
@@ -1167,12 +1172,7 @@ may_be_valid (chez_ptr x)
   return false;
 }
 
-struct lisp_frame_record {
-  ptrdiff_t pointer_count;
-  Lisp_Object *ptrs[];
-};
-
-static Lisp_Object **lisp_stack = NULL;
+static void **lisp_stack = NULL;
 static ptrdiff_t lisp_stack_capacity = 0;
 ptrdiff_t lisp_stack_size = 0;
 
@@ -1198,177 +1198,210 @@ ensure_lisp_stack_capacity (ptrdiff_t n)
         else
           new_cap *= 2;
       printf ("expanding to %ld\n", new_cap);
-      lisp_stack = reallocarray (lisp_stack,
-                                 new_cap,
-                                 sizeof (Lisp_Object **));
+      lisp_stack = reallocarray (lisp_stack, new_cap, sizeof (*lisp_stack));
       eassert (lisp_stack);
       lisp_stack_capacity = new_cap;
     }
 }
 
-static uint64_t push_frame_counter = 0;
-
-#define BEGIN_PUSH_FRAME(n)                                             \
-  do {                                                                  \
-    ++push_frame_counter;                                               \
-    eassert (n >= 0);                                                   \
-    eassert (n <= DEBUG_MAX_FRAME_SIZE);                                 \
-    ensure_lisp_stack_capacity (n + LISP_STACK_FRAME_HEADER_WORDS);     \
-    if (lisp_stack_size != 0) {                                          \
-      ptrdiff_t prev_frame_size =                                       \
-        (ptrdiff_t) lisp_stack[lisp_stack_size - 1];                    \
-      eassert(prev_frame_size >= 0);                                    \
-      eassert(prev_frame_size <= DEBUG_MAX_FRAME_SIZE);                  \
-    }                                                                   \
-    eassert (lisp_stack_size >= 0);                                     \
-    eassert (lisp_stack_size <= DEBUG_MAX_STACK_SIZE);                   \
-  } while (0)
-
-#define END_PUSH_FRAME(n)                                              \
-  do {                                                                 \
-    lisp_stack[lisp_stack_size++] = (Lisp_Object *) (ptrdiff_t) n;      \
-    eassert (lisp_stack_size >= 0);                                    \
-    eassert (lisp_stack_size <= DEBUG_MAX_STACK_SIZE);                  \
-  } while (0)
-
-#if 0
-void
-push_lisp_locals(bool already_initialized, int n, ...)
+static void print_stack_entry (void *data, Lisp_Object *ptr)
 {
-  BEGIN_PUSH_FRAME(n);
-  va_list ap;
-  va_start(ap, n);
-  for (int i = 0; i < n; i++)
-    {
-      Lisp_Object *ptr = va_arg(ap, Lisp_Object *);
-      analyze_scheme_ref (*ptr, "in push_lisp_locals");
-      /* printf ("push_lisp_locals: pushing %p at %d\n", ptr, (int) lisp_stack_size); */
-      lisp_stack[lisp_stack_size++] = ptr;
-      if (already_initialized)
-        eassert (may_be_valid (CHEZ (*ptr)));
-      else
-        *ptr = UNCHEZ (chez_false);
-    }
-  va_end(ap);
-  END_PUSH_FRAME(n);
+  eassert ((uintptr_t)ptr > 0x7fffffff0000);
+  //printf("  %p\n", ptr);
 }
-#endif
 
 void
 enter_lisp_frame (struct func_frame_info *fi, Lisp_Object *base)
 {
-  // TODO
+  //walk_lisp_stack (print_stack_entry, NULL);
+  ensure_lisp_stack_capacity (lisp_stack_size + 3);
+  lisp_stack[lisp_stack_size++] = base;
+  lisp_stack[lisp_stack_size++] = fi;
+  lisp_stack[lisp_stack_size++] = (void *) 0;  // number of arrays
+  ptrdiff_t offset = fi->start_offset;
+  for (int i = 0; i < LISP_LOCAL_OFFSET_BYTES; i++)
+    {
+      uint8_t init_mask = fi->init_mask[i];
+      for (int j = 0; init_mask; j++)
+        {
+          if (init_mask & 1)
+            base[offset + i*8 + j] = UNCHEZ (chez_false);
+          init_mask >>= 1;
+
+        }
+    }
+  //printf("entering %s\n", fi->func_name);
+  //walk_lisp_stack (print_stack_entry, NULL);
+}
+
+static int
+pop_count(uint8_t *words, size_t n)
+{
+  int result = 0;
+  for (size_t i = 0; i < n; i++)
+    {
+      uint8_t byte = words[i];
+      while (byte)
+        {
+          if (byte & 1)
+            result++;
+          byte >>= 1;
+        }
+    }
+  return result;
+}
+
+static void
+shift_left_and_set (uint8_t bytes[LISP_LOCAL_OFFSET_BYTES],
+               int shift_count,
+               int bit_to_set)
+{
+#ifdef ENABLE_CHECKING
+  int orig_pop_count = pop_count (bytes, LISP_LOCAL_OFFSET_BYTES);
+#endif
+  if (shift_count > 0)
+    {
+      int byte_shift_count = shift_count / 8;
+      memmove(bytes + byte_shift_count, bytes,
+              LISP_LOCAL_OFFSET_BYTES - byte_shift_count);
+      memset(bytes, 0, byte_shift_count);
+      int bit_shift_count = shift_count % 8;
+      if (bit_shift_count)
+        {
+          uint8_t carry = 0;
+          for (int i = 0; i < LISP_LOCAL_OFFSET_BYTES; i++)
+            {
+              unsigned shifted = (unsigned) bytes[i] << bit_shift_count;
+              bytes[i] = carry | (shifted & 0xFF);
+              carry = (shifted >> 8) & 0xFF;
+            }
+          eassert (carry == 0);
+        }
+    }
+  else if (shift_count < 0)
+    {
+      int byte_shift_count = (-shift_count) / 8;
+      byte_shift_count *= -1;
+      memmove(bytes, bytes + byte_shift_count,
+              LISP_LOCAL_OFFSET_BYTES - byte_shift_count);
+      memset(bytes + LISP_LOCAL_OFFSET_BYTES - byte_shift_count,
+             0, byte_shift_count);
+      int bit_shift_count = (-shift_count) % 8;
+      if (bit_shift_count)
+        {
+          uint8_t carry = 0;
+          for (int i = LISP_LOCAL_OFFSET_BYTES - 1; i >= 0; i++)
+            {
+              unsigned shifted = ((unsigned) bytes[i] << 8) >> bit_shift_count;
+              bytes[i] = carry | ((shifted >> 8) & 0xFF);
+              carry = shifted & 0xFF;
+            }
+          eassert (carry == 0);
+        }
+    }
+  eassert (orig_pop_count == pop_count (bytes, LISP_LOCAL_OFFSET_BYTES));
+  if (bit_to_set >= 0)
+    {
+      bytes[bit_to_set / 8] |= 1 << (bit_to_set % 8);
+      eassert (orig_pop_count + 1 == pop_count (bytes, LISP_LOCAL_OFFSET_BYTES));
+    }
 }
 
 void
-record_lisp_locals (struct func_frame_info *fi, size_t n, ...)
+record_lisp_locals (struct func_frame_info *fi,
+                    bool need_init,
+                    void *base,
+                    size_t n, ...)
 {
   va_list ap;
   va_start (ap, n);
+  bool any_bits_set = false;
+  for (int i = 0; i < LISP_LOCAL_OFFSET_BYTES && !any_bits_set; i++)
+    if (fi->bit_mask[i])
+      any_bits_set = true;
   for (size_t i = 0; i < n; i++)
     {
-      ptrdiff_t offset = va_arg (ap, ptrdiff_t);
+      Lisp_Object *ptr = va_arg (ap, Lisp_Object *);
+      ptrdiff_t offset = (char *) ptr - (char *) base;
       eassert (offset % sizeof (Lisp_Object) == 0);
-      if (fi->bit_mask == 0)
+      offset /= (ptrdiff_t) sizeof (Lisp_Object);
+      eassert (offset < MAX_LISP_LOCAL_OFFSET);
+      eassert (offset > -MAX_LISP_LOCAL_OFFSET);
+      if (!any_bits_set)
         {
           fi->start_offset = offset;
-          fi->bit_mask = 1;
+          shift_left_and_set(fi->bit_mask, 0, 0);
+          any_bits_set = true;
         }
       else
         {
           ptrdiff_t shift = offset - fi->start_offset;
           if (shift > 0)
             {
-              uint64_t new_bit = (uint64_t) 1 << shift;
-              eassert (new_bit);
-              eassert ((fi->bit_mask & new_bit) == 0);
-              fi->bit_mask |= new_bit;
+              shift_left_and_set (fi->bit_mask, 0, shift - 1);
+              shift_left_and_set (fi->init_mask, 0, need_init ? shift - 1 : -1);
             }
           else if (shift < 0)
             {
-              uint64_t new_mask = fi->bit_mask << (-shift);
-              eassert (new_mask >> (-shift) == fi->bit_mask);
-              eassert ((new_mask & 1) == 0);
-              new_mask |= 1;
               fi->start_offset = offset;
-              fi->bit_mask = new_mask;
+              shift_left_and_set (fi->bit_mask, -shift, 0);
+              shift_left_and_set (fi->init_mask, -shift, need_init ? 0 : -1);
             }
           else
             emacs_abort ();
         }
     }
+  eassert (fi->start_offset < MAX_LISP_LOCAL_OFFSET);
+  eassert (fi->start_offset > -MAX_LISP_LOCAL_OFFSET);
 }
 
 void
 push_lisp_local_array(bool already_initialized,
                       Lisp_Object *ptr, ptrdiff_t n)
 {
-  BEGIN_PUSH_FRAME(n);
-  for (int i = 0; i < n; i++)
-    {
-      lisp_stack[lisp_stack_size++] = &ptr[i];
-      if (already_initialized)
-        eassert (may_be_valid (CHEZ (ptr[i])));
-      else
-        ptr[i] = UNCHEZ (chez_false);
-    }
-  END_PUSH_FRAME(n);
+  eassert (n >= 0);
+  if (n == 0) return;
+  ensure_lisp_stack_capacity (lisp_stack_size + 2);
+  eassert (lisp_stack_size >= 1);
+  intptr_t num_arrays = (intptr_t) lisp_stack[--lisp_stack_size];
+  lisp_stack[lisp_stack_size++] = ptr;
+  lisp_stack[lisp_stack_size++] = (void *) n;
+  lisp_stack[lisp_stack_size++] = (void *) (num_arrays + 1);
 }
 
-// On the first call, *pos must be 0.  If any unexamined records
-// exist, the function returns true, sets *ptr to the start of a block
-// of frame records, and sets *count to the number of records in the
-// block.  Only the 'ptr' field of each record should be examined.
-// When there are no more records left, the return value is false.
-bool
-walk_lisp_stack (ptrdiff_t *pos,
-                 Lisp_Object ***ppptr,
-                 ptrdiff_t *count)
+void
+walk_lisp_stack (void (*f)(void *, Lisp_Object *), void *data)
 {
-#if 0
-  eassert (*pos >= 0);
-  ptrdiff_t index = lisp_stack_size - *pos;
-  while (index > 1)
+  ptrdiff_t i = lisp_stack_size;
+  while (i > 0)
     {
-      ptrdiff_t ptr_count = (ptrdiff_t) lisp_stack[--index];
-      eassert (ptr_count >= 0);
-      eassert (ptr_count <= DEBUG_MAX_FRAME_SIZE);
-      if (ptr_count > 0)
+      intptr_t num_arrays = (intptr_t) lisp_stack[--i];
+      for (int j = 0; j < num_arrays; j++)
         {
-          *ppptr = &lisp_stack[index - ptr_count];
-          *count = ptr_count;
-          index -= ptr_count;
-          *pos = lisp_stack_size - index;
-          return true;
+          intptr_t array_size = (intptr_t) lisp_stack[--i];
+          Lisp_Object *array_ptr = lisp_stack[--i];
+          for (intptr_t k = 0; k < array_size; k++)
+            f (data, array_ptr + k);
         }
+      struct func_frame_info *fi = lisp_stack[--i];
+      Lisp_Object *base = lisp_stack[--i];
+      ptrdiff_t offset = fi->start_offset;
+      for (int j = 0; i < LISP_LOCAL_OFFSET_BYTES; j++)
+        {
+          uint8_t bit_mask = fi->bit_mask[i];
+          while (bit_mask)
+            {
+              if (bit_mask & 1)
+                f (data, base + offset);
+              offset++;
+              bit_mask >>= 1;
+            }
+        }
+      eassert (i >= 0);
     }
-#endif
-  *ppptr = NULL;
-  *count = 0;
-  *pos = -1;
-  return false;
 }
 
 #ifdef ENABLE_CHECKING
-#pragma GCC diagnostic ignored "-Wunused-local-typedefs"
-
-static ptrdiff_t
-get_lisp_frame_ptrs (Lisp_Object **buf)
-{
-  ptrdiff_t total = 0;
-  ptrdiff_t pos = 0;
-  Lisp_Object **pptr;
-  ptrdiff_t count;
-  while (walk_lisp_stack (&pos, &pptr, &count))
-    {
-      for (ptrdiff_t i = 0; i < count; i++)
-        {
-          buf[total++] = pptr[i];
-        }
-    }
-  return total;
-}
-
 static int ptr_cmp (const void *p, const void *q)
 {
   Lisp_Object **pp = p, **qq = q;
@@ -1380,6 +1413,7 @@ static int ptr_cmp (const void *p, const void *q)
 static void
 run_init_checks(void)
 {
+#if 0
   return;
 
   Lisp_Object a = make_number(1), b = make_number(2);
@@ -1427,6 +1461,7 @@ run_init_checks(void)
   lisp_frame_record_init();
 
   printf("tests pass!\n");
+#endif
 }
 #endif
 

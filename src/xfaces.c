@@ -2698,7 +2698,8 @@ FRAME 0 means change the face on all frames, and change the default
   (Lisp_Object face, Lisp_Object attr, Lisp_Object value, Lisp_Object frame)
 {
   ENTER_LISP_FRAME (face, attr, value, frame);
-  LISP_LOCALS (lface, old_value, tail, test, key, val, list, tem, k, v, name, font_object, tmp, param, cons);
+  LISP_LOCALS (lface, old_value, tail, test, key, val, list, tem,
+               k, v, name, font_object, tmp, param, cons);
   old_value = Qnil;
 
   /* Set one of enum font_property_index (> 0) if ATTR is one of

@@ -235,9 +235,7 @@ report_file_errno (char const *string, Lisp_Object name, int errorno)
 void
 report_file_error (char const *string, Lisp_Object name)
 {
-  ENTER_LISP_FRAME (name);
   report_file_errno (string, name, errno);
-  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Like report_file_error, but reports a file-notify-error instead.  */
@@ -3595,7 +3593,9 @@ by calling `format-decode', which see.  */)
   (Lisp_Object filename, Lisp_Object visit, Lisp_Object beg, Lisp_Object end, Lisp_Object replace)
 {
   ENTER_LISP_FRAME (filename, visit, beg, end, replace);
-  LISP_LOCALS (handler, val, insval, orig_filename, old_undo, p, coding_system, old_Vdeactivate_mark, window_markers, workbuf, conversion_buffer, nbytes, unwind_data, tem);
+  LISP_LOCALS (handler, val, insval, orig_filename, old_undo, p,
+               coding_system, old_Vdeactivate_mark, window_markers,
+               workbuf, conversion_buffer, nbytes, unwind_data, tem);
   struct stat st;
   struct timespec mtime;
   int fd;

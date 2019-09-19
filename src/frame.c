@@ -3884,7 +3884,8 @@ void
 x_set_frame_parameters (struct frame *f, Lisp_Object alist)
 {
   ENTER_LISP_FRAME (alist);
-  LISP_LOCALS (tail, frame, left, top, icon_left, icon_top, fullscreen, elt, prop, val, param_index, old_value);
+  LISP_LOCALS (tail, frame, left, top, icon_left, icon_top,
+               fullscreen, elt, prop, val, param_index, old_value);
 
 
   /* If both of these parameters are present, it's more efficient to

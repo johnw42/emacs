@@ -1616,7 +1616,9 @@ one trustfile (usually a CA bundle).  */)
   (Lisp_Object proc, Lisp_Object type, Lisp_Object proplist)
 {
   ENTER_LISP_FRAME (proc, type, proplist);
-  LISP_LOCALS (global_init, priority_string, trustfiles, crlfiles, keylist, loglevel, hostname, prime_bits, verify_flags, tail, trustfile, crlfile, keyfile, certfile);
+  LISP_LOCALS (global_init, priority_string, trustfiles, crlfiles,
+               keylist, loglevel, hostname, prime_bits, verify_flags,
+               tail, trustfile, crlfile, keyfile, certfile);
   int ret = GNUTLS_E_SUCCESS;
   int max_log_level = 0;
 

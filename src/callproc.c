@@ -297,7 +297,9 @@ call_process (ptrdiff_t nargs, Lisp_Object *args, int filefd,
 	      ptrdiff_t tempfile_index)
 {
   ENTER_LISP_FRAME_VA (nargs, args);
-  LISP_LOCALS (buffer, current_dir, path, error_file, output_file, coding_systems, val, coding_attrs, stderr_file, spec_buffer, curbuf);
+  LISP_LOCALS (buffer, current_dir, path, error_file, output_file,
+               coding_systems, val, coding_attrs, stderr_file,
+               spec_buffer, curbuf);
   bool display_p;
   int fd0;
   int callproc_fd[CALLPROC_FDS];
@@ -1204,7 +1206,11 @@ CHILD_SETUP_TYPE
 child_setup (int in, int out, int err, char **new_argv, bool set_pgrp,
 	     Lisp_Object current_dir)
 {
-  ENTER_LISP_FRAME_T (CHILD_SETUP_TYPE, current_dir);
+#ifndef DOS_NT
+  ENTER_LISP_FRAME (current_dir);
+#else
+  ENTER_LISP_FRAME_T (int, current_dir);
+#endif
   LISP_LOCALS (tem, display, tmp);
   char **env;
   char *pwd_var;

@@ -6770,7 +6770,8 @@ Text larger than the specified size is clipped.  */)
   (Lisp_Object string, Lisp_Object frame, Lisp_Object parms, Lisp_Object timeout, Lisp_Object dx, Lisp_Object dy)
 {
   ENTER_LISP_FRAME (string, frame, parms, timeout, dx, dy);
-  LISP_LOCALS (window, size, tip_buf, last_string, last_frame, last_parms, timer, tail, elt, parm, last);
+  LISP_LOCALS (window, size, tip_buf, last_string, last_frame,
+               last_parms, timer, tail, elt, parm, last);
   struct frame *f, *tip_f;
   struct window *w;
   int root_x, root_y;

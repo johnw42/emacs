@@ -2394,7 +2394,9 @@ read_char (int commandflag, Lisp_Object map,
 	   bool *used_mouse_menu, struct timespec *end_time)
 {
   ENTER_LISP_FRAME (map, prev_event);
-  LISP_LOCALS (c, tem, save, last, tem0, d, posn, keys, saved_echo_string, saved_echo_prompt, help, object, position, window, htem);
+  LISP_LOCALS (c, tem, save, last, d, posn, keys, saved_echo_string,
+               saved_echo_prompt, help, object, position, window, htem);
+  SAVE_LISP_FRAME_PTR();
   ptrdiff_t jmpcount;
   sys_jmp_buf local_getcjmp;
   sys_jmp_buf save_jump;
@@ -2629,7 +2631,6 @@ read_char (int commandflag, Lisp_Object map,
      it *must not* be in effect when we call redisplay.  */
 
   jmpcount = SPECPDL_INDEX ();
-  SAVE_LISP_FRAME_PTR();
   if (sys_setjmp (local_getcjmp))
     {
       RESTORE_LISP_FRAME_PTR();
@@ -2714,9 +2715,9 @@ read_char (int commandflag, Lisp_Object map,
 	  save_getcjmp (save_jump);
 	  record_unwind_protect_ptr (restore_getcjmp, save_jump);
 	  restore_getcjmp (local_getcjmp);
-	  tem0 = sit_for (Vecho_keystrokes, 1, 1);
+	  tem = sit_for (Vecho_keystrokes, 1, 1);
 	  unbind_to (count, Qnil);
-	  if (EQ (tem0, Qt)
+	  if (EQ (tem, Qt)
 	      && ! CONSP (Vunread_command_events))
 	    echo_now ();
 	}
@@ -2789,10 +2790,10 @@ read_char (int commandflag, Lisp_Object map,
 	  save_getcjmp (save_jump);
 	  record_unwind_protect_ptr (restore_getcjmp, save_jump);
 	  restore_getcjmp (local_getcjmp);
-	  tem0 = sit_for (make_number (timeout), 1, 1);
+	  tem = sit_for (make_number (timeout), 1, 1);
 	  unbind_to (count1, Qnil);
 
-	  if (EQ (tem0, Qt)
+	  if (EQ (tem, Qt)
 	      && ! CONSP (Vunread_command_events))
 	    {
 	      Fdo_auto_save (Qnil, Qnil);
@@ -3832,7 +3833,8 @@ kbd_buffer_get_event (KBOARD **kbp,
                       struct timespec *end_time)
 {
   ENTER_LISP_FRAME ();
-  LISP_LOCALS (obj, first, object, position, help, frame, window, focus, bar_window, x, y);
+  LISP_LOCALS (obj, first, object, position, help, frame, window,
+               focus, bar_window, x, y);
 
 #ifdef subprocesses
   if (kbd_on_hold_p () && kbd_buffer_nr_stored () < KBD_BUFFER_SIZE / 4)
@@ -5533,7 +5535,8 @@ static Lisp_Object
 make_lispy_event (struct input_event *event)
 {
   ENTER_LISP_FRAME ();
-  LISP_LOCALS (lispy_c, position, start_pos, items, item, pos, string, new_down, down, head, files);
+  LISP_LOCALS (lispy_c, position, start_pos, items, item, pos,
+               string, new_down, down, head, files);
   int i;
 
   switch (event->kind)
@@ -7772,7 +7775,8 @@ bool
 parse_menu_item (Lisp_Object item, int inmenubar)
 {
   ENTER_LISP_FRAME_T (bool, item);
-  LISP_LOCALS (def, tem, item_string, start, filter, keyhint, help, type, keyeq, prefix, keys);
+  LISP_LOCALS (def, tem, item_string, start, filter, keyhint,
+               help, type, keyeq, prefix, keys);
   int i;
 
   filter = Qnil;
@@ -8600,7 +8604,9 @@ read_char_minibuf_menu_prompt (int commandflag,
 			       Lisp_Object map)
 {
   ENTER_LISP_FRAME (map);
-  LISP_LOCALS (name, rest, vector, prompt_strings, menu_strings, obj, orig_defn_macro, elt, event, tem, upcased_event, downcased_event, desc, s, selected);
+  LISP_LOCALS (name, rest, vector, prompt_strings, menu_strings,
+               obj, orig_defn_macro, elt, event, tem, upcased_event,
+               downcased_event, desc, s, selected);
   ptrdiff_t nlength;
   /* FIXME: Use the minibuffer's frame width.  */
   ptrdiff_t width = FRAME_COLS (SELECTED_FRAME ()) - 4;
@@ -9015,7 +9021,10 @@ read_key_sequence (Lisp_Object *keybuf, int bufsize, Lisp_Object prompt,
 		   bool fix_current_buffer, bool prevent_redisplay)
 {
   ENTER_LISP_FRAME_T (int, prompt);
-  LISP_LOCALS (current_binding, first_event, delayed_switch_frame, fake_prefixed_keys, key, new_binding, frame, kind, window, posn, head, breakdown, new_head, new_click, new_key);
+  LISP_LOCALS (current_binding, first_event, delayed_switch_frame,
+               fake_prefixed_keys, key, new_binding, frame, kind,
+               window, posn, head, breakdown, new_head, new_click,
+               new_key);
   ptrdiff_t count = SPECPDL_INDEX ();
 
   /* How many keys there are in the current key sequence.  */

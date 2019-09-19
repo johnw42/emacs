@@ -852,7 +852,9 @@ usage: (define-charset-internal ...)  */)
   (ptrdiff_t nargs, Lisp_Object *args)
 {
   ENTER_LISP_FRAME_VA (nargs, args);
-  LISP_LOCALS (attrs, val, min_byte_obj, max_byte_obj, parent, parent_min_code, parent_max_code, parent_code_offset, elt, car_part, cdr_part, tail);
+  LISP_LOCALS (attrs, val, min_byte_obj, max_byte_obj, parent,
+               parent_min_code, parent_max_code, parent_code_offset,
+               elt, car_part, cdr_part, tail);
   /* Charset attr vector.  */
   EMACS_UINT hash_code;
   struct Lisp_Hash_Table *hash_table = XHASH_TABLE (Vcharset_hash_table);

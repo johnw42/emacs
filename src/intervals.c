@@ -1005,7 +1005,8 @@ static Lisp_Object
 merge_properties_sticky (Lisp_Object pleft, Lisp_Object pright)
 {
   ENTER_LISP_FRAME (pleft, pright);
-  LISP_LOCALS (props, front, rear, lfront, lrear, rfront, rrear, tail1, tail2, sym, lval, rval, cat, tmp);
+  LISP_LOCALS (props, front, rear, lfront, lrear, rfront, rrear,
+               tail1, tail2, sym, lval, rval, cat, tmp);
   bool use_left, use_right, lpresent;
 
   props = Qnil;

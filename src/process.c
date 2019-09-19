@@ -1703,7 +1703,9 @@ usage: (make-process &rest ARGS)  */)
   (ptrdiff_t nargs, Lisp_Object *args)
 {
   ENTER_LISP_FRAME_VA (nargs, args);
-  LISP_LOCALS (buffer, name, command, program, proc, contact, current_dir, tem, xstderr, stderrproc, coding_systems, val, tem2, program_args, arg_encoding, arg);
+  LISP_LOCALS (buffer, name, command, program, proc, contact,
+               current_dir, tem, xstderr, stderrproc, coding_systems,
+               val, tem2, program_args, arg_encoding, arg);
   ptrdiff_t count = SPECPDL_INDEX ();
 
   if (nargs == 0)
@@ -3942,7 +3944,9 @@ usage: (make-network-process &rest ARGS)  */)
   (ptrdiff_t nargs, Lisp_Object *args)
 {
   ENTER_LISP_FRAME_VA (nargs, args);
-  LISP_LOCALS (proc, contact, tem, name, buffer, host, service, address, filter, sentinel, use_external_socket_p, addrinfos, server);
+  LISP_LOCALS (proc, contact, tem, name, buffer, host, service,
+               address, filter, sentinel, use_external_socket_p,
+               addrinfos, server);
   struct Lisp_Process *p;
   const char *portstring UNINIT;
   ptrdiff_t portstringlen ATTRIBUTE_UNUSED;

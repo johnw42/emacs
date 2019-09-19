@@ -2738,9 +2738,9 @@ static Lisp_Object
 read1 (Lisp_Object readcharfun, int *pch, bool first_in_list)
 {
   ENTER_LISP_FRAME (readcharfun);
-  LISP_LOCALS (tmp, head, data, val, ht, key, record, tbl, length, beg);
-  LISP_LOCALS (end, plist, tem, placeholder, number, value, comma_type);
-  LISP_LOCALS (char_obj, result, name, obarray);
+  LISP_LOCALS (tmp, head, data, val, ht, key, record, tbl, length, beg,
+               end, plist, tem, placeholder, number, value, comma_type,
+               char_obj, result, name, obarray);
   int c;
   bool uninterned_symbol = false;
   bool multibyte;

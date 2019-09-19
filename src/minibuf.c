@@ -375,8 +375,10 @@ read_minibuf (Lisp_Object map, Lisp_Object initial, Lisp_Object prompt,
 	      bool allow_props, bool inherit_input_method)
 {
   ENTER_LISP_FRAME (map, initial, prompt, histvar, histpos, defalt);
-  LISP_LOCALS (val, mini_frame, ambient_dir, minibuffer, input_method, enable_multibyte, histstring, histval, empty_minibuf, dummy, frame, backup_n, tail, buf, root_window, mini_window);
-  LISP_LOCALS (list, key, length, temp);
+  LISP_LOCALS (val, mini_frame, ambient_dir, minibuffer, input_method,
+               enable_multibyte, histstring, histval, empty_minibuf,
+               dummy, frame, backup_n, tail, buf, root_window,
+               mini_window, list, key, length, temp);
   ptrdiff_t count = SPECPDL_INDEX ();
   EMACS_INT pos = 0;
   /* String to add to the history.  */
