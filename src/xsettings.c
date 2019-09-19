@@ -58,7 +58,7 @@ static Lisp_Object current_tool_bar_style = NIL_INIT;
 static void
 store_config_changed_event (Lisp_Object arg, Lisp_Object display_name)
 {
-  ENTER_LISP_FRAME (arg, display_name);
+  ENTER_LISP_FRAME ((arg, display_name));
   struct input_event event;
   EVENT_INIT (event);
   event.kind = CONFIG_CHANGED_EVENT;
@@ -126,8 +126,7 @@ store_font_name_changed (const char *newfont)
 static Lisp_Object
 map_tool_bar_style (const char *tool_bar_style)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (style);
+  ENTER_LISP_FRAME ((), style);
   style = Qnil;
 
   if (tool_bar_style)
@@ -151,8 +150,7 @@ static void
 store_tool_bar_style_changed (const char *newstyle,
                               struct x_display_info *dpyinfo)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (style);
+  ENTER_LISP_FRAME ((), style);
   style = map_tool_bar_style (newstyle);
 
   if (EQ (current_tool_bar_style, style))
@@ -401,8 +399,7 @@ parse_settings (unsigned char *prop,
                 unsigned long bytes,
                 struct xsettings *settings)
 {
-  ENTER_LISP_FRAME_T (int);
-  LISP_LOCALS (byteorder);
+  ENTER_LISP_FRAME_T (int, (), byteorder);
   byteorder = Fbyteorder ();
 
   int my_bo = XFASTINT (byteorder) == 'B' ? MSBFirst : LSBFirst;

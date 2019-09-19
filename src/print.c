@@ -196,7 +196,7 @@ bool print_output_debug_flag EXTERNALLY_VISIBLE = 1;
 static void
 print_unwind (Lisp_Object saved_text)
 {
-  ENTER_LISP_FRAME (saved_text);
+  ENTER_LISP_FRAME ((saved_text));
   memcpy (print_buffer, SDATA (saved_text), SCHARS (saved_text));
   EXIT_LISP_FRAME_VOID ();
 }
@@ -206,8 +206,7 @@ print_unwind (Lisp_Object saved_text)
 static void
 printchar_to_stream (unsigned int ch, FILE *stream)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (coding_system, encoded_ch);
+  ENTER_LISP_FRAME ((), coding_system, encoded_ch);
   Lisp_Object dv UNINIT;
   ptrdiff_t i = 0, n = 1;
   coding_system = Vlocale_coding_system;
@@ -279,7 +278,7 @@ printchar_to_stream (unsigned int ch, FILE *stream)
 static void
 printchar (unsigned int ch, Lisp_Object fun)
 {
-  ENTER_LISP_FRAME (fun);
+  ENTER_LISP_FRAME ((fun));
   if (!NILP (fun) && !EQ (fun, Qt))
     call1 (fun, make_number (ch));
   else
@@ -336,7 +335,7 @@ static void
 strout (const char *ptr, ptrdiff_t size, ptrdiff_t size_byte,
 	Lisp_Object printcharfun)
 {
-  ENTER_LISP_FRAME (printcharfun);
+  ENTER_LISP_FRAME ((printcharfun));
   if (NILP (printcharfun))
     {
       ptrdiff_t incr = size_byte - (print_buffer_size - print_buffer_pos_byte);
@@ -429,8 +428,7 @@ strout (const char *ptr, ptrdiff_t size, ptrdiff_t size_byte,
 static void
 print_string (Lisp_Object string, Lisp_Object printcharfun)
 {
-  ENTER_LISP_FRAME (string, printcharfun);
-  LISP_LOCALS (newstr);
+  ENTER_LISP_FRAME ((string, printcharfun), newstr);
   if (EQ (printcharfun, Qt) || NILP (printcharfun))
     {
       ptrdiff_t chars;
@@ -511,7 +509,7 @@ DEFUN ("write-char", Fwrite_char, Swrite_char, 1, 2, 0,
 PRINTCHARFUN defaults to the value of `standard-output' (which see).  */)
   (Lisp_Object character, Lisp_Object printcharfun)
 {
-  ENTER_LISP_FRAME (character, printcharfun);
+  ENTER_LISP_FRAME ((character, printcharfun));
   if (NILP (printcharfun))
     printcharfun = Vstandard_output;
   CHECK_NUMBER (character);
@@ -528,7 +526,7 @@ PRINTCHARFUN defaults to the value of `standard-output' (which see).  */)
 static void
 print_c_string (char const *string, Lisp_Object printcharfun)
 {
-  ENTER_LISP_FRAME (printcharfun);
+  ENTER_LISP_FRAME ((printcharfun));
   ptrdiff_t len = strlen (string);
   strout (string, len, len, printcharfun);
   EXIT_LISP_FRAME_VOID ();
@@ -540,7 +538,7 @@ print_c_string (char const *string, Lisp_Object printcharfun)
 static void
 write_string (const char *data, Lisp_Object printcharfun)
 {
-  ENTER_LISP_FRAME (printcharfun);
+  ENTER_LISP_FRAME ((printcharfun));
   PRINTPREPARE;
   print_c_string (data, printcharfun);
   PRINTFINISH;
@@ -551,8 +549,7 @@ write_string (const char *data, Lisp_Object printcharfun)
 void
 temp_output_buffer_setup (const char *bufname)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (buf);
+  ENTER_LISP_FRAME ((), buf);
   ptrdiff_t count = SPECPDL_INDEX ();
   register struct buffer *old = current_buffer;
 
@@ -595,8 +592,7 @@ beginning of a line.  Value is non-nil if a newline is printed.
 If PRINTCHARFUN is omitted or nil, the value of `standard-output' is used.  */)
   (Lisp_Object printcharfun, Lisp_Object ensure)
 {
-  ENTER_LISP_FRAME (printcharfun, ensure);
-  LISP_LOCALS (val);
+  ENTER_LISP_FRAME ((printcharfun, ensure), val);
 
   if (NILP (printcharfun))
     printcharfun = Vstandard_output;
@@ -643,7 +639,7 @@ If PRINTCHARFUN is omitted, the value of `standard-output' (which see)
 is used instead.  */)
   (Lisp_Object object, Lisp_Object printcharfun)
 {
-  ENTER_LISP_FRAME (object, printcharfun);
+  ENTER_LISP_FRAME ((object, printcharfun));
   if (NILP (printcharfun))
     printcharfun = Vstandard_output;
   PRINTPREPARE;
@@ -668,8 +664,8 @@ a list, a buffer, a window, a frame, etc.
 A printed representation of an object is text which describes that object.  */)
   (Lisp_Object object, Lisp_Object noescape)
 {
-  ENTER_LISP_FRAME (object, noescape);
-  LISP_LOCALS (save_deactivate_mark, printcharfun);
+  ENTER_LISP_FRAME ((object, noescape), save_deactivate_mark,
+                    printcharfun);
   ptrdiff_t count = SPECPDL_INDEX ();
 
   specbind (Qinhibit_modification_hooks, Qt);
@@ -728,7 +724,7 @@ If PRINTCHARFUN is omitted, the value of `standard-output' (which see)
 is used instead.  */)
   (Lisp_Object object, Lisp_Object printcharfun)
 {
-  ENTER_LISP_FRAME (object, printcharfun);
+  ENTER_LISP_FRAME ((object, printcharfun));
   if (NILP (printcharfun))
     printcharfun = Vstandard_output;
   PRINTPREPARE;
@@ -762,7 +758,7 @@ If PRINTCHARFUN is omitted, the value of `standard-output' (which see)
 is used instead.  */)
   (Lisp_Object object, Lisp_Object printcharfun)
 {
-  ENTER_LISP_FRAME (object, printcharfun);
+  ENTER_LISP_FRAME ((object, printcharfun));
   if (NILP (printcharfun))
     printcharfun = Vstandard_output;
   PRINTPREPARE;
@@ -779,7 +775,7 @@ You can call `print' while debugging emacs, and pass it this function
 to make it write to the debugging output.  */)
   (Lisp_Object character)
 {
-  ENTER_LISP_FRAME (character);
+  ENTER_LISP_FRAME ((character));
   CHECK_NUMBER (character);
   printchar_to_stream (XINT (character), stderr);
   EXIT_LISP_FRAME (character);
@@ -804,7 +800,7 @@ Optional arg APPEND non-nil (interactively, with prefix arg) means
 append to existing target file.  */)
   (Lisp_Object file, Lisp_Object append)
 {
-  ENTER_LISP_FRAME (file, append);
+  ENTER_LISP_FRAME ((file, append));
   /* If equal to STDERR_FILENO, stderr has not been duplicated and is OK as-is.
      Otherwise, this is a close-on-exec duplicate of the original stderr. */
   static int stderr_dup = STDERR_FILENO;
@@ -844,7 +840,7 @@ append to existing target file.  */)
 void
 debug_print (Lisp_Object arg)
 {
-  ENTER_LISP_FRAME (arg);
+  ENTER_LISP_FRAME ((arg));
   Fprin1 (arg, Qexternal_debugging_output);
   fprintf (stderr, "\r\n");
   EXIT_LISP_FRAME_VOID ();
@@ -854,7 +850,7 @@ void safe_debug_print (Lisp_Object) EXTERNALLY_VISIBLE;
 void
 safe_debug_print (Lisp_Object arg)
 {
-  ENTER_LISP_FRAME (arg);
+  ENTER_LISP_FRAME ((arg));
   int valid = valid_lisp_object_p (arg);
 
   if (valid > 0)
@@ -877,8 +873,7 @@ See Info anchor `(elisp)Definition of signal' for some details on how this
 error message is constructed.  */)
   (Lisp_Object obj)
 {
-  ENTER_LISP_FRAME (obj);
-  LISP_LOCALS (value);
+  ENTER_LISP_FRAME ((obj), value);
   struct buffer *old = current_buffer;
 
   /* If OBJ is (error STRING), just return STRING.
@@ -910,8 +905,8 @@ void
 print_error_message (Lisp_Object data, Lisp_Object stream, const char *context,
 		     Lisp_Object caller)
 {
-  ENTER_LISP_FRAME (data, stream, caller);
-  LISP_LOCALS (errname, errmsg, file_error, tail, cname, error_conditions, obj);
+  ENTER_LISP_FRAME ((data, stream, caller), errname, errmsg,
+                    file_error, tail, cname, error_conditions, obj);
 
   if (context != 0)
     write_string (context, stream);
@@ -1130,7 +1125,7 @@ float_to_string (char *buf, double data)
 static void
 print (Lisp_Object obj, Lisp_Object printcharfun, bool escapeflag)
 {
-  ENTER_LISP_FRAME (obj, printcharfun);
+  ENTER_LISP_FRAME ((obj, printcharfun));
   new_backquote_output = 0;
 
   /* Reset print_number_index and Vprint_number_table only when
@@ -1191,8 +1186,7 @@ print (Lisp_Object obj, Lisp_Object printcharfun, bool escapeflag)
 static void
 print_preprocess (Lisp_Object obj)
 {
-  ENTER_LISP_FRAME (obj);
-  LISP_LOCALS (halftail, num);
+  ENTER_LISP_FRAME ((obj), halftail, num);
   int i;
   ptrdiff_t size;
   int loop_count = 0;
@@ -1299,7 +1293,7 @@ DEFUN ("print--preprocess", Fprint_preprocess, Sprint_preprocess, 1, 1, 0,
 Fills `print-number-table'.  */)
   (Lisp_Object object)
 {
-  ENTER_LISP_FRAME (object);
+  ENTER_LISP_FRAME ((object));
   print_number_index = 0;
   print_preprocess (object);
   EXIT_LISP_FRAME (Qnil);
@@ -1322,8 +1316,7 @@ static int print_check_string_result;
 static void
 print_check_string_charset_prop (INTERVAL interval, Lisp_Object string)
 {
-  ENTER_LISP_FRAME (string);
-  LISP_LOCALS (val, charset);
+  ENTER_LISP_FRAME ((string), val, charset);
 
   if (NILP (interval->plist)
       || (print_check_string_result == (PRINT_STRING_NON_CHARSET_FOUND
@@ -1370,7 +1363,7 @@ static Lisp_Object print_prune_charset_plist = NIL_INIT;
 static Lisp_Object
 print_prune_string_charset (Lisp_Object string)
 {
-  ENTER_LISP_FRAME (string);
+  ENTER_LISP_FRAME ((string));
   print_check_string_result = 0;
   traverse_intervals (string_intervals (string), 0,
 		      print_check_string_charset_prop, string);
@@ -1396,8 +1389,7 @@ static bool
 print_vectorlike (Lisp_Object obj, Lisp_Object printcharfun, bool escapeflag,
 		  char *buf)
 {
-  ENTER_LISP_FRAME_T (bool, obj, printcharfun);
-  LISP_LOCALS (frame_name, tem);
+  ENTER_LISP_FRAME_T (bool, (obj, printcharfun), frame_name, tem);
   switch (PSEUDOVECTOR_TYPE (XVECTOR (obj)))
     {
     case PVEC_PROCESS:
@@ -1796,8 +1788,7 @@ print_vectorlike (Lisp_Object obj, Lisp_Object printcharfun, bool escapeflag,
 static void
 print_object (Lisp_Object obj, Lisp_Object printcharfun, bool escapeflag)
 {
-  ENTER_LISP_FRAME (obj, printcharfun);
-  LISP_LOCALS (num, name, halftail, maybe);
+  ENTER_LISP_FRAME ((obj, printcharfun), num, name, halftail, maybe);
   char buf[max (sizeof "from..to..in " + 2 * INT_STRLEN_BOUND (EMACS_INT),
 		max (sizeof " . #" + INT_STRLEN_BOUND (printmax_t),
 		     40))];
@@ -2330,7 +2321,7 @@ print_object (Lisp_Object obj, Lisp_Object printcharfun, bool escapeflag)
 static void
 print_interval (INTERVAL interval, Lisp_Object printcharfun)
 {
-  ENTER_LISP_FRAME (printcharfun);
+  ENTER_LISP_FRAME ((printcharfun));
   if (NILP (interval->plist))
     EXIT_LISP_FRAME_VOID ();
   printchar (' ', printcharfun);

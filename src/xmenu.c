@@ -115,8 +115,7 @@ static LWLIB_ID next_menubar_widget_id;
 static struct frame *
 menubar_id_to_frame (LWLIB_ID id)
 {
-  ENTER_LISP_FRAME_T (struct frame *);
-  LISP_LOCALS (tail, frame);
+  ENTER_LISP_FRAME_T (struct frame *, (), tail, frame);
   struct frame *f;
 
   FOR_EACH_FRAME (tail, frame)
@@ -141,8 +140,7 @@ menubar_id_to_frame (LWLIB_ID id)
 void
 x_menu_set_in_use (bool in_use)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (frames, frame);
+  ENTER_LISP_FRAME ((), frames, frame);
 
   menu_items_inuse = in_use ? Qt : Qnil;
   popup_activated_flag = in_use;
@@ -289,7 +287,7 @@ escape key.  If FRAME has no menu bar this function does nothing.
 If FRAME is nil or not given, use the selected frame.  */)
   (Lisp_Object frame)
 {
-  ENTER_LISP_FRAME (frame);
+  ENTER_LISP_FRAME ((frame));
   XEvent ev;
   struct frame *f = decode_window_system_frame (frame);
   Widget menubar;
@@ -368,7 +366,7 @@ escape key.  If FRAME has no menu bar this function does nothing.
 If FRAME is nil or not given, use the selected frame.  */)
   (Lisp_Object frame)
 {
-  ENTER_LISP_FRAME (frame);
+  ENTER_LISP_FRAME ((frame));
   GtkWidget *menubar;
   struct frame *f;
 
@@ -490,8 +488,7 @@ popup_deactivate_callback (
 static void
 show_help_event (struct frame *f, xt_or_gtk_widget widget, Lisp_Object help)
 {
-  ENTER_LISP_FRAME (help);
-  LISP_LOCALS (frame);
+  ENTER_LISP_FRAME ((help), frame);
 
   if (f)
     {
@@ -513,8 +510,7 @@ show_help_event (struct frame *f, xt_or_gtk_widget widget, Lisp_Object help)
 static void
 menu_highlight_callback (GtkWidget *widget, gpointer call_data)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (help);
+  ENTER_LISP_FRAME ((), help);
   xg_menu_item_cb_data *cb_data;
 
   cb_data = g_object_get_data (G_OBJECT (widget), XG_ITEM_DATA);
@@ -536,8 +532,7 @@ menu_highlight_callback (GtkWidget *widget, gpointer call_data)
 static void
 menu_highlight_callback (Widget widget, LWLIB_ID id, void *call_data)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (help);
+  ENTER_LISP_FRAME ((), help);
   widget_value *wv = call_data;
   help = wv ? wv->help : Qnil;
 
@@ -700,8 +695,7 @@ apply_systemfont_to_menu (struct frame *f, Widget w)
 void
 set_frame_menubar (struct frame *f, bool first_time, bool deep_p)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (items, buffer, key, string, maps);
+  ENTER_LISP_FRAME ((), items, buffer, key, string, maps);
   xt_or_gtk_widget menubar_widget, old_widget;
 #ifdef USE_X_TOOLKIT
   LWLIB_ID id;
@@ -1170,8 +1164,7 @@ struct next_popup_x_y
 static void
 menu_position_func (GtkMenu *menu, gint *x, gint *y, gboolean *push_in, gpointer user_data)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (frame, workarea);
+  ENTER_LISP_FRAME ((), frame, workarea);
   struct next_popup_x_y *data = user_data;
   GtkRequisition req;
   int max_x = -1;
@@ -1472,8 +1465,8 @@ Lisp_Object
 x_menu_show (struct frame *f, int x, int y, int menuflags,
 	     Lisp_Object title, const char **error_name)
 {
-  ENTER_LISP_FRAME (title);
-  LISP_LOCALS (pane_name, prefix, item_name, enable, descrip, def, type, selected, help, entry);
+  ENTER_LISP_FRAME ((title), pane_name, prefix, item_name, enable,
+                    descrip, def, type, selected, help, entry);
   int i;
   widget_value *wv, *save_wv = 0, *first_wv = 0, *prev_wv = 0;
   widget_value **submenu_stack
@@ -1835,8 +1828,8 @@ static Lisp_Object
 x_dialog_show (struct frame *f, Lisp_Object title,
 	       Lisp_Object header, const char **error_name)
 {
-  ENTER_LISP_FRAME (title, header);
-  LISP_LOCALS (pane_name, item_name, enable, descrip, entry);
+  ENTER_LISP_FRAME ((title, header), pane_name, item_name, enable,
+                    descrip, entry);
   int i, nb_buttons=0;
   char dialog_name[6];
 
@@ -1993,8 +1986,7 @@ x_dialog_show (struct frame *f, Lisp_Object title,
 Lisp_Object
 xw_popup_dialog (struct frame *f, Lisp_Object header, Lisp_Object contents)
 {
-  ENTER_LISP_FRAME (header, contents);
-  LISP_LOCALS (title, selection);
+  ENTER_LISP_FRAME ((header, contents), title, selection);
   const char *error_name;
   ptrdiff_t specpdl_count = SPECPDL_INDEX ();
 
@@ -2045,8 +2037,7 @@ static struct frame *menu_help_frame;
 static void
 menu_help_callback (char const *help_string, int pane, int item)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (pane_name, menu_object);
+  ENTER_LISP_FRAME ((), pane_name, menu_object);
   Lisp_Object *first_item;
 
   first_item = XVECTOR (menu_items)->contents;
@@ -2068,7 +2059,7 @@ menu_help_callback (char const *help_string, int pane, int item)
 static void
 pop_down_menu (Lisp_Object arg)
 {
-  ENTER_LISP_FRAME (arg);
+  ENTER_LISP_FRAME ((arg));
   struct frame *f = XSAVE_POINTER (arg, 0);
   XMenu *menu = XSAVE_POINTER (arg, 1);
 
@@ -2101,8 +2092,8 @@ Lisp_Object
 x_menu_show (struct frame *f, int x, int y, int menuflags,
 	     Lisp_Object title, const char **error_name)
 {
-  ENTER_LISP_FRAME (title);
-  LISP_LOCALS (entry, pane_prefix, pane_name, prefix, item, item_name, enable, descrip, help);
+  ENTER_LISP_FRAME ((title), entry, pane_prefix, pane_name, prefix,
+                    item, item_name, enable, descrip, help);
   Window root;
   XMenu *menu;
   int pane, selidx, lpane, status;

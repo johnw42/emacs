@@ -164,8 +164,8 @@ ptrdiff_t
 get_composition_id (ptrdiff_t charpos, ptrdiff_t bytepos, ptrdiff_t nchars,
 		    Lisp_Object prop, Lisp_Object string)
 {
-  ENTER_LISP_FRAME_T (ptrdiff_t, prop, string);
-  LISP_LOCALS (id, length, components, key);
+  ENTER_LISP_FRAME_T (ptrdiff_t, (prop, string), id, length,
+                      components, key);
   ptrdiff_t glyph_len;
   struct Lisp_Vector *key_contents = XVECTOR_CACHE_INIT;
   struct Lisp_Hash_Table *hash_table = XHASH_TABLE (composition_hash_table);
@@ -423,8 +423,7 @@ find_composition (ptrdiff_t pos, ptrdiff_t limit,
 		  ptrdiff_t *start, ptrdiff_t *end,
 		  Lisp_Object *prop, Lisp_Object object)
 {
-  ENTER_LISP_FRAME_T (bool, object);
-  LISP_LOCALS (val);
+  ENTER_LISP_FRAME_T (bool, (object), val);
 
   if (get_property_and_range (pos, Qcomposition, prop, start, end, object))
     EXIT_LISP_FRAME (1);
@@ -462,8 +461,7 @@ find_composition (ptrdiff_t pos, ptrdiff_t limit,
 static void
 run_composition_function (ptrdiff_t from, ptrdiff_t to, Lisp_Object prop)
 {
-  ENTER_LISP_FRAME (prop);
-  LISP_LOCALS (func);
+  ENTER_LISP_FRAME ((prop), func);
   ptrdiff_t start, end;
 
   func = COMPOSITION_MODIFICATION_FUNC (prop);
@@ -496,8 +494,7 @@ run_composition_function (ptrdiff_t from, ptrdiff_t to, Lisp_Object prop)
 void
 update_compositions (ptrdiff_t from, ptrdiff_t to, int check_mask)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (prop);
+  ENTER_LISP_FRAME ((), prop);
   ptrdiff_t start, end;
   /* The beginning and end of the region to set the property
      `auto-composed' to nil.  */
@@ -604,8 +601,7 @@ update_compositions (ptrdiff_t from, ptrdiff_t to, int check_mask)
 void
 make_composition_value_copy (Lisp_Object list)
 {
-  ENTER_LISP_FRAME (list);
-  LISP_LOCALS (plist, val);
+  ENTER_LISP_FRAME ((list), plist, val);
 
   for (; CONSP (list); list = XCDR (list))
     {
@@ -632,8 +628,7 @@ void
 compose_text (ptrdiff_t start, ptrdiff_t end, Lisp_Object components,
 	      Lisp_Object modification_func, Lisp_Object string)
 {
-  ENTER_LISP_FRAME (components, modification_func, string);
-  LISP_LOCALS (prop);
+  ENTER_LISP_FRAME ((components, modification_func, string), prop);
 
   prop = Fcons (Fcons (make_number (end - start), components),
 		modification_func);
@@ -655,7 +650,7 @@ static Lisp_Object gstring_lookup_cache (Lisp_Object);
 static Lisp_Object
 gstring_lookup_cache (Lisp_Object header)
 {
-  ENTER_LISP_FRAME (header);
+  ENTER_LISP_FRAME ((header));
   struct Lisp_Hash_Table *h = XHASH_TABLE (gstring_hash_table);
   ptrdiff_t i = hash_lookup (h, header, NULL);
 
@@ -665,8 +660,7 @@ gstring_lookup_cache (Lisp_Object header)
 Lisp_Object
 composition_gstring_put_cache (Lisp_Object gstring, ptrdiff_t len)
 {
-  ENTER_LISP_FRAME (gstring);
-  LISP_LOCALS (header, copy);
+  ENTER_LISP_FRAME ((gstring), header, copy);
   struct Lisp_Hash_Table *h = XHASH_TABLE (gstring_hash_table);
   EMACS_UINT hash;
   ptrdiff_t i;
@@ -716,8 +710,7 @@ Clear composition cache.  */)
 bool
 composition_gstring_p (Lisp_Object gstring)
 {
-  ENTER_LISP_FRAME_T (bool, gstring);
-  LISP_LOCALS (header, glyph);
+  ENTER_LISP_FRAME_T (bool, (gstring), header, glyph);
   ptrdiff_t i;
 
   if (! VECTORP (gstring) || ASIZE (gstring) < 2)
@@ -750,8 +743,7 @@ int
 composition_gstring_width (Lisp_Object gstring, ptrdiff_t from, ptrdiff_t to,
 			   struct font_metrics *metrics)
 {
-  ENTER_LISP_FRAME_T (int, gstring);
-  LISP_LOCALS (font_object);
+  ENTER_LISP_FRAME_T (int, (gstring), font_object);
   Lisp_Object *glyph;
   int width = 0;
 
@@ -812,7 +804,7 @@ static Lisp_Object
 fill_gstring_header (Lisp_Object header, ptrdiff_t from, ptrdiff_t from_byte,
 		     ptrdiff_t to, Lisp_Object font_object, Lisp_Object string)
 {
-  ENTER_LISP_FRAME (header, font_object, string);
+  ENTER_LISP_FRAME ((header, font_object, string));
   ptrdiff_t len = to - from, i;
 
   if (len == 0)
@@ -847,8 +839,7 @@ fill_gstring_header (Lisp_Object header, ptrdiff_t from, ptrdiff_t from_byte,
 static void
 fill_gstring_body (Lisp_Object gstring)
 {
-  ENTER_LISP_FRAME (gstring);
-  LISP_LOCALS (font_object, header, g);
+  ENTER_LISP_FRAME ((gstring), font_object, header, g);
   font_object = LGSTRING_FONT (gstring);
 
   header = AREF (gstring, 0);
@@ -905,8 +896,7 @@ autocmp_chars (Lisp_Object rule, ptrdiff_t charpos, ptrdiff_t bytepos,
 	       ptrdiff_t limit, struct window *win, struct face *face,
 	       Lisp_Object string)
 {
-  ENTER_LISP_FRAME (rule, string);
-  LISP_LOCALS (pos, re, font_object, lgstring);
+  ENTER_LISP_FRAME ((rule, string), pos, re, font_object, lgstring);
   ptrdiff_t count = SPECPDL_INDEX ();
   pos = make_number (charpos);
 
@@ -964,8 +954,7 @@ autocmp_chars (Lisp_Object rule, ptrdiff_t charpos, ptrdiff_t bytepos,
 static bool
 char_composable_p (int c)
 {
-  ENTER_LISP_FRAME_T (bool);
-  LISP_LOCALS (val);
+  ENTER_LISP_FRAME_T (bool, (), val);
   EXIT_LISP_FRAME ((c > ' '
 	  && (c == ZERO_WIDTH_NON_JOINER || c == ZERO_WIDTH_JOINER
 	      || (val = CHAR_TABLE_REF (Vunicode_category_table, c),
@@ -988,8 +977,7 @@ char_composable_p (int c)
 void
 composition_compute_stop_pos (struct composition_it *cmp_it, ptrdiff_t charpos, ptrdiff_t bytepos, ptrdiff_t endpos, Lisp_Object string)
 {
-  ENTER_LISP_FRAME (string);
-  LISP_LOCALS (prop, val, elt);
+  ENTER_LISP_FRAME ((string), prop, val, elt);
   ptrdiff_t start, end;
   int c;
   /* This is from forward_to_next_line_start in xdisp.c.  */
@@ -1214,8 +1202,7 @@ composition_reseat_it (struct composition_it *cmp_it, ptrdiff_t charpos,
 		       ptrdiff_t bytepos, ptrdiff_t endpos, struct window *w,
 		       struct face *face, Lisp_Object string)
 {
-  ENTER_LISP_FRAME_T (bool, string);
-  LISP_LOCALS (prop, lgstring, val, elt);
+  ENTER_LISP_FRAME_T (bool, (string), prop, lgstring, val, elt);
   if (cmp_it->ch == -2)
     {
       composition_compute_stop_pos (cmp_it, charpos, bytepos, endpos, string);
@@ -1349,8 +1336,7 @@ composition_reseat_it (struct composition_it *cmp_it, ptrdiff_t charpos,
 int
 composition_update_it (struct composition_it *cmp_it, ptrdiff_t charpos, ptrdiff_t bytepos, Lisp_Object string)
 {
-  ENTER_LISP_FRAME_T (int, string);
-  LISP_LOCALS (gstring, glyph);
+  ENTER_LISP_FRAME_T (int, (string), gstring, glyph);
   int i;
   int c UNINIT;
 
@@ -1480,8 +1466,7 @@ find_automatic_composition (ptrdiff_t pos, ptrdiff_t limit,
 			    ptrdiff_t *start, ptrdiff_t *end,
 			    Lisp_Object *gstring, Lisp_Object string)
 {
-  ENTER_LISP_FRAME_T (bool, string);
-  LISP_LOCALS (window, val, elt);
+  ENTER_LISP_FRAME_T (bool, (string), window, val, elt);
   ptrdiff_t head, tail, stop;
   /* Forward limit position of checking a composition taking a
      looking-back count into account.  */
@@ -1672,8 +1657,7 @@ find_automatic_composition (ptrdiff_t pos, ptrdiff_t limit,
 ptrdiff_t
 composition_adjust_point (ptrdiff_t last_pt, ptrdiff_t new_pt)
 {
-  ENTER_LISP_FRAME_T (ptrdiff_t);
-  LISP_LOCALS (val, glyph);
+  ENTER_LISP_FRAME_T (ptrdiff_t, (), val, glyph);
   ptrdiff_t i, beg, end;
 
   if (new_pt == BEGV || new_pt == ZV)
@@ -1758,8 +1742,7 @@ If GLYPH is nil, the remaining elements of the glyph-string vector
 should be ignored.  */)
   (Lisp_Object from, Lisp_Object to, Lisp_Object font_object, Lisp_Object string)
 {
-  ENTER_LISP_FRAME (from, to, font_object, string);
-  LISP_LOCALS (gstring, header);
+  ENTER_LISP_FRAME ((from, to, font_object, string), gstring, header);
   ptrdiff_t frompos, frombyte, topos;
 
   if (! FONT_OBJECT_P (font_object))
@@ -1817,7 +1800,7 @@ Optional 3rd and 4th arguments are COMPONENTS and MODIFICATION-FUNC
 for the composition.  See `compose-region' for more details.  */)
   (Lisp_Object start, Lisp_Object end, Lisp_Object components, Lisp_Object modification_func)
 {
-  ENTER_LISP_FRAME (start, end, components, modification_func);
+  ENTER_LISP_FRAME ((start, end, components, modification_func));
   validate_region (&start, &end);
   if (!NILP (components)
       && !INTEGERP (components)
@@ -1840,7 +1823,8 @@ for the composition.  See `compose-string' for more details.  */)
   (Lisp_Object string, Lisp_Object start, Lisp_Object end,
    Lisp_Object components, Lisp_Object modification_func)
 {
-  ENTER_LISP_FRAME (string, start, end, components, modification_func);
+  ENTER_LISP_FRAME ((string, start, end, components,
+                     modification_func));
   ptrdiff_t from, to;
 
   CHECK_STRING (string);
@@ -1857,8 +1841,8 @@ Return information about composition at or nearest to position POS.
 See `find-composition' for more details.  */)
   (Lisp_Object pos, Lisp_Object limit, Lisp_Object string, Lisp_Object detail_p)
 {
-  ENTER_LISP_FRAME (pos, limit, string, detail_p);
-  LISP_LOCALS (prop, tail, gstring, components, relative_p, mod_func);
+  ENTER_LISP_FRAME ((pos, limit, string, detail_p), prop, tail,
+                    gstring, components, relative_p, mod_func);
   ptrdiff_t start, end, from, to;
   int id;
 

@@ -91,7 +91,7 @@ init_lcms_functions (void)
 static bool
 parse_lab_list (Lisp_Object lab_list, cmsCIELab *color)
 {
-  ENTER_LISP_FRAME_T (bool, lab_list);
+  ENTER_LISP_FRAME_T (bool, (lab_list));
 #define PARSE_LAB_LIST_FIELD(field)					\
   if (CONSP (lab_list) && NUMBERP (XCAR (lab_list)))			\
     {									\
@@ -119,7 +119,7 @@ chroma, and hue, respectively. The parameters each default to 1.  */)
   (Lisp_Object color1, Lisp_Object color2,
    Lisp_Object kL, Lisp_Object kC, Lisp_Object kH)
 {
-  ENTER_LISP_FRAME (color1, color2, kL, kC, kH);
+  ENTER_LISP_FRAME ((color1, color2, kL, kC, kH));
   cmsCIELab Lab1, Lab2;
   cmsFloat64Number Kl, Kc, Kh;
 
@@ -184,7 +184,7 @@ default_viewing_conditions (const cmsCIEXYZ *wp, cmsViewingConditions *vc)
 static bool
 parse_xyz_list (Lisp_Object xyz_list, cmsCIEXYZ *color)
 {
-  ENTER_LISP_FRAME_T (bool, xyz_list);
+  ENTER_LISP_FRAME_T (bool, (xyz_list));
 #define PARSE_XYZ_LIST_FIELD(field)					\
   if (CONSP (xyz_list) && NUMBERP (XCAR (xyz_list)))			\
     {									\
@@ -204,7 +204,7 @@ parse_xyz_list (Lisp_Object xyz_list, cmsCIEXYZ *color)
 static bool
 parse_jch_list (Lisp_Object jch_list, cmsJCh *color)
 {
-  ENTER_LISP_FRAME_T (bool, jch_list);
+  ENTER_LISP_FRAME_T (bool, (jch_list));
 #define PARSE_JCH_LIST_FIELD(field)					\
   if (CONSP (jch_list) && NUMBERP (XCAR (jch_list)))			\
     {									\
@@ -226,7 +226,7 @@ parse_jch_list (Lisp_Object jch_list, cmsJCh *color)
 static bool
 parse_jab_list (Lisp_Object jab_list, lcmsJab_t *color)
 {
-  ENTER_LISP_FRAME_T (bool, jab_list);
+  ENTER_LISP_FRAME_T (bool, (jab_list));
 #define PARSE_JAB_LIST_FIELD(field)					\
   if (CONSP (jab_list) && NUMBERP (XCAR (jab_list)))			\
     {									\
@@ -247,7 +247,7 @@ static bool
 parse_viewing_conditions (Lisp_Object view, const cmsCIEXYZ *wp,
                           cmsViewingConditions *vc)
 {
-  ENTER_LISP_FRAME_T (bool, view);
+  ENTER_LISP_FRAME_T (bool, (view));
 #define PARSE_VIEW_CONDITION_FLOAT(field)				\
   if (CONSP (view) && NUMBERP (XCAR (view)))				\
     {									\
@@ -328,7 +328,7 @@ Optional arguments WHITEPOINT and VIEW are the same as in `lcms-cam02-ucs',
 which see.  */)
   (Lisp_Object color, Lisp_Object whitepoint, Lisp_Object view)
 {
-  ENTER_LISP_FRAME (color, whitepoint, view);
+  ENTER_LISP_FRAME ((color, whitepoint, view));
   cmsViewingConditions vc;
   cmsJCh jch;
   cmsCIEXYZ xyz, xyzw;
@@ -366,7 +366,7 @@ Optional arguments WHITEPOINT and VIEW are the same as in `lcms-cam02-ucs',
 which see.  */)
   (Lisp_Object color, Lisp_Object whitepoint, Lisp_Object view)
 {
-  ENTER_LISP_FRAME (color, whitepoint, view);
+  ENTER_LISP_FRAME ((color, whitepoint, view));
   cmsViewingConditions vc;
   cmsJCh jch;
   cmsCIEXYZ xyz, xyzw;
@@ -405,7 +405,7 @@ Optional arguments WHITEPOINT and VIEW are the same as in `lcms-cam02-ucs',
 which see.  */)
   (Lisp_Object color, Lisp_Object whitepoint, Lisp_Object view)
 {
-  ENTER_LISP_FRAME (color, whitepoint, view);
+  ENTER_LISP_FRAME ((color, whitepoint, view));
   cmsViewingConditions vc;
   lcmsJab_t jab;
   cmsJCh jch;
@@ -447,7 +447,7 @@ Optional arguments WHITEPOINT and VIEW are the same as in `lcms-cam02-ucs',
 which see.  */)
   (Lisp_Object color, Lisp_Object whitepoint, Lisp_Object view)
 {
-  ENTER_LISP_FRAME (color, whitepoint, view);
+  ENTER_LISP_FRAME ((color, whitepoint, view));
   cmsViewingConditions vc;
   cmsJCh jch;
   lcmsJab_t jab;
@@ -503,7 +503,7 @@ The default viewing conditions are (20 100 1 1).  */)
   (Lisp_Object color1, Lisp_Object color2, Lisp_Object whitepoint,
    Lisp_Object view)
 {
-  ENTER_LISP_FRAME (color1, color2, whitepoint, view);
+  ENTER_LISP_FRAME ((color1, color2, whitepoint, view));
   cmsViewingConditions vc;
   cmsJCh jch1, jch2;
   cmsCIEXYZ xyz1, xyz2, xyzw;
@@ -551,7 +551,7 @@ DEFUN ("lcms-temp->white-point", Flcms_temp_to_white_point, Slcms_temp_to_white_
 Valid range of TEMPERATURE is from 4000K to 25000K.  */)
   (Lisp_Object temperature)
 {
-  ENTER_LISP_FRAME (temperature);
+  ENTER_LISP_FRAME ((temperature));
   cmsFloat64Number tempK;
   cmsCIExyY whitepoint;
   cmsCIEXYZ wp;
@@ -579,8 +579,7 @@ DEFUN ("lcms2-available-p", Flcms2_available_p, Slcms2_available_p, 0, 0, 0,
        doc: /* Return t if lcms2 color calculations are available in this instance of Emacs.  */)
      (void)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (found, status);
+  ENTER_LISP_FRAME ((), found, status);
 #ifdef WINDOWSNT
   found = Fassq (Qlcms2, Vlibrary_cache);
 

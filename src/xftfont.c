@@ -130,8 +130,7 @@ xftfont_get_colors (struct frame *f, struct face *face, GC gc,
 static Lisp_Object
 xftfont_list (struct frame *f, Lisp_Object spec)
 {
-  ENTER_LISP_FRAME (spec);
-  LISP_LOCALS (list, tail);
+  ENTER_LISP_FRAME ((spec), list, tail);
   list = ftfont_list (f, spec);
 
 
@@ -144,8 +143,7 @@ xftfont_list (struct frame *f, Lisp_Object spec)
 static Lisp_Object
 xftfont_match (struct frame *f, Lisp_Object spec)
 {
-  ENTER_LISP_FRAME (spec);
-  LISP_LOCALS (entity);
+  ENTER_LISP_FRAME ((spec), entity);
   entity = ftfont_match (f, spec);
 
 
@@ -212,8 +210,7 @@ xftfont_fix_match (FcPattern *pat, FcPattern *match)
 static void
 xftfont_add_rendering_parameters (FcPattern *pat, Lisp_Object entity)
 {
-  ENTER_LISP_FRAME (entity);
-  LISP_LOCALS (tail, key, val);
+  ENTER_LISP_FRAME ((entity), tail, key, val);
   int ival;
 
   for (tail = AREF (entity, FONT_EXTRA_INDEX); CONSP (tail); tail = XCDR (tail))
@@ -264,8 +261,7 @@ xftfont_add_rendering_parameters (FcPattern *pat, Lisp_Object entity)
 static Lisp_Object
 xftfont_open (struct frame *f, Lisp_Object entity, int pixel_size)
 {
-  ENTER_LISP_FRAME (entity);
-  LISP_LOCALS (val, filename, idx, font_object);
+  ENTER_LISP_FRAME ((entity), val, filename, idx, font_object);
   FcResult result;
   Display *display = FRAME_X_DISPLAY (f);
   FcPattern *pat = NULL, *match;
@@ -540,7 +536,7 @@ xftfont_done_face (struct frame *f, struct face *face)
 static int
 xftfont_has_char (Lisp_Object font, int c)
 {
-  ENTER_LISP_FRAME_T (int, font);
+  ENTER_LISP_FRAME_T (int, (font));
   struct xftfont_info *xftfont_info;
   struct charset *cs = NULL;
 
@@ -678,8 +674,7 @@ xftfont_draw (struct glyph_string *s, int from, int to, int x, int y,
 static Lisp_Object
 xftfont_shape (Lisp_Object lgstring)
 {
-  ENTER_LISP_FRAME (lgstring);
-  LISP_LOCALS (val);
+  ENTER_LISP_FRAME ((lgstring), val);
   struct font *font = CHECK_FONT_GET_OBJECT (LGSTRING_FONT (lgstring));
   struct xftfont_info *xftfont_info = (struct xftfont_info *) font;
   FT_Face ft_face = XftLockFace (xftfont_info->xftfont);
@@ -726,7 +721,7 @@ static bool
 xftfont_cached_font_ok (struct frame *f, Lisp_Object font_object,
                         Lisp_Object entity)
 {
-  ENTER_LISP_FRAME_T (bool, font_object, entity);
+  ENTER_LISP_FRAME_T (bool, (font_object, entity));
   struct xftfont_info *info = (struct xftfont_info *) XFONT_OBJECT (font_object);
   FcPattern *oldpat = info->xftfont->pattern;
   Display *display = FRAME_X_DISPLAY (f);

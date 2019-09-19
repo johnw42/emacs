@@ -221,7 +221,7 @@ e.g., if the number of buttons is reported as 3, but Emacs only sees 2 of
 them.  This happens with wheeled mice on Windows 9X, for example.  */)
   (Lisp_Object nbuttons)
 {
-  ENTER_LISP_FRAME (nbuttons);
+  ENTER_LISP_FRAME ((nbuttons));
   int n;
 
   CHECK_NUMBER (nbuttons);
@@ -312,8 +312,7 @@ mouse_get_pos (struct frame **f, int insist, Lisp_Object *bar_window,
 	       enum scroll_bar_part *part, Lisp_Object *x, Lisp_Object *y,
 	       Time *time)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (frame, tail);
+  ENTER_LISP_FRAME ((), frame, tail);
   int ix, iy;
 
   /* Clear the mouse-moved flag for every frame on this display.  */
@@ -523,8 +522,7 @@ vga_installed (void)
 void
 dos_set_window_size (int *rows, int *cols)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (video_mode, window);
+  ENTER_LISP_FRAME ((), video_mode, window);
   char video_name[30];
   union REGS regs;
   int video_mode_value, have_vga = 0;
@@ -736,8 +734,7 @@ msdos_set_cursor_shape (struct frame *f, int start_line, int width)
 static void
 IT_set_cursor_type (struct frame *f, Lisp_Object cursor_type)
 {
-  ENTER_LISP_FRAME (cursor_type);
-  LISP_LOCALS (bar_parms);
+  ENTER_LISP_FRAME ((cursor_type), bar_parms);
   if (EQ (cursor_type, Qbar) || EQ (cursor_type, Qhbar))
     {
       /* Just BAR means the normal EGA/VGA cursor.  */
@@ -1306,8 +1303,7 @@ IT_update_end (struct frame *f)
 static void
 IT_frame_up_to_date (struct frame *f)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (new_cursor, frame_desired_cursor);
+  ENTER_LISP_FRAME ((), new_cursor, frame_desired_cursor);
   struct window *sw;
 
   FRAME_MOUSE_UPDATE (f);
@@ -1557,7 +1553,7 @@ DEFUN ("msdos-remember-default-colors", Fmsdos_remember_default_colors,
        doc: /* Remember the screen colors of the current frame.  */)
   (Lisp_Object frame)
 {
-  ENTER_LISP_FRAME (frame);
+  ENTER_LISP_FRAME ((frame));
   struct frame *f;
 
   CHECK_FRAME (frame);
@@ -1576,8 +1572,7 @@ DEFUN ("msdos-remember-default-colors", Fmsdos_remember_default_colors,
 void
 IT_set_frame_parameters (struct frame *f, Lisp_Object alist)
 {
-  ENTER_LISP_FRAME (alist);
-  LISP_LOCALS (tail, elt, prop, val);
+  ENTER_LISP_FRAME ((alist), tail, elt, prop, val);
   int i, j, length = XINT (Flength (alist));
   Lisp_Object *parms
     = (Lisp_Object *) alloca (length * word_size);
@@ -2392,8 +2387,7 @@ Each input key receives two values in this vector: first the ASCII code,
 and then the scan code.  */)
   (void)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (val);
+  ENTER_LISP_FRAME ((), val);
   Lisp_Object *keys = XVECTOR (recent_doskeys)->contents;
 
 
@@ -2414,8 +2408,7 @@ and then the scan code.  */)
 static int
 dos_rawgetc (void)
 {
-  ENTER_LISP_FRAME_T (int);
-  LISP_LOCALS (mouse_window);
+  ENTER_LISP_FRAME_T (int, (), mouse_window);
   struct input_event event;
   union REGS regs;
   Mouse_HLInfo *hlinfo = MOUSE_HL_INFO (SELECTED_FRAME ());
@@ -3059,8 +3052,7 @@ XMenuActivate (Display *foo, XMenu *menu, int *pane, int *selidx,
 	       int x0, int y0, unsigned ButtonMask, char **txt,
 	       void (*help_callback)(char const *, int, int))
 {
-  ENTER_LISP_FRAME_T (int);
-  LISP_LOCALS (saved_echo_area_message, selectface);
+  ENTER_LISP_FRAME_T (int, (), saved_echo_area_message, selectface);
   struct IT_menu_state *state;
   int statecount, x, y, i, b, screensize, leave, result, onepane;
   int title_faces[4];		/* face to display the menu title */
@@ -3440,8 +3432,7 @@ If FILENAME is not a string, returns nil.
 The argument object is never altered--the value is a copy.  */)
   (Lisp_Object filename)
 {
-  ENTER_LISP_FRAME (filename);
-  LISP_LOCALS (tem);
+  ENTER_LISP_FRAME ((filename), tem);
 
   if (! STRINGP (filename))
     EXIT_LISP_FRAME (Qnil);
@@ -3734,8 +3725,7 @@ int
 run_msdos_command (char **argv, const char *working_dir,
 		   int tempin, int tempout, int temperr, char **envv)
 {
-  ENTER_LISP_FRAME_T (int);
-  LISP_LOCALS (cmd);
+  ENTER_LISP_FRAME_T (int, (), cmd);
   char *saveargv1, *saveargv2, *lowcase_argv0, *pa, *pl;
   char oldwd[MAXPATHLEN + 1]; /* Fixed size is safe on MSDOS.  */
   int msshell, result = -1, inbak, outbak, errbak, x, y;

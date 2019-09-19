@@ -142,7 +142,7 @@ nil_buffer (struct buffer *b)
 static void
 CHECK_OVERLAY (Lisp_Object x)
 {
-  ENTER_LISP_FRAME (x);
+  ENTER_LISP_FRAME ((x));
   CHECK_TYPE (OVERLAYP (x), Qoverlayp, x);
   EXIT_LISP_FRAME_VOID ();
 }
@@ -388,7 +388,7 @@ bset_zv_marker (struct buffer *b, Lisp_Object val)
 void
 nsberror (Lisp_Object spec)
 {
-  ENTER_LISP_FRAME (spec);
+  ENTER_LISP_FRAME ((spec));
   if (STRINGP (spec))
     error ("No buffer named %s", SDATA (spec));
   error ("Invalid buffer argument");
@@ -399,7 +399,7 @@ DEFUN ("buffer-live-p", Fbuffer_live_p, Sbuffer_live_p, 1, 1, 0,
 Value is nil if OBJECT is not a buffer or if it has been killed.  */)
   (Lisp_Object object)
 {
-  ENTER_LISP_FRAME (object);
+  ENTER_LISP_FRAME ((object));
   EXIT_LISP_FRAME (((BUFFERP (object) && BUFFER_LIVE_P (XBUFFER (object)))
 	  ? Qt : Qnil));
 }
@@ -411,8 +411,7 @@ proper order for that frame: the buffers shown in FRAME come first,
 followed by the rest of the buffers.  */)
   (Lisp_Object frame)
 {
-  ENTER_LISP_FRAME (frame);
-  LISP_LOCALS (general, framelist, prevlist, tail);
+  ENTER_LISP_FRAME ((frame), general, framelist, prevlist, tail);
   general = Fmapcar (Qcdr, Vbuffer_alist);
 
   if (FRAMEP (frame))
@@ -449,8 +448,7 @@ followed by the rest of the buffers.  */)
 static Lisp_Object
 assoc_ignore_text_properties (Lisp_Object key, Lisp_Object list)
 {
-  ENTER_LISP_FRAME (key, list);
-  LISP_LOCALS (tail, elt);
+  ENTER_LISP_FRAME ((key, list), tail, elt);
   for (tail = list; CONSP (tail); tail = XCDR (tail))
     {
       elt = XCAR (tail);
@@ -468,7 +466,7 @@ is a string and there is no buffer with that name, return nil.  If
 BUFFER-OR-NAME is a buffer, return it as given.  */)
   (Lisp_Object buffer_or_name)
 {
-  ENTER_LISP_FRAME (buffer_or_name);
+  ENTER_LISP_FRAME ((buffer_or_name));
   if (BUFFERP (buffer_or_name))
     EXIT_LISP_FRAME (buffer_or_name);
   CHECK_STRING (buffer_or_name);
@@ -483,8 +481,7 @@ If there is no such live buffer, return nil.
 See also `find-buffer-visiting'.  */)
   (Lisp_Object filename)
 {
-  ENTER_LISP_FRAME (filename);
-  LISP_LOCALS (tail, buf, handler, handled_buf);
+  ENTER_LISP_FRAME ((filename), tail, buf, handler, handled_buf);
 
   CHECK_STRING (filename);
   filename = Fexpand_file_name (filename, Qnil);
@@ -512,8 +509,7 @@ See also `find-buffer-visiting'.  */)
 Lisp_Object
 get_truename_buffer (Lisp_Object filename)
 {
-  ENTER_LISP_FRAME (filename);
-  LISP_LOCALS (tail, buf);
+  ENTER_LISP_FRAME ((filename), tail, buf);
 
   FOR_EACH_LIVE_BUFFER (tail, buf)
     {
@@ -535,8 +531,7 @@ If BUFFER-OR-NAME is a buffer instead of a string, return it as given,
 even if it is dead.  The return value is never nil.  */)
   (Lisp_Object buffer_or_name)
 {
-  ENTER_LISP_FRAME (buffer_or_name);
-  LISP_LOCALS (buffer, name);
+  ENTER_LISP_FRAME ((buffer_or_name), buffer, name);
   register struct buffer *b;
 
   buffer = Fget_buffer (buffer_or_name);
@@ -633,8 +628,7 @@ even if it is dead.  The return value is never nil.  */)
 static struct Lisp_Overlay *
 copy_overlays (struct buffer *b, struct Lisp_Overlay *list)
 {
-  ENTER_LISP_FRAME_T (struct Lisp_Overlay *);
-  LISP_LOCALS (overlay, start, end);
+  ENTER_LISP_FRAME_T (struct Lisp_Overlay *, (), overlay, start, end);
   struct Lisp_Overlay *result = NULL, *tail = NULL;
 
   for (; list; list = list->next)
@@ -685,8 +679,7 @@ set_buffer_overlays_after (struct buffer *b, struct Lisp_Overlay *o)
 static void
 clone_per_buffer_values (struct buffer *from, struct buffer *to)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (obj);
+  ENTER_LISP_FRAME ((), obj);
   int offset;
 
   FOR_EACH_PER_BUFFER_OBJECT_AT (offset)
@@ -726,8 +719,7 @@ clone_per_buffer_values (struct buffer *from, struct buffer *to)
 static void
 record_buffer_markers (struct buffer *b)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (buffer);
+  ENTER_LISP_FRAME ((), buffer);
   if (! NILP (BVAR (b, pt_marker)))
     {
 
@@ -749,8 +741,7 @@ record_buffer_markers (struct buffer *b)
 static void
 fetch_buffer_markers (struct buffer *b)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (m);
+  ENTER_LISP_FRAME ((), m);
   if (! NILP (BVAR (b, pt_marker)))
     {
 
@@ -781,8 +772,7 @@ such as major and minor modes, in the indirect buffer.
 CLONE nil means the indirect buffer's state is reset to default values.  */)
   (Lisp_Object base_buffer, Lisp_Object name, Lisp_Object clone)
 {
-  ENTER_LISP_FRAME (base_buffer, name, clone);
-  LISP_LOCALS (buf, tem);
+  ENTER_LISP_FRAME ((base_buffer, name, clone), buf, tem);
   struct buffer *b;
 
   CHECK_STRING (name);
@@ -996,8 +986,8 @@ reset_buffer (register struct buffer *b)
 static void
 reset_buffer_local_variables (struct buffer *b, bool permanent_too)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (tmp, last, buffer, local_var, prop, sym, list, newlist, elt);
+  ENTER_LISP_FRAME ((), tmp, last, buffer, local_var, prop, sym, list,
+                    newlist, elt);
   int offset, i;
 
   /* Reset the major mode to Fundamental, together with all the
@@ -1130,8 +1120,7 @@ visible to users), then if buffer NAME already exists a random number
 is first appended to NAME, to speed up finding a non-existent buffer.  */)
   (Lisp_Object name, Lisp_Object ignore)
 {
-  ENTER_LISP_FRAME (name, ignore);
-  LISP_LOCALS (genbase, gentemp);
+  ENTER_LISP_FRAME ((name, ignore), genbase, gentemp);
 
   CHECK_STRING (name);
 
@@ -1175,7 +1164,7 @@ BUFFER defaults to the current buffer.
 Return nil if BUFFER has been killed.  */)
   (Lisp_Object buffer)
 {
-  ENTER_LISP_FRAME (buffer);
+  ENTER_LISP_FRAME ((buffer));
   EXIT_LISP_FRAME (BVAR (decode_buffer (buffer), name));
 }
 
@@ -1184,7 +1173,7 @@ DEFUN ("buffer-file-name", Fbuffer_file_name, Sbuffer_file_name, 0, 1, 0,
 No argument or nil as argument means use the current buffer.  */)
   (Lisp_Object buffer)
 {
-  ENTER_LISP_FRAME (buffer);
+  ENTER_LISP_FRAME ((buffer));
   EXIT_LISP_FRAME (BVAR (decode_buffer (buffer), filename));
 }
 
@@ -1195,7 +1184,7 @@ If BUFFER is not indirect, return nil.
 BUFFER defaults to the current buffer.  */)
   (Lisp_Object buffer)
 {
-  ENTER_LISP_FRAME (buffer);
+  ENTER_LISP_FRAME ((buffer));
   struct buffer *base = decode_buffer (buffer)->base_buffer;
   EXIT_LISP_FRAME (base ? (XSETBUFFER (buffer, base), buffer) : Qnil);
 }
@@ -1207,8 +1196,7 @@ If VARIABLE does not have a buffer-local binding in BUFFER, the value
 is the default binding of the variable.  */)
   (Lisp_Object variable, Lisp_Object buffer)
 {
-  ENTER_LISP_FRAME (variable, buffer);
-  LISP_LOCALS (result);
+  ENTER_LISP_FRAME ((variable, buffer), result);
   result = buffer_local_value (variable, buffer);
 
 
@@ -1225,8 +1213,7 @@ is the default binding of the variable.  */)
 Lisp_Object
 buffer_local_value (Lisp_Object variable, Lisp_Object buffer)
 {
-  ENTER_LISP_FRAME (variable, buffer);
-  LISP_LOCALS (result, current_alist_element);
+  ENTER_LISP_FRAME ((variable, buffer), result, current_alist_element);
   register struct buffer *buf;
   struct Lisp_Symbol *sym;
 
@@ -1291,8 +1278,7 @@ buffer_local_value (Lisp_Object variable, Lisp_Object buffer)
 static Lisp_Object
 buffer_lisp_local_variables (struct buffer *buf, bool clone)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (result, tail, val, elt);
+  ENTER_LISP_FRAME ((), result, tail, val, elt);
   result = Qnil;
 
   for (tail = BVAR (buf, local_var_alist); CONSP (tail); tail = XCDR (tail))
@@ -1328,8 +1314,7 @@ Note that storing new VALUEs in these elements doesn't change the variables.
 No argument or nil as argument means use current buffer as BUFFER.  */)
   (Lisp_Object buffer)
 {
-  ENTER_LISP_FRAME (buffer);
-  LISP_LOCALS (result, sym, val);
+  ENTER_LISP_FRAME ((buffer), result, sym, val);
   struct buffer *buf = decode_buffer (buffer);
   result = buffer_lisp_local_variables (buf, 0);
 
@@ -1363,7 +1348,7 @@ DEFUN ("buffer-modified-p", Fbuffer_modified_p, Sbuffer_modified_p,
 No argument or nil as argument means use current buffer as BUFFER.  */)
   (Lisp_Object buffer)
 {
-  ENTER_LISP_FRAME (buffer);
+  ENTER_LISP_FRAME ((buffer));
   struct buffer *buf = decode_buffer (buffer);
   EXIT_LISP_FRAME (BUF_SAVE_MODIFF (buf) < BUF_MODIFF (buf) ? Qt : Qnil);
 }
@@ -1376,7 +1361,7 @@ header lines.  This function also forces recomputation of the
 menu bar menus and the frame title.  */)
      (Lisp_Object all)
 {
-  ENTER_LISP_FRAME (all);
+  ENTER_LISP_FRAME ((all));
   if (!NILP (all))
     {
       update_mode_lines = 10;
@@ -1402,7 +1387,7 @@ the function's argument is non-nil, but only if both `buffer-file-name'
 and `buffer-file-truename' are non-nil.  */)
   (Lisp_Object flag)
 {
-  ENTER_LISP_FRAME (flag);
+  ENTER_LISP_FRAME ((flag));
   Frestore_buffer_modified_p (flag);
 
   /* Set update_mode_lines only if buffer is displayed in some window.
@@ -1429,8 +1414,7 @@ It is not ensured that mode lines will be updated to show the modified
 state of the current buffer.  Use with care.  */)
   (Lisp_Object flag)
 {
-  ENTER_LISP_FRAME (flag);
-  LISP_LOCALS (fn);
+  ENTER_LISP_FRAME ((flag), fn);
 
   /* If buffer becoming modified, lock the file.
      If buffer becoming unmodified, unlock the file.  */
@@ -1485,7 +1469,7 @@ text in that buffer is changed.  It wraps around occasionally.
 No argument or nil as argument means use current buffer as BUFFER.  */)
   (Lisp_Object buffer)
 {
-  ENTER_LISP_FRAME (buffer);
+  ENTER_LISP_FRAME ((buffer));
   EXIT_LISP_FRAME (make_number (BUF_MODIFF (decode_buffer (buffer))));
 }
 
@@ -1501,7 +1485,7 @@ between these calls.  No argument or nil as argument means use current
 buffer as BUFFER.  */)
   (Lisp_Object buffer)
 {
-  ENTER_LISP_FRAME (buffer);
+  ENTER_LISP_FRAME ((buffer));
   EXIT_LISP_FRAME (make_number (BUF_CHARS_MODIFF (decode_buffer (buffer))));
 }
 
@@ -1519,8 +1503,7 @@ We return the name we actually gave the buffer.
 This does not change the name of the visited file (if any).  */)
   (Lisp_Object newname, Lisp_Object unique)
 {
-  ENTER_LISP_FRAME (newname, unique);
-  LISP_LOCALS (tem, buf);
+  ENTER_LISP_FRAME ((newname, unique), tem, buf);
 
   CHECK_STRING (newname);
 
@@ -1567,7 +1550,7 @@ This does not change the name of the visited file (if any).  */)
 static bool
 candidate_buffer (Lisp_Object b, Lisp_Object buffer)
 {
-  ENTER_LISP_FRAME_T (bool, b, buffer);
+  ENTER_LISP_FRAME_T (bool, (b, buffer));
   EXIT_LISP_FRAME ((BUFFERP (b) && !EQ (b, buffer)
 	  && BUFFER_LIVE_P (XBUFFER (b))
 	  && !BUFFER_HIDDEN_P (XBUFFER (b))));
@@ -1586,8 +1569,8 @@ list first, followed by the list of all buffers.  If no other buffer
 exists, return the buffer `*scratch*' (creating it if necessary).  */)
   (Lisp_Object buffer, Lisp_Object visible_ok, Lisp_Object frame)
 {
-  ENTER_LISP_FRAME (buffer, visible_ok, frame);
-  LISP_LOCALS (tail, pred, buf, notsogood);
+  ENTER_LISP_FRAME ((buffer, visible_ok, frame), tail, pred, buf,
+                    notsogood);
   struct frame *f = decode_live_frame (frame);
   tail = f->buffer_list;
   pred = f->buffer_predicate;
@@ -1650,8 +1633,7 @@ exists, return the buffer `*scratch*' (creating it if necessary).  */)
 Lisp_Object
 other_buffer_safely (Lisp_Object buffer)
 {
-  ENTER_LISP_FRAME (buffer);
-  LISP_LOCALS (tail, buf);
+  ENTER_LISP_FRAME ((buffer), tail, buf);
 
   FOR_EACH_LIVE_BUFFER (tail, buf)
     if (candidate_buffer (buf, buffer))
@@ -1674,8 +1656,7 @@ DEFUN ("buffer-enable-undo", Fbuffer_enable_undo, Sbuffer_enable_undo,
 No argument or nil as argument means do this for the current buffer.  */)
   (Lisp_Object buffer)
 {
-  ENTER_LISP_FRAME (buffer);
-  LISP_LOCALS (real_buffer);
+  ENTER_LISP_FRAME ((buffer), real_buffer);
 
   if (NILP (buffer))
     XSETBUFFER (real_buffer, current_buffer);
@@ -1746,8 +1727,7 @@ with SIGHUP.  This function calls `replace-buffer-in-windows' for
 cleaning up all windows currently displaying the buffer to be killed. */)
   (Lisp_Object buffer_or_name)
 {
-  ENTER_LISP_FRAME (buffer_or_name);
-  LISP_LOCALS (buffer, tem, buf, delete, owner);
+  ENTER_LISP_FRAME ((buffer_or_name), buffer, tem, buf, delete, owner);
   struct buffer *b;
   struct Lisp_Marker *m;
 
@@ -2015,8 +1995,7 @@ cleaning up all windows currently displaying the buffer to be killed. */)
 void
 record_buffer (Lisp_Object buffer)
 {
-  ENTER_LISP_FRAME (buffer);
-  LISP_LOCALS (aelt, aelt_cons, tem);
+  ENTER_LISP_FRAME ((buffer), aelt, aelt_cons, tem);
   register struct frame *f = XFRAME (selected_frame);
 
   CHECK_BUFFER (buffer);
@@ -2055,8 +2034,7 @@ DEFUN ("bury-buffer-internal", Fbury_buffer_internal, Sbury_buffer_internal,
        doc: /* Move BUFFER to the end of the buffer list.  */)
   (Lisp_Object buffer)
 {
-  ENTER_LISP_FRAME (buffer);
-  LISP_LOCALS (aelt, aelt_cons, tem);
+  ENTER_LISP_FRAME ((buffer), aelt, aelt_cons, tem);
   register struct frame *f = XFRAME (selected_frame);
 
   CHECK_BUFFER (buffer);
@@ -2093,8 +2071,7 @@ Use this function before selecting the buffer, since it may need to inspect
 the current buffer's major mode.  */)
   (Lisp_Object buffer)
 {
-  ENTER_LISP_FRAME (buffer);
-  LISP_LOCALS (function);
+  ENTER_LISP_FRAME ((buffer), function);
   ptrdiff_t count;
 
   CHECK_BUFFER (buffer);
@@ -2134,8 +2111,7 @@ DEFUN ("current-buffer", Fcurrent_buffer, Scurrent_buffer, 0, 0, 0,
        doc: /* Return the current buffer as a Lisp object.  */)
   (void)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (buf);
+  ENTER_LISP_FRAME ((), buf);
   XSETBUFFER (buf, current_buffer);
   EXIT_LISP_FRAME (buf);
 }
@@ -2163,8 +2139,7 @@ set_buffer_internal_1 (register struct buffer *b)
    post_acquire_global_lock.  */
 void set_buffer_internal_2 (register struct buffer *b)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (tail, var);
+  ENTER_LISP_FRAME ((), tail, var);
   register struct buffer *old_buf;
 
   scheme_check_ptr (b, "buffer");
@@ -2251,8 +2226,7 @@ ends when the current command terminates.  Use `switch-to-buffer' or
 The return value is the buffer made current.  */)
   (Lisp_Object buffer_or_name)
 {
-  ENTER_LISP_FRAME (buffer_or_name);
-  LISP_LOCALS (buffer);
+  ENTER_LISP_FRAME ((buffer_or_name), buffer);
   buffer = Fget_buffer (buffer_or_name);
   if (NILP (buffer))
     nsberror (buffer_or_name);
@@ -2265,7 +2239,7 @@ The return value is the buffer made current.  */)
 void
 restore_buffer (Lisp_Object buffer_or_name)
 {
-  ENTER_LISP_FRAME (buffer_or_name);
+  ENTER_LISP_FRAME ((buffer_or_name));
   Fset_buffer (buffer_or_name);
   EXIT_LISP_FRAME_VOID ();
 }
@@ -2275,7 +2249,7 @@ restore_buffer (Lisp_Object buffer_or_name)
 void
 set_buffer_if_live (Lisp_Object buffer)
 {
-  ENTER_LISP_FRAME (buffer);
+  ENTER_LISP_FRAME ((buffer));
   if (BUFFER_LIVE_P (XBUFFER (buffer)))
     set_buffer_internal (XBUFFER (buffer));
   EXIT_LISP_FRAME_VOID ();
@@ -2288,7 +2262,7 @@ If the text under POSITION (which defaults to point) has the
 `inhibit-read-only' text property set, the error will not be raised.  */)
   (Lisp_Object position)
 {
-  ENTER_LISP_FRAME (position);
+  ENTER_LISP_FRAME ((position));
   if (NILP (position))
     XSETFASTINT (position, PT);
   else
@@ -2322,8 +2296,7 @@ so the buffer is truly empty after this.  */)
 void
 validate_region (register Lisp_Object *b, register Lisp_Object *e)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (tem);
+  ENTER_LISP_FRAME ((), tem);
   CHECK_NUMBER_COERCE_MARKER (*b);
   CHECK_NUMBER_COERCE_MARKER (*e);
 
@@ -2380,8 +2353,7 @@ Using this function from `save-excursion' might produce surprising
 results, see Info node `(elisp)Swapping Text'.  */)
   (Lisp_Object buffer)
 {
-  ENTER_LISP_FRAME (buffer);
-  LISP_LOCALS (w, ws, buf1, buf2);
+  ENTER_LISP_FRAME ((buffer), w, ws, buf1, buf2);
   struct buffer *other_buffer;
   CHECK_BUFFER (buffer);
   other_buffer = XBUFFER (buffer);
@@ -2548,8 +2520,7 @@ If the multibyte flag was really changed, undo information of the
 current buffer is cleared.  */)
   (Lisp_Object flag)
 {
-  ENTER_LISP_FRAME (flag);
-  LISP_LOCALS (old_undo, process);
+  ENTER_LISP_FRAME ((flag), old_undo, process);
   struct Lisp_Marker *tail, *markers;
   struct buffer *other;
   ptrdiff_t begv, zv;
@@ -2885,8 +2856,7 @@ overlays_at (EMACS_INT pos, bool extend, Lisp_Object **vec_ptr,
 	     ptrdiff_t *len_ptr,
 	     ptrdiff_t *next_ptr, ptrdiff_t *prev_ptr, bool change_req)
 {
-  ENTER_LISP_FRAME_T (ptrdiff_t);
-  LISP_LOCALS (overlay, start, end);
+  ENTER_LISP_FRAME_T (ptrdiff_t, (), overlay, start, end);
   struct Lisp_Overlay *tail;
   ptrdiff_t idx = 0;
   ptrdiff_t len = *len_ptr;
@@ -3020,8 +2990,7 @@ overlays_in (EMACS_INT beg, EMACS_INT end, bool extend,
 	     Lisp_Object **vec_ptr, ptrdiff_t *len_ptr,
 	     ptrdiff_t *next_ptr, ptrdiff_t *prev_ptr)
 {
-  ENTER_LISP_FRAME_T (ptrdiff_t);
-  LISP_LOCALS (overlay, ostart, oend);
+  ENTER_LISP_FRAME_T (ptrdiff_t, (), overlay, ostart, oend);
   struct Lisp_Overlay *tail;
   ptrdiff_t idx = 0;
   ptrdiff_t len = *len_ptr;
@@ -3136,8 +3105,7 @@ overlays_in (EMACS_INT beg, EMACS_INT end, bool extend,
 bool
 mouse_face_overlay_overlaps (Lisp_Object overlay)
 {
-  ENTER_LISP_FRAME_T (bool, overlay);
-  LISP_LOCALS (tem);
+  ENTER_LISP_FRAME_T (bool, (overlay), tem);
   ptrdiff_t start = OVERLAY_POSITION (OVERLAY_START (overlay));
   ptrdiff_t end = OVERLAY_POSITION (OVERLAY_END (overlay));
   ptrdiff_t n, i, size;
@@ -3170,8 +3138,7 @@ mouse_face_overlay_overlaps (Lisp_Object overlay)
 Lisp_Object
 disable_line_numbers_overlay_at_eob (void)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (tem);
+  ENTER_LISP_FRAME ((), tem);
   ptrdiff_t n, i, size;
   Lisp_Object *v;
   tem = Qnil;
@@ -3202,8 +3169,7 @@ disable_line_numbers_overlay_at_eob (void)
 bool
 overlay_touches_p (ptrdiff_t pos)
 {
-  ENTER_LISP_FRAME_T (bool);
-  LISP_LOCALS (overlay);
+  ENTER_LISP_FRAME_T (bool, (), overlay);
   struct Lisp_Overlay *tail;
 
   for (tail = current_buffer->overlays_before; tail; tail = tail->next)
@@ -3279,8 +3245,7 @@ compare_overlays (const void *v1, const void *v2)
 ptrdiff_t
 sort_overlays (Lisp_Object *overlay_vec, ptrdiff_t noverlays, struct window *w)
 {
-  ENTER_LISP_FRAME_T (ptrdiff_t);
-  LISP_LOCALS (tem, overlay, window, car, cdr);
+  ENTER_LISP_FRAME_T (ptrdiff_t, (), tem, overlay, window, car, cdr);
   ptrdiff_t i, j;
   USE_SAFE_ALLOCA;
   struct sortvec *sortvec;
@@ -3390,7 +3355,7 @@ static void
 record_overlay_string (struct sortstrlist *ssl, Lisp_Object str,
 		       Lisp_Object str2, Lisp_Object pri, ptrdiff_t size)
 {
-  ENTER_LISP_FRAME (str, str2, pri);
+  ENTER_LISP_FRAME ((str, str2, pri));
   ptrdiff_t nbytes;
 
   if (ssl->used == ssl->size)
@@ -3446,8 +3411,7 @@ record_overlay_string (struct sortstrlist *ssl, Lisp_Object str,
 ptrdiff_t
 overlay_strings (ptrdiff_t pos, struct window *w, unsigned char **pstr)
 {
-  ENTER_LISP_FRAME_T (ptrdiff_t);
-  LISP_LOCALS (overlay, window, str, tem);
+  ENTER_LISP_FRAME_T (ptrdiff_t, (), overlay, window, str, tem);
   struct Lisp_Overlay *ov;
   ptrdiff_t startpos, endpos;
   bool multibyte = ! NILP (BVAR (current_buffer, enable_multibyte_characters));
@@ -3569,8 +3533,8 @@ overlay_strings (ptrdiff_t pos, struct window *w, unsigned char **pstr)
 void
 recenter_overlay_lists (struct buffer *buf, ptrdiff_t pos)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (overlay, beg, end, otherbeg, otheroverlay, otherend);
+  ENTER_LISP_FRAME ((), overlay, beg, end, otherbeg, otheroverlay,
+                    otherend);
   struct Lisp_Overlay *prev, *tail, *next;
 
   /* See if anything in overlays_before should move to overlays_after.  */
@@ -3722,8 +3686,7 @@ adjust_overlays_for_delete (ptrdiff_t pos, ptrdiff_t length)
 void
 fix_start_end_in_overlays (register ptrdiff_t start, register ptrdiff_t end)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (overlay);
+  ENTER_LISP_FRAME ((), overlay);
   struct Lisp_Overlay *before_list UNINIT;
   struct Lisp_Overlay *after_list UNINIT;
   /* These are either nil, indicating that before_list or after_list
@@ -3870,8 +3833,7 @@ fix_start_end_in_overlays (register ptrdiff_t start, register ptrdiff_t end)
 void
 fix_overlays_before (struct buffer *bp, ptrdiff_t prev, ptrdiff_t pos)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (tem);
+  ENTER_LISP_FRAME ((), tem);
   /* If parent is nil, replace overlays_before; otherwise, parent->next.  */
   struct Lisp_Overlay *tail = bp->overlays_before, *parent = NULL, *right_pair;
   ptrdiff_t end UNINIT;
@@ -3951,7 +3913,7 @@ DEFUN ("overlayp", Foverlayp, Soverlayp, 1, 1, 0,
        doc: /* Return t if OBJECT is an overlay.  */)
   (Lisp_Object object)
 {
-  ENTER_LISP_FRAME (object);
+  ENTER_LISP_FRAME ((object));
   EXIT_LISP_FRAME ((OVERLAYP (object) ? Qt : Qnil));
 }
 
@@ -3968,8 +3930,8 @@ for the rear of the overlay advance when text is inserted there
   (Lisp_Object beg, Lisp_Object end, Lisp_Object buffer,
    Lisp_Object front_advance, Lisp_Object rear_advance)
 {
-  ENTER_LISP_FRAME (beg, end, buffer, front_advance, rear_advance);
-  LISP_LOCALS (overlay, temp);
+  ENTER_LISP_FRAME ((beg, end, buffer, front_advance, rear_advance),
+                    overlay, temp);
   struct buffer *b;
 
   if (NILP (buffer))
@@ -4066,7 +4028,7 @@ unchain_overlay (struct Lisp_Overlay *list, struct Lisp_Overlay *overlay)
 static void
 unchain_both (struct buffer *b, Lisp_Object overlay)
 {
-  ENTER_LISP_FRAME (overlay);
+  ENTER_LISP_FRAME ((overlay));
   struct Lisp_Overlay *ov = XOVERLAY (overlay);
 
   set_buffer_overlays_before (b, unchain_overlay (b->overlays_before, ov));
@@ -4082,8 +4044,7 @@ If BUFFER is omitted, and OVERLAY is in no buffer, put it in the current
 buffer.  */)
   (Lisp_Object overlay, Lisp_Object beg, Lisp_Object end, Lisp_Object buffer)
 {
-  ENTER_LISP_FRAME (overlay, beg, end, buffer);
-  LISP_LOCALS (obuffer, temp);
+  ENTER_LISP_FRAME ((overlay, beg, end, buffer), obuffer, temp);
   struct buffer *b, *ob = 0;
   ptrdiff_t count = SPECPDL_INDEX ();
   ptrdiff_t n_beg, n_end;
@@ -4183,8 +4144,7 @@ DEFUN ("delete-overlay", Fdelete_overlay, Sdelete_overlay, 1, 1, 0,
        doc: /* Delete the overlay OVERLAY from its buffer.  */)
   (Lisp_Object overlay)
 {
-  ENTER_LISP_FRAME (overlay);
-  LISP_LOCALS (buffer);
+  ENTER_LISP_FRAME ((overlay), buffer);
   struct buffer *b;
   ptrdiff_t count = SPECPDL_INDEX ();
 
@@ -4218,7 +4178,7 @@ BUFFER omitted or nil means delete all overlays of the current
 buffer.  */)
   (Lisp_Object buffer)
 {
-  ENTER_LISP_FRAME (buffer);
+  ENTER_LISP_FRAME ((buffer));
   delete_all_overlays (decode_buffer (buffer));
   EXIT_LISP_FRAME (Qnil);
 }
@@ -4229,7 +4189,7 @@ DEFUN ("overlay-start", Foverlay_start, Soverlay_start, 1, 1, 0,
        doc: /* Return the position at which OVERLAY starts.  */)
   (Lisp_Object overlay)
 {
-  ENTER_LISP_FRAME (overlay);
+  ENTER_LISP_FRAME ((overlay));
   CHECK_OVERLAY (overlay);
 
   EXIT_LISP_FRAME ((Fmarker_position (OVERLAY_START (overlay))));
@@ -4239,7 +4199,7 @@ DEFUN ("overlay-end", Foverlay_end, Soverlay_end, 1, 1, 0,
        doc: /* Return the position at which OVERLAY ends.  */)
   (Lisp_Object overlay)
 {
-  ENTER_LISP_FRAME (overlay);
+  ENTER_LISP_FRAME ((overlay));
   CHECK_OVERLAY (overlay);
 
   EXIT_LISP_FRAME ((Fmarker_position (OVERLAY_END (overlay))));
@@ -4250,7 +4210,7 @@ DEFUN ("overlay-buffer", Foverlay_buffer, Soverlay_buffer, 1, 1, 0,
 Return nil if OVERLAY has been deleted.  */)
   (Lisp_Object overlay)
 {
-  ENTER_LISP_FRAME (overlay);
+  ENTER_LISP_FRAME ((overlay));
   CHECK_OVERLAY (overlay);
 
   EXIT_LISP_FRAME (Fmarker_buffer (OVERLAY_START (overlay)));
@@ -4262,7 +4222,7 @@ This is a copy of OVERLAY's plist; modifying its conses has no effect on
 OVERLAY.  */)
   (Lisp_Object overlay)
 {
-  ENTER_LISP_FRAME (overlay);
+  ENTER_LISP_FRAME ((overlay));
   CHECK_OVERLAY (overlay);
 
   EXIT_LISP_FRAME (Fcopy_sequence (XOVERLAY (overlay)->plist));
@@ -4274,8 +4234,7 @@ DEFUN ("overlays-at", Foverlays_at, Soverlays_at, 1, 2, 0,
 If SORTED is non-nil, then sort them by decreasing priority.  */)
   (Lisp_Object pos, Lisp_Object sorted)
 {
-  ENTER_LISP_FRAME (pos, sorted);
-  LISP_LOCALS (result);
+  ENTER_LISP_FRAME ((pos, sorted), result);
   ptrdiff_t len, noverlays;
   Lisp_Object *overlay_vec;
 
@@ -4319,8 +4278,7 @@ between BEG and END, or at END provided END denotes the position at the
 end of the buffer.  */)
   (Lisp_Object beg, Lisp_Object end)
 {
-  ENTER_LISP_FRAME (beg, end);
-  LISP_LOCALS (result);
+  ENTER_LISP_FRAME ((beg, end), result);
   ptrdiff_t len, noverlays;
   Lisp_Object *overlay_vec;
 
@@ -4352,8 +4310,7 @@ If there are no overlay boundaries from POS to (point-max),
 the value is (point-max).  */)
   (Lisp_Object pos)
 {
-  ENTER_LISP_FRAME (pos);
-  LISP_LOCALS (oend);
+  ENTER_LISP_FRAME ((pos), oend);
   ptrdiff_t i, len, noverlays;
   ptrdiff_t endpos;
   Lisp_Object *overlay_vec;
@@ -4395,7 +4352,7 @@ If there are no overlay boundaries from (point-min) to POS,
 the value is (point-min).  */)
   (Lisp_Object pos)
 {
-  ENTER_LISP_FRAME (pos);
+  ENTER_LISP_FRAME ((pos));
   ptrdiff_t prevpos;
   Lisp_Object *overlay_vec;
   ptrdiff_t len;
@@ -4434,8 +4391,7 @@ The lists you get are copies, so that changing them has no effect.
 However, the overlays you get are the real objects that the buffer uses.  */)
   (void)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (before, after, tmp);
+  ENTER_LISP_FRAME ((), before, after, tmp);
   struct Lisp_Overlay *ol;
   before = Qnil;
   after = Qnil;
@@ -4461,7 +4417,7 @@ That makes overlay lookup faster for positions near POS (but perhaps slower
 for positions far away from POS).  */)
   (Lisp_Object pos)
 {
-  ENTER_LISP_FRAME (pos);
+  ENTER_LISP_FRAME ((pos));
   ptrdiff_t p;
   CHECK_NUMBER_COERCE_MARKER (pos);
 
@@ -4474,7 +4430,7 @@ DEFUN ("overlay-get", Foverlay_get, Soverlay_get, 2, 2, 0,
        doc: /* Get the property of overlay OVERLAY with property name PROP.  */)
   (Lisp_Object overlay, Lisp_Object prop)
 {
-  ENTER_LISP_FRAME (overlay, prop);
+  ENTER_LISP_FRAME ((overlay, prop));
   CHECK_OVERLAY (overlay);
   EXIT_LISP_FRAME (lookup_char_property (XOVERLAY (overlay)->plist, prop, 0));
 }
@@ -4484,8 +4440,7 @@ DEFUN ("overlay-put", Foverlay_put, Soverlay_put, 3, 3, 0,
 VALUE will be returned.*/)
   (Lisp_Object overlay, Lisp_Object prop, Lisp_Object value)
 {
-  ENTER_LISP_FRAME (overlay, prop, value);
-  LISP_LOCALS (tail, buffer);
+  ENTER_LISP_FRAME ((overlay, prop, value), tail, buffer);
   bool changed;
 
   CHECK_OVERLAY (overlay);
@@ -4543,7 +4498,7 @@ static ptrdiff_t last_overlay_modification_hooks_used;
 static void
 add_overlay_mod_hooklist (Lisp_Object functionlist, Lisp_Object overlay)
 {
-  ENTER_LISP_FRAME (functionlist, overlay);
+  ENTER_LISP_FRAME ((functionlist, overlay));
   ptrdiff_t oldsize = ASIZE (last_overlay_modification_hooks);
 
   if (oldsize - 1 <= last_overlay_modification_hooks_used)
@@ -4574,8 +4529,8 @@ void
 report_overlay_modification (Lisp_Object start, Lisp_Object end, bool after,
 			     Lisp_Object arg1, Lisp_Object arg2, Lisp_Object arg3)
 {
-  ENTER_LISP_FRAME (start, end, arg1, arg2, arg3);
-  LISP_LOCALS (prop, overlay, ostart, oend, prop_i, overlay_i);
+  ENTER_LISP_FRAME ((start, end, arg1, arg2, arg3), prop, overlay,
+                    ostart, oend, prop_i, overlay_i);
   struct Lisp_Overlay *tail;
   /* True if this change is an insertion.  */
   bool insertion = (after ? XFASTINT (arg3) == 0 : EQ (start, end));
@@ -4702,7 +4657,7 @@ static void
 call_overlay_mod_hooks (Lisp_Object list, Lisp_Object overlay, bool after,
 			Lisp_Object arg1, Lisp_Object arg2, Lisp_Object arg3)
 {
-  ENTER_LISP_FRAME (list, overlay, arg1, arg2, arg3);
+  ENTER_LISP_FRAME ((list, overlay, arg1, arg2, arg3));
   while (CONSP (list))
     {
       if (NILP (arg3))
@@ -4719,8 +4674,7 @@ call_overlay_mod_hooks (Lisp_Object list, Lisp_Object overlay, bool after,
 void
 evaporate_overlays (ptrdiff_t pos)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (overlay, hit_list);
+  ENTER_LISP_FRAME ((), overlay, hit_list);
   struct Lisp_Overlay *tail;
 
   hit_list = Qnil;
@@ -5213,8 +5167,7 @@ scheme_init_buffer_once (void)
 void
 init_buffer_once (void)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (syntax_table, category_table);
+  ENTER_LISP_FRAME ((), syntax_table, category_table);
   int idx;
 
   // TODO(jrw): Why is this necessary?
@@ -5441,8 +5394,7 @@ init_buffer_once (void)
 void
 init_buffer (int initialized)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (temp);
+  ENTER_LISP_FRAME ((), temp);
   char *pwd;
   ptrdiff_t len;
 
@@ -5571,7 +5523,7 @@ static void
 defvar_per_buffer (struct Lisp_Buffer_Objfwd *bo_fwd, const char *namestring,
 		   Lisp_Object *address, Lisp_Object predicate)
 {
-  ENTER_LISP_FRAME (predicate);
+  ENTER_LISP_FRAME ((predicate));
   struct Lisp_Symbol *sym;
   int offset;
 

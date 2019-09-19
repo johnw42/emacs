@@ -115,7 +115,7 @@ usage: (interactive &optional ARG-DESCRIPTOR)  */
 static Lisp_Object
 quotify_arg (Lisp_Object exp)
 {
-  ENTER_LISP_FRAME (exp);
+  ENTER_LISP_FRAME ((exp));
   if (CONSP (exp)
       || (SYMBOLP (exp)
 	  && !NILP (exp) && !EQ (exp, Qt)))
@@ -128,8 +128,7 @@ quotify_arg (Lisp_Object exp)
 static Lisp_Object
 quotify_args (Lisp_Object exp)
 {
-  ENTER_LISP_FRAME (exp);
-  LISP_LOCALS (tail, next);
+  ENTER_LISP_FRAME ((exp), tail, next);
   for (tail = exp; CONSP (tail); tail = next)
     {
       next = XCDR (tail);
@@ -144,8 +143,7 @@ static const char *callint_argfuns[]
 static void
 check_mark (bool for_region)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (tem);
+  ENTER_LISP_FRAME ((), tem);
   tem = Fmarker_buffer (BVAR (current_buffer, mark));
   if (NILP (tem) || (XBUFFER (tem) != current_buffer))
     error (for_region ? "The mark is not set now, so there is no region"
@@ -167,8 +165,8 @@ check_mark (bool for_region)
 static void
 fix_command (Lisp_Object input, Lisp_Object values)
 {
-  ENTER_LISP_FRAME (input, values);
-  LISP_LOCALS (car, intail, valtail, elt, presflag, carelt);
+  ENTER_LISP_FRAME ((input, values), car, intail, valtail, elt,
+                    presflag, carelt);
   /* FIXME: Instead of this ugly hack, we should provide a way for an
      interactive spec to return an expression/function that will re-build the
      args without user intervention.  */
@@ -232,7 +230,7 @@ static Lisp_Object
 read_file_name (Lisp_Object default_filename, Lisp_Object mustmatch,
 		Lisp_Object initial, Lisp_Object predicate)
 {
-  ENTER_LISP_FRAME (default_filename, mustmatch, initial, predicate);
+  ENTER_LISP_FRAME ((default_filename, mustmatch, initial, predicate));
   EXIT_LISP_FRAME (CALLN (Ffuncall, intern ("read-file-name"),
 		callint_message, Qnil, default_filename,
 		mustmatch, initial, predicate));
@@ -246,7 +244,7 @@ return non-nil.
 usage: (funcall-interactively FUNCTION &rest ARGUMENTS)  */)
      (ptrdiff_t nargs, Lisp_Object *args)
 {
-  ENTER_LISP_FRAME_VA (nargs, args);
+  ENTER_LISP_FRAME_VA (nargs, args, ());
   ptrdiff_t speccount = SPECPDL_INDEX ();
   temporarily_switch_to_single_kboard (NULL);
 
@@ -274,10 +272,12 @@ invoke it.  If KEYS is omitted or nil, the return value of
 `this-command-keys-vector' is used.  */)
   (Lisp_Object function, Lisp_Object record_flag, Lisp_Object keys)
 {
-  ENTER_LISP_FRAME (function, record_flag, keys);
-  LISP_LOCALS (specs, filter_specs, teml, up_event, enable, prefix_arg,
-               save_this_command, save_last_command, save_this_original_command, save_real_this_command, form, input, funval, values,
-               this_cmd, result, event, w, tem2, val);
+  ENTER_LISP_FRAME ((function, record_flag, keys), specs,
+                    filter_specs, teml, up_event, enable, prefix_arg,
+                    save_this_command, save_last_command,
+                    save_this_original_command,
+                    save_real_this_command, form, input, funval,
+                    values, this_cmd, result, event, w, tem2, val);
   /* `args' will contain the array of arguments to pass to the function.
      `visargs' will contain the same list but in a nicer form, so that if we
      pass it to Fformat_message it will be understandable to a human.  */
@@ -858,8 +858,7 @@ A raw prefix argument is what you get from `(interactive "P")'.
 Its numeric meaning is what you would get from `(interactive "p")'.  */)
   (Lisp_Object raw)
 {
-  ENTER_LISP_FRAME (raw);
-  LISP_LOCALS (val);
+  ENTER_LISP_FRAME ((raw), val);
 
   if (NILP (raw))
     XSETFASTINT (val, 1);

@@ -650,8 +650,7 @@ recompute_basic_faces (struct frame *f)
 void
 clear_face_cache (bool clear_fonts_p)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (tail, frame);
+  ENTER_LISP_FRAME ((), tail, frame);
 #ifdef HAVE_WINDOW_SYSTEM
 
   if (clear_fonts_p
@@ -693,7 +692,7 @@ DEFUN ("clear-face-cache", Fclear_face_cache, Sclear_face_cache, 0, 1, 0,
 Optional THOROUGHLY non-nil means try to free unused fonts, too.  */)
   (Lisp_Object thoroughly)
 {
-  ENTER_LISP_FRAME (thoroughly);
+  ENTER_LISP_FRAME ((thoroughly));
   clear_face_cache (!NILP (thoroughly));
   face_change = true;
   windows_or_buffers_changed = 53;
@@ -716,8 +715,7 @@ the pixmap.  Bits are stored row by row, each row occupies
 \(WIDTH + 7)/8 bytes.  */)
   (Lisp_Object object)
 {
-  ENTER_LISP_FRAME (object);
-  LISP_LOCALS (width, height, data);
+  ENTER_LISP_FRAME ((object), width, height, data);
   bool pixmap_p = false;
 
   if (STRINGP (object))
@@ -767,8 +765,7 @@ the pixmap.  Bits are stored row by row, each row occupies
 static ptrdiff_t
 load_pixmap (struct frame *f, Lisp_Object name)
 {
-  ENTER_LISP_FRAME_T (ptrdiff_t, name);
-  LISP_LOCALS (bits);
+  ENTER_LISP_FRAME_T (ptrdiff_t, (name), bits);
   ptrdiff_t bitmap_id;
 
   if (NILP (name))
@@ -827,7 +824,7 @@ load_pixmap (struct frame *f, Lisp_Object name)
 static bool
 parse_rgb_list (Lisp_Object rgb_list, XColor *color)
 {
-  ENTER_LISP_FRAME_T (bool, rgb_list);
+  ENTER_LISP_FRAME_T (bool, (rgb_list));
 #define PARSE_RGB_LIST_FIELD(field)					\
   if (CONSP (rgb_list) && INTEGERP (XCAR (rgb_list)))			\
     {									\
@@ -854,8 +851,7 @@ static bool
 tty_lookup_color (struct frame *f, Lisp_Object color, XColor *tty_color,
 		  XColor *std_color)
 {
-  ENTER_LISP_FRAME_T (bool, color);
-  LISP_LOCALS (frame, color_desc, rgb);
+  ENTER_LISP_FRAME_T (bool, (color), frame, color_desc, rgb);
 
   if (!STRINGP (color) || NILP (Ffboundp (Qtty_color_desc)))
     EXIT_LISP_FRAME (false);
@@ -976,8 +972,7 @@ defined_color (struct frame *f, const char *color_name, XColor *color_def,
 Lisp_Object
 tty_color_name (struct frame *f, int idx)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (frame, coldesc);
+  ENTER_LISP_FRAME ((), frame, coldesc);
   if (idx >= 0 && !NILP (Ffboundp (Qtty_color_by_index)))
     {
 
@@ -1038,8 +1033,7 @@ static bool
 face_color_supported_p (struct frame *f, const char *color_name,
 			bool background_p)
 {
-  ENTER_LISP_FRAME_T (bool);
-  LISP_LOCALS (frame);
+  ENTER_LISP_FRAME_T (bool, (), frame);
   XColor not_used;
 
   XSETFRAME (frame, f);
@@ -1065,7 +1059,7 @@ FRAME specifies the frame and thus the display for interpreting COLOR.
 If FRAME is nil or omitted, use the selected frame.  */)
   (Lisp_Object color, Lisp_Object frame)
 {
-  ENTER_LISP_FRAME (color, frame);
+  ENTER_LISP_FRAME ((color, frame));
   CHECK_STRING (color);
   EXIT_LISP_FRAME ((face_color_gray_p (decode_any_frame (frame), SSDATA (color))
 	  ? Qt : Qnil));
@@ -1081,7 +1075,7 @@ If FRAME is nil or omitted, use the selected frame.
 COLOR must be a valid color name.  */)
   (Lisp_Object color, Lisp_Object frame, Lisp_Object background_p)
 {
-  ENTER_LISP_FRAME (color, frame, background_p);
+  ENTER_LISP_FRAME ((color, frame, background_p));
   CHECK_STRING (color);
   EXIT_LISP_FRAME ((face_color_supported_p (decode_any_frame (frame),
 				  SSDATA (color), !NILP (background_p))
@@ -1093,7 +1087,7 @@ static unsigned long
 load_color2 (struct frame *f, struct face *face, Lisp_Object name,
              enum lface_attribute_index target_index, XColor *color)
 {
-  ENTER_LISP_FRAME_T (unsigned long, name);
+  ENTER_LISP_FRAME_T (unsigned long, (name));
   eassert (STRINGP (name));
   eassert (target_index == LFACE_FOREGROUND_INDEX
 	   || target_index == LFACE_BACKGROUND_INDEX
@@ -1165,7 +1159,7 @@ unsigned long
 load_color (struct frame *f, struct face *face, Lisp_Object name,
 	    enum lface_attribute_index target_index)
 {
-  ENTER_LISP_FRAME_T (unsigned long, name);
+  ENTER_LISP_FRAME_T (unsigned long, (name));
   XColor color;
   EXIT_LISP_FRAME (load_color2 (f, face, name, target_index, &color));
 }
@@ -1184,8 +1178,7 @@ static void
 load_face_colors (struct frame *f, struct face *face,
 		  Lisp_Object *attrs)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (fg, bg, dfg, tmp);
+  ENTER_LISP_FRAME ((), fg, bg, dfg, tmp);
   XColor xfg, xbg;
 
   bg = attrs[LFACE_BACKGROUND_INDEX];
@@ -1386,8 +1379,7 @@ static enum font_property_index font_props_for_sorting[FONT_SIZE_INDEX];
 static int
 compare_fonts_by_sort_order (const void *v1, const void *v2)
 {
-  ENTER_LISP_FRAME_T (int);
-  LISP_LOCALS (font1, font2, val1, val2);
+  ENTER_LISP_FRAME_T (int, (), font1, font2, val1, val2);
   Lisp_Object const *p1 = v1;
   Lisp_Object const *p2 = v2;
   font1 = *p1;
@@ -1444,8 +1436,8 @@ The result list is sorted according to the current setting of
 the face font sort order.  */)
   (Lisp_Object family, Lisp_Object frame)
 {
-  ENTER_LISP_FRAME (family, frame);
-  LISP_LOCALS (font_spec, list, vec, result, font, v, spacing);
+  ENTER_LISP_FRAME ((family, frame), font_spec, list, vec, result,
+                    font, v, spacing);
   Lisp_Object *drivers;
 
   struct frame *f = decode_live_frame (frame);
@@ -1544,8 +1536,8 @@ the WIDTH times as wide as FACE on FRAME.  */)
   (Lisp_Object pattern, Lisp_Object face, Lisp_Object frame,
    Lisp_Object maximum, Lisp_Object width)
 {
-  ENTER_LISP_FRAME (pattern, face, frame, maximum, width);
-  LISP_LOCALS (font_spec, fonts, tail, font_entity, fontsets);
+  ENTER_LISP_FRAME ((pattern, face, frame, maximum, width), font_spec,
+                    fonts, tail, font_entity, fontsets);
   struct frame *f;
   int size, avgwidth;
 
@@ -1678,7 +1670,7 @@ the WIDTH times as wide as FACE on FRAME.  */)
 static void
 check_lface_attrs (Lisp_Object attrs[LFACE_VECTOR_SIZE])
 {
-  ENTER_LISP_FRAME (attrs);
+  ENTER_LISP_FRAME ((attrs));
   eassert (UNSPECIFIEDP (attrs[LFACE_FAMILY_INDEX])
 	   || IGNORE_DEFFACE_P (attrs[LFACE_FAMILY_INDEX])
 	   || STRINGP (attrs[LFACE_FAMILY_INDEX]));
@@ -1755,7 +1747,7 @@ check_lface_attrs (Lisp_Object attrs[LFACE_VECTOR_SIZE])
 static void
 check_lface (Lisp_Object lface)
 {
-  ENTER_LISP_FRAME (lface);
+  ENTER_LISP_FRAME ((lface));
   if (!NILP (lface))
     {
       eassert (LFACEP (lface));
@@ -1806,7 +1798,7 @@ push_named_merge_point (struct named_merge_point *new_named_merge_point,
 			enum named_merge_point_kind named_merge_point_kind,
 			struct named_merge_point **named_merge_points)
 {
-  ENTER_LISP_FRAME_T (bool, face_name);
+  ENTER_LISP_FRAME_T (bool, (face_name));
   struct named_merge_point *prev;
 
   for (prev = *named_merge_points; prev; prev = prev->prev)
@@ -1842,8 +1834,7 @@ push_named_merge_point (struct named_merge_point *new_named_merge_point,
 static Lisp_Object
 resolve_face_name (Lisp_Object face_name, bool signal_p)
 {
-  ENTER_LISP_FRAME (face_name);
-  LISP_LOCALS (orig_face, tortoise, hare);
+  ENTER_LISP_FRAME ((face_name), orig_face, tortoise, hare);
 
   if (STRINGP (face_name))
     face_name = Fintern (face_name, Qnil);
@@ -1889,8 +1880,7 @@ static Lisp_Object
 lface_from_face_name_no_resolve (struct frame *f, Lisp_Object face_name,
 				 bool signal_p)
 {
-  ENTER_LISP_FRAME (face_name);
-  LISP_LOCALS (lface);
+  ENTER_LISP_FRAME ((face_name), lface);
 
   if (f)
     lface = assq_no_quit (face_name, f->face_alist);
@@ -1917,7 +1907,7 @@ lface_from_face_name_no_resolve (struct frame *f, Lisp_Object face_name,
 static Lisp_Object
 lface_from_face_name (struct frame *f, Lisp_Object face_name, bool signal_p)
 {
-  ENTER_LISP_FRAME (face_name);
+  ENTER_LISP_FRAME ((face_name));
   face_name = resolve_face_name (face_name, signal_p);
   EXIT_LISP_FRAME (lface_from_face_name_no_resolve (f, face_name, signal_p));
 }
@@ -1934,8 +1924,7 @@ get_lface_attributes_no_remap (struct frame *f, Lisp_Object face_name,
 			       Lisp_Object attrs[LFACE_VECTOR_SIZE],
 			       bool signal_p)
 {
-  ENTER_LISP_FRAME_T (bool, face_name, attrs);
-  LISP_LOCALS (lface);
+  ENTER_LISP_FRAME_T (bool, (face_name, attrs), lface);
 
   lface = lface_from_face_name_no_resolve (f, face_name, signal_p);
 
@@ -1957,8 +1946,7 @@ get_lface_attributes (struct frame *f, Lisp_Object face_name,
 		      Lisp_Object attrs[LFACE_VECTOR_SIZE], bool signal_p,
 		      struct named_merge_point *named_merge_points)
 {
-  ENTER_LISP_FRAME_T (bool, face_name, attrs);
-  LISP_LOCALS (face_remapping);
+  ENTER_LISP_FRAME_T (bool, (face_name, attrs), face_remapping);
 
   face_name = resolve_face_name (face_name, signal_p);
 
@@ -1994,7 +1982,7 @@ get_lface_attributes (struct frame *f, Lisp_Object face_name,
 static bool
 lface_fully_specified_p (Lisp_Object attrs[LFACE_VECTOR_SIZE])
 {
-  ENTER_LISP_FRAME_T (bool, attrs);
+  ENTER_LISP_FRAME_T (bool, (attrs));
   int i;
 
   for (i = 1; i < LFACE_VECTOR_SIZE; ++i)
@@ -2017,8 +2005,7 @@ static void
 set_lface_from_font (struct frame *f, Lisp_Object lface,
 		     Lisp_Object font_object, bool force_p)
 {
-  ENTER_LISP_FRAME (lface, font_object);
-  LISP_LOCALS (val, family, foundry);
+  ENTER_LISP_FRAME ((lface, font_object), val, family, foundry);
   struct font *font = XFONT_OBJECT (font_object);
 
   /* Set attributes only if unspecified, otherwise face defaults for
@@ -2081,8 +2068,7 @@ set_lface_from_font (struct frame *f, Lisp_Object lface,
 static Lisp_Object
 merge_face_heights (Lisp_Object from, Lisp_Object to, Lisp_Object invalid)
 {
-  ENTER_LISP_FRAME (from, to, invalid);
-  LISP_LOCALS (result);
+  ENTER_LISP_FRAME ((from, to, invalid), result);
   result = invalid;
 
 
@@ -2130,8 +2116,7 @@ static void
 merge_face_vectors (struct frame *f, Lisp_Object *from, Lisp_Object *to,
 		    struct named_merge_point *named_merge_points)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (font);
+  ENTER_LISP_FRAME ((), font);
   int i;
   font = Qnil;
 
@@ -2210,7 +2195,7 @@ static bool
 merge_named_face (struct frame *f, Lisp_Object face_name, Lisp_Object *to,
 		  struct named_merge_point *named_merge_points)
 {
-  ENTER_LISP_FRAME_T (bool, face_name);
+  ENTER_LISP_FRAME_T (bool, (face_name));
   struct named_merge_point named_merge_point;
 
   if (push_named_merge_point (&named_merge_point,
@@ -2258,8 +2243,8 @@ static bool
 merge_face_ref (struct frame *f, Lisp_Object face_ref, Lisp_Object *to,
 		bool err_msgs, struct named_merge_point *named_merge_points)
 {
-  ENTER_LISP_FRAME_T (bool, face_ref);
-  LISP_LOCALS (first, color_name, color, keyword, value, new_height, pixmap_p, next);
+  ENTER_LISP_FRAME_T (bool, (face_ref), first, color_name, color,
+                      keyword, value, new_height, pixmap_p, next);
   bool ok = true;		/* Succeed without an error? */
 
   if (CONSP (face_ref))
@@ -2512,8 +2497,7 @@ for that frame.  Otherwise operate on the global face definition.
 Value is a vector of face attributes.  */)
   (Lisp_Object face, Lisp_Object frame)
 {
-  ENTER_LISP_FRAME (face, frame);
-  LISP_LOCALS (global_lface, lface);
+  ENTER_LISP_FRAME ((face, frame), global_lface, lface);
   struct frame *f;
   int i;
 
@@ -2606,8 +2590,7 @@ existence of a frame-local face with name FACE on that frame.
 Otherwise check for the existence of a global face.  */)
   (Lisp_Object face, Lisp_Object frame)
 {
-  ENTER_LISP_FRAME (face, frame);
-  LISP_LOCALS (lface);
+  ENTER_LISP_FRAME ((face, frame), lface);
 
   face = resolve_face_name (face, true);
 
@@ -2635,8 +2618,7 @@ FRAME controls where the data is copied to.
 The value is TO.  */)
   (Lisp_Object from, Lisp_Object to, Lisp_Object frame, Lisp_Object new_frame)
 {
-  ENTER_LISP_FRAME (from, to, frame, new_frame);
-  LISP_LOCALS (lface, copy);
+  ENTER_LISP_FRAME ((from, to, frame, new_frame), lface, copy);
   struct frame *f;
 
   CHECK_SYMBOL (from);
@@ -2697,9 +2679,9 @@ FRAME 0 means change the face on all frames, and change the default
   for new frames.  */)
   (Lisp_Object face, Lisp_Object attr, Lisp_Object value, Lisp_Object frame)
 {
-  ENTER_LISP_FRAME (face, attr, value, frame);
-  LISP_LOCALS (lface, old_value, tail, test, key, val, list, tem,
-               k, v, name, font_object, tmp, param, cons);
+  ENTER_LISP_FRAME ((face, attr, value, frame), lface, old_value,
+                    tail, test, key, val, list, tem, k, v, name,
+                    font_object, tmp, param, cons);
   old_value = Qnil;
 
   /* Set one of enum font_property_index (> 0) if ATTR is one of
@@ -3288,8 +3270,7 @@ void
 update_face_from_frame_parameter (struct frame *f, Lisp_Object param,
 				  Lisp_Object new_value)
 {
-  ENTER_LISP_FRAME (param, new_value);
-  LISP_LOCALS (face, lface, frame);
+  ENTER_LISP_FRAME ((param, new_value), face, lface, frame);
   face = Qnil;
 
 
@@ -3369,8 +3350,7 @@ update_face_from_frame_parameter (struct frame *f, Lisp_Object param,
 static void
 set_font_frame_param (Lisp_Object frame, Lisp_Object lface)
 {
-  ENTER_LISP_FRAME (frame, lface);
-  LISP_LOCALS (font);
+  ENTER_LISP_FRAME ((frame, lface), font);
   struct frame *f = XFRAME (frame);
 
   if (FRAME_WINDOW_P (f)
@@ -3401,8 +3381,7 @@ specified or nil, use selected frame.  This function exists because
 ordinary `x-get-resource' doesn't take a frame argument.  */)
   (Lisp_Object resource, Lisp_Object class, Lisp_Object frame)
 {
-  ENTER_LISP_FRAME (resource, class, frame);
-  LISP_LOCALS (value);
+  ENTER_LISP_FRAME ((resource, class, frame), value);
   value = Qnil;
 
   struct frame *f;
@@ -3426,8 +3405,7 @@ ordinary `x-get-resource' doesn't take a frame argument.  */)
 static Lisp_Object
 face_boolean_x_resource_value (Lisp_Object value, bool signal_p)
 {
-  ENTER_LISP_FRAME (value);
-  LISP_LOCALS (result);
+  ENTER_LISP_FRAME ((value), result);
   result = make_number (0);
 
 
@@ -3454,8 +3432,7 @@ DEFUN ("internal-set-lisp-face-attribute-from-resource",
        3, 4, 0, doc: /* */)
   (Lisp_Object face, Lisp_Object attr, Lisp_Object value, Lisp_Object frame)
 {
-  ENTER_LISP_FRAME (face, attr, value, frame);
-  LISP_LOCALS (boolean_value);
+  ENTER_LISP_FRAME ((face, attr, value, frame), boolean_value);
   CHECK_SYMBOL (face);
   CHECK_SYMBOL (attr);
   CHECK_STRING (value);
@@ -3505,8 +3482,7 @@ DEFUN ("internal-set-lisp-face-attribute-from-resource",
 static void
 x_update_menu_appearance (struct frame *f)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (lface, xlfd);
+  ENTER_LISP_FRAME ((), lface, xlfd);
   struct x_display_info *dpyinfo = FRAME_DISPLAY_INFO (f);
   XrmDatabase rdb;
 
@@ -3626,7 +3602,7 @@ However, for :height, floating point values are also relative.  */
        attributes: const)
   (Lisp_Object attribute, Lisp_Object value)
 {
-  ENTER_LISP_FRAME (attribute, value);
+  ENTER_LISP_FRAME ((attribute, value));
   if (EQ (value, Qunspecified) || (EQ (value, QCignore_defface)))
     EXIT_LISP_FRAME (Qt);
   else if (EQ (attribute, QCheight))
@@ -3642,7 +3618,7 @@ If VALUE1 or VALUE2 are absolute (see `face-attribute-relative-p'), then
 the result will be absolute, otherwise it will be relative.  */)
   (Lisp_Object attribute, Lisp_Object value1, Lisp_Object value2)
 {
-  ENTER_LISP_FRAME (attribute, value1, value2);
+  ENTER_LISP_FRAME ((attribute, value1, value2));
   if (EQ (value1, Qunspecified) || EQ (value1, QCignore_defface))
     EXIT_LISP_FRAME (value2);
   else if (EQ (attribute, QCheight))
@@ -3663,8 +3639,7 @@ frame.  If FRAME is t, report on the defaults for face SYMBOL (for new
 frames).  If FRAME is omitted or nil, use the selected frame.  */)
   (Lisp_Object symbol, Lisp_Object keyword, Lisp_Object frame)
 {
-  ENTER_LISP_FRAME (symbol, keyword, frame);
-  LISP_LOCALS (lface, value);
+  ENTER_LISP_FRAME ((symbol, keyword, frame), lface, value);
   struct frame *f = EQ (frame, Qt) ? NULL : decode_live_frame (frame);
   lface = lface_from_face_name (f, symbol, true);
   value = Qnil;
@@ -3727,8 +3702,7 @@ DEFUN ("internal-lisp-face-attribute-values",
 Value is nil if ATTR doesn't have a discrete set of valid values.  */)
   (Lisp_Object attr)
 {
-  ENTER_LISP_FRAME (attr);
-  LISP_LOCALS (result);
+  ENTER_LISP_FRAME ((attr), result);
   result = Qnil;
 
 
@@ -3749,8 +3723,7 @@ DEFUN ("internal-merge-in-global-face", Finternal_merge_in_global_face,
 Default face attributes override any local face attributes.  */)
   (Lisp_Object face, Lisp_Object frame)
 {
-  ENTER_LISP_FRAME (face, frame);
-  LISP_LOCALS (global_lface, local_lface, name);
+  ENTER_LISP_FRAME ((face, frame), global_lface, local_lface, name);
   int i;
   Lisp_Object *gvec, *lvec;
   struct frame *f = XFRAME (frame);
@@ -3844,8 +3817,7 @@ if the optional third argument CHARACTER is given,
 return the font name used for CHARACTER.  */)
   (Lisp_Object face, Lisp_Object frame, Lisp_Object character)
 {
-  ENTER_LISP_FRAME (face, frame, character);
-  LISP_LOCALS (result, lface);
+  ENTER_LISP_FRAME ((face, frame, character), result, lface);
   if (EQ (frame, Qt))
     {
       result = Qnil;
@@ -3898,7 +3870,7 @@ return the font name used for CHARACTER.  */)
 static bool
 face_attr_equal_p (Lisp_Object v1, Lisp_Object v2)
 {
-  ENTER_LISP_FRAME_T (bool, v1, v2);
+  ENTER_LISP_FRAME_T (bool, (v1, v2));
   /* Type can differ, e.g. when one attribute is unspecified, i.e. nil,
      and the other is specified.  */
   if (XTYPE (v1) != XTYPE (v2))
@@ -3950,8 +3922,7 @@ If FRAME is t, report on the defaults for FACE1 and FACE2 (for new frames).
 If FRAME is omitted or nil, use the selected frame.  */)
   (Lisp_Object face1, Lisp_Object face2, Lisp_Object frame)
 {
-  ENTER_LISP_FRAME (face1, face2, frame);
-  LISP_LOCALS (lface1, lface2);
+  ENTER_LISP_FRAME ((face1, face2, frame), lface1, lface2);
   bool equal_p;
   struct frame *f;
 
@@ -3977,8 +3948,7 @@ If FRAME is t, report on the defaults for face FACE (for new frames).
 If FRAME is omitted or nil, use the selected frame.  */)
   (Lisp_Object face, Lisp_Object frame)
 {
-  ENTER_LISP_FRAME (face, frame);
-  LISP_LOCALS (lface);
+  ENTER_LISP_FRAME ((face, frame), lface);
   struct frame *f = EQ (frame, Qt) ? NULL : decode_live_frame (frame);
   lface = lface_from_face_name (f, face, true);
 
@@ -3998,7 +3968,7 @@ DEFUN ("frame-face-alist", Fframe_face_alist, Sframe_face_alist,
 For internal use only.  */)
   (Lisp_Object frame)
 {
-  ENTER_LISP_FRAME (frame);
+  ENTER_LISP_FRAME ((frame));
   EXIT_LISP_FRAME (decode_live_frame (frame)->face_alist);
 }
 
@@ -4009,7 +3979,7 @@ For internal use only.  */)
 static unsigned
 hash_string_case_insensitive (Lisp_Object string)
 {
-  ENTER_LISP_FRAME_T (unsigned, string);
+  ENTER_LISP_FRAME_T (unsigned, (string));
   const unsigned char *s;
   unsigned hash = 0;
   eassert (STRINGP (string));
@@ -4197,7 +4167,7 @@ two lists of the form (RED GREEN BLUE) aforementioned. */)
   (Lisp_Object color1, Lisp_Object color2, Lisp_Object frame,
    Lisp_Object metric)
 {
-  ENTER_LISP_FRAME (color1, color2, frame, metric);
+  ENTER_LISP_FRAME ((color1, color2, frame, metric));
   struct frame *f = decode_live_frame (frame);
   XColor cdef1, cdef2;
 
@@ -4325,8 +4295,7 @@ free_realized_faces (struct face_cache *c)
 void
 free_all_realized_faces (Lisp_Object frame)
 {
-  ENTER_LISP_FRAME (frame);
-  LISP_LOCALS (rest);
+  ENTER_LISP_FRAME ((frame), rest);
   if (NILP (frame))
     {
       FOR_EACH_FRAME (rest, frame)
@@ -4504,7 +4473,7 @@ lookup_face (struct frame *f, Lisp_Object *attr)
 int
 face_for_font (struct frame *f, Lisp_Object font_object, struct face *base_face)
 {
-  ENTER_LISP_FRAME_T (int, font_object);
+  ENTER_LISP_FRAME_T (int, (font_object));
   struct face_cache *cache = FRAME_FACE_CACHE (f);
   unsigned hash;
   int i;
@@ -4540,7 +4509,7 @@ face_for_font (struct frame *f, Lisp_Object font_object, struct face *base_face)
 int
 lookup_named_face (struct frame *f, Lisp_Object symbol, bool signal_p)
 {
-  ENTER_LISP_FRAME_T (int, symbol);
+  ENTER_LISP_FRAME_T (int, (symbol));
   Lisp_Object attrs[LFACE_VECTOR_SIZE];
   Lisp_Object symbol_attrs[LFACE_VECTOR_SIZE];
   struct face *default_face = FACE_FROM_ID_OR_NULL (f, DEFAULT_FACE_ID);
@@ -4571,8 +4540,7 @@ lookup_named_face (struct frame *f, Lisp_Object symbol, bool signal_p)
 int
 lookup_basic_face (struct frame *f, int face_id)
 {
-  ENTER_LISP_FRAME_T (int);
-  LISP_LOCALS (name, mapping);
+  ENTER_LISP_FRAME_T (int, (), name, mapping);
   int remapped_face_id;
 
   if (NILP (Vface_remapping_alist))
@@ -4713,7 +4681,7 @@ int
 lookup_derived_face (struct frame *f, Lisp_Object symbol, int face_id,
 		     bool signal_p)
 {
-  ENTER_LISP_FRAME_T (int, symbol);
+  ENTER_LISP_FRAME_T (int, (symbol));
   Lisp_Object attrs[LFACE_VECTOR_SIZE];
   Lisp_Object symbol_attrs[LFACE_VECTOR_SIZE];
   struct face *default_face;
@@ -4732,8 +4700,7 @@ DEFUN ("face-attributes-as-vector", Fface_attributes_as_vector,
        doc: /* Return a vector of face attributes corresponding to PLIST.  */)
   (Lisp_Object plist)
 {
-  ENTER_LISP_FRAME (plist);
-  LISP_LOCALS (lface);
+  ENTER_LISP_FRAME ((plist), lface);
   lface = Fmake_vector (make_number (LFACE_VECTOR_SIZE),
 			Qunspecified);
   merge_face_ref (XFRAME (selected_frame), plist, XVECTOR (lface)->contents,
@@ -4771,8 +4738,7 @@ x_supports_face_attributes_p (struct frame *f,
 			      Lisp_Object attrs[LFACE_VECTOR_SIZE],
 			      struct face *def_face)
 {
-  ENTER_LISP_FRAME_T (bool, attrs);
-  LISP_LOCALS (s1, s2);
+  ENTER_LISP_FRAME_T (bool, (attrs), s1, s2);
   Lisp_Object *def_attrs = def_face->lface;
 
   /* Check that other specified attributes are different that the default
@@ -4878,8 +4844,7 @@ tty_supports_face_attributes_p (struct frame *f,
 				Lisp_Object attrs[LFACE_VECTOR_SIZE],
 				struct face *def_face)
 {
-  ENTER_LISP_FRAME_T (bool, attrs);
-  LISP_LOCALS (val, fg, bg, def_fg, def_bg);
+  ENTER_LISP_FRAME_T (bool, (attrs), val, fg, bg, def_fg, def_bg);
   int weight, slant;
   XColor fg_tty_color, fg_std_color;
   XColor bg_tty_color, bg_std_color;
@@ -5060,8 +5025,7 @@ satisfied by the tty display code's automatic substitution of a `dim'
 face for italic.  */)
   (Lisp_Object attributes, Lisp_Object display)
 {
-  ENTER_LISP_FRAME (attributes, display);
-  LISP_LOCALS (frame, tail);
+  ENTER_LISP_FRAME ((attributes, display), frame, tail);
   bool supports = false;
   int i;
   struct frame *f;
@@ -5133,8 +5097,7 @@ a suitable height, and then tries to match the font weight.
 Value is ORDER.  */)
   (Lisp_Object order)
 {
-  ENTER_LISP_FRAME (order);
-  LISP_LOCALS (list, attr);
+  ENTER_LISP_FRAME ((order), list, attr);
   int i;
   int indices[ARRAYELTS (font_sort_order)];
 
@@ -5193,8 +5156,7 @@ Each ALTERNATIVE is tried in order if no fonts of font family FAMILY can
 be found.  Value is ALIST.  */)
   (Lisp_Object alist)
 {
-  ENTER_LISP_FRAME (alist);
-  LISP_LOCALS (entry, tail, tail2);
+  ENTER_LISP_FRAME ((alist), entry, tail, tail2);
 
   CHECK_LIST (alist);
   alist = Fcopy_sequence (alist);
@@ -5223,8 +5185,7 @@ Each ALTERNATIVE is tried in order if no fonts of font registry REGISTRY can
 be found.  Value is ALIST.  */)
   (Lisp_Object alist)
 {
-  ENTER_LISP_FRAME (alist);
-  LISP_LOCALS (entry, tail, tail2);
+  ENTER_LISP_FRAME ((alist), entry, tail, tail2);
 
   CHECK_LIST (alist);
   alist = Fcopy_sequence (alist);
@@ -5252,8 +5213,7 @@ be found.  Value is ALIST.  */)
 static int
 face_fontset (Lisp_Object attrs[LFACE_VECTOR_SIZE])
 {
-  ENTER_LISP_FRAME_T (int, attrs);
-  LISP_LOCALS (name);
+  ENTER_LISP_FRAME_T (int, (attrs), name);
 
   name = attrs[LFACE_FONTSET_INDEX];
   if (!STRINGP (name))
@@ -5327,8 +5287,7 @@ realize_basic_faces (struct frame *f)
 static bool
 realize_default_face (struct frame *f)
 {
-  ENTER_LISP_FRAME_T (bool);
-  LISP_LOCALS (lface, frame, font_object, color);
+  ENTER_LISP_FRAME_T (bool, (), lface, frame, font_object, color);
   struct face_cache *c = FRAME_FACE_CACHE (f);
   Lisp_Object attrs[LFACE_VECTOR_SIZE];
 
@@ -5450,8 +5409,7 @@ realize_default_face (struct frame *f)
 static void
 realize_named_face (struct frame *f, Lisp_Object symbol, int id)
 {
-  ENTER_LISP_FRAME (symbol);
-  LISP_LOCALS (lface, frame);
+  ENTER_LISP_FRAME ((symbol), lface, frame);
   struct face_cache *c = FRAME_FACE_CACHE (f);
   lface = lface_from_face_name (f, symbol, false);
 
@@ -5489,7 +5447,7 @@ static struct face *
 realize_face (struct face_cache *cache, Lisp_Object attrs[LFACE_VECTOR_SIZE],
 	      int former_face_id)
 {
-  ENTER_LISP_FRAME_T (struct face *, attrs);
+  ENTER_LISP_FRAME_T (struct face *, (attrs));
   struct face *face;
 
   /* LFACE must be fully specified.  */
@@ -5533,7 +5491,7 @@ static struct face *
 realize_non_ascii_face (struct frame *f, Lisp_Object font_object,
 			struct face *base_face)
 {
-  ENTER_LISP_FRAME_T (struct face *, font_object);
+  ENTER_LISP_FRAME_T (struct face *, (font_object));
   struct face_cache *cache = FRAME_FACE_CACHE (f);
   struct face *face;
 
@@ -5567,8 +5525,8 @@ realize_non_ascii_face (struct frame *f, Lisp_Object font_object,
 static struct face *
 realize_x_face (struct face_cache *cache, Lisp_Object attrs[LFACE_VECTOR_SIZE])
 {
-  ENTER_LISP_FRAME_T (struct face *, attrs);
-  LISP_LOCALS (stipple, underline, overline, strike_through, box, keyword, value);
+  ENTER_LISP_FRAME_T (struct face *, (attrs), stipple, underline,
+                      overline, strike_through, box, keyword, value);
   struct face *face = NULL;
 #ifdef HAVE_WINDOW_SYSTEM
   struct face *default_face;
@@ -5823,8 +5781,7 @@ static void
 map_tty_color (struct frame *f, struct face *face,
 	       enum lface_attribute_index idx, bool *defaulted)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (frame, color, def);
+  ENTER_LISP_FRAME ((), frame, color, def);
   bool foreground_p = idx == LFACE_FOREGROUND_INDEX;
   unsigned long default_pixel =
     foreground_p ? FACE_TTY_DEFAULT_FG_COLOR : FACE_TTY_DEFAULT_BG_COLOR;
@@ -5898,7 +5855,7 @@ static struct face *
 realize_tty_face (struct face_cache *cache,
 		  Lisp_Object attrs[LFACE_VECTOR_SIZE])
 {
-  ENTER_LISP_FRAME_T (struct face *, attrs);
+  ENTER_LISP_FRAME_T (struct face *, (attrs));
   struct face *face;
   int weight, slant;
   bool face_colors_defaulted = false;
@@ -5960,7 +5917,7 @@ For such faces, the bold face attribute is ignored if this variable
 is non-nil.  */)
   (Lisp_Object suppress)
 {
-  ENTER_LISP_FRAME (suppress);
+  ENTER_LISP_FRAME ((suppress));
   tty_suppress_bold_inverse_default_colors_p = !NILP (suppress);
   face_change = true;
   EXIT_LISP_FRAME (suppress);
@@ -5978,7 +5935,7 @@ is non-nil.  */)
 int
 compute_char_face (struct frame *f, int ch, Lisp_Object prop)
 {
-  ENTER_LISP_FRAME_T (int, prop);
+  ENTER_LISP_FRAME_T (int, (prop));
   int face_id;
 
   if (NILP (BVAR (current_buffer, enable_multibyte_characters)))
@@ -6027,8 +5984,8 @@ face_at_buffer_position (struct window *w, ptrdiff_t pos,
 			 ptrdiff_t *endptr, ptrdiff_t limit,
 			 bool mouse, int base_face_id)
 {
-  ENTER_LISP_FRAME_T (int);
-  LISP_LOCALS (prop, position, propname, limit1, end, oend);
+  ENTER_LISP_FRAME_T (int, (), prop, position, propname, limit1, end,
+                      oend);
   struct frame *f = XFRAME (w->frame);
   Lisp_Object attrs[LFACE_VECTOR_SIZE];
   ptrdiff_t i, noverlays;
@@ -6164,8 +6121,8 @@ face_for_overlay_string (struct window *w, ptrdiff_t pos,
 			 ptrdiff_t *endptr, ptrdiff_t limit,
 			 bool mouse, Lisp_Object overlay)
 {
-  ENTER_LISP_FRAME_T (int, overlay);
-  LISP_LOCALS (prop, position, propname, limit1, end);
+  ENTER_LISP_FRAME_T (int, (overlay), prop, position, propname,
+                      limit1, end);
   struct frame *f = XFRAME (w->frame);
   Lisp_Object attrs[LFACE_VECTOR_SIZE];
   ptrdiff_t endpos;
@@ -6239,8 +6196,8 @@ face_at_string_position (struct window *w, Lisp_Object string,
 			 ptrdiff_t *endptr, enum face_id base_face_id,
 			 bool mouse_p)
 {
-  ENTER_LISP_FRAME_T (int, string);
-  LISP_LOCALS (prop, position, end, limit, prop_name);
+  ENTER_LISP_FRAME_T (int, (string), prop, position, end, limit,
+                      prop_name);
   struct frame *f = XFRAME (WINDOW_FRAME (w));
   Lisp_Object attrs[LFACE_VECTOR_SIZE];
   struct face *base_face;
@@ -6310,7 +6267,7 @@ int
 merge_faces (struct frame *f, Lisp_Object face_name, int face_id,
 	     int base_face_id)
 {
-  ENTER_LISP_FRAME_T (int, face_name);
+  ENTER_LISP_FRAME_T (int, (face_name));
   Lisp_Object attrs[LFACE_VECTOR_SIZE];
   struct face *base_face;
 
@@ -6365,8 +6322,7 @@ The file should define one named RGB color per line like so:
 where R,G,B are numbers between 0 and 255 and name is an arbitrary string.  */)
   (Lisp_Object filename)
 {
-  ENTER_LISP_FRAME (filename);
-  LISP_LOCALS (cmap, abspath);
+  ENTER_LISP_FRAME ((filename), cmap, abspath);
   FILE *fp;
   cmap = Qnil;
 
@@ -6444,7 +6400,7 @@ dump_realized_face (struct face *face)
 DEFUN ("dump-face", Fdump_face, Sdump_face, 0, 1, 0, doc: /* */)
   (Lisp_Object n)
 {
-  ENTER_LISP_FRAME (n);
+  ENTER_LISP_FRAME ((n));
   if (NILP (n))
     {
       int i;

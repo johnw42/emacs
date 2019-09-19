@@ -12,8 +12,7 @@
 void
 unexec (const char *new_name, const char *old_name)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (data, errstring);
+  ENTER_LISP_FRAME ((), data, errstring);
 
   if (! dldump (0, new_name, RTLD_MEMORY))
     EXIT_LISP_FRAME_VOID ();

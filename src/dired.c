@@ -83,7 +83,7 @@ dirent_type (struct dirent *dp)
 static DIR *
 open_directory (Lisp_Object dirname, int *fdp)
 {
-  ENTER_LISP_FRAME_T (DIR *, dirname);
+  ENTER_LISP_FRAME_T (DIR *, (dirname));
   char *name = SSDATA (dirname);
   DIR *d;
   int fd, opendir_errno;
@@ -138,7 +138,7 @@ directory_files_internal_unwind (void *d)
 static struct dirent *
 read_dirent (DIR *dir, Lisp_Object dirname)
 {
-  ENTER_LISP_FRAME_T (struct dirent *, dirname);
+  ENTER_LISP_FRAME_T (struct dirent *, (dirname));
   while (true)
     {
       errno = 0;
@@ -171,8 +171,9 @@ directory_files_internal (Lisp_Object directory, Lisp_Object full,
 			  Lisp_Object match, Lisp_Object nosort, bool attrs,
 			  Lisp_Object id_format)
 {
-  ENTER_LISP_FRAME (directory, full, match, nosort, id_format);
-  LISP_LOCALS (list, dirfilename, encoded_directory, w32_save, name, finalname, fullname, fileattrs);
+  ENTER_LISP_FRAME ((directory, full, match, nosort, id_format), list,
+                    dirfilename, encoded_directory, w32_save, name,
+                    finalname, fullname, fileattrs);
   ptrdiff_t directory_nbytes;
   struct re_pattern_buffer *bufp = NULL;
   bool needsep = 0;
@@ -347,8 +348,7 @@ If NOSORT is non-nil, the list is not sorted--its order is unpredictable.
  NOSORT is useful if you plan to sort the result yourself.  */)
   (Lisp_Object directory, Lisp_Object full, Lisp_Object match, Lisp_Object nosort)
 {
-  ENTER_LISP_FRAME (directory, full, match, nosort);
-  LISP_LOCALS (handler);
+  ENTER_LISP_FRAME ((directory, full, match, nosort), handler);
   directory = Fexpand_file_name (directory, Qnil);
 
   /* If the file name has special constructs in it,
@@ -383,8 +383,8 @@ On MS-Windows, performance depends on `w32-get-true-file-attributes',
 which see.  */)
   (Lisp_Object directory, Lisp_Object full, Lisp_Object match, Lisp_Object nosort, Lisp_Object id_format)
 {
-  ENTER_LISP_FRAME (directory, full, match, nosort, id_format);
-  LISP_LOCALS (handler);
+  ENTER_LISP_FRAME ((directory, full, match, nosort, id_format),
+                    handler);
   directory = Fexpand_file_name (directory, Qnil);
 
   /* If the file name has special constructs in it,
@@ -419,8 +419,7 @@ by the variables `completion-regexp-list' and
 is matched against file and directory names relative to DIRECTORY.  */)
   (Lisp_Object file, Lisp_Object directory, Lisp_Object predicate)
 {
-  ENTER_LISP_FRAME (file, directory, predicate);
-  LISP_LOCALS (handler);
+  ENTER_LISP_FRAME ((file, directory, predicate), handler);
   directory = Fexpand_file_name (directory, Qnil);
 
   /* If the directory name has special constructs in it,
@@ -448,8 +447,7 @@ by `completion-regexp-list', which see.  `completion-regexp-list'
 is matched against file and directory names relative to DIRECTORY.  */)
   (Lisp_Object file, Lisp_Object directory)
 {
-  ENTER_LISP_FRAME (file, directory);
-  LISP_LOCALS (handler);
+  ENTER_LISP_FRAME ((file, directory), handler);
   directory = Fexpand_file_name (directory, Qnil);
 
   /* If the directory name has special constructs in it,
@@ -473,9 +471,9 @@ static Lisp_Object
 file_name_completion (Lisp_Object file, Lisp_Object dirname, bool all_flag,
 		      Lisp_Object predicate)
 {
-  ENTER_LISP_FRAME (file, dirname, predicate);
-  LISP_LOCALS (bestmatch, tem, elt, name, encoded_file, encoded_dir,
-               file_encoding, regexps, table, zero, cmp);
+  ENTER_LISP_FRAME ((file, dirname, predicate), bestmatch, tem, elt,
+                    name, encoded_file, encoded_dir, file_encoding,
+                    regexps, table, zero, cmp);
   ptrdiff_t bestmatchsize = 0;
   int matchcount = 0;
   /* If ALL_FLAG is 1, BESTMATCH is the list of all matches, decoded.
@@ -923,8 +921,7 @@ On some FAT-based filesystems, only the date of last access is recorded,
 so last access time will always be midnight of that day.  */)
   (Lisp_Object filename, Lisp_Object id_format)
 {
-  ENTER_LISP_FRAME (filename, id_format);
-  LISP_LOCALS (encoded, handler);
+  ENTER_LISP_FRAME ((filename, id_format), encoded, handler);
 
   filename = internal_condition_case_2 (Fexpand_file_name, filename, Qnil,
 					Qt, Fidentity);
@@ -953,8 +950,7 @@ file_attributes (int fd, char const *name,
 		 Lisp_Object dirname, Lisp_Object filename,
 		 Lisp_Object id_format)
 {
-  ENTER_LISP_FRAME (dirname, filename, id_format);
-  LISP_LOCALS (file_type);
+  ENTER_LISP_FRAME ((dirname, filename, id_format), file_type);
   ptrdiff_t count = SPECPDL_INDEX ();
   struct stat s;
 
@@ -1065,7 +1061,7 @@ DEFUN ("file-attributes-lessp", Ffile_attributes_lessp, Sfile_attributes_lessp, 
 Comparison is in lexicographic order and case is significant.  */)
   (Lisp_Object f1, Lisp_Object f2)
 {
-  ENTER_LISP_FRAME (f1, f2);
+  ENTER_LISP_FRAME ((f1, f2));
   EXIT_LISP_FRAME (Fstring_lessp (Fcar (f1), Fcar (f2)));
 }
 
@@ -1076,8 +1072,7 @@ If we don't know how to determine that on this platform, just
 return a list with one element, taken from `user-real-login-name'.  */)
      (void)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (users);
+  ENTER_LISP_FRAME ((), users);
   users = Qnil;
 
 #if defined HAVE_GETPWENT && defined HAVE_ENDPWENT
@@ -1099,8 +1094,7 @@ DEFUN ("system-groups", Fsystem_groups, Ssystem_groups, 0, 0, 0,
 The value may be nil if not supported on this platform.  */)
      (void)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (groups);
+  ENTER_LISP_FRAME ((), groups);
   groups = Qnil;
 
 #if defined HAVE_GETGRENT && defined HAVE_ENDGRENT

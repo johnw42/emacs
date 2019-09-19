@@ -448,8 +448,7 @@ buffer_overflow (void)
 static void
 make_gap_larger (ptrdiff_t nbytes_added)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (tem);
+  ENTER_LISP_FRAME ((), tem);
   ptrdiff_t real_gap_loc;
   ptrdiff_t real_gap_loc_byte;
   ptrdiff_t old_gap_size;
@@ -502,8 +501,7 @@ make_gap_larger (ptrdiff_t nbytes_added)
 static void
 make_gap_smaller (ptrdiff_t nbytes_removed)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (tem);
+  ENTER_LISP_FRAME ((), tem);
   ptrdiff_t real_gap_loc;
   ptrdiff_t real_gap_loc_byte;
   ptrdiff_t real_Z;
@@ -965,7 +963,7 @@ void
 insert_from_string (Lisp_Object string, ptrdiff_t pos, ptrdiff_t pos_byte,
 		    ptrdiff_t length, ptrdiff_t length_byte, bool inherit)
 {
-  ENTER_LISP_FRAME (string);
+  ENTER_LISP_FRAME ((string));
   ptrdiff_t opoint = PT;
 
   if (SCHARS (string) == 0)
@@ -987,7 +985,7 @@ insert_from_string_before_markers (Lisp_Object string,
 				   ptrdiff_t length, ptrdiff_t length_byte,
 				   bool inherit)
 {
-  ENTER_LISP_FRAME (string);
+  ENTER_LISP_FRAME ((string));
   ptrdiff_t opoint = PT;
 
   if (SCHARS (string) == 0)
@@ -1007,7 +1005,7 @@ insert_from_string_1 (Lisp_Object string, ptrdiff_t pos, ptrdiff_t pos_byte,
 		      ptrdiff_t nchars, ptrdiff_t nbytes,
 		      bool inherit, bool before_markers)
 {
-  ENTER_LISP_FRAME (string);
+  ENTER_LISP_FRAME ((string));
   ptrdiff_t outgoing_nbytes = nbytes;
   INTERVAL intervals;
 
@@ -1298,7 +1296,7 @@ static void
 adjust_after_replace (ptrdiff_t from, ptrdiff_t from_byte,
 		      Lisp_Object prev_text, ptrdiff_t len, ptrdiff_t len_byte)
 {
-  ENTER_LISP_FRAME (prev_text);
+  ENTER_LISP_FRAME ((prev_text));
   ptrdiff_t nchars_del = 0, nbytes_del = 0;
 
 #ifdef BYTE_COMBINING_DEBUG
@@ -1393,8 +1391,7 @@ replace_range (ptrdiff_t from, ptrdiff_t to, Lisp_Object new,
                bool prepare, bool inherit, bool markers,
                bool adjust_match_data)
 {
-  ENTER_LISP_FRAME (new);
-  LISP_LOCALS (deletion);
+  ENTER_LISP_FRAME ((new), deletion);
   ptrdiff_t inschars = SCHARS (new);
   ptrdiff_t insbytes = SBYTES (new);
   ptrdiff_t from_byte, to_byte;
@@ -1698,8 +1695,7 @@ del_range (ptrdiff_t from, ptrdiff_t to)
 Lisp_Object
 del_range_1 (ptrdiff_t from, ptrdiff_t to, bool prepare, bool ret_string)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (deletion);
+  ENTER_LISP_FRAME ((), deletion);
   ptrdiff_t from_byte, to_byte;
 
   /* Make args be valid */
@@ -1821,8 +1817,7 @@ Lisp_Object
 del_range_2 (ptrdiff_t from, ptrdiff_t from_byte,
 	     ptrdiff_t to, ptrdiff_t to_byte, bool ret_string)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (deletion);
+  ENTER_LISP_FRAME ((), deletion);
   ptrdiff_t nbytes_del, nchars_del;
 
   check_markers ();
@@ -1946,8 +1941,7 @@ void
 prepare_to_modify_buffer_1 (ptrdiff_t start, ptrdiff_t end,
 			    ptrdiff_t *preserve_ptr)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (temp, preserve_marker);
+  ENTER_LISP_FRAME ((), temp, preserve_marker);
   struct buffer *base_buffer;
 
   XSETFASTINT (temp, start);
@@ -2124,8 +2118,8 @@ static void
 signal_before_change (ptrdiff_t start_int, ptrdiff_t end_int,
 		      ptrdiff_t *preserve_ptr)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (start, end, start_marker, end_marker, preserve_marker);
+  ENTER_LISP_FRAME ((), start, end, start_marker, end_marker,
+                    preserve_marker);
   ptrdiff_t count = SPECPDL_INDEX ();
   struct rvoe_arg rvoe_arg;
 
@@ -2194,8 +2188,7 @@ signal_before_change (ptrdiff_t start_int, ptrdiff_t end_int,
 void
 signal_after_change (ptrdiff_t charpos, ptrdiff_t lendel, ptrdiff_t lenins)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (elt);
+  ENTER_LISP_FRAME ((), elt);
   ptrdiff_t count = SPECPDL_INDEX ();
   struct rvoe_arg rvoe_arg;
 
@@ -2274,8 +2267,7 @@ DEFUN ("combine-after-change-execute", Fcombine_after_change_execute,
        doc: /* This function is for use internally in the function `combine-after-change-calls'.  */)
   (void)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (tail, elt);
+  ENTER_LISP_FRAME ((), tail, elt);
   ptrdiff_t count = SPECPDL_INDEX ();
   ptrdiff_t beg, end, change;
   ptrdiff_t begpos, endpos;

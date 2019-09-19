@@ -200,7 +200,7 @@ x_stop_queuing_selection_requests (void)
 static Atom
 symbol_to_x_atom (struct x_display_info *dpyinfo, Lisp_Object sym)
 {
-  ENTER_LISP_FRAME_T (Atom, sym);
+  ENTER_LISP_FRAME_T (Atom, (sym));
   Atom val;
   if (NILP (sym))	    EXIT_LISP_FRAME (0);
   if (EQ (sym, QPRIMARY))   EXIT_LISP_FRAME (XA_PRIMARY);
@@ -235,8 +235,7 @@ symbol_to_x_atom (struct x_display_info *dpyinfo, Lisp_Object sym)
 static Lisp_Object
 x_atom_to_symbol (struct x_display_info *dpyinfo, Atom atom)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (val);
+  ENTER_LISP_FRAME ((), val);
   char *str;
 
   if (! atom)
@@ -303,8 +302,8 @@ static void
 x_own_selection (Lisp_Object selection_name, Lisp_Object selection_value,
 		 Lisp_Object frame)
 {
-  ENTER_LISP_FRAME (selection_name, selection_value, frame);
-  LISP_LOCALS (selection_data, prev_value, rest);
+  ENTER_LISP_FRAME ((selection_name, selection_value, frame),
+                    selection_data, prev_value, rest);
   struct frame *f = XFRAME (frame);
   Window selecting_window = FRAME_X_WINDOW (f);
   struct x_display_info *dpyinfo = FRAME_DISPLAY_INFO (f);
@@ -361,8 +360,8 @@ static Lisp_Object
 x_get_local_selection (Lisp_Object selection_symbol, Lisp_Object target_type,
 		       bool local_request, struct x_display_info *dpyinfo)
 {
-  ENTER_LISP_FRAME (selection_symbol, target_type);
-  LISP_LOCALS (local_value, handler_fn, value, check);
+  ENTER_LISP_FRAME ((selection_symbol, target_type), local_value,
+                    handler_fn, value, check);
 
   local_value = LOCAL_SELECTION (selection_symbol, dpyinfo);
 
@@ -751,8 +750,8 @@ x_reply_selection_request (struct selection_input_event *event,
 static void
 x_handle_selection_request (struct selection_input_event *event)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (selection_symbol, target_symbol, local_selection_data, multprop, subtarget);
+  ENTER_LISP_FRAME ((), selection_symbol, target_symbol,
+                    local_selection_data, multprop, subtarget);
   Time local_selection_time;
 
   struct x_display_info *dpyinfo = SELECTION_EVENT_DPYINFO (event);
@@ -863,8 +862,8 @@ x_convert_selection (Lisp_Object selection_symbol,
 		     Lisp_Object target_symbol, Atom property,
 		     bool for_multiple, struct x_display_info *dpyinfo)
 {
-  ENTER_LISP_FRAME_T (bool, selection_symbol, target_symbol);
-  LISP_LOCALS (lisp_selection);
+  ENTER_LISP_FRAME_T (bool, (selection_symbol, target_symbol),
+                      lisp_selection);
   struct selection_data *cs;
 
   lisp_selection
@@ -911,8 +910,8 @@ x_convert_selection (Lisp_Object selection_symbol,
 static void
 x_handle_selection_clear (struct selection_input_event *event)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (selection_symbol, local_selection_data, Vselection_alist, rest);
+  ENTER_LISP_FRAME ((), selection_symbol, local_selection_data,
+                    Vselection_alist, rest);
   Atom selection = SELECTION_EVENT_SELECTION (event);
   Time changed_owner_time = SELECTION_EVENT_TIME (event);
 
@@ -979,8 +978,7 @@ x_handle_selection_event (struct selection_input_event *event)
 void
 x_clear_frame_selections (struct frame *f)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (frame, rest);
+  ENTER_LISP_FRAME ((), frame, rest);
   struct x_display_info *dpyinfo = FRAME_DISPLAY_INFO (f);
   struct terminal *t = dpyinfo->terminal;
 
@@ -1157,7 +1155,7 @@ static Lisp_Object
 x_get_foreign_selection (Lisp_Object selection_symbol, Lisp_Object target_type,
 			 Lisp_Object time_stamp, Lisp_Object frame)
 {
-  ENTER_LISP_FRAME (selection_symbol, target_type, time_stamp, frame);
+  ENTER_LISP_FRAME ((selection_symbol, target_type, time_stamp, frame));
   struct frame *f = XFRAME (frame);
   struct x_display_info *dpyinfo = FRAME_DISPLAY_INFO (f);
   Display *display = dpyinfo->display;
@@ -1374,7 +1372,7 @@ receive_incremental_selection (struct x_display_info *dpyinfo,
 			       Atom *type_ret, int *format_ret,
 			       unsigned long *size_ret)
 {
-  ENTER_LISP_FRAME (target_type);
+  ENTER_LISP_FRAME ((target_type));
   ptrdiff_t offset = 0;
   struct prop_location *wait_object;
   Display *display = dpyinfo->display;
@@ -1476,8 +1474,7 @@ x_get_window_property_as_lisp_data (struct x_display_info *dpyinfo,
 				    Lisp_Object target_type,
 				    Atom selection_atom)
 {
-  ENTER_LISP_FRAME (target_type);
-  LISP_LOCALS (val);
+  ENTER_LISP_FRAME ((target_type), val);
   Atom actual_type;
   int actual_format;
   unsigned long actual_size;
@@ -1575,8 +1572,7 @@ selection_data_to_lisp_data (struct x_display_info *dpyinfo,
 			     const unsigned char *data,
 			     ptrdiff_t size, Atom type, int format)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (str, lispy_type, v);
+  ENTER_LISP_FRAME ((), str, lispy_type, v);
   if (type == dpyinfo->Xatom_NULL)
     EXIT_LISP_FRAME (QNULL);
 
@@ -1709,7 +1705,7 @@ selection_data_to_lisp_data (struct x_display_info *dpyinfo,
 static unsigned long
 cons_to_x_long (Lisp_Object obj)
 {
-  ENTER_LISP_FRAME_T (unsigned long, obj);
+  ENTER_LISP_FRAME_T (unsigned long, (obj));
   if (X_ULONG_MAX <= INTMAX_MAX
       || XINT (INTEGERP (obj) ? obj : XCAR (obj)) < 0)
     EXIT_LISP_FRAME (cons_to_signed (obj, X_LONG_MIN, min (X_ULONG_MAX, INTMAX_MAX)));
@@ -1723,8 +1719,7 @@ static void
 lisp_data_to_selection_data (struct x_display_info *dpyinfo,
 			     Lisp_Object obj, struct selection_data *cs)
 {
-  ENTER_LISP_FRAME (obj);
-  LISP_LOCALS (type);
+  ENTER_LISP_FRAME ((obj), type);
   type = Qnil;
 
 
@@ -1867,8 +1862,7 @@ lisp_data_to_selection_data (struct x_display_info *dpyinfo,
 static Lisp_Object
 clean_local_selection_data (Lisp_Object obj)
 {
-  ENTER_LISP_FRAME (obj);
-  LISP_LOCALS (copy);
+  ENTER_LISP_FRAME ((obj), copy);
   if (CONSP (obj)
       && INTEGERP (XCAR (obj))
       && CONSP (XCDR (obj))
@@ -1927,8 +1921,7 @@ x_handle_selection_notify (const XSelectionEvent *event)
 static struct frame *
 frame_for_x_selection (Lisp_Object object)
 {
-  ENTER_LISP_FRAME_T (struct frame *, object);
-  LISP_LOCALS (tail, frame);
+  ENTER_LISP_FRAME_T (struct frame *, (object), tail, frame);
   struct frame *f;
 
   if (NILP (object))
@@ -1981,7 +1974,7 @@ nil, it defaults to the selected frame.
 On Nextstep, FRAME is unused.  */)
   (Lisp_Object selection, Lisp_Object value, Lisp_Object frame)
 {
-  ENTER_LISP_FRAME (selection, value, frame);
+  ENTER_LISP_FRAME ((selection, value, frame));
   if (NILP (frame)) frame = selected_frame;
   if (!FRAME_LIVE_P (XFRAME (frame)) || !FRAME_X_P (XFRAME (frame)))
     error ("X selection unavailable for this frame");
@@ -2015,8 +2008,8 @@ On Nextstep, TIME-STAMP and TERMINAL are unused.  */)
   (Lisp_Object selection_symbol, Lisp_Object target_type,
    Lisp_Object time_stamp, Lisp_Object terminal)
 {
-  ENTER_LISP_FRAME (selection_symbol, target_type, time_stamp, terminal);
-  LISP_LOCALS (val, frame);
+  ENTER_LISP_FRAME ((selection_symbol, target_type, time_stamp,
+                     terminal), val, frame);
   val = Qnil;
 
   struct frame *f = frame_for_x_selection (terminal);
@@ -2063,7 +2056,7 @@ On Nextstep, the TIME-OBJECT and TERMINAL arguments are unused.
 On MS-DOS, all this does is return non-nil if we own the selection.  */)
   (Lisp_Object selection, Lisp_Object time_object, Lisp_Object terminal)
 {
-  ENTER_LISP_FRAME (selection, time_object, terminal);
+  ENTER_LISP_FRAME ((selection, time_object, terminal));
   Time timestamp;
   Atom selection_atom;
   struct selection_input_event event;
@@ -2119,7 +2112,7 @@ frame's display, or the first available X display.
 On Nextstep, TERMINAL is unused.  */)
   (Lisp_Object selection, Lisp_Object terminal)
 {
-  ENTER_LISP_FRAME (selection, terminal);
+  ENTER_LISP_FRAME ((selection, terminal));
   struct frame *f = frame_for_x_selection (terminal);
 
   CHECK_SYMBOL (selection);
@@ -2147,7 +2140,7 @@ frame's display, or the first available X display.
 On Nextstep, TERMINAL is unused.  */)
   (Lisp_Object selection, Lisp_Object terminal)
 {
-  ENTER_LISP_FRAME (selection, terminal);
+  ENTER_LISP_FRAME ((selection, terminal));
   Window owner;
   Atom atom;
   struct frame *f = frame_for_x_selection (terminal);
@@ -2180,7 +2173,7 @@ On Nextstep, TERMINAL is unused.  */)
 static Lisp_Object
 x_clipboard_manager_save (Lisp_Object frame)
 {
-  ENTER_LISP_FRAME (frame);
+  ENTER_LISP_FRAME ((frame));
   struct frame *f = XFRAME (frame);
   struct x_display_info *dpyinfo = FRAME_DISPLAY_INFO (f);
   Atom data = dpyinfo->Xatom_UTF8_STRING;
@@ -2199,7 +2192,7 @@ x_clipboard_manager_save (Lisp_Object frame)
 static Lisp_Object
 x_clipboard_manager_error_1 (Lisp_Object err)
 {
-  ENTER_LISP_FRAME (err);
+  ENTER_LISP_FRAME ((err));
   AUTO_STRING (format, "X clipboard manager error: %s\n\
 If the problem persists, set `%s' to nil.");
   AUTO_STRING (varname, "x-select-enable-clipboard-manager");
@@ -2212,7 +2205,7 @@ If the problem persists, set `%s' to nil.");
 static Lisp_Object
 x_clipboard_manager_error_2 (Lisp_Object err)
 {
-  ENTER_LISP_FRAME (err);
+  ENTER_LISP_FRAME ((err));
   fprintf (stderr, "Error saving to X clipboard manager.\n\
 If the problem persists, set '%s' \
 to nil.\n", "x-select-enable-clipboard-manager");
@@ -2226,8 +2219,7 @@ to nil.\n", "x-select-enable-clipboard-manager");
 void
 x_clipboard_manager_save_frame (Lisp_Object frame)
 {
-  ENTER_LISP_FRAME (frame);
-  LISP_LOCALS (local_selection);
+  ENTER_LISP_FRAME ((frame), local_selection);
   struct frame *f;
 
   if (!NILP (Vx_select_enable_clipboard_manager)
@@ -2256,8 +2248,7 @@ x_clipboard_manager_save_frame (Lisp_Object frame)
 void
 x_clipboard_manager_save_all (void)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (local_selection, local_frame);
+  ENTER_LISP_FRAME ((), local_selection, local_frame);
   /* Loop through all X displays, saving owned clipboards.  */
   struct x_display_info *dpyinfo;
 
@@ -2295,8 +2286,7 @@ x_clipboard_manager_save_all (void)
 int
 x_check_property_data (Lisp_Object data)
 {
-  ENTER_LISP_FRAME_T (int, data);
-  LISP_LOCALS (iter, o);
+  ENTER_LISP_FRAME_T (int, (data), iter, o);
   int size = 0;
 
   for (iter = data; CONSP (iter); iter = XCDR (iter))
@@ -2333,8 +2323,7 @@ x_check_property_data (Lisp_Object data)
 void
 x_fill_property_data (Display *dpy, Lisp_Object data, void *ret, int format)
 {
-  ENTER_LISP_FRAME (data);
-  LISP_LOCALS (iter, o);
+  ENTER_LISP_FRAME ((data), iter, o);
   unsigned long val;
   unsigned long  *d32 = (unsigned long  *) ret;
   unsigned short *d16 = (unsigned short *) ret;
@@ -2426,8 +2415,7 @@ Use the display for FRAME or the current frame if FRAME is not given or nil.
 If the value is 0 or the atom is not known, return the empty string.  */)
   (Lisp_Object value, Lisp_Object frame)
 {
-  ENTER_LISP_FRAME (value, frame);
-  LISP_LOCALS (ret);
+  ENTER_LISP_FRAME ((value, frame), ret);
   struct frame *f = decode_window_system_frame (frame);
   char *name = 0;
   char empty[] = "";
@@ -2463,7 +2451,7 @@ ATOM can be a symbol or a string.  The ATOM is interned on the display that
 FRAME is on.  If FRAME is nil, the selected frame is used.  */)
   (Lisp_Object atom, Lisp_Object frame)
 {
-  ENTER_LISP_FRAME (atom, frame);
+  ENTER_LISP_FRAME ((atom, frame));
   Atom x_atom;
   struct frame *f = decode_window_system_frame (frame);
   ptrdiff_t i;
@@ -2500,8 +2488,7 @@ bool
 x_handle_dnd_message (struct frame *f, const XClientMessageEvent *event,
                       struct x_display_info *dpyinfo, struct input_event *bufp)
 {
-  ENTER_LISP_FRAME_T (bool);
-  LISP_LOCALS (vec, frame);
+  ENTER_LISP_FRAME_T (bool, (), vec, frame);
   /* format 32 => size 5, format 16 => size 10, format 8 => size 20 */
   unsigned long size = 160/event->format;
   int x, y;
@@ -2579,7 +2566,8 @@ are ignored.  */)
   (Lisp_Object display, Lisp_Object dest, Lisp_Object from,
    Lisp_Object message_type, Lisp_Object format, Lisp_Object values)
 {
-  ENTER_LISP_FRAME (display, dest, from, message_type, format, values);
+  ENTER_LISP_FRAME ((display, dest, from, message_type, format,
+                     values));
   struct x_display_info *dpyinfo = check_x_display_info (display);
 
   CHECK_STRING (message_type);
@@ -2596,7 +2584,7 @@ void
 x_send_client_event (Lisp_Object display, Lisp_Object dest, Lisp_Object from,
                      Atom message_type, Lisp_Object format, Lisp_Object values)
 {
-  ENTER_LISP_FRAME (display, dest, from, format, values);
+  ENTER_LISP_FRAME ((display, dest, from, format, values));
   struct x_display_info *dpyinfo = check_x_display_info (display);
   Window wdest;
   XEvent event;

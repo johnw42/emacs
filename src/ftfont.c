@@ -154,8 +154,7 @@ matching_prefix (char const *str, ptrdiff_t len, char const *pat)
 static Lisp_Object
 get_adstyle_property (FcPattern *p)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (adstyle);
+  ENTER_LISP_FRAME ((), adstyle);
   FcChar8 *fcstr;
   char *str, *end;
 
@@ -184,8 +183,7 @@ get_adstyle_property (FcPattern *p)
 static Lisp_Object
 ftfont_pattern_entity (FcPattern *p, Lisp_Object extra)
 {
-  ENTER_LISP_FRAME (extra);
-  LISP_LOCALS (key, cache, entity, val);
+  ENTER_LISP_FRAME ((extra), key, cache, entity, val);
   FcChar8 *str;
   char *file;
   int idx;
@@ -296,8 +294,7 @@ static Lisp_Object ftfont_generic_family_list = NIL_INIT;
 static Lisp_Object
 ftfont_resolve_generic_family (Lisp_Object family, FcPattern *pattern)
 {
-  ENTER_LISP_FRAME (family);
-  LISP_LOCALS (slot);
+  ENTER_LISP_FRAME ((family), slot);
   FcPattern *match;
   FcResult result;
   FcLangSet *langset;
@@ -355,8 +352,7 @@ struct ftfont_cache_data
 static Lisp_Object
 ftfont_lookup_cache (Lisp_Object key, enum ftfont_cache_for cache_for)
 {
-  ENTER_LISP_FRAME (key);
-  LISP_LOCALS (cache, val, entity);
+  ENTER_LISP_FRAME ((key), cache, val, entity);
   struct ftfont_cache_data *cache_data;
 
   if (FONT_ENTITY_P (key))
@@ -448,8 +444,7 @@ ftfont_lookup_cache (Lisp_Object key, enum ftfont_cache_for cache_for)
 FcCharSet *
 ftfont_get_fc_charset (Lisp_Object entity)
 {
-  ENTER_LISP_FRAME_T (FcCharSet *, entity);
-  LISP_LOCALS (val, cache);
+  ENTER_LISP_FRAME_T (FcCharSet *, (entity), val, cache);
   struct ftfont_cache_data *cache_data;
 
   cache = ftfont_lookup_cache (entity, FTFONT_CACHE_FOR_CHARSET);
@@ -490,7 +485,7 @@ ftfont_get_cache (struct frame *f)
 static int
 ftfont_get_charset (Lisp_Object registry)
 {
-  ENTER_LISP_FRAME_T (int, registry);
+  ENTER_LISP_FRAME_T (int, (registry));
   char *str = SSDATA (SYMBOL_NAME (registry));
   USE_SAFE_ALLOCA;
   char *re = SAFE_ALLOCA (SBYTES (SYMBOL_NAME (registry)) * 2 + 1);
@@ -571,8 +566,7 @@ struct OpenTypeSpec
 static struct OpenTypeSpec *
 ftfont_get_open_type_spec (Lisp_Object otf_spec)
 {
-  ENTER_LISP_FRAME_T (struct OpenTypeSpec *, otf_spec);
-  LISP_LOCALS (val, len);
+  ENTER_LISP_FRAME_T (struct OpenTypeSpec *, (otf_spec), val, len);
   struct OpenTypeSpec *spec = malloc (sizeof *spec);
   int i, j;
   bool negative;
@@ -639,8 +633,8 @@ ftfont_get_open_type_spec (Lisp_Object otf_spec)
 static FcPattern *
 ftfont_spec_pattern (Lisp_Object spec, char *otlayout, struct OpenTypeSpec **otspec, const char **langname)
 {
-  ENTER_LISP_FRAME_T (FcPattern *, spec);
-  LISP_LOCALS (tmp, extra, script, registry, key, val, chars);
+  ENTER_LISP_FRAME_T (FcPattern *, (spec), tmp, extra, script,
+                      registry, key, val, chars);
   FcPattern *pattern = NULL;
   FcCharSet *charset = NULL;
   FcLangSet *langset = NULL;
@@ -810,8 +804,8 @@ ftfont_spec_pattern (Lisp_Object spec, char *otlayout, struct OpenTypeSpec **ots
 Lisp_Object
 ftfont_list (struct frame *f, Lisp_Object spec)
 {
-  ENTER_LISP_FRAME (spec);
-  LISP_LOCALS (val, family, adstyle, chars, resolved, entity, this_adstyle);
+  ENTER_LISP_FRAME ((spec), val, family, adstyle, chars, resolved,
+                    entity, this_adstyle);
   val = Qnil;
 
   int i;
@@ -1012,8 +1006,7 @@ ftfont_list (struct frame *f, Lisp_Object spec)
 Lisp_Object
 ftfont_match (struct frame *f, Lisp_Object spec)
 {
-  ENTER_LISP_FRAME (spec);
-  LISP_LOCALS (entity);
+  ENTER_LISP_FRAME ((spec), entity);
   entity = Qnil;
 
   FcPattern *pattern, *match = NULL;
@@ -1065,8 +1058,7 @@ ftfont_match (struct frame *f, Lisp_Object spec)
 Lisp_Object
 ftfont_list_family (struct frame *f)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (list);
+  ENTER_LISP_FRAME ((), list);
   list = Qnil;
 
   FcPattern *pattern = NULL;
@@ -1114,8 +1106,7 @@ ftfont_open2 (struct frame *f,
               int pixel_size,
               Lisp_Object font_object)
 {
-  ENTER_LISP_FRAME (entity, font_object);
-  LISP_LOCALS (val, filename, idx, cache);
+  ENTER_LISP_FRAME ((entity, font_object), val, filename, idx, cache);
   struct ftfont_info *ftfont_info;
   struct font *font;
   struct ftfont_cache_data *cache_data;
@@ -1248,8 +1239,7 @@ ftfont_open2 (struct frame *f,
 Lisp_Object
 ftfont_open (struct frame *f, Lisp_Object entity, int pixel_size)
 {
-  ENTER_LISP_FRAME (entity);
-  LISP_LOCALS (font_object);
+  ENTER_LISP_FRAME ((entity), font_object);
   FT_UInt size;
   size = XINT (AREF (entity, FONT_SIZE_INDEX));
   if (size == 0)
@@ -1262,8 +1252,7 @@ ftfont_open (struct frame *f, Lisp_Object entity, int pixel_size)
 void
 ftfont_close (struct font *font)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (val, cache);
+  ENTER_LISP_FRAME ((), val, cache);
   if (font_data_structures_may_be_ill_formed ())
     EXIT_LISP_FRAME_VOID ();
 
@@ -1293,7 +1282,7 @@ ftfont_close (struct font *font)
 int
 ftfont_has_char (Lisp_Object font, int c)
 {
-  ENTER_LISP_FRAME_T (int, font);
+  ENTER_LISP_FRAME_T (int, (font));
   struct charset *cs = NULL;
 
   if (EQ (AREF (font, FONT_ADSTYLE_INDEX), Qja)
@@ -1444,8 +1433,7 @@ ftfont_anchor_point (struct font *font, unsigned int code, int idx,
 static Lisp_Object
 ftfont_otf_features (OTF_GSUB_GPOS *gsub_gpos)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (scripts, langsyses, features, sym);
+  ENTER_LISP_FRAME ((), scripts, langsyses, features, sym);
   int i, j, k, l;
 
   for (scripts = Qnil, i = gsub_gpos->ScriptList.ScriptCount - 1; i >= 0; i--)
@@ -1489,8 +1477,7 @@ ftfont_otf_features (OTF_GSUB_GPOS *gsub_gpos)
 Lisp_Object
 ftfont_otf_capability (struct font *font)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (gsub_gpos);
+  ENTER_LISP_FRAME ((), gsub_gpos);
   struct ftfont_info *ftfont_info = (struct ftfont_info *) font;
   OTF *otf = ftfont_get_otf (ftfont_info);
 
@@ -2459,8 +2446,7 @@ static Lisp_Object
 ftfont_shape_by_flt (Lisp_Object lgstring, struct font *font,
 		     FT_Face ft_face, OTF *otf, FT_Matrix *matrix)
 {
-  ENTER_LISP_FRAME (lgstring);
-  LISP_LOCALS (g, g0, g1, family, lglyph, vec);
+  ENTER_LISP_FRAME ((lgstring), g, g0, g1, family, lglyph, vec);
   ptrdiff_t len = LGSTRING_GLYPH_LEN (lgstring);
   ptrdiff_t i;
   struct MFLTFontFT flt_font_ft;
@@ -2649,7 +2635,7 @@ ftfont_shape_by_flt (Lisp_Object lgstring, struct font *font,
 Lisp_Object
 ftfont_shape (Lisp_Object lgstring)
 {
-  ENTER_LISP_FRAME (lgstring);
+  ENTER_LISP_FRAME ((lgstring));
   struct font *font = CHECK_FONT_GET_OBJECT (LGSTRING_FONT (lgstring));
   struct ftfont_info *ftfont_info = (struct ftfont_info *) font;
   OTF *otf = ftfont_get_otf (ftfont_info);
@@ -2723,7 +2709,7 @@ static const char *const ftfont_non_booleans [] = {
 void
 ftfont_filter_properties (Lisp_Object font, Lisp_Object alist)
 {
-  ENTER_LISP_FRAME (font, alist);
+  ENTER_LISP_FRAME ((font, alist));
   font_filter_properties (font, alist, ftfont_booleans, ftfont_non_booleans);
   EXIT_LISP_FRAME_VOID ();
 }

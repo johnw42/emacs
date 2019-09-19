@@ -444,8 +444,7 @@ DEFUN ("w16-set-clipboard-data", Fw16_set_clipboard_data, Sw16_set_clipboard_dat
        doc: /* This sets the clipboard data to the given text.  */)
   (Lisp_Object string, Lisp_Object frame)
 {
-  ENTER_LISP_FRAME (string, frame);
-  LISP_LOCALS (coding_system);
+  ENTER_LISP_FRAME ((string, frame), coding_system);
   unsigned ok = 1, put_status = 0;
   int nbytes, no_crlf_conversion;
   unsigned char *src, *dst = NULL;
@@ -549,8 +548,7 @@ DEFUN ("w16-get-clipboard-data", Fw16_get_clipboard_data, Sw16_get_clipboard_dat
        doc: /* This gets the clipboard data in text format.  */)
   (Lisp_Object frame)
 {
-  ENTER_LISP_FRAME (frame);
-  LISP_LOCALS (ret, coding_system);
+  ENTER_LISP_FRAME ((frame), ret, coding_system);
   unsigned data_size, truelen;
   unsigned char *htext = NULL;
   ret = Qnil;
@@ -644,8 +642,7 @@ server to query.  If omitted or nil, that stands for the selected
 frame's display, or the first available X display.  */)
   (Lisp_Object selection, Lisp_Object terminal)
 {
-  ENTER_LISP_FRAME (selection, terminal);
-  LISP_LOCALS (val);
+  ENTER_LISP_FRAME ((selection, terminal), val);
   CHECK_SYMBOL (selection);
 
   /* Return nil for SECONDARY selection.  For PRIMARY (or nil)

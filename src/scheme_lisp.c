@@ -1221,30 +1221,26 @@ enter_lisp_frame (struct func_frame_info *fi, void *base)
 
 void
 record_lisp_locals (struct func_frame_info *fi,
-                    bool is_params,
                     void *base,
-                    size_t n, ...)
+                    size_t num_params,
+                    size_t num_locals,
+                    ...)
 {
-  ptrdiff_t *offsets = malloc(n * sizeof (ptrdiff_t));
+  ptrdiff_t *offsets = malloc((num_params + num_locals) *
+                              sizeof (ptrdiff_t));
 
   va_list ap;
-  va_start (ap, n);
-  bool any_bits_set = false;
-  for (size_t i = 0; i < n; i++)
+  va_start (ap, num_locals);
+  for (size_t i = 0; i < num_params + num_locals; i++)
     {
       Lisp_Object *ptr = va_arg (ap, Lisp_Object *);
       offsets[i] = (char *) ptr - (char *) base;
     }
-  if (is_params)
-    {
-      fi->num_params = n;
-      fi->params = offsets;
-    }
-  else
-    {
-      fi->num_locals = n;
-      fi->locals = offsets;
-    }
+  va_end (ap);
+  fi->num_params = num_params;
+  fi->params = offsets;
+  fi->num_locals = num_locals;
+  fi->locals = offsets + num_params;
 }
 
 void
@@ -1304,8 +1300,7 @@ run_init_checks(void)
   return;
 
   Lisp_Object a = make_number(1), b = make_number(2);
-  ENTER_LISP_FRAME (a, b);
-  LISP_LOCALS (c, d);
+  ENTER_LISP_FRAME ((a, b), c, d);
 
   Lisp_Object *expected[] = {&a, &b, &c, &d};
   qsort (expected, ARRAYELTS (expected),
@@ -1318,7 +1313,7 @@ run_init_checks(void)
 
   {
     Lisp_Object args[] = {make_number(3), make_number(4)};
-    ENTER_LISP_FRAME_VA (2, args);
+    ENTER_LISP_FRAME_VA (2, args, ());
     LISP_LOCAL_ARRAY (e, 2);
 
     Lisp_Object *expected[] =

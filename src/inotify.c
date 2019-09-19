@@ -73,8 +73,7 @@ static Lisp_Object watch_list = NIL_INIT;
 static Lisp_Object
 mask_to_aspects (uint32_t mask)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (aspects);
+  ENTER_LISP_FRAME ((), aspects);
   aspects = Qnil;
 
   if (mask & IN_ACCESS)
@@ -115,7 +114,7 @@ mask_to_aspects (uint32_t mask)
 static uint32_t
 symbol_to_inotifymask (Lisp_Object symb)
 {
-  ENTER_LISP_FRAME_T (uint32_t, symb);
+  ENTER_LISP_FRAME_T (uint32_t, (symb));
   if (EQ (symb, Qaccess))
     EXIT_LISP_FRAME (IN_ACCESS);
   else if (EQ (symb, Qattrib))
@@ -162,8 +161,7 @@ symbol_to_inotifymask (Lisp_Object symb)
 static uint32_t
 aspect_to_inotifymask (Lisp_Object aspect)
 {
-  ENTER_LISP_FRAME_T (uint32_t, aspect);
-  LISP_LOCALS (x);
+  ENTER_LISP_FRAME_T (uint32_t, (aspect), x);
   if (CONSP (aspect) || NILP (aspect))
     {
       x = aspect;
@@ -181,8 +179,7 @@ aspect_to_inotifymask (Lisp_Object aspect)
 static Lisp_Object
 inotifyevent_to_event (Lisp_Object watch, struct inotify_event const *ev)
 {
-  ENTER_LISP_FRAME (watch);
-  LISP_LOCALS (name);
+  ENTER_LISP_FRAME ((watch), name);
   uint32_t mask;
   CONS_TO_INTEGER (Fnth (make_number (3), watch), uint32_t, mask);
 
@@ -212,8 +209,8 @@ static Lisp_Object
 add_watch (int wd, Lisp_Object filename,
 	   uint32_t imask, Lisp_Object callback)
 {
-  ENTER_LISP_FRAME (filename, callback);
-  LISP_LOCALS (descriptor, tail, watch, watch_id, mask);
+  ENTER_LISP_FRAME ((filename, callback), descriptor, tail, watch,
+                    watch_id, mask);
   descriptor = INTEGER_TO_CONS (wd);
 
   tail = assoc_no_quit (descriptor, watch_list);
@@ -258,8 +255,7 @@ add_watch (int wd, Lisp_Object filename,
 static Lisp_Object
 find_descriptor (Lisp_Object descriptor)
 {
-  ENTER_LISP_FRAME (descriptor);
-  LISP_LOCALS (tail, prevtail);
+  ENTER_LISP_FRAME ((descriptor), tail, prevtail);
   prevtail = Qt;
 
   for (tail = watch_list; !NILP (tail); prevtail = tail, tail = XCDR (tail))
@@ -275,8 +271,7 @@ find_descriptor (Lisp_Object descriptor)
 static void
 remove_descriptor (Lisp_Object prevtail, bool invalid_p)
 {
-  ENTER_LISP_FRAME (prevtail);
-  LISP_LOCALS (tail);
+  ENTER_LISP_FRAME ((prevtail), tail);
   tail = CONSP (prevtail) ? XCDR (prevtail) : watch_list;
 
 
@@ -314,8 +309,7 @@ remove_descriptor (Lisp_Object prevtail, bool invalid_p)
 static void
 remove_watch (Lisp_Object descriptor, Lisp_Object id)
 {
-  ENTER_LISP_FRAME (descriptor, id);
-  LISP_LOCALS (prevtail, elt, prev);
+  ENTER_LISP_FRAME ((descriptor, id), prevtail, elt, prev);
   prevtail = find_descriptor (descriptor);
 
   if (NILP (prevtail))
@@ -340,8 +334,7 @@ remove_watch (Lisp_Object descriptor, Lisp_Object id)
 static void
 inotify_callback (int fd, void *_)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (descriptor, prevtail, tail, watches);
+  ENTER_LISP_FRAME ((), descriptor, prevtail, tail, watches);
   int to_read;
   if (ioctl (fd, FIONREAD, &to_read) < 0)
     report_file_notify_error ("Error while retrieving file system events",
@@ -450,8 +443,7 @@ IN_MASK_ADD
 IN_ONESHOT  */)
      (Lisp_Object filename, Lisp_Object aspect, Lisp_Object callback)
 {
-  ENTER_LISP_FRAME (filename, aspect, callback);
-  LISP_LOCALS (encoded_file_name);
+  ENTER_LISP_FRAME ((filename, aspect, callback), encoded_file_name);
   int wd = -1;
   uint32_t imask = aspect_to_inotifymask (aspect);
   uint32_t mask = imask | IN_MASK_ADD | IN_EXCL_UNLINK;
@@ -478,7 +470,7 @@ IN_ONESHOT  */)
 static bool
 valid_watch_descriptor (Lisp_Object wd)
 {
-  ENTER_LISP_FRAME_T (bool, wd);
+  ENTER_LISP_FRAME_T (bool, (wd));
   EXIT_LISP_FRAME ((CONSP (wd)
 	  && (RANGED_INTEGERP (0, XCAR (wd), INT_MAX)
 	      || (CONSP (XCAR (wd))
@@ -496,8 +488,7 @@ WATCH-DESCRIPTOR should be an object returned by `inotify-add-watch'.
 See inotify_rm_watch(2) for more information.  */)
      (Lisp_Object watch_descriptor)
 {
-  ENTER_LISP_FRAME (watch_descriptor);
-  LISP_LOCALS (descriptor, id);
+  ENTER_LISP_FRAME ((watch_descriptor), descriptor, id);
 
 
   if (! valid_watch_descriptor (watch_descriptor))
@@ -521,8 +512,7 @@ reason.  Removing the watch by calling `inotify-rm-watch' also makes
 it invalid.  */)
      (Lisp_Object watch_descriptor)
 {
-  ENTER_LISP_FRAME (watch_descriptor);
-  LISP_LOCALS (tail, watch);
+  ENTER_LISP_FRAME ((watch_descriptor), tail, watch);
   if (! valid_watch_descriptor (watch_descriptor))
     EXIT_LISP_FRAME (Qnil);
   tail = assoc_no_quit (XCAR (watch_descriptor), watch_list);

@@ -279,8 +279,7 @@ DEF_DLL_FN (const char *, gnutls_ext_get_name, (unsigned int));
 static bool
 init_gnutls_functions (void)
 {
-  ENTER_LISP_FRAME_T (bool);
-  LISP_LOCALS (name);
+  ENTER_LISP_FRAME_T (bool, (), name);
   HMODULE library;
   int max_log_level = 1;
 
@@ -866,7 +865,7 @@ gnutls_make_error (int err)
 Lisp_Object
 emacs_gnutls_deinit (Lisp_Object proc)
 {
-  ENTER_LISP_FRAME (proc);
+  ENTER_LISP_FRAME ((proc));
   int log_level;
 
   CHECK_PROCESS (proc);
@@ -909,7 +908,7 @@ The second parameter is the list of parameters to feed to gnutls-boot
 to finish setting up the connection. */)
   (Lisp_Object proc, Lisp_Object params)
 {
-  ENTER_LISP_FRAME (proc, params);
+  ENTER_LISP_FRAME ((proc, params));
   CHECK_PROCESS (proc);
 
   XPROCESS (proc)->gnutls_boot_parameters = params;
@@ -921,7 +920,7 @@ DEFUN ("gnutls-get-initstage", Fgnutls_get_initstage, Sgnutls_get_initstage, 1, 
 See also `gnutls-boot'.  */)
   (Lisp_Object proc)
 {
-  ENTER_LISP_FRAME (proc);
+  ENTER_LISP_FRAME ((proc));
   CHECK_PROCESS (proc);
 
   EXIT_LISP_FRAME (make_number (GNUTLS_INITSTAGE (proc)));
@@ -934,7 +933,7 @@ usage: (gnutls-errorp ERROR)  */
        attributes: const)
   (Lisp_Object err)
 {
-  ENTER_LISP_FRAME (err);
+  ENTER_LISP_FRAME ((err));
   if (EQ (err, Qt)
       || EQ (err, Qgnutls_e_again))
     EXIT_LISP_FRAME (Qnil);
@@ -948,8 +947,7 @@ ERROR is an integer or a symbol with an integer `gnutls-code' property.
 Usage: (gnutls-error-fatalp ERROR)  */)
   (Lisp_Object err)
 {
-  ENTER_LISP_FRAME (err);
-  LISP_LOCALS (code);
+  ENTER_LISP_FRAME ((err), code);
 
   if (EQ (err, Qt)) EXIT_LISP_FRAME (Qnil);
 
@@ -981,8 +979,7 @@ ERROR is an integer or a symbol with an integer `gnutls-code' property.
 usage: (gnutls-error-string ERROR)  */)
   (Lisp_Object err)
 {
-  ENTER_LISP_FRAME (err);
-  LISP_LOCALS (code);
+  ENTER_LISP_FRAME ((err), code);
 
   if (EQ (err, Qt)) EXIT_LISP_FRAME (build_string ("Not an error"));
 
@@ -1010,15 +1007,14 @@ DEFUN ("gnutls-deinit", Fgnutls_deinit, Sgnutls_deinit, 1, 1, 0,
 See also `gnutls-init'.  */)
   (Lisp_Object proc)
 {
-  ENTER_LISP_FRAME (proc);
+  ENTER_LISP_FRAME ((proc));
   EXIT_LISP_FRAME (emacs_gnutls_deinit (proc));
 }
 
 static Lisp_Object
 gnutls_hex_string (unsigned char *buf, ptrdiff_t buf_size, const char *prefix)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (ret);
+  ENTER_LISP_FRAME ((), ret);
   ptrdiff_t prefix_length = strlen (prefix);
   ptrdiff_t retlen;
   if (INT_MULTIPLY_WRAPV (buf_size, 3, &retlen)
@@ -1040,8 +1036,7 @@ gnutls_hex_string (unsigned char *buf, ptrdiff_t buf_size, const char *prefix)
 static Lisp_Object
 gnutls_certificate_details (gnutls_x509_crt_t cert)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (res);
+  ENTER_LISP_FRAME ((), res);
   res = Qnil;
 
   int err;
@@ -1216,7 +1211,7 @@ DEFUN ("gnutls-peer-status-warning-describe", Fgnutls_peer_status_warning_descri
        doc: /* Describe the warning of a GnuTLS peer status from `gnutls-peer-status'.  */)
   (Lisp_Object status_symbol)
 {
-  ENTER_LISP_FRAME (status_symbol);
+  ENTER_LISP_FRAME ((status_symbol));
   CHECK_SYMBOL (status_symbol);
 
   if (EQ (status_symbol, intern (":invalid")))
@@ -1257,8 +1252,7 @@ The return value is a property list with top-level keys :warnings and
 `gnutls-peer-status-warning-describe'. */)
   (Lisp_Object proc)
 {
-  ENTER_LISP_FRAME (proc);
-  LISP_LOCALS (warnings, result);
+  ENTER_LISP_FRAME ((proc), warnings, result);
   warnings = Qnil;
   result = Qnil;
 
@@ -1414,8 +1408,8 @@ boot_error (struct Lisp_Process *p, const char *m, ...)
 Lisp_Object
 gnutls_verify_boot (Lisp_Object proc, Lisp_Object proplist)
 {
-  ENTER_LISP_FRAME (proc, proplist);
-  LISP_LOCALS (warnings, hostname, verify_error, tail, warning, message);
+  ENTER_LISP_FRAME ((proc, proplist), warnings, hostname,
+                    verify_error, tail, warning, message);
   int ret;
   struct Lisp_Process *p = XPROCESS (proc);
   gnutls_session_t state = p->gnutls_state;
@@ -1615,10 +1609,10 @@ work.  For X.509 PKI (`gnutls-x509pki'), you probably need at least
 one trustfile (usually a CA bundle).  */)
   (Lisp_Object proc, Lisp_Object type, Lisp_Object proplist)
 {
-  ENTER_LISP_FRAME (proc, type, proplist);
-  LISP_LOCALS (global_init, priority_string, trustfiles, crlfiles,
-               keylist, loglevel, hostname, prime_bits, verify_flags,
-               tail, trustfile, crlfile, keyfile, certfile);
+  ENTER_LISP_FRAME ((proc, type, proplist), global_init,
+                    priority_string, trustfiles, crlfiles, keylist,
+                    loglevel, hostname, prime_bits, verify_flags,
+                    tail, trustfile, crlfile, keyfile, certfile);
   int ret = GNUTLS_E_SUCCESS;
   int max_log_level = 0;
 
@@ -1911,7 +1905,7 @@ This function may also return `gnutls-e-again', or
 `gnutls-e-interrupted'.  */)
     (Lisp_Object proc, Lisp_Object cont)
 {
-  ENTER_LISP_FRAME (proc, cont);
+  ENTER_LISP_FRAME ((proc, cont));
   gnutls_session_t state;
   int ret;
 
@@ -1935,8 +1929,7 @@ DEFUN ("gnutls-ciphers", Fgnutls_ciphers, Sgnutls_ciphers, 0, 0, 0,
 The alist key is the cipher name. */)
   (void)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (ciphers, cipher_symbol, cp);
+  ENTER_LISP_FRAME ((), ciphers, cipher_symbol, cp);
   ciphers = Qnil;
 
 
@@ -1986,8 +1979,7 @@ gnutls_symmetric_aead (bool encrypting, gnutls_cipher_algorithm_t gca,
 		       const char *idata, ptrdiff_t isize,
                        Lisp_Object aead_auth)
 {
-  ENTER_LISP_FRAME (cipher, aead_auth);
-  LISP_LOCALS (actual_iv, output);
+  ENTER_LISP_FRAME ((cipher, aead_auth), actual_iv, output);
 # ifdef HAVE_GNUTLS_AEAD
 
   const char *desc = encrypting ? "encrypt" : "decrypt";
@@ -2069,8 +2061,8 @@ gnutls_symmetric (bool encrypting, Lisp_Object cipher,
                   Lisp_Object key, Lisp_Object iv,
                   Lisp_Object input, Lisp_Object aead_auth)
 {
-  ENTER_LISP_FRAME (cipher, key, iv, input, aead_auth);
-  LISP_LOCALS (info, v, actual_iv, aead_output, storage);
+  ENTER_LISP_FRAME ((cipher, key, iv, input, aead_auth), info, v,
+                    actual_iv, aead_output, storage);
   if (BUFFERP (key) || STRINGP (key))
     key = list1 (key);
 
@@ -2245,7 +2237,7 @@ these AEAD ciphers, but it may still be omitted (nil) as well. */)
   (Lisp_Object cipher, Lisp_Object key, Lisp_Object iv,
    Lisp_Object input, Lisp_Object aead_auth)
 {
-  ENTER_LISP_FRAME (cipher, key, iv, input, aead_auth);
+  ENTER_LISP_FRAME ((cipher, key, iv, input, aead_auth));
   EXIT_LISP_FRAME (gnutls_symmetric (true, cipher, key, iv, input, aead_auth));
 }
 
@@ -2273,7 +2265,7 @@ these AEAD ciphers, but it may still be omitted (nil) as well. */)
   (Lisp_Object cipher, Lisp_Object key, Lisp_Object iv,
    Lisp_Object input, Lisp_Object aead_auth)
 {
-  ENTER_LISP_FRAME (cipher, key, iv, input, aead_auth);
+  ENTER_LISP_FRAME ((cipher, key, iv, input, aead_auth));
   EXIT_LISP_FRAME (gnutls_symmetric (false, cipher, key, iv, input, aead_auth));
 }
 
@@ -2285,8 +2277,7 @@ with `gnutls-hash-mac'.  The alist key is the mac-algorithm method
 name. */)
   (void)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (mac_algorithms, gma_symbol, mp);
+  ENTER_LISP_FRAME ((), mac_algorithms, gma_symbol, mp);
   mac_algorithms = Qnil;
 
   const gnutls_mac_algorithm_t *macs = gnutls_mac_list ();
@@ -2329,8 +2320,7 @@ with `gnutls-hash-digest'.  The alist key is the digest-algorithm
 method name. */)
   (void)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (digest_algorithms, gda_symbol, mp);
+  ENTER_LISP_FRAME ((), digest_algorithms, gda_symbol, mp);
   digest_algorithms = Qnil;
 
   const gnutls_digest_algorithm_t *digests = gnutls_digest_list ();
@@ -2374,8 +2364,7 @@ a plist with the `:mac-algorithm-id' numeric property, or the number
 itself. */)
   (Lisp_Object hash_method, Lisp_Object key, Lisp_Object input)
 {
-  ENTER_LISP_FRAME (hash_method, key, input);
-  LISP_LOCALS (info, v, digest);
+  ENTER_LISP_FRAME ((hash_method, key, input), info, v, digest);
   if (BUFFERP (input) || STRINGP (input))
     input = list1 (input);
 
@@ -2474,8 +2463,7 @@ alist, or a plist with the `:digest-algorithm-id' numeric property, or
 the number itself. */)
   (Lisp_Object digest_method, Lisp_Object input)
 {
-  ENTER_LISP_FRAME (digest_method, input);
-  LISP_LOCALS (info, v, digest);
+  ENTER_LISP_FRAME ((digest_method, input), info, v, digest);
   if (BUFFERP (input) || STRINGP (input))
     input = list1 (input);
 
@@ -2563,8 +2551,7 @@ Any GnuTLS extension with ID up to 100
                         : the list will contain its name.  */)
   (void)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (capabilities, found);
+  ENTER_LISP_FRAME ((), capabilities, found);
   capabilities = Qnil;
 
 

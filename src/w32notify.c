@@ -480,7 +480,7 @@ remove_watch (struct notification *dirwatch)
 static DWORD
 filter_list_to_flags (Lisp_Object filter_list)
 {
-  ENTER_LISP_FRAME_T (DWORD, filter_list);
+  ENTER_LISP_FRAME_T (DWORD, (filter_list));
   DWORD flags = 0;
 
   if (NILP (filter_list))
@@ -556,8 +556,8 @@ will never come in.  Volumes shared from remote Windows machines do
 generate notifications correctly, though.  */)
   (Lisp_Object file, Lisp_Object filter, Lisp_Object callback)
 {
-  ENTER_LISP_FRAME (file, filter, callback);
-  LISP_LOCALS (dirfn, basefn, watch_object, watch_descriptor, lisp_errstr);
+  ENTER_LISP_FRAME ((file, filter, callback), dirfn, basefn,
+                    watch_object, watch_descriptor, lisp_errstr);
   DWORD flags;
   BOOL subdirs = FALSE;
   struct notification *dirwatch = NULL;
@@ -636,8 +636,7 @@ DEFUN ("w32notify-rm-watch", Fw32notify_rm_watch,
 WATCH-DESCRIPTOR should be an object returned by `w32notify-add-watch'.  */)
      (Lisp_Object watch_descriptor)
 {
-  ENTER_LISP_FRAME (watch_descriptor);
-  LISP_LOCALS (watch_object);
+  ENTER_LISP_FRAME ((watch_descriptor), watch_object);
   struct notification *dirwatch;
   int status = -1;
 
@@ -663,8 +662,7 @@ WATCH-DESCRIPTOR should be an object returned by `w32notify-add-watch'.  */)
 Lisp_Object
 w32_get_watch_object (void *desc)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (descriptor);
+  ENTER_LISP_FRAME ((), descriptor);
   descriptor = make_pointer_integer (desc);
 
 
@@ -684,8 +682,7 @@ the watcher thread exits abnormally for any other reason.  Removing the
 watch by calling `w32notify-rm-watch' also makes it invalid.  */)
      (Lisp_Object watch_descriptor)
 {
-  ENTER_LISP_FRAME (watch_descriptor);
-  LISP_LOCALS (watch_object);
+  ENTER_LISP_FRAME ((watch_descriptor), watch_object);
   watch_object = Fassoc (watch_descriptor, watch_list, Qnil);
 
 

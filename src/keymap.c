@@ -103,7 +103,7 @@ static Lisp_Object get_keyelt (Lisp_Object, bool);
 static void
 CHECK_VECTOR_OR_CHAR_TABLE (Lisp_Object x)
 {
-  ENTER_LISP_FRAME (x);
+  ENTER_LISP_FRAME ((x));
   CHECK_TYPE (VECTORP (x) || CHAR_TABLE_P (x), Qvector_or_char_table_p, x);
   EXIT_LISP_FRAME_VOID ();
 }
@@ -122,8 +122,7 @@ The optional arg STRING supplies a menu name for the keymap
 in case you use it as a menu with `x-popup-menu'.  */)
   (Lisp_Object string)
 {
-  ENTER_LISP_FRAME (string);
-  LISP_LOCALS (tail);
+  ENTER_LISP_FRAME ((string), tail);
   if (!NILP (string))
     tail = list1 (string);
   else
@@ -143,7 +142,7 @@ The optional arg STRING supplies a menu name for the keymap
 in case you use it as a menu with `x-popup-menu'.  */)
   (Lisp_Object string)
 {
-  ENTER_LISP_FRAME (string);
+  ENTER_LISP_FRAME ((string));
   if (!NILP (string))
     {
       if (!NILP (Vpurify_flag))
@@ -163,7 +162,7 @@ in case you use it as a menu with `x-popup-menu'.  */)
 void
 initial_define_key (Lisp_Object keymap, int key, const char *defname)
 {
-  ENTER_LISP_FRAME (keymap);
+  ENTER_LISP_FRAME ((keymap));
   store_in_keymap (keymap, make_number (key), intern_c_string (defname));
   EXIT_LISP_FRAME_VOID ();
 }
@@ -171,7 +170,7 @@ initial_define_key (Lisp_Object keymap, int key, const char *defname)
 void
 initial_define_lispy_key (Lisp_Object keymap, const char *keyname, const char *defname)
 {
-  ENTER_LISP_FRAME (keymap);
+  ENTER_LISP_FRAME ((keymap));
   store_in_keymap (keymap, intern_c_string (keyname), intern_c_string (defname));
   EXIT_LISP_FRAME_VOID ();
 }
@@ -186,7 +185,7 @@ a vector of densely packed bindings for small character codes
 is also allowed as an element.  */)
   (Lisp_Object object)
 {
-  ENTER_LISP_FRAME (object);
+  ENTER_LISP_FRAME ((object));
   EXIT_LISP_FRAME ((KEYMAPP (object) ? Qt : Qnil));
 }
 
@@ -196,8 +195,7 @@ If non-nil, the prompt is shown in the echo-area
 when reading a key-sequence to be looked-up in this keymap.  */)
   (Lisp_Object map)
 {
-  ENTER_LISP_FRAME (map);
-  LISP_LOCALS (tem);
+  ENTER_LISP_FRAME ((map), tem);
   map = get_keymap (map, 0, 0);
   while (CONSP (map))
     {
@@ -239,8 +237,7 @@ when reading a key-sequence to be looked-up in this keymap.  */)
 Lisp_Object
 get_keymap (Lisp_Object object, bool error_if_not_keymap, bool autoload)
 {
-  ENTER_LISP_FRAME (object);
-  LISP_LOCALS (tem, tail);
+  ENTER_LISP_FRAME ((object), tem, tail);
 
  autoload_retry:
   if (NILP (object))
@@ -286,8 +283,7 @@ get_keymap (Lisp_Object object, bool error_if_not_keymap, bool autoload)
 static Lisp_Object
 keymap_parent (Lisp_Object keymap, bool autoload)
 {
-  ENTER_LISP_FRAME (keymap);
-  LISP_LOCALS (list);
+  ENTER_LISP_FRAME ((keymap), list);
 
   keymap = get_keymap (keymap, 1, autoload);
 
@@ -308,7 +304,7 @@ DEFUN ("keymap-parent", Fkeymap_parent, Skeymap_parent, 1, 1, 0,
 If KEYMAP has no parent, return nil.  */)
   (Lisp_Object keymap)
 {
-  ENTER_LISP_FRAME (keymap);
+  ENTER_LISP_FRAME ((keymap));
   EXIT_LISP_FRAME (keymap_parent (keymap, 1));
 }
 
@@ -316,7 +312,7 @@ If KEYMAP has no parent, return nil.  */)
 static bool
 keymap_memberp (Lisp_Object map, Lisp_Object maps)
 {
-  ENTER_LISP_FRAME_T (bool, map, maps);
+  ENTER_LISP_FRAME_T (bool, (map, maps));
   if (NILP (map)) EXIT_LISP_FRAME (0);
   while (KEYMAPP (maps) && !EQ (map, maps))
     maps = keymap_parent (maps, 0);
@@ -330,8 +326,7 @@ DEFUN ("set-keymap-parent", Fset_keymap_parent, Sset_keymap_parent, 2, 2, 0,
 Return PARENT.  PARENT should be nil or another keymap.  */)
   (Lisp_Object keymap, Lisp_Object parent)
 {
-  ENTER_LISP_FRAME (keymap, parent);
-  LISP_LOCALS (list, prev);
+  ENTER_LISP_FRAME ((keymap, parent), list, prev);
 
   /* Flush any reverse-map cache.  */
   where_is_cache = Qnil; where_is_cache_keymaps = Qt;
@@ -386,10 +381,9 @@ static Lisp_Object
 access_keymap_1 (Lisp_Object map, Lisp_Object idx,
 		 bool t_ok, bool noinherit, bool autoload)
 {
-  ENTER_LISP_FRAME (map, idx);
-  LISP_LOCALS (event_meta_binding, event_meta_map, tail, t_binding,
-               retval, retval_tail, val, binding, submap, parent_entry,
-               key);
+  ENTER_LISP_FRAME ((map, idx), event_meta_binding, event_meta_map,
+                    tail, t_binding, retval, retval_tail, val,
+                    binding, submap, parent_entry, key);
   /* If idx is a list (some sort of mouse click, perhaps?),
      the index we want to use is the car of the list, which
      ought to be a symbol.  */
@@ -558,8 +552,7 @@ Lisp_Object
 access_keymap (Lisp_Object map, Lisp_Object idx,
 	       bool t_ok, bool noinherit, bool autoload)
 {
-  ENTER_LISP_FRAME (map, idx);
-  LISP_LOCALS (val);
+  ENTER_LISP_FRAME ((map, idx), val);
   val = access_keymap_1 (map, idx, t_ok, noinherit, autoload);
 
   EXIT_LISP_FRAME (EQ (val, Qunbound) ? Qnil : val);
@@ -568,7 +561,7 @@ access_keymap (Lisp_Object map, Lisp_Object idx,
 static void
 map_keymap_item (map_keymap_function_t fun, Lisp_Object args, Lisp_Object key, Lisp_Object val, void *data)
 {
-  ENTER_LISP_FRAME (args, key, val);
+  ENTER_LISP_FRAME ((args, key, val));
   if (EQ (val, Qt))
     val = Qnil;
   (*fun) (key, val, args, data);
@@ -578,7 +571,7 @@ map_keymap_item (map_keymap_function_t fun, Lisp_Object args, Lisp_Object key, L
 static void
 map_keymap_char_table_item (Lisp_Object args, Lisp_Object key, Lisp_Object val)
 {
-  ENTER_LISP_FRAME (args, key, val);
+  ENTER_LISP_FRAME ((args, key, val));
   if (!NILP (val))
     {
       map_keymap_function_t fun
@@ -601,8 +594,7 @@ map_keymap_internal (Lisp_Object map,
 		     Lisp_Object args,
 		     void *data)
 {
-  ENTER_LISP_FRAME (map, args);
-  LISP_LOCALS (tail, binding, character);
+  ENTER_LISP_FRAME ((map, args), tail, binding, character);
   tail = (CONSP (map) && EQ (Qkeymap, XCAR (map))) ? XCDR (map) : map;
 
 
@@ -638,7 +630,7 @@ map_keymap_internal (Lisp_Object map,
 static void
 map_keymap_call (Lisp_Object key, Lisp_Object val, Lisp_Object fun, void *dummy)
 {
-  ENTER_LISP_FRAME (key, val, fun);
+  ENTER_LISP_FRAME ((key, val, fun));
   call2 (fun, key, val);
   EXIT_LISP_FRAME_VOID ();
 }
@@ -649,7 +641,7 @@ void
 map_keymap (Lisp_Object map, map_keymap_function_t fun, Lisp_Object args,
 	    void *data, bool autoload)
 {
-  ENTER_LISP_FRAME (map, args);
+  ENTER_LISP_FRAME ((map, args));
   map = get_keymap (map, 1, autoload);
   while (CONSP (map))
     {
@@ -671,7 +663,7 @@ map_keymap (Lisp_Object map, map_keymap_function_t fun, Lisp_Object args,
 void
 map_keymap_canonical (Lisp_Object map, map_keymap_function_t fun, Lisp_Object args, void *data)
 {
-  ENTER_LISP_FRAME (map, args);
+  ENTER_LISP_FRAME ((map, args));
   /* map_keymap_canonical may be used from redisplay (e.g. when building menus)
      so be careful to ignore errors and to inhibit redisplay.  */
   map = safe_call1 (Qkeymap_canonicalize, map);
@@ -687,7 +679,7 @@ the definition it is bound to.  The event may be a character range.
 If KEYMAP has a parent, this function returns it without processing it.  */)
   (Lisp_Object function, Lisp_Object keymap)
 {
-  ENTER_LISP_FRAME (function, keymap);
+  ENTER_LISP_FRAME ((function, keymap));
   keymap = get_keymap (keymap, 1, 1);
   keymap = map_keymap_internal (keymap, map_keymap_call, function, NULL);
   EXIT_LISP_FRAME (keymap);
@@ -704,7 +696,7 @@ grandparent's bindings are also included and so on.
 usage: (map-keymap FUNCTION KEYMAP)  */)
   (Lisp_Object function, Lisp_Object keymap, Lisp_Object sort_first)
 {
-  ENTER_LISP_FRAME (function, keymap, sort_first);
+  ENTER_LISP_FRAME ((function, keymap, sort_first));
   if (! NILP (sort_first))
     EXIT_LISP_FRAME (call2 (intern ("map-keymap-sorted"), function, keymap));
 
@@ -729,8 +721,7 @@ usage: (map-keymap FUNCTION KEYMAP)  */)
 static Lisp_Object
 get_keyelt (Lisp_Object object, bool autoload)
 {
-  ENTER_LISP_FRAME (object);
-  LISP_LOCALS (tem, filter);
+  ENTER_LISP_FRAME ((object), tem, filter);
   while (1)
     {
       if (!(CONSP (object)))
@@ -781,8 +772,7 @@ get_keyelt (Lisp_Object object, bool autoload)
 static Lisp_Object
 store_in_keymap (Lisp_Object keymap, Lisp_Object idx, Lisp_Object def)
 {
-  ENTER_LISP_FRAME (keymap, idx, def);
-  LISP_LOCALS (tail, insertion_point, elt);
+  ENTER_LISP_FRAME ((keymap, idx, def), tail, insertion_point, elt);
   /* Flush any reverse-map cache.  */
   where_is_cache = Qnil;
   where_is_cache_keymaps = Qt;
@@ -946,8 +936,7 @@ store_in_keymap (Lisp_Object keymap, Lisp_Object idx, Lisp_Object def)
 static Lisp_Object
 copy_keymap_item (Lisp_Object elt)
 {
-  ENTER_LISP_FRAME (elt);
-  LISP_LOCALS (res, tem);
+  ENTER_LISP_FRAME ((elt), res, tem);
 
   if (!CONSP (elt))
     EXIT_LISP_FRAME (elt);
@@ -1007,7 +996,7 @@ copy_keymap_item (Lisp_Object elt)
 static void
 copy_keymap_1 (Lisp_Object chartable, Lisp_Object idx, Lisp_Object elt)
 {
-  ENTER_LISP_FRAME (chartable, idx, elt);
+  ENTER_LISP_FRAME ((chartable, idx, elt));
   Fset_char_table_range (chartable, idx, copy_keymap_item (elt));
   EXIT_LISP_FRAME_VOID ();
 }
@@ -1031,8 +1020,7 @@ However, a key definition which is a symbol whose definition is a keymap
 is not copied.  */)
   (Lisp_Object keymap)
 {
-  ENTER_LISP_FRAME (keymap);
-  LISP_LOCALS (copy, tail, elt);
+  ENTER_LISP_FRAME ((keymap), copy, tail, elt);
   keymap = get_keymap (keymap, 1, 0);
   copy = tail = list1 (Qkeymap);
   keymap = XCDR (keymap);		/* Skip the `keymap' symbol.  */
@@ -1104,8 +1092,7 @@ binding is altered.  If there is no binding for KEY, the new pair
 binding KEY to DEF is added at the front of KEYMAP.  */)
   (Lisp_Object keymap, Lisp_Object key, Lisp_Object def)
 {
-  ENTER_LISP_FRAME (keymap, key, def);
-  LISP_LOCALS (c, cmd, tmp, defi);
+  ENTER_LISP_FRAME ((keymap, key, def), c, cmd, tmp, defi);
   ptrdiff_t idx;
   bool metized = 0;
   int meta_bit;
@@ -1225,7 +1212,7 @@ keymaps to search for command remapping.  Otherwise, search for the
 remapping in all currently active keymaps.  */)
   (Lisp_Object command, Lisp_Object position, Lisp_Object keymaps)
 {
-  ENTER_LISP_FRAME (command, position, keymaps);
+  ENTER_LISP_FRAME ((command, position, keymaps));
   if (!SYMBOLP (command))
     EXIT_LISP_FRAME (Qnil);
 
@@ -1260,8 +1247,7 @@ third optional argument ACCEPT-DEFAULT is non-nil, `lookup-key' will
 recognize the default bindings, just as `read-key-sequence' does.  */)
   (Lisp_Object keymap, Lisp_Object key, Lisp_Object accept_default)
 {
-  ENTER_LISP_FRAME (keymap, key, accept_default);
-  LISP_LOCALS (cmd, c);
+  ENTER_LISP_FRAME ((keymap, key, accept_default), cmd, c);
   ptrdiff_t idx;
   ptrdiff_t length;
   bool t_ok = !NILP (accept_default);
@@ -1308,8 +1294,7 @@ recognize the default bindings, just as `read-key-sequence' does.  */)
 static Lisp_Object
 define_as_prefix (Lisp_Object keymap, Lisp_Object c)
 {
-  ENTER_LISP_FRAME (keymap, c);
-  LISP_LOCALS (cmd);
+  ENTER_LISP_FRAME ((keymap, c), cmd);
 
   cmd = Fmake_sparse_keymap (Qnil);
   store_in_keymap (keymap, c, cmd);
@@ -1322,7 +1307,7 @@ define_as_prefix (Lisp_Object keymap, Lisp_Object c)
 static Lisp_Object
 append_key (Lisp_Object key_sequence, Lisp_Object key)
 {
-  ENTER_LISP_FRAME (key_sequence, key);
+  ENTER_LISP_FRAME ((key_sequence, key));
   AUTO_LIST1 (key_list, key);
   EXIT_LISP_FRAME (CALLN (Fvconcat, key_sequence, key_list));
 }
@@ -1333,8 +1318,7 @@ append_key (Lisp_Object key_sequence, Lisp_Object key)
 static void
 silly_event_symbol_error (Lisp_Object c)
 {
-  ENTER_LISP_FRAME (c);
-  LISP_LOCALS (parsed, base, name, assoc, keystring);
+  ENTER_LISP_FRAME ((c), parsed, base, name, assoc, keystring);
   int modifiers;
 
   parsed = parse_modifiers (c);
@@ -1402,8 +1386,8 @@ static ptrdiff_t cmm_size = 0;
 ptrdiff_t
 current_minor_maps (Lisp_Object **modeptr, Lisp_Object **mapptr)
 {
-  ENTER_LISP_FRAME_T (ptrdiff_t);
-  LISP_LOCALS (alist, assoc, var, val, emulation_alists, temp);
+  ENTER_LISP_FRAME_T (ptrdiff_t, (), alist, assoc, var, val,
+                      emulation_alists, temp);
   ptrdiff_t i = 0;
   int list_number = 0;
   Lisp_Object lists[2];
@@ -1511,7 +1495,7 @@ current_minor_maps (Lisp_Object **modeptr, Lisp_Object **mapptr)
 static ptrdiff_t
 click_position (Lisp_Object position)
 {
-  ENTER_LISP_FRAME_T (ptrdiff_t, position);
+  ENTER_LISP_FRAME_T (ptrdiff_t, (position));
   EMACS_INT pos = (INTEGERP (position) ? XINT (position)
 		   : MARKERP (position) ? marker_position (position)
 		   : PT);
@@ -1528,8 +1512,8 @@ OLP if non-nil indicates that we should obey `overriding-local-map' and
 like in the respective argument of `key-binding'.  */)
   (Lisp_Object olp, Lisp_Object position)
 {
-  ENTER_LISP_FRAME (olp, position);
-  LISP_LOCALS (keymaps, window, local_map, keymap, otlp, string, pos, map);
+  ENTER_LISP_FRAME ((olp, position), keymaps, window, local_map,
+                    keymap, otlp, string, pos, map);
   ptrdiff_t count = SPECPDL_INDEX ();
 
   keymaps = list1 (current_global_map);
@@ -1685,8 +1669,8 @@ specified buffer position instead of point are used.
   */)
   (Lisp_Object key, Lisp_Object accept_default, Lisp_Object no_remap, Lisp_Object position)
 {
-  ENTER_LISP_FRAME (key, accept_default, no_remap, position);
-  LISP_LOCALS (value, event, kind, value1);
+  ENTER_LISP_FRAME ((key, accept_default, no_remap, position), value,
+                    event, kind, value1);
 
   if (NILP (position) && VECTORP (key))
     {
@@ -1738,8 +1722,7 @@ If optional argument ACCEPT-DEFAULT is non-nil, recognize default
 bindings; see the description of `lookup-key' for more details about this.  */)
   (Lisp_Object keys, Lisp_Object accept_default)
 {
-  ENTER_LISP_FRAME (keys, accept_default);
-  LISP_LOCALS (map);
+  ENTER_LISP_FRAME ((keys, accept_default), map);
   map = BVAR (current_buffer, keymap);
   if (NILP (map))
     EXIT_LISP_FRAME (Qnil);
@@ -1759,7 +1742,7 @@ If optional argument ACCEPT-DEFAULT is non-nil, recognize default
 bindings; see the description of `lookup-key' for more details about this.  */)
   (Lisp_Object keys, Lisp_Object accept_default)
 {
-  ENTER_LISP_FRAME (keys, accept_default);
+  ENTER_LISP_FRAME ((keys, accept_default));
   EXIT_LISP_FRAME (Flookup_key (current_global_map, keys, accept_default));
 }
 
@@ -1779,8 +1762,7 @@ If optional argument ACCEPT-DEFAULT is non-nil, recognize default
 bindings; see the description of `lookup-key' for more details about this.  */)
   (Lisp_Object key, Lisp_Object accept_default)
 {
-  ENTER_LISP_FRAME (key, accept_default);
-  LISP_LOCALS (binding);
+  ENTER_LISP_FRAME ((key, accept_default), binding);
   Lisp_Object *modes, *maps;
   int nmaps;
   int i, j;
@@ -1816,8 +1798,7 @@ string for the map.  This is required to use the keymap as a menu.
 This function returns COMMAND.  */)
   (Lisp_Object command, Lisp_Object mapvar, Lisp_Object name)
 {
-  ENTER_LISP_FRAME (command, mapvar, name);
-  LISP_LOCALS (map);
+  ENTER_LISP_FRAME ((command, mapvar, name), map);
   map = Fmake_sparse_keymap (name);
   Ffset (command, map);
   if (!NILP (mapvar))
@@ -1831,7 +1812,7 @@ DEFUN ("use-global-map", Fuse_global_map, Suse_global_map, 1, 1, 0,
        doc: /* Select KEYMAP as the global keymap.  */)
   (Lisp_Object keymap)
 {
-  ENTER_LISP_FRAME (keymap);
+  ENTER_LISP_FRAME ((keymap));
   keymap = get_keymap (keymap, 1, 1);
   current_global_map = keymap;
 
@@ -1843,7 +1824,7 @@ DEFUN ("use-local-map", Fuse_local_map, Suse_local_map, 1, 1, 0,
 If KEYMAP is nil, that means no local keymap.  */)
   (Lisp_Object keymap)
 {
-  ENTER_LISP_FRAME (keymap);
+  ENTER_LISP_FRAME ((keymap));
   if (!NILP (keymap))
     keymap = get_keymap (keymap, 1, 1);
 
@@ -1889,8 +1870,8 @@ static void
 accessible_keymaps_1 (Lisp_Object key, Lisp_Object cmd, Lisp_Object args, void *data)
 /* Use void * data to be compatible with map_keymap_function_t.  */
 {
-  ENTER_LISP_FRAME (key, cmd, args);
-  LISP_LOCALS (maps, tail, thisseq, tem, prefix, last);
+  ENTER_LISP_FRAME ((key, cmd, args), maps, tail, thisseq, tem,
+                    prefix, last);
   struct accessible_keymaps_data *d = data; /* Cast! */
   maps = d->maps;
 
@@ -1966,8 +1947,8 @@ An optional argument PREFIX, if non-nil, should be a key sequence;
 then the value includes only maps for prefixes that start with PREFIX.  */)
   (Lisp_Object keymap, Lisp_Object prefix)
 {
-  ENTER_LISP_FRAME (keymap, prefix);
-  LISP_LOCALS (maps, tail, tem, copy, thismap, last);
+  ENTER_LISP_FRAME ((keymap, prefix), maps, tail, tem, copy, thismap,
+                    last);
   EMACS_INT prefixlen = XFASTINT (Flength (prefix));
 
   if (!NILP (prefix))
@@ -2049,8 +2030,7 @@ For example, [?\C-x ?l] is converted into the string \"C-x l\".
 For an approximate inverse of this, see `kbd'.  */)
   (Lisp_Object keys, Lisp_Object prefix)
 {
-  ENTER_LISP_FRAME (keys, prefix);
-  LISP_LOCALS (list, sep, key, result);
+  ENTER_LISP_FRAME ((keys, prefix), list, sep, key, result);
   ptrdiff_t len = 0;
   EMACS_INT i;
   ptrdiff_t i_byte;
@@ -2279,8 +2259,7 @@ around function keys and event symbols.
 See `text-char-description' for describing character codes.  */)
   (Lisp_Object key, Lisp_Object no_angles)
 {
-  ENTER_LISP_FRAME (key, no_angles);
-  LISP_LOCALS (result);
+  ENTER_LISP_FRAME ((key, no_angles), result);
   USE_SAFE_ALLOCA;
 
   if (CONSP (key) && lucid_event_type_list_p (key))
@@ -2361,7 +2340,7 @@ characters into "C-char", and uses the 2**27 bit for Meta.
 See Info node `(elisp)Describing Characters' for examples.  */)
   (Lisp_Object character)
 {
-  ENTER_LISP_FRAME (character);
+  ENTER_LISP_FRAME ((character));
   /* Currently MAX_MULTIBYTE_LENGTH is 4 (< 6).  */
   char str[6];
   int c;
@@ -2389,8 +2368,7 @@ static int where_is_preferred_modifier;
 static int
 preferred_sequence_p (Lisp_Object seq)
 {
-  ENTER_LISP_FRAME_T (int, seq);
-  LISP_LOCALS (ii, elt);
+  ENTER_LISP_FRAME_T (int, (seq), ii, elt);
   EMACS_INT i;
   EMACS_INT len = XFASTINT (Flength (seq));
   int result = 1;
@@ -2431,8 +2409,7 @@ static Lisp_Object
 shadow_lookup (Lisp_Object shadow, Lisp_Object key, Lisp_Object flag,
 	       bool remap)
 {
-  ENTER_LISP_FRAME (shadow, key, flag);
-  LISP_LOCALS (tail, value, remapping);
+  ENTER_LISP_FRAME ((shadow, key, flag), tail, value, remapping);
 
   for (tail = shadow; CONSP (tail); tail = XCDR (tail))
     {
@@ -2476,8 +2453,8 @@ static Lisp_Object
 where_is_internal (Lisp_Object definition, Lisp_Object keymaps,
 		   bool noindirect, bool nomenus)
 {
-  ENTER_LISP_FRAME (definition, keymaps);
-  LISP_LOCALS (maps, found, this, map, tem, last);
+  ENTER_LISP_FRAME ((definition, keymaps), maps, found, this, map,
+                    tem, last);
   maps = Qnil;
 
   struct where_is_internal_data data;
@@ -2597,8 +2574,10 @@ The optional 5th arg NO-REMAP alters how command remapping is handled:
   bindings for DEFINITION instead, ignoring its remapping.  */)
   (Lisp_Object definition, Lisp_Object keymap, Lisp_Object firstonly, Lisp_Object noindirect, Lisp_Object no_remap)
 {
-  ENTER_LISP_FRAME (definition, keymap, firstonly, noindirect, no_remap);
-  LISP_LOCALS (keymaps, sequences, found, remapped_sequences, tem, sequence, function, seqs, tem1, bindings);
+  ENTER_LISP_FRAME ((definition, keymap, firstonly, noindirect,
+                     no_remap), keymaps, sequences, found,
+                    remapped_sequences, tem, sequence, function, seqs,
+                    tem1, bindings);
   /* The keymaps in which to search.  */
   /* Potentially relevant bindings in "shortest to longest" order.  */
   sequences = Qnil;
@@ -2763,8 +2742,8 @@ The optional 5th arg NO-REMAP alters how command remapping is handled:
 static void
 where_is_internal_1 (Lisp_Object key, Lisp_Object binding, Lisp_Object args, void *data)
 {
-  ENTER_LISP_FRAME (key, binding, args);
-  LISP_LOCALS (definition, this, last, sequence, sequences);
+  ENTER_LISP_FRAME ((key, binding, args), definition, this, last,
+                    sequence, sequences);
   struct where_is_internal_data *d = data; /* Cast! */
   definition = d->definition;
 
@@ -2824,8 +2803,7 @@ The optional argument MENUS, if non-nil, says to mention menu bindings.
 \(Ordinarily these are omitted from the output.)  */)
   (Lisp_Object buffer, Lisp_Object prefix, Lisp_Object menus)
 {
-  ENTER_LISP_FRAME (buffer, prefix, menus);
-  LISP_LOCALS (outbuf, shadow, start1);
+  ENTER_LISP_FRAME ((buffer, prefix, menus), outbuf, shadow, start1);
   bool nomenu = NILP (menus);
 
   const char *alternate_heading
@@ -3012,8 +2990,9 @@ describe_map_tree (Lisp_Object startmap, bool partial, Lisp_Object shadow,
 		   Lisp_Object prefix, const char *title, bool nomenu,
 		   bool transl, bool always_title, bool mention_shadow)
 {
-  ENTER_LISP_FRAME (startmap, shadow, prefix);
-  LISP_LOCALS (maps, orig_maps, seen, sub_shadows, list, elt, elt_prefix, tem, tail, shmap);
+  ENTER_LISP_FRAME ((startmap, shadow, prefix), maps, orig_maps, seen,
+                    sub_shadows, list, elt, elt_prefix, tem, tail,
+                    shmap);
   bool something = 0;
   const char *key_heading
     = "\
@@ -3121,8 +3100,7 @@ static int previous_description_column;
 static void
 describe_command (Lisp_Object definition, Lisp_Object args)
 {
-  ENTER_LISP_FRAME (definition, args);
-  LISP_LOCALS (tem1);
+  ENTER_LISP_FRAME ((definition, args), tem1);
   ptrdiff_t column = current_column ();
   int description_column;
 
@@ -3159,8 +3137,7 @@ describe_command (Lisp_Object definition, Lisp_Object args)
 static void
 describe_translation (Lisp_Object definition, Lisp_Object args)
 {
-  ENTER_LISP_FRAME (definition, args);
-  LISP_LOCALS (tem1);
+  ENTER_LISP_FRAME ((definition, args), tem1);
 
   Findent_to (make_number (16), make_number (1));
 
@@ -3224,8 +3201,8 @@ describe_map (Lisp_Object map, Lisp_Object prefix,
 	      bool partial, Lisp_Object shadow,
 	      Lisp_Object *seen, bool nomenu, bool mention_shadow)
 {
-  ENTER_LISP_FRAME (map, prefix, shadow);
-  LISP_LOCALS (tail, definition, event, tem, suppress, kludge, start, end);
+  ENTER_LISP_FRAME ((map, prefix, shadow), tail, definition, event,
+                    tem, suppress, kludge, start, end);
   bool first = 1;
 
   /* These accumulate the values from sparse keymap bindings,
@@ -3401,7 +3378,7 @@ describe_map (Lisp_Object map, Lisp_Object prefix,
 static void
 describe_vector_princ (Lisp_Object elt, Lisp_Object fun)
 {
-  ENTER_LISP_FRAME (elt, fun);
+  ENTER_LISP_FRAME ((elt, fun));
   Findent_to (make_number (16), make_number (1));
   call1 (fun, elt);
   Fterpri (Qnil, Qnil);
@@ -3414,7 +3391,7 @@ This is text showing the elements of vector matched against indices.
 DESCRIBER is the output function used; nil means use `princ'.  */)
   (Lisp_Object vector, Lisp_Object describer)
 {
-  ENTER_LISP_FRAME (vector, describer);
+  ENTER_LISP_FRAME ((vector, describer));
   ptrdiff_t count = SPECPDL_INDEX ();
   if (NILP (describer))
     describer = intern ("princ");
@@ -3464,8 +3441,9 @@ describe_vector (Lisp_Object vector, Lisp_Object prefix, Lisp_Object args,
 		 bool partial, Lisp_Object shadow, Lisp_Object entire_map,
 		 bool keymap_p, bool mention_shadow)
 {
-  ENTER_LISP_FRAME (vector, prefix, args, shadow, entire_map);
-  LISP_LOCALS (definition, tem2, elt_prefix, suppress, kludge, character, tem, val);
+  ENTER_LISP_FRAME ((vector, prefix, args, shadow, entire_map),
+                    definition, tem2, elt_prefix, suppress, kludge,
+                    character, tem, val);
   elt_prefix = Qnil;
 
   int i;
@@ -3650,8 +3628,7 @@ static Lisp_Object apropos_accumulate = NIL_INIT;
 static void
 apropos_accum (Lisp_Object symbol, Lisp_Object string)
 {
-  ENTER_LISP_FRAME (symbol, string);
-  LISP_LOCALS (tem);
+  ENTER_LISP_FRAME ((symbol, string), tem);
 
   tem = Fstring_match (string, Fsymbol_name (symbol), Qnil);
   if (!NILP (tem) && !NILP (apropos_predicate))
@@ -3668,8 +3645,7 @@ for each symbol and a symbol is mentioned only if that returns non-nil.
 Return list of symbols found.  */)
   (Lisp_Object regexp, Lisp_Object predicate)
 {
-  ENTER_LISP_FRAME (regexp, predicate);
-  LISP_LOCALS (tem);
+  ENTER_LISP_FRAME ((regexp, predicate), tem);
   CHECK_STRING (regexp);
   apropos_predicate = predicate;
   apropos_accumulate = Qnil;

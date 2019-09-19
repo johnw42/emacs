@@ -45,8 +45,7 @@ static Lisp_Object watch_list = NIL_INIT;
 static Lisp_Object
 kqueue_directory_listing (Lisp_Object directory_files)
 {
-  ENTER_LISP_FRAME (directory_files);
-  LISP_LOCALS (dl, result);
+  ENTER_LISP_FRAME ((directory_files), dl, result);
   result = Qnil;
 
 
@@ -77,8 +76,8 @@ static void
 kqueue_generate_event (Lisp_Object watch_object, Lisp_Object actions,
 		       Lisp_Object file, Lisp_Object file1)
 {
-  ENTER_LISP_FRAME (watch_object, actions, file, file1);
-  LISP_LOCALS (flags, action, entry);
+  ENTER_LISP_FRAME ((watch_object, actions, file, file1), flags,
+                    action, entry);
   struct input_event event;
 
   /* Check, whether all actions shall be monitored.  */
@@ -119,10 +118,10 @@ kqueue_generate_event (Lisp_Object watch_object, Lisp_Object actions,
 static void
 kqueue_compare_dir_list (Lisp_Object watch_object)
 {
-  ENTER_LISP_FRAME (watch_object);
-  LISP_LOCALS (dir, pending_dl, deleted_dl, old_directory_files,
-               old_dl, new_directory_files, new_dl, dl, old_entry,
-               new_entry, dl1, entry, size);
+  ENTER_LISP_FRAME ((watch_object), dir, pending_dl, deleted_dl,
+                    old_directory_files, old_dl, new_directory_files,
+                    new_dl, dl, old_entry, new_entry, dl1, entry,
+                    size);
 
   dir = XCAR (XCDR (watch_object));
   pending_dl = Qnil;
@@ -286,8 +285,7 @@ kqueue_compare_dir_list (Lisp_Object watch_object)
 static void
 kqueue_callback (int fd, void *data)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (descriptor, watch_object, file, actions);
+  ENTER_LISP_FRAME ((), descriptor, watch_object, file, actions);
   for (;;) {
     struct kevent kev;
     static const struct timespec nullts = { 0, 0 };
@@ -375,8 +373,8 @@ will be reported only in case of the `rename' event.  This is possible
 only when the upper directory of the renamed file is watched.  */)
   (Lisp_Object file, Lisp_Object flags, Lisp_Object callback)
 {
-  ENTER_LISP_FRAME (file, flags, callback);
-  LISP_LOCALS (watch_object, dir_list, watch_descriptor);
+  ENTER_LISP_FRAME ((file, flags, callback), watch_object, dir_list,
+                    watch_descriptor);
   int maxfd, fd, oflags;
   u_short fflags = 0;
   struct kevent kev;
@@ -477,8 +475,7 @@ DEFUN ("kqueue-rm-watch", Fkqueue_rm_watch, Skqueue_rm_watch, 1, 1, 0,
 WATCH-DESCRIPTOR should be an object returned by `kqueue-add-watch'.  */)
      (Lisp_Object watch_descriptor)
 {
-  ENTER_LISP_FRAME (watch_descriptor);
-  LISP_LOCALS (watch_object);
+  ENTER_LISP_FRAME ((watch_descriptor), watch_object);
   watch_object = assq_no_quit (watch_descriptor, watch_list);
 
 
@@ -514,7 +511,7 @@ reason.  Removing the watch by calling `kqueue-rm-watch' also makes it
 invalid.  */)
      (Lisp_Object watch_descriptor)
 {
-  ENTER_LISP_FRAME (watch_descriptor);
+  ENTER_LISP_FRAME ((watch_descriptor));
   EXIT_LISP_FRAME (NILP (assq_no_quit (watch_descriptor, watch_list)) ? Qnil : Qt);
 }
 

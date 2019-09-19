@@ -83,7 +83,7 @@ static uniprop_decoder_t uniprop_get_decoder (Lisp_Object);
 static void
 CHECK_CHAR_TABLE (Lisp_Object x)
 {
-  ENTER_LISP_FRAME (x);
+  ENTER_LISP_FRAME ((x));
   CHECK_TYPE (CHAR_TABLE_P (x), Qchar_table_p, x);
   EXIT_LISP_FRAME_VOID ();
 }
@@ -91,14 +91,14 @@ CHECK_CHAR_TABLE (Lisp_Object x)
 static void
 set_char_table_ascii (Lisp_Object table, Lisp_Object val)
 {
-  ENTER_LISP_FRAME (table, val);
+  ENTER_LISP_FRAME ((table, val));
   XCHAR_TABLE (table)->ascii = val;
   EXIT_LISP_FRAME_VOID ();
 }
 static void
 set_char_table_parent (Lisp_Object table, Lisp_Object val)
 {
-  ENTER_LISP_FRAME (table, val);
+  ENTER_LISP_FRAME ((table, val));
   XCHAR_TABLE (table)->parent = val;
   EXIT_LISP_FRAME_VOID ();
 }
@@ -113,8 +113,7 @@ that specifies how many extra slots the char-table has.  Otherwise,
 the char-table has no extra slot.  */)
   (Lisp_Object purpose, Lisp_Object init)
 {
-  ENTER_LISP_FRAME (purpose, init);
-  LISP_LOCALS (vector, n);
+  ENTER_LISP_FRAME ((purpose, init), vector, n);
   int n_extras;
   int size;
 
@@ -142,8 +141,7 @@ the char-table has no extra slot.  */)
 static Lisp_Object
 make_sub_char_table (int depth, int min_char, Lisp_Object defalt)
 {
-  ENTER_LISP_FRAME (defalt);
-  LISP_LOCALS (table);
+  ENTER_LISP_FRAME ((defalt), table);
   int i;
   table = make_uninit_sub_char_table (depth, min_char);
 
@@ -156,8 +154,7 @@ make_sub_char_table (int depth, int min_char, Lisp_Object defalt)
 static Lisp_Object
 char_table_ascii (Lisp_Object table)
 {
-  ENTER_LISP_FRAME (table);
-  LISP_LOCALS (sub, val);
+  ENTER_LISP_FRAME ((table), sub, val);
 
   sub = XCHAR_TABLE (table)->contents[0];
   if (! SUB_CHAR_TABLE_P (sub))
@@ -174,8 +171,7 @@ char_table_ascii (Lisp_Object table)
 static Lisp_Object
 copy_sub_char_table (Lisp_Object table)
 {
-  ENTER_LISP_FRAME (table);
-  LISP_LOCALS (copy, val);
+  ENTER_LISP_FRAME ((table), copy, val);
   int depth = XSUB_CHAR_TABLE (table)->depth;
   int min_char = XSUB_CHAR_TABLE (table)->min_char;
   copy = make_sub_char_table (depth, min_char, Qnil);
@@ -198,8 +194,7 @@ copy_sub_char_table (Lisp_Object table)
 Lisp_Object
 copy_char_table (Lisp_Object table)
 {
-  ENTER_LISP_FRAME (table);
-  LISP_LOCALS (copy);
+  ENTER_LISP_FRAME ((table), copy);
   int size = PVSIZE (table);
   int i;
 
@@ -226,8 +221,7 @@ copy_char_table (Lisp_Object table)
 static Lisp_Object
 sub_char_table_ref (Lisp_Object table, int c, bool is_uniprop)
 {
-  ENTER_LISP_FRAME (table);
-  LISP_LOCALS (val);
+  ENTER_LISP_FRAME ((table), val);
   struct Lisp_Sub_Char_Table *tbl = XSUB_CHAR_TABLE (table);
   int idx = CHARTAB_IDX (c, tbl->depth, tbl->min_char);
 
@@ -242,8 +236,7 @@ sub_char_table_ref (Lisp_Object table, int c, bool is_uniprop)
 Lisp_Object
 char_table_ref (Lisp_Object table, int c)
 {
-  ENTER_LISP_FRAME (table);
-  LISP_LOCALS (val);
+  ENTER_LISP_FRAME ((table), val);
   struct Lisp_Char_Table *tbl = XCHAR_TABLE (table);
 
   if (ASCII_CHAR_P (c))
@@ -271,8 +264,7 @@ static Lisp_Object
 sub_char_table_ref_and_range (Lisp_Object table, int c, int *from, int *to,
 			      Lisp_Object defalt, bool is_uniprop)
 {
-  ENTER_LISP_FRAME (table, defalt);
-  LISP_LOCALS (val, this_val);
+  ENTER_LISP_FRAME ((table, defalt), val, this_val);
   struct Lisp_Sub_Char_Table *tbl = XSUB_CHAR_TABLE (table);
   int depth = tbl->depth, min_char = tbl->min_char;
   int chartab_idx = CHARTAB_IDX (c, depth, min_char), idx;
@@ -339,8 +331,7 @@ sub_char_table_ref_and_range (Lisp_Object table, int c, int *from, int *to,
 Lisp_Object
 char_table_ref_and_range (Lisp_Object table, int c, int *from, int *to)
 {
-  ENTER_LISP_FRAME (table);
-  LISP_LOCALS (val, this_val);
+  ENTER_LISP_FRAME ((table), val, this_val);
   struct Lisp_Char_Table *tbl = XCHAR_TABLE (table);
   int chartab_idx = CHARTAB_IDX (c, 0, 0), idx;
   bool is_uniprop = UNIPROP_TABLE_P (table);
@@ -405,8 +396,7 @@ char_table_ref_and_range (Lisp_Object table, int c, int *from, int *to)
 static void
 sub_char_table_set (Lisp_Object table, int c, Lisp_Object val, bool is_uniprop)
 {
-  ENTER_LISP_FRAME (table, val);
-  LISP_LOCALS (sub);
+  ENTER_LISP_FRAME ((table, val), sub);
   struct Lisp_Sub_Char_Table *tbl = XSUB_CHAR_TABLE (table);
   int depth = tbl->depth, min_char = tbl->min_char;
   int i = CHARTAB_IDX (c, depth, min_char);
@@ -436,8 +426,7 @@ sub_char_table_set (Lisp_Object table, int c, Lisp_Object val, bool is_uniprop)
 void
 char_table_set (Lisp_Object table, int c, Lisp_Object val)
 {
-  ENTER_LISP_FRAME (table, val);
-  LISP_LOCALS (sub);
+  ENTER_LISP_FRAME ((table, val), sub);
   struct Lisp_Char_Table *tbl = XCHAR_TABLE (table);
 
   if (ASCII_CHAR_P (c)
@@ -464,8 +453,7 @@ static void
 sub_char_table_set_range (Lisp_Object table, int from, int to, Lisp_Object val,
 			  bool is_uniprop)
 {
-  ENTER_LISP_FRAME (table, val);
-  LISP_LOCALS (sub);
+  ENTER_LISP_FRAME ((table, val), sub);
   struct Lisp_Sub_Char_Table *tbl = XSUB_CHAR_TABLE (table);
   int depth = tbl->depth, min_char = tbl->min_char;
   int chars_in_block = chartab_chars[depth];
@@ -505,8 +493,7 @@ sub_char_table_set_range (Lisp_Object table, int from, int to, Lisp_Object val,
 void
 char_table_set_range (Lisp_Object table, int from, int to, Lisp_Object val)
 {
-  ENTER_LISP_FRAME (table, val);
-  LISP_LOCALS (sub);
+  ENTER_LISP_FRAME ((table, val), sub);
   struct Lisp_Char_Table *tbl = XCHAR_TABLE (table);
 
   if (from == to)
@@ -549,7 +536,7 @@ DEFUN ("char-table-subtype", Fchar_table_subtype, Schar_table_subtype,
 Return the subtype of char-table CHAR-TABLE.  The value is a symbol.  */)
   (Lisp_Object char_table)
 {
-  ENTER_LISP_FRAME (char_table);
+  ENTER_LISP_FRAME ((char_table));
   CHECK_CHAR_TABLE (char_table);
 
   EXIT_LISP_FRAME (XCHAR_TABLE (char_table)->purpose);
@@ -564,7 +551,7 @@ then the actual applicable value is inherited from the parent char-table
 \(or from its parents, if necessary).  */)
   (Lisp_Object char_table)
 {
-  ENTER_LISP_FRAME (char_table);
+  ENTER_LISP_FRAME ((char_table));
   CHECK_CHAR_TABLE (char_table);
 
   EXIT_LISP_FRAME (XCHAR_TABLE (char_table)->parent);
@@ -576,8 +563,7 @@ DEFUN ("set-char-table-parent", Fset_char_table_parent, Sset_char_table_parent,
 Return PARENT.  PARENT must be either nil or another char-table.  */)
   (Lisp_Object char_table, Lisp_Object parent)
 {
-  ENTER_LISP_FRAME (char_table, parent);
-  LISP_LOCALS (temp);
+  ENTER_LISP_FRAME ((char_table, parent), temp);
 
   CHECK_CHAR_TABLE (char_table);
 
@@ -600,7 +586,7 @@ DEFUN ("char-table-extra-slot", Fchar_table_extra_slot, Schar_table_extra_slot,
        doc: /* Return the value of CHAR-TABLE's extra-slot number N.  */)
   (Lisp_Object char_table, Lisp_Object n)
 {
-  ENTER_LISP_FRAME (char_table, n);
+  ENTER_LISP_FRAME ((char_table, n));
   CHECK_CHAR_TABLE (char_table);
   CHECK_NUMBER (n);
   if (XINT (n) < 0
@@ -616,7 +602,7 @@ DEFUN ("set-char-table-extra-slot", Fset_char_table_extra_slot,
        doc: /* Set CHAR-TABLE's extra-slot number N to VALUE.  */)
   (Lisp_Object char_table, Lisp_Object n, Lisp_Object value)
 {
-  ENTER_LISP_FRAME (char_table, n, value);
+  ENTER_LISP_FRAME ((char_table, n, value));
   CHECK_CHAR_TABLE (char_table);
   CHECK_NUMBER (n);
   if (XINT (n) < 0
@@ -634,8 +620,7 @@ RANGE should be nil (for the default value),
 a cons of character codes (for characters in the range), or a character code.  */)
   (Lisp_Object char_table, Lisp_Object range)
 {
-  ENTER_LISP_FRAME (char_table, range);
-  LISP_LOCALS (val);
+  ENTER_LISP_FRAME ((char_table, range), val);
   CHECK_CHAR_TABLE (char_table);
 
   if (EQ (range, Qnil))
@@ -666,7 +651,7 @@ a cons of character codes (for characters in the range),
 or a character code.  Return VALUE.  */)
   (Lisp_Object char_table, Lisp_Object range, Lisp_Object value)
 {
-  ENTER_LISP_FRAME (char_table, range, value);
+  ENTER_LISP_FRAME ((char_table, range, value));
   CHECK_CHAR_TABLE (char_table);
   if (EQ (range, Qt))
     {
@@ -696,8 +681,7 @@ or a character code.  Return VALUE.  */)
 static Lisp_Object
 optimize_sub_char_table (Lisp_Object table, Lisp_Object test)
 {
-  ENTER_LISP_FRAME (table, test);
-  LISP_LOCALS (elt, this);
+  ENTER_LISP_FRAME ((table, test), elt, this);
   struct Lisp_Sub_Char_Table *tbl = XSUB_CHAR_TABLE (table);
   int i, depth = tbl->depth;
   bool optimizable;
@@ -734,8 +718,7 @@ TEST is the comparison function used to decide whether two entries are
 equivalent and can be merged.  It defaults to `equal'.  */)
   (Lisp_Object char_table, Lisp_Object test)
 {
-  ENTER_LISP_FRAME (char_table, test);
-  LISP_LOCALS (elt);
+  ENTER_LISP_FRAME ((char_table, test), elt);
   int i;
 
   CHECK_CHAR_TABLE (char_table);
@@ -772,8 +755,8 @@ map_sub_char_table (void (*c_function) (Lisp_Object, Lisp_Object, Lisp_Object),
 		    Lisp_Object function, Lisp_Object table, Lisp_Object arg, Lisp_Object val,
 		    Lisp_Object range, Lisp_Object top)
 {
-  ENTER_LISP_FRAME (function, table, arg, val, range, top);
-  LISP_LOCALS (this, parent, temp);
+  ENTER_LISP_FRAME ((function, table, arg, val, range, top), this,
+                    parent, temp);
   /* Depth of TABLE.  */
   int depth;
   /* Minimum and maximum characters covered by TABLE. */
@@ -902,8 +885,7 @@ void
 map_char_table (void (*c_function) (Lisp_Object, Lisp_Object, Lisp_Object),
 		Lisp_Object function, Lisp_Object table, Lisp_Object arg)
 {
-  ENTER_LISP_FRAME (function, table, arg);
-  LISP_LOCALS (range, val, parent, temp);
+  ENTER_LISP_FRAME ((function, table, arg), range, val, parent, temp);
   uniprop_decoder_t decoder = UNIPROP_GET_DECODER (table);
 
   range = Fcons (make_number (0), make_number (MAX_CHAR));
@@ -970,7 +952,7 @@ range of characters that have the same value.
 VALUE is what (char-table-range CHAR-TABLE KEY) returns.  */)
   (Lisp_Object function, Lisp_Object char_table)
 {
-  ENTER_LISP_FRAME (function, char_table);
+  ENTER_LISP_FRAME ((function, char_table));
   CHECK_CHAR_TABLE (char_table);
 
   map_char_table (NULL, function, char_table, char_table);
@@ -984,8 +966,7 @@ map_sub_char_table_for_charset (void (*c_function) (Lisp_Object, Lisp_Object),
 				Lisp_Object range, struct charset *charset,
 				unsigned from, unsigned to)
 {
-  ENTER_LISP_FRAME (function, table, arg, range);
-  LISP_LOCALS (this);
+  ENTER_LISP_FRAME ((function, table, arg, range), this);
   struct Lisp_Sub_Char_Table *tbl = XSUB_CHAR_TABLE (table);
   int i, c = tbl->min_char, depth = tbl->depth;
 
@@ -1068,8 +1049,7 @@ map_char_table_for_charset (void (*c_function) (Lisp_Object, Lisp_Object),
 			    struct charset *charset,
 			    unsigned from, unsigned to)
 {
-  ENTER_LISP_FRAME (function, table, arg);
-  LISP_LOCALS (range, this);
+  ENTER_LISP_FRAME ((function, table, arg), range, this);
   int c, i;
 
   range = Fcons (Qnil, Qnil);
@@ -1154,8 +1134,7 @@ map_char_table_for_charset (void (*c_function) (Lisp_Object, Lisp_Object),
 static Lisp_Object
 uniprop_table_uncompress (Lisp_Object table, int idx)
 {
-  ENTER_LISP_FRAME (table);
-  LISP_LOCALS (val, sub);
+  ENTER_LISP_FRAME ((table), val, sub);
   val = XSUB_CHAR_TABLE (table)->contents[idx];
 
   int min_char = XSUB_CHAR_TABLE (table)->min_char + chartab_chars[2] * idx;
@@ -1219,8 +1198,7 @@ uniprop_table_uncompress (Lisp_Object table, int idx)
 static Lisp_Object
 uniprop_decode_value_run_length (Lisp_Object table, Lisp_Object value)
 {
-  ENTER_LISP_FRAME (table, value);
-  LISP_LOCALS (valvec);
+  ENTER_LISP_FRAME ((table, value), valvec);
   if (VECTORP (XCHAR_TABLE (table)->extras[4]))
     {
       valvec = XCHAR_TABLE (table)->extras[4];
@@ -1242,7 +1220,7 @@ static const int uniprop_decoder_count = ARRAYELTS (uniprop_decoder);
 static uniprop_decoder_t
 uniprop_get_decoder (Lisp_Object table)
 {
-  ENTER_LISP_FRAME_T (uniprop_decoder_t, table);
+  ENTER_LISP_FRAME_T (uniprop_decoder_t, (table));
   EMACS_INT i;
 
   if (! INTEGERP (XCHAR_TABLE (table)->extras[1]))
@@ -1260,7 +1238,7 @@ uniprop_get_decoder (Lisp_Object table)
 static Lisp_Object
 uniprop_encode_value_character (Lisp_Object table, Lisp_Object value)
 {
-  ENTER_LISP_FRAME (table, value);
+  ENTER_LISP_FRAME ((table, value));
   if (! NILP (value) && ! CHARACTERP (value))
     wrong_type_argument (Qintegerp, value);
   EXIT_LISP_FRAME (value);
@@ -1273,7 +1251,7 @@ uniprop_encode_value_character (Lisp_Object table, Lisp_Object value)
 static Lisp_Object
 uniprop_encode_value_run_length (Lisp_Object table, Lisp_Object value)
 {
-  ENTER_LISP_FRAME (table, value);
+  ENTER_LISP_FRAME ((table, value));
   struct Lisp_Vector *value_table = XVECTOR (XCHAR_TABLE (table)->extras[4]);
   int i, size = ASIZE (XCHAR_TABLE (table)->extras[4]);
 
@@ -1292,7 +1270,7 @@ uniprop_encode_value_run_length (Lisp_Object table, Lisp_Object value)
 static Lisp_Object
 uniprop_encode_value_numeric (Lisp_Object table, Lisp_Object value)
 {
-  ENTER_LISP_FRAME (table, value);
+  ENTER_LISP_FRAME ((table, value));
   struct Lisp_Vector *value_table = XVECTOR (XCHAR_TABLE (table)->extras[4]);
   int i, size = ASIZE (XCHAR_TABLE (table)->extras[4]);
 
@@ -1321,7 +1299,7 @@ static const int uniprop_encoder_count = ARRAYELTS (uniprop_encoder);
 static uniprop_decoder_t
 uniprop_get_encoder (Lisp_Object table)
 {
-  ENTER_LISP_FRAME_T (uniprop_decoder_t, table);
+  ENTER_LISP_FRAME_T (uniprop_decoder_t, (table));
   EMACS_INT i;
 
   if (! INTEGERP (XCHAR_TABLE (table)->extras[2]))
@@ -1339,8 +1317,7 @@ uniprop_get_encoder (Lisp_Object table)
 Lisp_Object
 uniprop_table (Lisp_Object prop)
 {
-  ENTER_LISP_FRAME (prop);
-  LISP_LOCALS (val, table, result);
+  ENTER_LISP_FRAME ((prop), val, table, result);
 
   val = Fassq (prop, Vchar_code_property_alist);
   if (! CONSP (val))
@@ -1375,8 +1352,7 @@ Use `get-unicode-property-internal' and
 and put an element value.  */)
   (Lisp_Object prop)
 {
-  ENTER_LISP_FRAME (prop);
-  LISP_LOCALS (table);
+  ENTER_LISP_FRAME ((prop), table);
   table = uniprop_table (prop);
 
 
@@ -1391,8 +1367,7 @@ DEFUN ("get-unicode-property-internal", Fget_unicode_property_internal,
 CHAR-TABLE must be what returned by `unicode-property-table-internal'. */)
   (Lisp_Object char_table, Lisp_Object ch)
 {
-  ENTER_LISP_FRAME (char_table, ch);
-  LISP_LOCALS (val);
+  ENTER_LISP_FRAME ((char_table, ch), val);
   uniprop_decoder_t decoder;
 
   CHECK_CHAR_TABLE (char_table);
@@ -1410,7 +1385,7 @@ DEFUN ("put-unicode-property-internal", Fput_unicode_property_internal,
 CHAR-TABLE must be what returned by `unicode-property-table-internal'. */)
   (Lisp_Object char_table, Lisp_Object ch, Lisp_Object value)
 {
-  ENTER_LISP_FRAME (char_table, ch, value);
+  ENTER_LISP_FRAME ((char_table, ch, value));
   uniprop_encoder_t encoder;
 
   CHECK_CHAR_TABLE (char_table);

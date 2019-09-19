@@ -37,8 +37,7 @@ DEFUN ("case-table-p", Fcase_table_p, Scase_table_p, 1, 1, 0,
 See `set-case-table' for more information on these data structures.  */)
   (Lisp_Object object)
 {
-  ENTER_LISP_FRAME (object);
-  LISP_LOCALS (up, canon, eqv);
+  ENTER_LISP_FRAME ((object), up, canon, eqv);
 
   if (! CHAR_TABLE_P (object))
     EXIT_LISP_FRAME (Qnil);
@@ -59,7 +58,7 @@ See `set-case-table' for more information on these data structures.  */)
 static Lisp_Object
 check_case_table (Lisp_Object obj)
 {
-  ENTER_LISP_FRAME (obj);
+  ENTER_LISP_FRAME ((obj));
   CHECK_TYPE (!NILP (Fcase_table_p (obj)), Qcase_table_p, obj);
   EXIT_LISP_FRAME ((obj));
 }
@@ -100,7 +99,7 @@ EQUIVALENCES is a map that cyclically permutes each equivalence class
  in which case it is deduced from CANONICALIZE.  */)
   (Lisp_Object table)
 {
-  ENTER_LISP_FRAME (table);
+  ENTER_LISP_FRAME ((table));
   EXIT_LISP_FRAME (set_case_table (table, 0));
 }
 
@@ -110,15 +109,14 @@ DEFUN ("set-standard-case-table", Fset_standard_case_table,
 See `set-case-table' for more info on case tables.  */)
   (Lisp_Object table)
 {
-  ENTER_LISP_FRAME (table);
+  ENTER_LISP_FRAME ((table));
   EXIT_LISP_FRAME (set_case_table (table, 1));
 }
 
 static Lisp_Object
 set_case_table (Lisp_Object table, bool standard)
 {
-  ENTER_LISP_FRAME (table);
-  LISP_LOCALS (up, canon, eqv);
+  ENTER_LISP_FRAME ((table), up, canon, eqv);
 
   check_case_table (table);
 
@@ -180,8 +178,7 @@ set_case_table (Lisp_Object table, bool standard)
 static void
 set_canon (Lisp_Object case_table, Lisp_Object range, Lisp_Object elt)
 {
-  ENTER_LISP_FRAME (case_table, range, elt);
-  LISP_LOCALS (up, canon);
+  ENTER_LISP_FRAME ((case_table, range, elt), up, canon);
   up = XCHAR_TABLE (case_table)->extras[0];
 
   canon = XCHAR_TABLE (case_table)->extras[1];
@@ -200,7 +197,7 @@ set_canon (Lisp_Object case_table, Lisp_Object range, Lisp_Object elt)
 static void
 set_identity (Lisp_Object table, Lisp_Object c, Lisp_Object elt)
 {
-  ENTER_LISP_FRAME (table, c, elt);
+  ENTER_LISP_FRAME ((table, c, elt));
   if (NATNUMP (elt))
     {
       int from, to;
@@ -228,8 +225,7 @@ set_identity (Lisp_Object table, Lisp_Object c, Lisp_Object elt)
 static void
 shuffle (Lisp_Object table, Lisp_Object c, Lisp_Object elt)
 {
-  ENTER_LISP_FRAME (table, c, elt);
-  LISP_LOCALS (tem);
+  ENTER_LISP_FRAME ((table, c, elt), tem);
   if (NATNUMP (elt))
     {
       int from, to;
@@ -257,8 +253,7 @@ shuffle (Lisp_Object table, Lisp_Object c, Lisp_Object elt)
 void
 init_casetab_once (void)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (down, up, eqv);
+  ENTER_LISP_FRAME ((), down, up, eqv);
   register int i;
 
   DEFSYM (Qcase_table, "case-table");

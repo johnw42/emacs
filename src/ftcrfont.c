@@ -111,8 +111,7 @@ ftcrfont_glyph_extents (struct font *font,
 static Lisp_Object
 ftcrfont_list (struct frame *f, Lisp_Object spec)
 {
-  ENTER_LISP_FRAME (spec);
-  LISP_LOCALS (list, tail);
+  ENTER_LISP_FRAME ((spec), list, tail);
   list = ftfont_list (f, spec);
 
 
@@ -124,8 +123,7 @@ ftcrfont_list (struct frame *f, Lisp_Object spec)
 static Lisp_Object
 ftcrfont_match (struct frame *f, Lisp_Object spec)
 {
-  ENTER_LISP_FRAME (spec);
-  LISP_LOCALS (entity);
+  ENTER_LISP_FRAME ((spec), entity);
   entity = ftfont_match (f, spec);
 
 
@@ -137,8 +135,7 @@ ftcrfont_match (struct frame *f, Lisp_Object spec)
 static Lisp_Object
 ftcrfont_open (struct frame *f, Lisp_Object entity, int pixel_size)
 {
-  ENTER_LISP_FRAME (entity);
-  LISP_LOCALS (font_object);
+  ENTER_LISP_FRAME ((entity), font_object);
   struct font *font;
   struct ftcrfont_info *ftcrfont_info;
   FT_Face ft_face;

@@ -208,8 +208,7 @@ ftxfont_draw_background (struct frame *f, struct font *font, GC gc, int x, int y
 static Lisp_Object
 ftxfont_list (struct frame *f, Lisp_Object spec)
 {
-  ENTER_LISP_FRAME (spec);
-  LISP_LOCALS (list, tail);
+  ENTER_LISP_FRAME ((spec), list, tail);
   list = ftfont_list (f, spec);
 
 
@@ -221,8 +220,7 @@ ftxfont_list (struct frame *f, Lisp_Object spec)
 static Lisp_Object
 ftxfont_match (struct frame *f, Lisp_Object spec)
 {
-  ENTER_LISP_FRAME (spec);
-  LISP_LOCALS (entity);
+  ENTER_LISP_FRAME ((spec), entity);
   entity = ftfont_match (f, spec);
 
 
@@ -234,8 +232,7 @@ ftxfont_match (struct frame *f, Lisp_Object spec)
 static Lisp_Object
 ftxfont_open (struct frame *f, Lisp_Object entity, int pixel_size)
 {
-  ENTER_LISP_FRAME (entity);
-  LISP_LOCALS (font_object);
+  ENTER_LISP_FRAME ((entity), font_object);
   font_object = ftfont_open (f, entity, pixel_size);
 
   if (NILP (font_object))

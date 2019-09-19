@@ -191,7 +191,7 @@ fontset_id_valid_p (int id)
 static void
 set_fontset_id (Lisp_Object fontset, Lisp_Object id)
 {
-  ENTER_LISP_FRAME (fontset, id);
+  ENTER_LISP_FRAME ((fontset, id));
   set_char_table_extras (fontset, 0, id);
   EXIT_LISP_FRAME_VOID ();
 }
@@ -202,7 +202,7 @@ set_fontset_id (Lisp_Object fontset, Lisp_Object id)
 static void
 set_fontset_name (Lisp_Object fontset, Lisp_Object name)
 {
-  ENTER_LISP_FRAME (fontset, name);
+  ENTER_LISP_FRAME ((fontset, name));
   set_char_table_extras (fontset, 1, name);
   EXIT_LISP_FRAME_VOID ();
 }
@@ -211,7 +211,7 @@ set_fontset_name (Lisp_Object fontset, Lisp_Object name)
 static void
 set_fontset_ascii (Lisp_Object fontset, Lisp_Object ascii)
 {
-  ENTER_LISP_FRAME (fontset, ascii);
+  ENTER_LISP_FRAME ((fontset, ascii));
   set_char_table_extras (fontset, 2, ascii);
   EXIT_LISP_FRAME_VOID ();
 }
@@ -222,7 +222,7 @@ set_fontset_ascii (Lisp_Object fontset, Lisp_Object ascii)
 static void
 set_fontset_base (Lisp_Object fontset, Lisp_Object base)
 {
-  ENTER_LISP_FRAME (fontset, base);
+  ENTER_LISP_FRAME ((fontset, base));
   set_char_table_extras (fontset, 3, base);
   EXIT_LISP_FRAME_VOID ();
 }
@@ -231,7 +231,7 @@ set_fontset_base (Lisp_Object fontset, Lisp_Object base)
 static void
 set_fontset_frame (Lisp_Object fontset, Lisp_Object frame)
 {
-  ENTER_LISP_FRAME (fontset, frame);
+  ENTER_LISP_FRAME ((fontset, frame));
   set_char_table_extras (fontset, 4, frame);
   EXIT_LISP_FRAME_VOID ();
 }
@@ -240,7 +240,7 @@ set_fontset_frame (Lisp_Object fontset, Lisp_Object frame)
 static void
 set_fontset_nofont_face (Lisp_Object fontset, Lisp_Object face)
 {
-  ENTER_LISP_FRAME (fontset, face);
+  ENTER_LISP_FRAME ((fontset, face));
   set_char_table_extras (fontset, 5, face);
   EXIT_LISP_FRAME_VOID ();
 }
@@ -249,7 +249,7 @@ set_fontset_nofont_face (Lisp_Object fontset, Lisp_Object face)
 static void
 set_fontset_default (Lisp_Object fontset, Lisp_Object def)
 {
-  ENTER_LISP_FRAME (fontset, def);
+  ENTER_LISP_FRAME ((fontset, def));
   set_char_table_extras (fontset, 6, def);
   EXIT_LISP_FRAME_VOID ();
 }
@@ -260,7 +260,7 @@ set_fontset_default (Lisp_Object fontset, Lisp_Object def)
 static void
 set_fontset_fallback (Lisp_Object fontset, Lisp_Object fallback)
 {
-  ENTER_LISP_FRAME (fontset, fallback);
+  ENTER_LISP_FRAME ((fontset, fallback));
   set_char_table_extras (fontset, 7, fallback);
   EXIT_LISP_FRAME_VOID ();
 }
@@ -316,8 +316,7 @@ set_fontset_fallback (Lisp_Object fontset, Lisp_Object fallback)
 static Lisp_Object
 fontset_ref (Lisp_Object fontset, int c)
 {
-  ENTER_LISP_FRAME (fontset);
-  LISP_LOCALS (elt);
+  ENTER_LISP_FRAME ((fontset), elt);
 
   elt = CHAR_TABLE_REF (fontset, c);
   if (NILP (elt) && ! EQ (fontset, Vdefault_fontset)
@@ -354,7 +353,7 @@ fontset_ref (Lisp_Object fontset, int c)
 static void
 fontset_add (Lisp_Object fontset, Lisp_Object range, Lisp_Object elt, Lisp_Object add)
 {
-  ENTER_LISP_FRAME (fontset, range, elt, add);
+  ENTER_LISP_FRAME ((fontset, range, elt, add));
   Lisp_Object args[2];
   int idx = (EQ (add, Qappend) ? 0 : 1);
 
@@ -402,8 +401,9 @@ fontset_compare_rfontdef (const void *val1, const void *val2)
 static void
 reorder_font_vector (Lisp_Object font_group, struct font *font)
 {
-  ENTER_LISP_FRAME (font_group);
-  LISP_LOCALS (vec, font_object, rfont_def, font_def, font_spec, otf_spec, encoding, tail, lang);
+  ENTER_LISP_FRAME ((font_group), vec, font_object, rfont_def,
+                    font_def, font_spec, otf_spec, encoding, tail,
+                    lang);
   int size;
   int i;
   bool score_changed = false;
@@ -493,8 +493,7 @@ reorder_font_vector (Lisp_Object font_group, struct font *font)
 static Lisp_Object
 fontset_get_font_group (Lisp_Object fontset, int c)
 {
-  ENTER_LISP_FRAME (fontset);
-  LISP_LOCALS (font_group, base_fontset, rfont_def);
+  ENTER_LISP_FRAME ((fontset), font_group, base_fontset, rfont_def);
   int from = 0, to = MAX_CHAR, i;
 
   eassert (! BASE_FONTSET_P (fontset));
@@ -569,8 +568,8 @@ static Lisp_Object
 fontset_find_font (Lisp_Object fontset, int c, struct face *face,
 		   int charset_id, bool fallback)
 {
-  ENTER_LISP_FRAME (fontset);
-  LISP_LOCALS (vec, font_group, rfont_def, repertory, font_def, font_entity, font_object, new_vec);
+  ENTER_LISP_FRAME ((fontset), vec, font_group, rfont_def, repertory,
+                    font_def, font_entity, font_object, new_vec);
   int i, charset_matched = 0, found_index;
   struct frame *f = (FRAMEP (FONTSET_FRAME (fontset))
 		     ? XFRAME (FONTSET_FRAME (fontset))
@@ -771,8 +770,7 @@ fontset_find_font (Lisp_Object fontset, int c, struct face *face,
 static Lisp_Object
 fontset_font (Lisp_Object fontset, int c, struct face *face, int id)
 {
-  ENTER_LISP_FRAME (fontset);
-  LISP_LOCALS (rfont_def, base_fontset);
+  ENTER_LISP_FRAME ((fontset), rfont_def, base_fontset);
   Lisp_Object default_rfont_def UNINIT;
 
   /* Try a font-group of FONTSET. */
@@ -834,8 +832,7 @@ fontset_font (Lisp_Object fontset, int c, struct face *face, int id)
 static Lisp_Object
 make_fontset (Lisp_Object frame, Lisp_Object name, Lisp_Object base)
 {
-  ENTER_LISP_FRAME (frame, name, base);
-  LISP_LOCALS (fontset);
+  ENTER_LISP_FRAME ((frame, name, base), fontset);
   int size = ASIZE (Vfontset_table);
   int id = next_fontset_id;
 
@@ -874,8 +871,7 @@ make_fontset (Lisp_Object frame, Lisp_Object name, Lisp_Object base)
 Lisp_Object
 fontset_name (int id)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (fontset);
+  ENTER_LISP_FRAME ((), fontset);
 
   fontset = FONTSET_FROM_ID (id);
   EXIT_LISP_FRAME (FONTSET_NAME (fontset));
@@ -887,8 +883,7 @@ fontset_name (int id)
 Lisp_Object
 fontset_ascii (int id)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (fontset, elt);
+  ENTER_LISP_FRAME ((), fontset, elt);
 
   fontset= FONTSET_FROM_ID (id);
   elt = FONTSET_ASCII (fontset);
@@ -903,8 +898,7 @@ fontset_ascii (int id)
 void
 free_face_fontset (struct frame *f, struct face *face)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (fontset);
+  ENTER_LISP_FRAME ((), fontset);
 
   fontset = FONTSET_FROM_ID (face->fontset);
   if (NILP (fontset))
@@ -937,8 +931,8 @@ int
 face_for_char (struct frame *f, struct face *face, int c,
 	       ptrdiff_t pos, Lisp_Object object)
 {
-  ENTER_LISP_FRAME_T (int, object);
-  LISP_LOCALS (fontset, rfont_def, charset, font_object, val);
+  ENTER_LISP_FRAME_T (int, (object), fontset, rfont_def, charset,
+                      font_object, val);
   int face_id;
   int id;
 
@@ -1042,8 +1036,8 @@ face_for_char (struct frame *f, struct face *face, int c,
 Lisp_Object
 font_for_char (struct face *face, int c, ptrdiff_t pos, Lisp_Object object)
 {
-  ENTER_LISP_FRAME (object);
-  LISP_LOCALS (fontset, rfont_def, charset, font_object, val);
+  ENTER_LISP_FRAME ((object), fontset, rfont_def, charset,
+                    font_object, val);
   int id;
 
   if (ASCII_CHAR_P (c))
@@ -1091,8 +1085,7 @@ font_for_char (struct face *face, int c, ptrdiff_t pos, Lisp_Object object)
 int
 make_fontset_for_ascii_face (struct frame *f, int base_fontset_id, struct face *face)
 {
-  ENTER_LISP_FRAME_T (int);
-  LISP_LOCALS (base_fontset, fontset, frame);
+  ENTER_LISP_FRAME_T (int, (), base_fontset, fontset, frame);
 
   XSETFRAME (frame, f);
   if (base_fontset_id >= 0)
@@ -1125,7 +1118,7 @@ static Lisp_Object Vcached_fontset_data = NIL_INIT;
 static Lisp_Object
 fontset_pattern_regexp (Lisp_Object pattern)
 {
-  ENTER_LISP_FRAME (pattern);
+  ENTER_LISP_FRAME ((pattern));
   if (!strchr (SSDATA (pattern), '*')
       && !strchr (SSDATA (pattern), '?'))
     /* PATTERN does not contain any wild cards.  */
@@ -1202,8 +1195,7 @@ fontset_pattern_regexp (Lisp_Object pattern)
 int
 fs_query_fontset (Lisp_Object name, int name_pattern)
 {
-  ENTER_LISP_FRAME_T (int, name);
-  LISP_LOCALS (tem, fontset, this_name);
+  ENTER_LISP_FRAME_T (int, (name), tem, fontset, this_name);
   int i;
 
   name = Fdowncase (name);
@@ -1251,8 +1243,7 @@ just as X font name matching algorithm allows.
 If REGEXPP is non-nil, PATTERN is a regular expression.  */)
   (Lisp_Object pattern, Lisp_Object regexpp)
 {
-  ENTER_LISP_FRAME (pattern, regexpp);
-  LISP_LOCALS (fontset);
+  ENTER_LISP_FRAME ((pattern, regexpp), fontset);
   int id;
 
   check_window_system (NULL);
@@ -1275,8 +1266,7 @@ If REGEXPP is non-nil, PATTERN is a regular expression.  */)
 Lisp_Object
 list_fontsets (struct frame *f, Lisp_Object pattern, int size)
 {
-  ENTER_LISP_FRAME (pattern);
-  LISP_LOCALS (frame, regexp, val, fontset, name);
+  ENTER_LISP_FRAME ((pattern), frame, regexp, val, fontset, name);
   int id;
 
   XSETFRAME (frame, f);
@@ -1311,8 +1301,7 @@ list_fontsets (struct frame *f, Lisp_Object pattern, int size)
 static void
 free_realized_fontsets (Lisp_Object base)
 {
-  ENTER_LISP_FRAME (base);
-  LISP_LOCALS (this, tail);
+  ENTER_LISP_FRAME ((base), this, tail);
   int id;
 
 #if 0
@@ -1376,7 +1365,7 @@ free_realized_fontsets (Lisp_Object base)
 static Lisp_Object
 check_fontset_name (Lisp_Object name, Lisp_Object *frame)
 {
-  ENTER_LISP_FRAME (name);
+  ENTER_LISP_FRAME ((name));
   int id;
   struct frame *f = decode_live_frame (*frame);
 
@@ -1403,7 +1392,7 @@ check_fontset_name (Lisp_Object name, Lisp_Object *frame)
 static void
 accumulate_script_ranges (Lisp_Object arg, Lisp_Object range, Lisp_Object val)
 {
-  ENTER_LISP_FRAME (arg, range, val);
+  ENTER_LISP_FRAME ((arg, range, val));
   if (EQ (XCAR (arg), val))
     {
       if (CONSP (range))
@@ -1430,8 +1419,8 @@ accumulate_script_ranges (Lisp_Object arg, Lisp_Object range, Lisp_Object val)
 static void
 set_fontset_font (Lisp_Object arg, Lisp_Object range)
 {
-  ENTER_LISP_FRAME (arg, range);
-  LISP_LOCALS (fontset, font_def, add, ascii, script_range_list);
+  ENTER_LISP_FRAME ((arg, range), fontset, font_def, add, ascii,
+                    script_range_list);
   int from = XINT (XCAR (range)), to = XINT (XCDR (range));
 
   fontset = AREF (arg, 0);
@@ -1514,10 +1503,10 @@ to the previously set font specifications for TARGET.  If it is
 appended.  By default, FONT-SPEC overrides the previous settings.  */)
   (Lisp_Object name, Lisp_Object target, Lisp_Object font_spec, Lisp_Object frame, Lisp_Object add)
 {
-  ENTER_LISP_FRAME (name, target, font_spec, frame, add);
-  LISP_LOCALS (fontset, font_def, registry, family, range_list,
-               fontname, spec, encoding, repertory, from, to,
-               script_list, val, arg, tail, fr, font_object);
+  ENTER_LISP_FRAME ((name, target, font_spec, frame, add), fontset,
+                    font_def, registry, family, range_list, fontname,
+                    spec, encoding, repertory, from, to, script_list,
+                    val, arg, tail, fr, font_object);
   struct charset *charset = NULL;
   bool ascii_changed = 0;
 
@@ -1711,8 +1700,8 @@ FONT-SPEC is a vector, a cons, or a string.  See the documentation of
 `set-fontset-font' for the meaning.  */)
   (Lisp_Object name, Lisp_Object fontlist)
 {
-  ENTER_LISP_FRAME (name, fontlist);
-  LISP_LOCALS (fontset, tail, font_spec, short_name, elt, script);
+  ENTER_LISP_FRAME ((name, fontlist), fontset, tail, font_spec,
+                    short_name, elt, script);
   int id;
 
   CHECK_STRING (name);
@@ -1784,8 +1773,9 @@ static ptrdiff_t num_auto_fontsets;
 int
 fontset_from_font (Lisp_Object font_object)
 {
-  ENTER_LISP_FRAME_T (int, font_object);
-  LISP_LOCALS (font_name, font_spec, registry, fontset_spec, alias, name, fontset, val, target);
+  ENTER_LISP_FRAME_T (int, (font_object), font_name, font_spec,
+                      registry, fontset_spec, alias, name, fontset,
+                      val, target);
   font_name = font_get_name (font_object);
 
   font_spec = copy_font_spec (font_object);
@@ -1843,8 +1833,7 @@ fontset_from_font (Lisp_Object font_object)
 static void
 update_auto_fontset_alist (Lisp_Object font_object, Lisp_Object fontset)
 {
-  ENTER_LISP_FRAME (font_object, fontset);
-  LISP_LOCALS (prev, tail);
+  ENTER_LISP_FRAME ((font_object, fontset), prev, tail);
 
   for (prev = Qnil, tail = auto_fontset_alist; CONSP (tail);
        prev = tail, tail = XCDR (tail))
@@ -1880,8 +1869,8 @@ information about the derived fonts from the default fontset.  The
 format is the same as above.  */)
   (Lisp_Object fontset, Lisp_Object frame)
 {
-  ENTER_LISP_FRAME (fontset, frame);
-  LISP_LOCALS (val, elt, alist, font_object, slot, name);
+  ENTER_LISP_FRAME ((fontset, frame), val, elt, alist, font_object,
+                    slot, name);
   Lisp_Object *realized[2], fontsets[2], tables[2];
   int c, i, j, k;
 
@@ -2012,8 +2001,8 @@ If the 2nd optional arg ALL is non-nil, return a list of all font name
 patterns.  */)
   (Lisp_Object name, Lisp_Object ch, Lisp_Object all)
 {
-  ENTER_LISP_FRAME (name, ch, all);
-  LISP_LOCALS (fontset, elt, list, repertory, val, frame, family, registry);
+  ENTER_LISP_FRAME ((name, ch, all), fontset, elt, list, repertory,
+                    val, frame, family, registry);
   int c;
   int i, j;
 
@@ -2071,8 +2060,7 @@ DEFUN ("fontset-list", Ffontset_list, Sfontset_list, 0, 0, 0,
        doc: /* Return a list of all defined fontset names.  */)
   (void)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (fontset, list);
+  ENTER_LISP_FRAME ((), fontset, list);
   int i;
 
   list = Qnil;
@@ -2095,8 +2083,7 @@ Lisp_Object dump_fontset (Lisp_Object) EXTERNALLY_VISIBLE;
 Lisp_Object
 dump_fontset (Lisp_Object fontset)
 {
-  ENTER_LISP_FRAME (fontset);
-  LISP_LOCALS (vec, frame);
+  ENTER_LISP_FRAME ((fontset), vec, frame);
 
   vec = Fmake_vector (make_number (3), Qnil);
   ASET (vec, 0, FONTSET_ID (fontset));
@@ -2131,8 +2118,7 @@ DEFUN ("fontset-list-all", Ffontset_list_all, Sfontset_list_all, 0, 0, 0,
        doc: /* Return a brief summary of all fontsets for debug use.  */)
   (void)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (val);
+  ENTER_LISP_FRAME ((), val);
   int i;
 
   for (i = 0, val = Qnil; i < ASIZE (Vfontset_table); i++)

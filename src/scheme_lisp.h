@@ -296,7 +296,7 @@ struct func_frame_info {
 extern ptrdiff_t lisp_stack_size;
 
 void enter_lisp_frame (struct func_frame_info *fi, void *base);
-void record_lisp_locals (struct func_frame_info *fi, bool is_params, void *base, size_t n, ...);
+void record_lisp_locals (struct func_frame_info *fi, void *base, size_t num_params, size_t num_locals, ...);
 void push_lisp_local_array(bool already_initialized, Lisp_Object *ptr, ptrdiff_t n);
 void pop_lisp_locals(int n);
 void walk_lisp_stack (void (*f)(void *, Lisp_Object *), void *);
@@ -307,35 +307,32 @@ void walk_lisp_stack (void (*f)(void *, Lisp_Object *), void *);
 
 #define MAX_LOCAL_LISP_ARRAYS 3
 
-#define ENTER_LISP_FRAME_T(type, ...)                                   \
+#define ENTER_LISP_FRAME_T(type, params, ...)                           \
   static bool is_this_func_frame_info_init = false;                     \
   static struct func_frame_info this_func_frame_info = FUNC_FRAME_INFO_INIT; \
-  static bool was_this_func_frame_info_init;                            \
-  was_this_func_frame_info_init = is_this_func_frame_info_init;         \
   typedef type this_lisp_frame_type;                                    \
   (void) (this_lisp_frame_type *) 0;                                    \
   ptrdiff_t orig_lisp_stack_size = lisp_stack_size;                     \
   Lisp_Object dummy_lisp_var;                                           \
-  SCHEME_ANALYZE_LISP_FRAME(false __VA_OPT__(, __VA_ARGS__));           \
+  PP_MAP(LISP_LOCAL_VAR, __VA_ARGS__)                                   \
+  if (!is_this_func_frame_info_init)                                    \
+    {                                                                   \
+      is_this_func_frame_info_init = true;                              \
+      record_lisp_locals                                                \
+        (&this_func_frame_info,                                         \
+         &dummy_lisp_var,                                               \
+         PP_NARGS params, PP_NARGS (__VA_ARGS__)                        \
+         LISP_LOCAL_MAP_ADDR params                                     \
+         LISP_LOCAL_MAP_ADDR(__VA_ARGS__));                             \
+    }                                                                   \
   enter_lisp_frame(&this_func_frame_info, &dummy_lisp_var)
 #define ENTER_LISP_FRAME_VA_T(type, nargs, args, ...)                   \
   ENTER_LISP_FRAME_T (type __VA_OPT__(, __VA_ARGS__));                 \
   push_lisp_local_array (true, args, nargs)
-#define LISP_LOCALS(...)                                                \
-  Lisp_Object PP_MAP_COMMA(LISP_LOCAL_VAR, __VA_ARGS__);               \
-  SCHEME_ANALYZE_LISP_FRAME (true, __VA_ARGS__)
-#define LISP_LOCAL_VAR(name) name = Qnil
-#define SCHEME_ANALYZE_LISP_FRAME(need_init, ...)                       \
-  if (!was_this_func_frame_info_init)                                   \
-    {                                                                   \
-      is_this_func_frame_info_init = true;                              \
-      __VA_OPT__ (record_lisp_locals                                    \
-                  (&this_func_frame_info, need_init,                    \
-                   &dummy_lisp_var,                                     \
-                   PP_NARGS (__VA_ARGS__),                              \
-                   PP_MAP_COMMA (LISP_LOCAL_ADDR, __VA_ARGS__)));       \
-    }
-#define LISP_LOCAL_ADDR(var) &var
+#define LISP_LOCAL_VAR(name) Lisp_Object name = Qnil;
+#define LISP_LOCAL_ADDR(var) , &var
+#define LISP_LOCAL_MAP_ADDR(...) \
+  __VA_OPT__(PP_MAP(LISP_LOCAL_ADDR, __VA_ARGS__))
 #define EXIT_LISP_FRAME_NO_RETURN()             \
   (lisp_stack_size = orig_lisp_stack_size)
 #define LISP_LOCAL_ARRAY(name, size) \

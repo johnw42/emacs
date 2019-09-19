@@ -78,8 +78,8 @@ Returns the newly constructed xwidget, or nil if construction fails.  */)
    Lisp_Object title, Lisp_Object width, Lisp_Object height,
    Lisp_Object arguments, Lisp_Object buffer)
 {
-  ENTER_LISP_FRAME (type, title, width, height, arguments, buffer);
-  LISP_LOCALS (val);
+  ENTER_LISP_FRAME ((type, title, width, height, arguments, buffer),
+                    val);
   if (!xg_gtk_initialized)
     error ("make-xwidget: GTK has not been initialized");
   CHECK_SYMBOL (type);
@@ -163,8 +163,7 @@ DEFUN ("get-buffer-xwidgets", Fget_buffer_xwidgets, Sget_buffer_xwidgets,
 BUFFER may be a buffer or the name of one.  */)
   (Lisp_Object buffer)
 {
-  ENTER_LISP_FRAME (buffer);
-  LISP_LOCALS (xw, tail, xw_list);
+  ENTER_LISP_FRAME ((buffer), xw, tail, xw_list);
 
   if (NILP (buffer))
     EXIT_LISP_FRAME (Qnil);
@@ -232,8 +231,7 @@ static void
 store_xwidget_event_string (struct xwidget *xw, const char *eventname,
                             const char *eventstr)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (xwl);
+  ENTER_LISP_FRAME ((), xwl);
   struct input_event event;
   XSETXWIDGET (xwl, xw);
   EVENT_INIT (event);
@@ -249,8 +247,7 @@ store_xwidget_js_callback_event (struct xwidget *xw,
                                  Lisp_Object proc,
                                  Lisp_Object argument)
 {
-  ENTER_LISP_FRAME (proc, argument);
-  LISP_LOCALS (xwl);
+  ENTER_LISP_FRAME ((proc, argument), xwl);
   struct input_event event;
   XSETXWIDGET (xwl, xw);
   EVENT_INIT (event);
@@ -284,8 +281,7 @@ webkit_view_load_changed_cb (WebKitWebView *webkitwebview,
 static Lisp_Object
 webkit_js_to_lisp (JSContextRef context, JSValueRef value)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (obj);
+  ENTER_LISP_FRAME ((), obj);
   switch (JSValueGetType (context, value))
     {
     case kJSTypeString:
@@ -372,8 +368,7 @@ webkit_javascript_finished_cb (GObject      *webview,
                                GAsyncResult *result,
                                gpointer      lisp_callback)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (lisp_value);
+  ENTER_LISP_FRAME ((), lisp_value);
     WebKitJavascriptResult *js_result;
     JSValueRef value;
     JSGlobalContextRef context;
@@ -520,8 +515,7 @@ xwidget_init_view (struct xwidget *xww,
                    struct glyph_string *s,
                    int x, int y)
 {
-  ENTER_LISP_FRAME_T (struct xwidget_view *);
-  LISP_LOCALS (val);
+  ENTER_LISP_FRAME_T (struct xwidget_view *, (), val);
 
   if (!xg_gtk_initialized)
     error ("xwidget_init_view: GTK has not been initialized");
@@ -695,7 +689,7 @@ DEFUN ("xwidget-webkit-goto-uri",
        doc: /* Make the xwidget webkit instance referenced by XWIDGET browse URI.  */)
   (Lisp_Object xwidget, Lisp_Object uri)
 {
-  ENTER_LISP_FRAME (xwidget, uri);
+  ENTER_LISP_FRAME ((xwidget, uri));
   WEBKIT_FN_INIT ();
   CHECK_STRING (uri);
   webkit_web_view_load_uri (WEBKIT_WEB_VIEW (xw->widget_osr), SSDATA (uri));
@@ -709,7 +703,7 @@ DEFUN ("xwidget-webkit-zoom",
 referenced by XWIDGET.  */)
   (Lisp_Object xwidget, Lisp_Object factor)
 {
-  ENTER_LISP_FRAME (xwidget, factor);
+  ENTER_LISP_FRAME ((xwidget, factor));
   WEBKIT_FN_INIT ();
   if (FLOATP (factor))
     {
@@ -731,7 +725,7 @@ FUN is provided, feed the JavaScript return value to the single
 argument procedure FUN.*/)
   (Lisp_Object xwidget, Lisp_Object script, Lisp_Object fun)
 {
-  ENTER_LISP_FRAME (xwidget, script, fun);
+  ENTER_LISP_FRAME ((xwidget, script, fun));
   WEBKIT_FN_INIT ();
   CHECK_STRING (script);
   if (!NILP (fun) && !FUNCTIONP (fun))
@@ -761,8 +755,7 @@ DEFUN ("xwidget-resize", Fxwidget_resize, Sxwidget_resize, 3, 3, 0,
        doc: /* Resize XWIDGET.  NEW_WIDTH, NEW_HEIGHT define the new size.  */ )
   (Lisp_Object xwidget, Lisp_Object new_width, Lisp_Object new_height)
 {
-  ENTER_LISP_FRAME (xwidget, new_width, new_height);
-  LISP_LOCALS (tail);
+  ENTER_LISP_FRAME ((xwidget, new_width, new_height), tail);
   CHECK_XWIDGET (xwidget);
   CHECK_RANGED_INTEGER (new_width, 0, INT_MAX);
   CHECK_RANGED_INTEGER (new_height, 0, INT_MAX);
@@ -809,7 +802,7 @@ This can be used to read the xwidget desired size, and resizes the
 Emacs allocated area accordingly.  */)
   (Lisp_Object xwidget)
 {
-  ENTER_LISP_FRAME (xwidget);
+  ENTER_LISP_FRAME ((xwidget));
   CHECK_XWIDGET (xwidget);
   GtkRequisition requisition;
   gtk_widget_size_request (XXWIDGET (xwidget)->widget_osr, &requisition);
@@ -823,7 +816,7 @@ DEFUN ("xwidgetp",
        doc: /* Return t if OBJECT is an xwidget.  */)
   (Lisp_Object object)
 {
-  ENTER_LISP_FRAME (object);
+  ENTER_LISP_FRAME ((object));
   EXIT_LISP_FRAME (XWIDGETP (object) ? Qt : Qnil);
 }
 
@@ -833,7 +826,7 @@ DEFUN ("xwidget-view-p",
        doc: /* Return t if OBJECT is an xwidget-view.  */)
   (Lisp_Object object)
 {
-  ENTER_LISP_FRAME (object);
+  ENTER_LISP_FRAME ((object));
   EXIT_LISP_FRAME (XWIDGET_VIEW_P (object) ? Qt : Qnil);
 }
 
@@ -844,7 +837,7 @@ DEFUN ("xwidget-info",
 Currently [TYPE TITLE WIDTH HEIGHT].  */)
   (Lisp_Object xwidget)
 {
-  ENTER_LISP_FRAME (xwidget);
+  ENTER_LISP_FRAME ((xwidget));
   CHECK_XWIDGET (xwidget);
   struct xwidget *xw = XXWIDGET (xwidget);
   EXIT_LISP_FRAME (CALLN (Fvector, xw->type, xw->title,
@@ -858,7 +851,7 @@ DEFUN ("xwidget-view-info",
 Currently [X Y CLIP_RIGHT CLIP_BOTTOM CLIP_TOP CLIP_LEFT].  */)
   (Lisp_Object xwidget_view)
 {
-  ENTER_LISP_FRAME (xwidget_view);
+  ENTER_LISP_FRAME ((xwidget_view));
   CHECK_XWIDGET_VIEW (xwidget_view);
   struct xwidget_view *xv = XXWIDGET_VIEW (xwidget_view);
   EXIT_LISP_FRAME (CALLN (Fvector, make_number (xv->x), make_number (xv->y),
@@ -872,7 +865,7 @@ DEFUN ("xwidget-view-model",
        doc:  /* Return the model associated with XWIDGET-VIEW.  */)
   (Lisp_Object xwidget_view)
 {
-  ENTER_LISP_FRAME (xwidget_view);
+  ENTER_LISP_FRAME ((xwidget_view));
   CHECK_XWIDGET_VIEW (xwidget_view);
   EXIT_LISP_FRAME (XXWIDGET_VIEW (xwidget_view)->model);
 }
@@ -883,7 +876,7 @@ DEFUN ("xwidget-view-window",
        doc:  /* Return the window of XWIDGET-VIEW.  */)
   (Lisp_Object xwidget_view)
 {
-  ENTER_LISP_FRAME (xwidget_view);
+  ENTER_LISP_FRAME ((xwidget_view));
   CHECK_XWIDGET_VIEW (xwidget_view);
   EXIT_LISP_FRAME (XXWIDGET_VIEW (xwidget_view)->w);
 }
@@ -895,7 +888,7 @@ DEFUN ("delete-xwidget-view",
        doc:  /* Delete the XWIDGET-VIEW.  */)
   (Lisp_Object xwidget_view)
 {
-  ENTER_LISP_FRAME (xwidget_view);
+  ENTER_LISP_FRAME ((xwidget_view));
   CHECK_XWIDGET_VIEW (xwidget_view);
   struct xwidget_view *xv = XXWIDGET_VIEW (xwidget_view);
   gtk_widget_destroy (xv->widgetwindow);
@@ -917,8 +910,7 @@ If WINDOW is unspecified or nil, use the selected window.
 Return nil if no association is found.  */)
   (Lisp_Object xwidget, Lisp_Object window)
 {
-  ENTER_LISP_FRAME (xwidget, window);
-  LISP_LOCALS (tail, xwidget_view);
+  ENTER_LISP_FRAME ((xwidget, window), tail, xwidget_view);
   CHECK_XWIDGET (xwidget);
 
   if (NILP (window))
@@ -945,7 +937,7 @@ DEFUN ("xwidget-plist",
        doc: /* Return the plist of XWIDGET.  */)
   (Lisp_Object xwidget)
 {
-  ENTER_LISP_FRAME (xwidget);
+  ENTER_LISP_FRAME ((xwidget));
   CHECK_XWIDGET (xwidget);
   EXIT_LISP_FRAME (XXWIDGET (xwidget)->plist);
 }
@@ -956,7 +948,7 @@ DEFUN ("xwidget-buffer",
        doc: /* Return the buffer of XWIDGET.  */)
   (Lisp_Object xwidget)
 {
-  ENTER_LISP_FRAME (xwidget);
+  ENTER_LISP_FRAME ((xwidget));
   CHECK_XWIDGET (xwidget);
   EXIT_LISP_FRAME (XXWIDGET (xwidget)->buffer);
 }
@@ -968,7 +960,7 @@ DEFUN ("set-xwidget-plist",
 Returns PLIST.  */)
   (Lisp_Object xwidget, Lisp_Object plist)
 {
-  ENTER_LISP_FRAME (xwidget, plist);
+  ENTER_LISP_FRAME ((xwidget, plist));
   CHECK_XWIDGET (xwidget);
   CHECK_LIST (plist);
 
@@ -985,7 +977,7 @@ exiting or killing a buffer if XWIDGET is running.
 This function returns FLAG.  */)
   (Lisp_Object xwidget, Lisp_Object flag)
 {
-  ENTER_LISP_FRAME (xwidget, flag);
+  ENTER_LISP_FRAME ((xwidget, flag));
   CHECK_XWIDGET (xwidget);
   XXWIDGET (xwidget)->kill_without_query = NILP (flag);
   EXIT_LISP_FRAME (flag);
@@ -997,7 +989,7 @@ DEFUN ("xwidget-query-on-exit-flag",
        doc: /* Return the current value of the query-on-exit flag for XWIDGET.  */)
   (Lisp_Object xwidget)
 {
-  ENTER_LISP_FRAME (xwidget);
+  ENTER_LISP_FRAME ((xwidget));
   CHECK_XWIDGET (xwidget);
   EXIT_LISP_FRAME ((XXWIDGET (xwidget)->kill_without_query ? Qnil : Qt));
 }
@@ -1065,7 +1057,7 @@ syms_of_xwidget (void)
 bool
 valid_xwidget_spec_p (Lisp_Object object)
 {
-  ENTER_LISP_FRAME_T (bool, object);
+  ENTER_LISP_FRAME_T (bool, (object));
   EXIT_LISP_FRAME (CONSP (object) && EQ (XCAR (object), Qxwidget));
 }
 
@@ -1074,8 +1066,7 @@ valid_xwidget_spec_p (Lisp_Object object)
 static Lisp_Object
 xwidget_spec_value (Lisp_Object spec, Lisp_Object key)
 {
-  ENTER_LISP_FRAME (spec, key);
-  LISP_LOCALS (tail);
+  ENTER_LISP_FRAME ((spec, key), tail);
 
   eassert (valid_xwidget_spec_p (spec));
 
@@ -1093,8 +1084,7 @@ xwidget_spec_value (Lisp_Object spec, Lisp_Object key)
 void
 xwidget_view_delete_all_in_window (struct window *w)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (tail);
+  ENTER_LISP_FRAME ((), tail);
   struct xwidget_view *xv = NULL;
   for (tail = Vxwidget_view_list;
  CONSP (tail);
@@ -1115,8 +1105,7 @@ xwidget_view_delete_all_in_window (struct window *w)
 static struct xwidget_view *
 xwidget_view_lookup (struct xwidget *xw, struct window *w)
 {
-  ENTER_LISP_FRAME_T (struct xwidget_view *);
-  LISP_LOCALS (xwidget, window, ret);
+  ENTER_LISP_FRAME_T (struct xwidget_view *, (), xwidget, window, ret);
   XSETXWIDGET (xwidget, xw);
   XSETWINDOW (window, w);
 
@@ -1128,8 +1117,7 @@ xwidget_view_lookup (struct xwidget *xw, struct window *w)
 struct xwidget *
 lookup_xwidget (Lisp_Object spec)
 {
-  ENTER_LISP_FRAME_T (struct xwidget *, spec);
-  LISP_LOCALS (value);
+  ENTER_LISP_FRAME_T (struct xwidget *, (spec), value);
   /* When a xwidget lisp spec is found initialize the C struct that is
      used in the C code.  This is done by redisplay so values change
      if the spec changes.  So, take special care of one-shot events.  */
@@ -1145,8 +1133,7 @@ lookup_xwidget (Lisp_Object spec)
 static void
 xwidget_start_redisplay (void)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (tail);
+  ENTER_LISP_FRAME ((), tail);
   for (tail = Vxwidget_view_list;
  CONSP (tail);
        tail = XCDR (tail))
@@ -1175,8 +1162,7 @@ xwidget_touched (struct xwidget_view *xv)
 void
 xwidget_end_redisplay (struct window *w, struct glyph_matrix *matrix)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (tail);
+  ENTER_LISP_FRAME ((), tail);
   int i;
   int area;
 
@@ -1240,8 +1226,7 @@ xwidget_end_redisplay (struct window *w, struct glyph_matrix *matrix)
 void
 kill_buffer_xwidgets (Lisp_Object buffer)
 {
-  ENTER_LISP_FRAME (buffer);
-  LISP_LOCALS (tail, xwidget);
+  ENTER_LISP_FRAME ((buffer), tail, xwidget);
   for (tail = Fget_buffer_xwidgets (buffer); CONSP (tail); tail = XCDR (tail))
     {
       xwidget = XCAR (tail);

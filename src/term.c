@@ -155,8 +155,7 @@ tty_ring_bell (struct frame *f)
 static void
 tty_send_additional_strings (struct terminal *terminal, Lisp_Object sym)
 {
-  ENTER_LISP_FRAME (sym);
-  LISP_LOCALS (extra_codes, string);
+  ENTER_LISP_FRAME ((sym), extra_codes, string);
   /* Use only accessors like CDR_SAFE and assq_no_quit to avoid any
      form of quitting or signaling an error, since this function can
      run as part of the "emergency escape" procedure invoked in the
@@ -528,8 +527,7 @@ unsigned char *
 encode_terminal_code (struct glyph *src, int src_len,
 		      struct coding_system *coding)
 {
-  ENTER_LISP_FRAME_T (unsigned char *);
-  LISP_LOCALS (charset_list, g, string);
+  ENTER_LISP_FRAME_T (unsigned char *, (), charset_list, g, string);
   struct glyph *src_end = src + src_len;
   unsigned char *buf;
   ptrdiff_t nchars, nbytes, required;
@@ -1556,8 +1554,7 @@ tty_append_glyph (struct it *it)
 void
 produce_glyphs (struct it *it)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (charset_list, acronym);
+  ENTER_LISP_FRAME ((), charset_list, acronym);
   /* If a hook is installed, let it do the work.  */
 
   /* Nothing but characters are supported on terminal frames.  */
@@ -1745,8 +1742,7 @@ append_composite_glyph (struct it *it)
 static void
 produce_composite_glyph (struct it *it)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (gstring);
+  ENTER_LISP_FRAME ((), gstring);
   if (it->cmp_it.ch < 0)
     {
       struct composition *cmp = composition_table[it->cmp_it.id];
@@ -1846,7 +1842,7 @@ append_glyphless_glyph (struct it *it, int face_id, const char *str)
 static void
 produce_glyphless_glyph (struct it *it, Lisp_Object acronym)
 {
-  ENTER_LISP_FRAME (acronym);
+  ENTER_LISP_FRAME ((acronym));
   int len, face_id = merge_glyphless_glyph_face (it);
   char buf[sizeof "\\x" + max (6, (INT_WIDTH + 3) / 4)];
   char const *str = "    ";
@@ -2049,7 +2045,7 @@ selected frame's terminal).  This function always returns nil if
 TERMINAL does not refer to a text terminal.  */)
   (Lisp_Object terminal)
 {
-  ENTER_LISP_FRAME (terminal);
+  ENTER_LISP_FRAME ((terminal));
   struct terminal *t = decode_tty_terminal (terminal);
 
   EXIT_LISP_FRAME ((t && t->display_info.tty->TN_max_colors > 0) ? Qt : Qnil);
@@ -2065,7 +2061,7 @@ selected frame's terminal).  This function always returns 0 if
 TERMINAL does not refer to a text terminal.  */)
   (Lisp_Object terminal)
 {
-  ENTER_LISP_FRAME (terminal);
+  ENTER_LISP_FRAME ((terminal));
   struct terminal *t = decode_tty_terminal (terminal);
 
   EXIT_LISP_FRAME (make_number (t ? t->display_info.tty->TN_max_colors : 0));
@@ -2146,8 +2142,7 @@ tty_setup_colors (struct tty_display_info *tty, int mode)
 void
 set_tty_color_mode (struct tty_display_info *tty, struct frame *f)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (tem, val, color_mode, tty_color_mode_alist);
+  ENTER_LISP_FRAME ((), tem, val, color_mode, tty_color_mode_alist);
   int mode;
   tty_color_mode_alist = Fintern_soft (build_string ("tty-color-mode-alist"), Qnil);
 
@@ -2187,7 +2182,7 @@ TERMINAL can be a terminal object, a frame, or nil (meaning the
 selected frame's terminal).  */)
   (Lisp_Object terminal)
 {
-  ENTER_LISP_FRAME (terminal);
+  ENTER_LISP_FRAME ((terminal));
   struct terminal *t = decode_tty_terminal (terminal);
 
   EXIT_LISP_FRAME ((t && t->display_info.tty->type
@@ -2202,7 +2197,7 @@ selected frame's terminal).  This function always returns nil if
 TERMINAL is not on a tty device.  */)
   (Lisp_Object terminal)
 {
-  ENTER_LISP_FRAME (terminal);
+  ENTER_LISP_FRAME ((terminal));
   struct terminal *t = decode_tty_terminal (terminal);
 
   EXIT_LISP_FRAME ((t && !strcmp (t->display_info.tty->name, DEV_TTY) ? Qt : Qnil));
@@ -2219,7 +2214,7 @@ selected frame's terminal).  This function always returns nil if
 TERMINAL does not refer to a text terminal.  */)
   (Lisp_Object terminal)
 {
-  ENTER_LISP_FRAME (terminal);
+  ENTER_LISP_FRAME ((terminal));
   struct terminal *t = decode_live_terminal (terminal);
 
   if (t->type == output_termcap)
@@ -2235,7 +2230,7 @@ does not refer to a text terminal.  Otherwise, it returns the
 top-most frame on the text terminal.  */)
   (Lisp_Object terminal)
 {
-  ENTER_LISP_FRAME (terminal);
+  ENTER_LISP_FRAME ((terminal));
   struct terminal *t = decode_live_terminal (terminal);
 
   if (t->type == output_termcap)
@@ -2266,8 +2261,7 @@ suspended.
 A suspended tty may be resumed by calling `resume-tty' on it.  */)
   (Lisp_Object tty)
 {
-  ENTER_LISP_FRAME (tty);
-  LISP_LOCALS (term);
+  ENTER_LISP_FRAME ((tty), term);
   struct terminal *t = decode_tty_terminal (tty);
   FILE *f;
 
@@ -2326,8 +2320,7 @@ TTY may be a terminal object, a frame, or nil (meaning the selected
 frame's terminal). */)
   (Lisp_Object tty)
 {
-  ENTER_LISP_FRAME (tty);
-  LISP_LOCALS (term);
+  ENTER_LISP_FRAME ((tty), term);
   struct terminal *t = decode_tty_terminal (tty);
   int fd;
 
@@ -2575,8 +2568,7 @@ int
 handle_one_term_event (struct tty_display_info *tty, Gpm_Event *event,
 		       struct input_event *hold_quit)
 {
-  ENTER_LISP_FRAME_T (int);
-  LISP_LOCALS (frame);
+  ENTER_LISP_FRAME_T (int, (), frame);
   struct frame *f = XFRAME (tty->top_frame);
   struct input_event ie;
   bool do_help = 0;
@@ -2819,8 +2811,7 @@ tty_menu_calc_size (tty_menu *menu, int *width, int *height)
 static void
 mouse_get_xy (int *x, int *y)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (lmx, lmy, lisp_dummy);
+  ENTER_LISP_FRAME ((), lmx, lmy, lisp_dummy);
   struct frame *sf = SELECTED_FRAME ();
   lmx = Qnil;
   lmy = Qnil;
@@ -3064,8 +3055,7 @@ static mi_result
 read_menu_input (struct frame *sf, int *x, int *y, int min_y, int max_y,
 		 bool *first_time)
 {
-  ENTER_LISP_FRAME_T (mi_result);
-  LISP_LOCALS (cmd, saved_mouse_tracking);
+  ENTER_LISP_FRAME_T (mi_result, (), cmd, saved_mouse_tracking);
   if (*first_time)
     {
       *first_time = false;
@@ -3140,8 +3130,7 @@ tty_menu_activate (tty_menu *menu, int *pane, int *selidx,
 		   void (*help_callback)(char const *, int, int),
 		   bool kbd_navigation)
 {
-  ENTER_LISP_FRAME_T (int);
-  LISP_LOCALS (selectface, prev_inhibit_redisplay);
+  ENTER_LISP_FRAME_T (int, (), selectface, prev_inhibit_redisplay);
   struct tty_menu_state *state;
   int statecount, x, y, i;
   bool leave, onepane;
@@ -3424,8 +3413,7 @@ tty_menu_destroy (tty_menu *menu)
 static void
 tty_menu_help_callback (char const *help_string, int pane, int item)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (pane_name, menu_object);
+  ENTER_LISP_FRAME ((), pane_name, menu_object);
 
   struct Lisp_Vector *first_item = XVECTOR (menu_items);
   if (EQ (xv_ref (first_item, 0), Qt))
@@ -3446,7 +3434,7 @@ tty_menu_help_callback (char const *help_string, int pane, int item)
 static void
 tty_pop_down_menu (Lisp_Object arg)
 {
-  ENTER_LISP_FRAME (arg);
+  ENTER_LISP_FRAME ((arg));
   tty_menu *menu = XSAVE_POINTER (arg, 0);
   struct buffer *orig_buffer = XSAVE_POINTER (arg, 1);
 
@@ -3461,8 +3449,7 @@ tty_pop_down_menu (Lisp_Object arg)
 static int
 tty_menu_last_menubar_item (struct frame *f)
 {
-  ENTER_LISP_FRAME_T (int);
-  LISP_LOCALS (items, str);
+  ENTER_LISP_FRAME_T (int, (), items, str);
   int i = 0;
 
   eassert (FRAME_TERMCAP_P (f) && FRAME_LIVE_P (f));
@@ -3492,8 +3479,7 @@ tty_menu_last_menubar_item (struct frame *f)
 static void
 tty_menu_new_item_coords (struct frame *f, int which, int *x, int *y)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (items, pos, str);
+  ENTER_LISP_FRAME ((), items, pos, str);
   eassert (FRAME_TERMCAP_P (f) && FRAME_LIVE_P (f));
   if (FRAME_TERMCAP_P (f) && FRAME_LIVE_P (f))
     {
@@ -3548,8 +3534,8 @@ Lisp_Object
 tty_menu_show (struct frame *f, int x, int y, int menuflags,
 	       Lisp_Object title, const char **error_name)
 {
-  ENTER_LISP_FRAME (title);
-  LISP_LOCALS (entry, pane_prefix, pane_name, prefix, item, item_name, enable, descrip, help);
+  ENTER_LISP_FRAME ((title), entry, pane_prefix, pane_name, prefix,
+                    item, item_name, enable, descrip, help);
   tty_menu *menu;
   int pane, selidx, lpane, status;
   char *datap;

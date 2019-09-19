@@ -318,14 +318,14 @@ the third, MAXDEPTH, the maximum stack depth used in this function.
 If the third argument is incorrect, Emacs may crash.  */)
   (Lisp_Object bytestr, Lisp_Object vector, Lisp_Object maxdepth)
 {
-  ENTER_LISP_FRAME (bytestr, vector, maxdepth);
+  ENTER_LISP_FRAME ((bytestr, vector, maxdepth));
   EXIT_LISP_FRAME (exec_byte_code (bytestr, vector, maxdepth, Qnil, 0, NULL));
 }
 
 static void
 bcall0 (Lisp_Object f)
 {
-  ENTER_LISP_FRAME (f);
+  ENTER_LISP_FRAME ((f));
   Ffuncall (1, &f);
   EXIT_LISP_FRAME_VOID ();
 }
@@ -342,8 +342,8 @@ Lisp_Object
 exec_byte_code (Lisp_Object bytestr, Lisp_Object vector, Lisp_Object maxdepth,
 		Lisp_Object args_template, ptrdiff_t nargs, Lisp_Object *args)
 {
-  ENTER_LISP_FRAME_VA (nargs, args);
-  LISP_LOCALS (v1, v2, sym, val, handler, handlers, body, jmp_table, hash_code, result);
+  ENTER_LISP_FRAME_VA (nargs, args, (), v1, v2, sym, val, handler,
+                       handlers, body, jmp_table, hash_code, result);
 #ifdef BYTE_CODE_METER
   int volatile this_op = 0;
 #endif
@@ -1532,7 +1532,7 @@ exec_byte_code (Lisp_Object bytestr, Lisp_Object vector, Lisp_Object maxdepth,
 Lisp_Object
 get_byte_code_arity (Lisp_Object args_template)
 {
-  ENTER_LISP_FRAME (args_template);
+  ENTER_LISP_FRAME ((args_template));
   eassert (NATNUMP (args_template));
   EMACS_INT at = XINT (args_template);
   bool rest = (at & 128) != 0;

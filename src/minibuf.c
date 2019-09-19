@@ -70,8 +70,7 @@ static ptrdiff_t minibuf_prompt_width;
 static void
 choose_minibuf_frame (void)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (buffer, tail, frame);
+  ENTER_LISP_FRAME ((), buffer, tail, frame);
   if (FRAMEP (selected_frame)
       && FRAME_LIVE_P (XFRAME (selected_frame))
       && !EQ (minibuf_window, XFRAME (selected_frame)->minibuffer_window))
@@ -124,7 +123,7 @@ This affects where the minibuffer is displayed if you put text in it
 without invoking the usual minibuffer commands.  */)
   (Lisp_Object window)
 {
-  ENTER_LISP_FRAME (window);
+  ENTER_LISP_FRAME ((window));
   CHECK_WINDOW (window);
   if (! MINI_WINDOW_P (XWINDOW (window)))
     error ("Window is not a minibuffer window");
@@ -147,8 +146,7 @@ static void run_exit_minibuf_hook (void);
 static Lisp_Object
 string_to_object (Lisp_Object val, Lisp_Object defalt)
 {
-  ENTER_LISP_FRAME (val, defalt);
-  LISP_LOCALS (expr_and_pos);
+  ENTER_LISP_FRAME ((val, defalt), expr_and_pos);
   ptrdiff_t pos;
 
   if (STRINGP (val) && SCHARS (val) == 0)
@@ -191,8 +189,8 @@ read_minibuf_noninteractive (Lisp_Object map, Lisp_Object initial,
 			     Lisp_Object defalt,
 			     bool allow_props, bool inherit_input_method)
 {
-  ENTER_LISP_FRAME (map, initial, prompt, backup_n, histvar, histpos, defalt);
-  LISP_LOCALS (val);
+  ENTER_LISP_FRAME ((map, initial, prompt, backup_n, histvar, histpos,
+                     defalt), val);
   ptrdiff_t size, len;
   char *line;
   int c;
@@ -274,8 +272,7 @@ No argument or nil as argument means use current buffer as BUFFER.
 BUFFER can be a buffer or a buffer name.  */)
   (Lisp_Object buffer)
 {
-  ENTER_LISP_FRAME (buffer);
-  LISP_LOCALS (tem);
+  ENTER_LISP_FRAME ((buffer), tem);
 
   if (NILP (buffer))
     buffer = Fcurrent_buffer ();
@@ -294,8 +291,7 @@ DEFUN ("minibuffer-prompt-end", Fminibuffer_prompt_end,
 Return (point-min) if current buffer is not a minibuffer.  */)
   (void)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (beg, end, tem);
+  ENTER_LISP_FRAME ((), beg, end, tem);
   /* This function is written to be most efficient when there's a prompt.  */
   beg = make_number (BEGV);
 
@@ -374,11 +370,12 @@ read_minibuf (Lisp_Object map, Lisp_Object initial, Lisp_Object prompt,
 	      Lisp_Object histvar, Lisp_Object histpos, Lisp_Object defalt,
 	      bool allow_props, bool inherit_input_method)
 {
-  ENTER_LISP_FRAME (map, initial, prompt, histvar, histpos, defalt);
-  LISP_LOCALS (val, mini_frame, ambient_dir, minibuffer, input_method,
-               enable_multibyte, histstring, histval, empty_minibuf,
-               dummy, frame, backup_n, tail, buf, root_window,
-               mini_window, list, key, length, temp);
+  ENTER_LISP_FRAME ((map, initial, prompt, histvar, histpos, defalt),
+                    val, mini_frame, ambient_dir, minibuffer,
+                    input_method, enable_multibyte, histstring,
+                    histval, empty_minibuf, dummy, frame, backup_n,
+                    tail, buf, root_window, mini_window, list, key,
+                    length, temp);
   ptrdiff_t count = SPECPDL_INDEX ();
   EMACS_INT pos = 0;
   /* String to add to the history.  */
@@ -780,8 +777,7 @@ read_minibuf (Lisp_Object map, Lisp_Object initial, Lisp_Object prompt,
 Lisp_Object
 get_minibuffer (EMACS_INT depth)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (tail, buf);
+  ENTER_LISP_FRAME ((), tail, buf);
   tail = Fnthcdr (make_number (depth), Vminibuffer_list);
 
   if (NILP (tail))
@@ -836,8 +832,8 @@ run_exit_minibuf_hook (void)
 static void
 read_minibuf_unwind (void)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (old_deactivate_mark, window, key_vec, frames, frame1, val);
+  ENTER_LISP_FRAME ((), old_deactivate_mark, window, key_vec, frames,
+                    frame1, val);
 
   /* If this was a recursive minibuffer,
      tie the minibuffer window back to the outer level minibuffer buffer.  */
@@ -978,8 +974,9 @@ behavior differs from the way such arguments are used in `completing-read'
 and some related functions, which use zero-indexing for POSITION.  */)
   (Lisp_Object prompt, Lisp_Object initial_contents, Lisp_Object keymap, Lisp_Object read, Lisp_Object hist, Lisp_Object default_value, Lisp_Object inherit_input_method)
 {
-  ENTER_LISP_FRAME (prompt, initial_contents, keymap, read, hist, default_value, inherit_input_method);
-  LISP_LOCALS (histvar, histpos, val);
+  ENTER_LISP_FRAME ((prompt, initial_contents, keymap, read, hist,
+                     default_value, inherit_input_method), histvar,
+                    histpos, val);
 
   CHECK_STRING (prompt);
   if (NILP (keymap))
@@ -1029,8 +1026,8 @@ Fifth arg INHERIT-INPUT-METHOD, if non-nil, means the minibuffer inherits
  the current input method and the setting of `enable-multibyte-characters'.  */)
   (Lisp_Object prompt, Lisp_Object initial_input, Lisp_Object history, Lisp_Object default_value, Lisp_Object inherit_input_method)
 {
-  ENTER_LISP_FRAME (prompt, initial_input, history, default_value, inherit_input_method);
-  LISP_LOCALS (val);
+  ENTER_LISP_FRAME ((prompt, initial_input, history, default_value,
+                     inherit_input_method), val);
   ptrdiff_t count = SPECPDL_INDEX ();
 
   /* Just in case we're in a recursive minibuffer, make it clear that the
@@ -1059,7 +1056,7 @@ Third arg INHERIT-INPUT-METHOD, if non-nil, means the minibuffer inherits
 the current input method and the setting of`enable-multibyte-characters'.  */)
   (Lisp_Object prompt, Lisp_Object initial, Lisp_Object inherit_input_method)
 {
-  ENTER_LISP_FRAME (prompt, initial, inherit_input_method);
+  ENTER_LISP_FRAME ((prompt, initial, inherit_input_method));
   CHECK_STRING (prompt);
   EXIT_LISP_FRAME (read_minibuf (Vminibuffer_local_ns_map, initial, prompt,
 		       0, Qminibuffer_history, make_number (0), Qnil, 0,
@@ -1073,8 +1070,7 @@ if it is a list.  If DEFAULT-VALUE is omitted or nil, and the user enters
 null input, return a symbol whose name is an empty string.  */)
   (Lisp_Object prompt, Lisp_Object default_value)
 {
-  ENTER_LISP_FRAME (prompt, default_value);
-  LISP_LOCALS (name, default_string);
+  ENTER_LISP_FRAME ((prompt, default_value), name, default_string);
 
   if (NILP (default_value))
     default_string = Qnil;
@@ -1096,7 +1092,7 @@ DEFUN ("read-function", Fread_function, Sread_function, 1, 1, 0,
 Prompt with PROMPT.  */)
   (Lisp_Object prompt)
 {
-  ENTER_LISP_FRAME (prompt);
+  ENTER_LISP_FRAME ((prompt));
   EXIT_LISP_FRAME (Fintern (Fcompleting_read (prompt, Vobarray, Qfboundp, Qt, Qnil, Qnil, Qnil, Qnil),
 		  Qnil));
 }
@@ -1110,8 +1106,7 @@ A user option, or customizable variable, is one for which
 `custom-variable-p' returns non-nil.  */)
   (Lisp_Object prompt, Lisp_Object default_value)
 {
-  ENTER_LISP_FRAME (prompt, default_value);
-  LISP_LOCALS (name, default_string);
+  ENTER_LISP_FRAME ((prompt, default_value), name, default_string);
 
   if (NILP (default_value))
     default_string = Qnil;
@@ -1147,8 +1142,7 @@ function, instead of the usual behavior.  */)
   (Lisp_Object prompt, Lisp_Object def, Lisp_Object require_match,
    Lisp_Object predicate)
 {
-  ENTER_LISP_FRAME (prompt, def, require_match, predicate);
-  LISP_LOCALS (result);
+  ENTER_LISP_FRAME ((prompt, def, require_match, predicate), result);
   char *s;
   ptrdiff_t len;
   ptrdiff_t count = SPECPDL_INDEX ();
@@ -1204,7 +1198,7 @@ function, instead of the usual behavior.  */)
 static Lisp_Object
 minibuf_conform_representation (Lisp_Object string, Lisp_Object basis)
 {
-  ENTER_LISP_FRAME (string, basis);
+  ENTER_LISP_FRAME ((string, basis));
   if (STRING_MULTIBYTE (string) == STRING_MULTIBYTE (basis))
     EXIT_LISP_FRAME (string);
 
@@ -1247,8 +1241,8 @@ Additionally to this predicate, `completion-regexp-list'
 is used to further constrain the set of candidates.  */)
   (Lisp_Object string, Lisp_Object collection, Lisp_Object predicate)
 {
-  ENTER_LISP_FRAME (string, collection, predicate);
-  LISP_LOCALS (bestmatch, tail, elt, eltstring, bucket, zero, end, tem, regexps);
+  ENTER_LISP_FRAME ((string, collection, predicate), bestmatch, tail,
+                    elt, eltstring, bucket, zero, end, tem, regexps);
   /* Size in bytes of BESTMATCH.  */
   ptrdiff_t bestmatchsize = 0;
   /* These are in bytes, too.  */
@@ -1513,8 +1507,9 @@ backward compatibility.  If non-nil, strings in COLLECTION that start
 with a space are ignored unless STRING itself starts with a space.  */)
   (Lisp_Object string, Lisp_Object collection, Lisp_Object predicate, Lisp_Object hide_spaces)
 {
-  ENTER_LISP_FRAME (string, collection, predicate, hide_spaces);
-  LISP_LOCALS (tail, elt, eltstring, allmatches, bucket, tem, zero, regexps);
+  ENTER_LISP_FRAME ((string, collection, predicate, hide_spaces),
+                    tail, elt, eltstring, allmatches, bucket, tem,
+                    zero, regexps);
   int type = HASH_TABLE_P (collection) ? 3
     : VECTORP (collection) ? 2
     : NILP (collection) || (CONSP (collection) && !FUNCTIONP (collection));
@@ -1742,7 +1737,8 @@ Completion ignores case if the ambient value of
 See also `completing-read-function'.  */)
   (Lisp_Object prompt, Lisp_Object collection, Lisp_Object predicate, Lisp_Object require_match, Lisp_Object initial_input, Lisp_Object hist, Lisp_Object def, Lisp_Object inherit_input_method)
 {
-  ENTER_LISP_FRAME (prompt, collection, predicate, require_match, initial_input, hist, def, inherit_input_method);
+  ENTER_LISP_FRAME ((prompt, collection, predicate, require_match,
+                     initial_input, hist, def, inherit_input_method));
   EXIT_LISP_FRAME (CALLN (Ffuncall,
 		Fsymbol_value (intern ("completing-read-function")),
 		prompt, collection, predicate, require_match, initial_input,
@@ -1757,8 +1753,8 @@ If COLLECTION is a function, it is called with three arguments:
 the values STRING, PREDICATE and `lambda'.  */)
   (Lisp_Object string, Lisp_Object collection, Lisp_Object predicate)
 {
-  ENTER_LISP_FRAME (string, collection, predicate);
-  LISP_LOCALS (regexps, tail, tem, strkey);
+  ENTER_LISP_FRAME ((string, collection, predicate), regexps, tail,
+                    tem, strkey);
   tem = Qnil;
 
   ptrdiff_t i = 0;
@@ -1885,8 +1881,7 @@ If FLAG is nil, invoke `try-completion'; if it is t, invoke
 `all-completions'; otherwise invoke `test-completion'.  */)
   (Lisp_Object string, Lisp_Object predicate, Lisp_Object flag)
 {
-  ENTER_LISP_FRAME (string, predicate, flag);
-  LISP_LOCALS (res, bufs);
+  ENTER_LISP_FRAME ((string, predicate, flag), res, bufs);
   if (NILP (flag))
     EXIT_LISP_FRAME (Ftry_completion (string, Vbuffer_alist, predicate));
   else if (EQ (flag, Qt))
@@ -1938,8 +1933,7 @@ Unlike `assoc', KEY can also match an entry in LIST consisting of a
 single string, rather than a cons cell whose car is a string.  */)
   (Lisp_Object key, Lisp_Object list, Lisp_Object case_fold)
 {
-  ENTER_LISP_FRAME (key, list, case_fold);
-  LISP_LOCALS (tail, elt, tem, thiscar);
+  ENTER_LISP_FRAME ((key, list, case_fold), tail, elt, tem, thiscar);
 
   if (SYMBOLP (key))
     key = Fsymbol_name (key);

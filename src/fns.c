@@ -69,7 +69,7 @@ Other values of LIMIT are ignored.
 See Info node `(elisp)Random Numbers' for more details.  */)
   (Lisp_Object limit)
 {
-  ENTER_LISP_FRAME (limit);
+  ENTER_LISP_FRAME ((limit));
   EMACS_INT val;
 
   if (EQ (limit, Qt))
@@ -102,8 +102,7 @@ the number of bytes in the string; it is the number of characters.
 To get the number of bytes, use `string-bytes'.  */)
   (Lisp_Object sequence)
 {
-  ENTER_LISP_FRAME (sequence);
-  LISP_LOCALS (val);
+  ENTER_LISP_FRAME ((sequence), val);
 
   if (STRINGP (sequence))
     XSETFASTINT (val, SCHARS (sequence));
@@ -140,7 +139,7 @@ it returns 0.  If LIST is circular, it returns a finite value
 which is at least the number of distinct elements.  */)
   (Lisp_Object list)
 {
-  ENTER_LISP_FRAME (list);
+  ENTER_LISP_FRAME ((list));
   intptr_t len = 0;
   FOR_EACH_TAIL_SAFE (list)
     len++;
@@ -152,7 +151,7 @@ DEFUN ("string-bytes", Fstring_bytes, Sstring_bytes, 1, 1, 0,
 If STRING is multibyte, this may be greater than the length of STRING.  */)
   (Lisp_Object string)
 {
-  ENTER_LISP_FRAME (string);
+  ENTER_LISP_FRAME ((string));
   CHECK_STRING (string);
   EXIT_LISP_FRAME (make_number (SBYTES (string)));
 }
@@ -163,7 +162,7 @@ Case is significant, but text properties are ignored.
 Symbols are also allowed; their print names are used instead.  */)
   (Lisp_Object s1, Lisp_Object s2)
 {
-  ENTER_LISP_FRAME (s1, s2);
+  ENTER_LISP_FRAME ((s1, s2));
   if (SYMBOLP (s1))
     s1 = SYMBOL_NAME (s1);
   if (SYMBOLP (s2))
@@ -202,7 +201,8 @@ If string STR1 is greater, the value is a positive number N;
   (Lisp_Object str1, Lisp_Object start1, Lisp_Object end1, Lisp_Object str2,
    Lisp_Object start2, Lisp_Object end2, Lisp_Object ignore_case)
 {
-  ENTER_LISP_FRAME (str1, start1, end1, str2, start2, end2, ignore_case);
+  ENTER_LISP_FRAME ((str1, start1, end1, str2, start2, end2,
+                     ignore_case));
   ptrdiff_t from1, to1, from2, to2, i1, i1_byte, i2, i2_byte;
 
   CHECK_STRING (str1);
@@ -268,7 +268,7 @@ Case is significant.
 Symbols are also allowed; their print names are used instead.  */)
   (Lisp_Object string1, Lisp_Object string2)
 {
-  ENTER_LISP_FRAME (string1, string2);
+  ENTER_LISP_FRAME ((string1, string2));
   register ptrdiff_t end;
   register ptrdiff_t i1, i1_byte, i2, i2_byte;
 
@@ -315,7 +315,7 @@ Case is significant.
 Symbols are also allowed; their print names are used instead.  */)
   (Lisp_Object string1, Lisp_Object string2)
 {
-  ENTER_LISP_FRAME (string1, string2);
+  ENTER_LISP_FRAME ((string1, string2));
   if (SYMBOLP (string1))
     string1 = SYMBOL_NAME (string1);
   if (SYMBOLP (string2))
@@ -372,7 +372,7 @@ If your system does not support a locale environment, this function
 behaves like `string-lessp'.  */)
   (Lisp_Object s1, Lisp_Object s2, Lisp_Object locale, Lisp_Object ignore_case)
 {
-  ENTER_LISP_FRAME (s1, s2, locale, ignore_case);
+  ENTER_LISP_FRAME ((s1, s2, locale, ignore_case));
 #if defined __STDC_ISO_10646__ || defined WINDOWSNT
   /* Check parameters.  */
   if (SYMBOLP (s1))
@@ -421,7 +421,7 @@ behaves like `string-equal'.
 Do NOT use this function to compare file names for equality.  */)
   (Lisp_Object s1, Lisp_Object s2, Lisp_Object locale, Lisp_Object ignore_case)
 {
-  ENTER_LISP_FRAME (s1, s2, locale, ignore_case);
+  ENTER_LISP_FRAME ((s1, s2, locale, ignore_case));
 #if defined __STDC_ISO_10646__ || defined WINDOWSNT
   /* Check parameters.  */
   if (SYMBOLP (s1))
@@ -447,7 +447,7 @@ static Lisp_Object concat (ptrdiff_t nargs, Lisp_Object *args,
 Lisp_Object
 concat2 (Lisp_Object s1, Lisp_Object s2)
 {
-  ENTER_LISP_FRAME (s1, s2);
+  ENTER_LISP_FRAME ((s1, s2));
   EXIT_LISP_FRAME (concat (2, ((Lisp_Object []) {s1, s2}), Lisp_String, 0));
 }
 
@@ -455,7 +455,7 @@ concat2 (Lisp_Object s1, Lisp_Object s2)
 Lisp_Object
 concat3 (Lisp_Object s1, Lisp_Object s2, Lisp_Object s3)
 {
-  ENTER_LISP_FRAME (s1, s2, s3);
+  ENTER_LISP_FRAME ((s1, s2, s3));
   EXIT_LISP_FRAME (concat (3, ((Lisp_Object []) {s1, s2, s3}), Lisp_String, 0));
 }
 
@@ -467,7 +467,7 @@ The last argument is not copied, just used as the tail of the new list.
 usage: (append &rest SEQUENCES)  */)
   (ptrdiff_t nargs, Lisp_Object *args)
 {
-  ENTER_LISP_FRAME_VA (nargs, args);
+  ENTER_LISP_FRAME_VA (nargs, args, ());
   EXIT_LISP_FRAME (concat (nargs, args, Lisp_Cons, 1));
 }
 
@@ -478,7 +478,7 @@ Each argument may be a string or a list or vector of characters (integers).
 usage: (concat &rest SEQUENCES)  */)
   (ptrdiff_t nargs, Lisp_Object *args)
 {
-  ENTER_LISP_FRAME_VA (nargs, args);
+  ENTER_LISP_FRAME_VA (nargs, args, ());
   EXIT_LISP_FRAME (concat (nargs, args, Lisp_String, 0));
 }
 
@@ -489,7 +489,7 @@ Each argument may be a list, vector or string.
 usage: (vconcat &rest SEQUENCES)   */)
   (ptrdiff_t nargs, Lisp_Object *args)
 {
-  ENTER_LISP_FRAME_VA (nargs, args);
+  ENTER_LISP_FRAME_VA (nargs, args, ());
   EXIT_LISP_FRAME (concat (nargs, args, Lisp_Vectorlike, 0));
 }
 
@@ -502,8 +502,7 @@ If the original sequence is empty, this function may return
 the same empty object instead of its copy.  */)
   (Lisp_Object arg)
 {
-  ENTER_LISP_FRAME (arg);
-  LISP_LOCALS (val);
+  ENTER_LISP_FRAME ((arg), val);
   if (NILP (arg)) EXIT_LISP_FRAME (arg);
 
   if (RECORDP (arg))
@@ -545,8 +544,8 @@ static Lisp_Object
 concat (ptrdiff_t nargs, Lisp_Object *args,
 	enum Lisp_Type target_type, bool last_special)
 {
-  ENTER_LISP_FRAME_VA (nargs, args);
-  LISP_LOCALS (val, tail, this, last_tail, prev, ch, thislen, elt, props);
+  ENTER_LISP_FRAME_VA (nargs, args, (), val, tail, this, last_tail,
+                       prev, ch, thislen, elt, props);
   ptrdiff_t toindex;
   ptrdiff_t toindex_byte = 0;
   EMACS_INT result_len;
@@ -825,7 +824,7 @@ clear_string_char_byte_cache (void)
 ptrdiff_t
 string_char_to_byte (Lisp_Object string, ptrdiff_t char_index)
 {
-  ENTER_LISP_FRAME_T (ptrdiff_t, string);
+  ENTER_LISP_FRAME_T (ptrdiff_t, (string));
   ptrdiff_t i_byte;
   ptrdiff_t best_below, best_below_byte;
   ptrdiff_t best_above, best_above_byte;
@@ -886,7 +885,7 @@ string_char_to_byte (Lisp_Object string, ptrdiff_t char_index)
 ptrdiff_t
 string_byte_to_char (Lisp_Object string, ptrdiff_t byte_index)
 {
-  ENTER_LISP_FRAME_T (ptrdiff_t, string);
+  ENTER_LISP_FRAME_T (ptrdiff_t, (string));
   ptrdiff_t i, i_byte;
   ptrdiff_t best_below, best_below_byte;
   ptrdiff_t best_above, best_above_byte;
@@ -951,8 +950,7 @@ string_byte_to_char (Lisp_Object string, ptrdiff_t byte_index)
 static Lisp_Object
 string_make_multibyte (Lisp_Object string)
 {
-  ENTER_LISP_FRAME (string);
-  LISP_LOCALS (ret);
+  ENTER_LISP_FRAME ((string), ret);
   unsigned char *buf;
   ptrdiff_t nbytes;
   USE_SAFE_ALLOCA;
@@ -985,8 +983,7 @@ string_make_multibyte (Lisp_Object string)
 Lisp_Object
 string_to_multibyte (Lisp_Object string)
 {
-  ENTER_LISP_FRAME (string);
-  LISP_LOCALS (ret);
+  ENTER_LISP_FRAME ((string), ret);
   unsigned char *buf;
   ptrdiff_t nbytes;
   USE_SAFE_ALLOCA;
@@ -1016,8 +1013,7 @@ string_to_multibyte (Lisp_Object string)
 Lisp_Object
 string_make_unibyte (Lisp_Object string)
 {
-  ENTER_LISP_FRAME (string);
-  LISP_LOCALS (ret);
+  ENTER_LISP_FRAME ((string), ret);
   ptrdiff_t nchars;
   unsigned char *buf;
   USE_SAFE_ALLOCA;
@@ -1050,7 +1046,7 @@ STRING is unibyte and entirely ASCII, the returned string is unibyte.
 string the same way whether it is unibyte or multibyte.)  */)
   (Lisp_Object string)
 {
-  ENTER_LISP_FRAME (string);
+  ENTER_LISP_FRAME ((string));
   CHECK_STRING (string);
 
   EXIT_LISP_FRAME (string_make_multibyte (string));
@@ -1065,7 +1061,7 @@ If the lookup in the translation table fails, this function takes just
 the low 8 bits of each character.  */)
   (Lisp_Object string)
 {
-  ENTER_LISP_FRAME (string);
+  ENTER_LISP_FRAME ((string));
   CHECK_STRING (string);
 
   EXIT_LISP_FRAME (string_make_unibyte (string));
@@ -1080,7 +1076,7 @@ If STRING is multibyte and contains a character of charset
 `eight-bit', it is converted to the corresponding single byte.  */)
   (Lisp_Object string)
 {
-  ENTER_LISP_FRAME (string);
+  ENTER_LISP_FRAME ((string));
   CHECK_STRING (string);
 
   if (STRING_MULTIBYTE (string))
@@ -1111,8 +1107,7 @@ If you're not sure, whether to use `string-as-multibyte' or
 `string-to-multibyte', use `string-to-multibyte'.  */)
   (Lisp_Object string)
 {
-  ENTER_LISP_FRAME (string);
-  LISP_LOCALS (new_string);
+  ENTER_LISP_FRAME ((string), new_string);
   CHECK_STRING (string);
 
   if (! STRING_MULTIBYTE (string))
@@ -1147,7 +1142,7 @@ utf-8 sequence to an eight-bit character, not just bytes that don't form a
 correct sequence.  */)
   (Lisp_Object string)
 {
-  ENTER_LISP_FRAME (string);
+  ENTER_LISP_FRAME ((string));
   CHECK_STRING (string);
 
   EXIT_LISP_FRAME (string_to_multibyte (string));
@@ -1163,7 +1158,7 @@ If STRING contains a non-ASCII, non-`eight-bit' character,
 an error is signaled.  */)
   (Lisp_Object string)
 {
-  ENTER_LISP_FRAME (string);
+  ENTER_LISP_FRAME ((string));
   CHECK_STRING (string);
 
   if (STRING_MULTIBYTE (string))
@@ -1190,8 +1185,7 @@ are shared, however.
 Elements of ALIST that are not conses are also shared.  */)
   (Lisp_Object alist)
 {
-  ENTER_LISP_FRAME (alist);
-  LISP_LOCALS (tem, car);
+  ENTER_LISP_FRAME ((alist), tem, car);
   if (NILP (alist))
     EXIT_LISP_FRAME (alist);
   alist = concat (1, &alist, Lisp_Cons, false);
@@ -1216,7 +1210,7 @@ void
 validate_subarray (Lisp_Object array, Lisp_Object from, Lisp_Object to,
 		   ptrdiff_t size, ptrdiff_t *ifrom, ptrdiff_t *ito)
 {
-  ENTER_LISP_FRAME (array, from, to);
+  ENTER_LISP_FRAME ((array, from, to));
   EMACS_INT f, t;
 
   if (INTEGERP (from))
@@ -1264,8 +1258,7 @@ value is a new vector that contains the elements between index FROM
 With one argument, just copy STRING (with properties, if any).  */)
   (Lisp_Object string, Lisp_Object from, Lisp_Object to)
 {
-  ENTER_LISP_FRAME (string, from, to);
-  LISP_LOCALS (res);
+  ENTER_LISP_FRAME ((string, from, to), res);
   ptrdiff_t size, ifrom, ito;
 
   size = CHECK_VECTOR_OR_STRING (string);
@@ -1300,7 +1293,7 @@ If FROM or TO is negative, it counts from the end.
 With one argument, just copy STRING without its properties.  */)
   (Lisp_Object string, Lisp_Object from, Lisp_Object to)
 {
-  ENTER_LISP_FRAME (string, from, to);
+  ENTER_LISP_FRAME ((string, from, to));
   ptrdiff_t from_char, to_char, from_byte, to_byte, size;
 
   CHECK_STRING (string);
@@ -1323,8 +1316,7 @@ Lisp_Object
 substring_both (Lisp_Object string, ptrdiff_t from, ptrdiff_t from_byte,
 		ptrdiff_t to, ptrdiff_t to_byte)
 {
-  ENTER_LISP_FRAME (string);
-  LISP_LOCALS (res);
+  ENTER_LISP_FRAME ((string), res);
   ptrdiff_t size = CHECK_VECTOR_OR_STRING (string);
 
   if (!(0 <= from && from <= to && to <= size))
@@ -1348,8 +1340,7 @@ DEFUN ("nthcdr", Fnthcdr, Snthcdr, 2, 2, 0,
        doc: /* Take cdr N times on LIST, return the result.  */)
   (Lisp_Object n, Lisp_Object list)
 {
-  ENTER_LISP_FRAME (n, list);
-  LISP_LOCALS (tail);
+  ENTER_LISP_FRAME ((n, list), tail);
   CHECK_NUMBER (n);
   tail = list;
 
@@ -1371,7 +1362,7 @@ DEFUN ("nth", Fnth, Snth, 2, 2, 0,
 N counts from zero.  If LIST is not that long, nil is returned.  */)
   (Lisp_Object n, Lisp_Object list)
 {
-  ENTER_LISP_FRAME (n, list);
+  ENTER_LISP_FRAME ((n, list));
   EXIT_LISP_FRAME (Fcar (Fnthcdr (n, list)));
 }
 
@@ -1379,7 +1370,7 @@ DEFUN ("elt", Felt, Selt, 2, 2, 0,
        doc: /* Return element of SEQUENCE at index N.  */)
   (Lisp_Object sequence, Lisp_Object n)
 {
-  ENTER_LISP_FRAME (sequence, n);
+  ENTER_LISP_FRAME ((sequence, n));
   CHECK_NUMBER (n);
   if (CONSP (sequence) || NILP (sequence))
     EXIT_LISP_FRAME (Fcar (Fnthcdr (n, sequence)));
@@ -1394,8 +1385,7 @@ DEFUN ("member", Fmember, Smember, 2, 2, 0,
 The value is actually the tail of LIST whose car is ELT.  */)
   (Lisp_Object elt, Lisp_Object list)
 {
-  ENTER_LISP_FRAME (elt, list);
-  LISP_LOCALS (tail);
+  ENTER_LISP_FRAME ((elt, list), tail);
   tail = list;
 
   FOR_EACH_TAIL (tail)
@@ -1410,8 +1400,7 @@ DEFUN ("memq", Fmemq, Smemq, 2, 2, 0,
 The value is actually the tail of LIST whose car is ELT.  */)
   (Lisp_Object elt, Lisp_Object list)
 {
-  ENTER_LISP_FRAME (elt, list);
-  LISP_LOCALS (tail);
+  ENTER_LISP_FRAME ((elt, list), tail);
   tail = list;
 
   FOR_EACH_TAIL (tail)
@@ -1426,8 +1415,7 @@ DEFUN ("memql", Fmemql, Smemql, 2, 2, 0,
 The value is actually the tail of LIST whose car is ELT.  */)
   (Lisp_Object elt, Lisp_Object list)
 {
-  ENTER_LISP_FRAME (elt, list);
-  LISP_LOCALS (tail, tem);
+  ENTER_LISP_FRAME ((elt, list), tail, tem);
   if (!FLOATP (elt))
     EXIT_LISP_FRAME (Fmemq (elt, list));
 
@@ -1450,8 +1438,7 @@ The value is actually the first element of LIST whose car is KEY.
 Elements of LIST that are not conses are ignored.  */)
   (Lisp_Object key, Lisp_Object list)
 {
-  ENTER_LISP_FRAME (key, list);
-  LISP_LOCALS (tail);
+  ENTER_LISP_FRAME ((key, list), tail);
   tail = list;
 
   FOR_EACH_TAIL (tail)
@@ -1467,7 +1454,7 @@ Elements of LIST that are not conses are ignored.  */)
 Lisp_Object
 assq_no_quit (Lisp_Object key, Lisp_Object list)
 {
-  ENTER_LISP_FRAME (key, list);
+  ENTER_LISP_FRAME ((key, list));
   for (; ! NILP (list); list = XCDR (list))
     if (CONSP (XCAR (list)) && EQ (XCAR (XCAR (list)), key))
       EXIT_LISP_FRAME (XCAR (list));
@@ -1481,8 +1468,7 @@ The value is actually the first element of LIST whose car equals KEY.
 Equality is defined by TESTFN if non-nil or by `equal' if nil.  */)
      (Lisp_Object key, Lisp_Object list, Lisp_Object testfn)
 {
-  ENTER_LISP_FRAME (key, list, testfn);
-  LISP_LOCALS (tail, car);
+  ENTER_LISP_FRAME ((key, list, testfn), tail, car);
   tail = list;
 
   FOR_EACH_TAIL (tail)
@@ -1507,8 +1493,7 @@ Equality is defined by TESTFN if non-nil or by `equal' if nil.  */)
 Lisp_Object
 assoc_no_quit (Lisp_Object key, Lisp_Object list)
 {
-  ENTER_LISP_FRAME (key, list);
-  LISP_LOCALS (car);
+  ENTER_LISP_FRAME ((key, list), car);
   for (; ! NILP (list); list = XCDR (list))
     {
       car = XCAR (list);
@@ -1525,8 +1510,7 @@ DEFUN ("rassq", Frassq, Srassq, 2, 2, 0,
 The value is actually the first element of LIST whose cdr is KEY.  */)
   (Lisp_Object key, Lisp_Object list)
 {
-  ENTER_LISP_FRAME (key, list);
-  LISP_LOCALS (tail);
+  ENTER_LISP_FRAME ((key, list), tail);
   tail = list;
 
   FOR_EACH_TAIL (tail)
@@ -1541,8 +1525,7 @@ DEFUN ("rassoc", Frassoc, Srassoc, 2, 2, 0,
 The value is actually the first element of LIST whose cdr equals KEY.  */)
   (Lisp_Object key, Lisp_Object list)
 {
-  ENTER_LISP_FRAME (key, list);
-  LISP_LOCALS (tail, car);
+  ENTER_LISP_FRAME ((key, list), tail, car);
   tail = list;
 
   FOR_EACH_TAIL (tail)
@@ -1569,8 +1552,7 @@ the value of a list `foo'.  See also `remq', which does not modify the
 argument.  */)
   (Lisp_Object elt, Lisp_Object list)
 {
-  ENTER_LISP_FRAME (elt, list);
-  LISP_LOCALS (prev, tail, tem);
+  ENTER_LISP_FRAME ((elt, list), prev, tail, tem);
   prev = Qnil;
   tail = list;
 
@@ -1609,8 +1591,7 @@ Write `(setq foo (delete element foo))' to be sure of correctly
 changing the value of a sequence `foo'.  */)
   (Lisp_Object elt, Lisp_Object seq)
 {
-  ENTER_LISP_FRAME (elt, seq);
-  LISP_LOCALS (tem, prev, tail);
+  ENTER_LISP_FRAME ((elt, seq), tem, prev, tail);
   if (VECTORP (seq))
     {
       ptrdiff_t i, n;
@@ -1740,8 +1721,7 @@ If SEQ is a list, it should be nil-terminated.
 This function may destructively modify SEQ to produce the value.  */)
   (Lisp_Object seq)
 {
-  ENTER_LISP_FRAME (seq);
-  LISP_LOCALS (prev, tail, next, tem);
+  ENTER_LISP_FRAME ((seq), prev, tail, next, tem);
   if (NILP (seq))
     EXIT_LISP_FRAME (seq);
   else if (STRINGP (seq))
@@ -1795,8 +1775,7 @@ DEFUN ("reverse", Freverse, Sreverse, 1, 1, 0,
 See also the function `nreverse', which is used more often.  */)
   (Lisp_Object seq)
 {
-  ENTER_LISP_FRAME (seq);
-  LISP_LOCALS (new);
+  ENTER_LISP_FRAME ((seq), new);
 
   if (NILP (seq))
     EXIT_LISP_FRAME (Qnil);
@@ -1863,8 +1842,7 @@ See also the function `nreverse', which is used more often.  */)
 static Lisp_Object
 sort_list (Lisp_Object list, Lisp_Object predicate)
 {
-  ENTER_LISP_FRAME (list, predicate);
-  LISP_LOCALS (front, back, len, tem);
+  ENTER_LISP_FRAME ((list, predicate), front, back, len, tem);
   EMACS_INT length;
 
   front = list;
@@ -1888,7 +1866,7 @@ sort_list (Lisp_Object list, Lisp_Object predicate)
 static bool
 inorder (Lisp_Object pred, Lisp_Object a, Lisp_Object b)
 {
-  ENTER_LISP_FRAME_T (bool, pred, a, b);
+  ENTER_LISP_FRAME_T (bool, (pred, a, b));
   EXIT_LISP_FRAME (NILP (call2 (pred, b, a)));
 }
 
@@ -1901,7 +1879,7 @@ merge_vectors (Lisp_Object pred,
 	       ptrdiff_t blen, Lisp_Object const b[VLA_ELEMS (blen)],
 	       Lisp_Object dest[VLA_ELEMS (alen + blen)])
 {
-  ENTER_LISP_FRAME (pred, dest);
+  ENTER_LISP_FRAME ((pred, dest));
   eassume (0 < alen && 0 < blen);
   Lisp_Object const *alim = a + alen;
   Lisp_Object const *blim = b + blen;
@@ -1938,7 +1916,7 @@ sort_vector_inplace (Lisp_Object pred, ptrdiff_t len,
 		     Lisp_Object vec[restrict VLA_ELEMS (len)],
 		     Lisp_Object tmp[restrict VLA_ELEMS (len >> 1)])
 {
-  ENTER_LISP_FRAME (pred, vec, tmp);
+  ENTER_LISP_FRAME ((pred, vec, tmp));
   eassume (2 <= len);
   ptrdiff_t halflen = len >> 1;
   sort_vector_copy (pred, halflen, vec, tmp);
@@ -1955,7 +1933,7 @@ sort_vector_copy (Lisp_Object pred, ptrdiff_t len,
 		  Lisp_Object src[restrict VLA_ELEMS (len)],
 		  Lisp_Object dest[restrict VLA_ELEMS (len)])
 {
-  ENTER_LISP_FRAME (pred, src, dest);
+  ENTER_LISP_FRAME ((pred, src, dest));
   eassume (0 < len);
   ptrdiff_t halflen = len >> 1;
   if (halflen < 1)
@@ -1977,7 +1955,7 @@ sort_vector_copy (Lisp_Object pred, ptrdiff_t len,
 static void
 sort_vector (Lisp_Object vector, Lisp_Object predicate)
 {
-  ENTER_LISP_FRAME (vector, predicate);
+  ENTER_LISP_FRAME ((vector, predicate));
   ptrdiff_t len = ASIZE (vector);
   if (len < 2)
     EXIT_LISP_FRAME_VOID ();
@@ -2004,7 +1982,7 @@ SEQ, and should return non-nil if the first element should sort before
 the second.  */)
   (Lisp_Object seq, Lisp_Object predicate)
 {
-  ENTER_LISP_FRAME (seq, predicate);
+  ENTER_LISP_FRAME ((seq, predicate));
   if (CONSP (seq))
     seq = sort_list (seq, predicate);
   else if (VECTORP (seq))
@@ -2017,8 +1995,7 @@ the second.  */)
 Lisp_Object
 merge (Lisp_Object org_l1, Lisp_Object org_l2, Lisp_Object pred)
 {
-  ENTER_LISP_FRAME (org_l1, org_l2, pred);
-  LISP_LOCALS (l1, l2, tail, value, tem);
+  ENTER_LISP_FRAME ((org_l1, org_l2, pred), l1, l2, tail, value, tem);
   l1 = org_l1;
 
   l2 = org_l2;
@@ -2076,8 +2053,7 @@ corresponding to the given PROP, or nil if PROP is not one of the
 properties on the list.  This function never signals an error.  */)
   (Lisp_Object plist, Lisp_Object prop)
 {
-  ENTER_LISP_FRAME (plist, prop);
-  LISP_LOCALS (tail);
+  ENTER_LISP_FRAME ((plist, prop), tail);
   tail = plist;
 
   FOR_EACH_TAIL_SAFE (tail)
@@ -2099,8 +2075,7 @@ DEFUN ("get", Fget, Sget, 2, 2, 0,
 This is the last value stored with `(put SYMBOL PROPNAME VALUE)'.  */)
   (Lisp_Object symbol, Lisp_Object propname)
 {
-  ENTER_LISP_FRAME (symbol, propname);
-  LISP_LOCALS (propval);
+  ENTER_LISP_FRAME ((symbol, propname), propval);
   CHECK_SYMBOL (symbol);
   propval = Fplist_get (CDR (Fassq (symbol, Voverriding_plist_environment)),
                                     propname);
@@ -2120,8 +2095,7 @@ use `(setq x (plist-put x prop val))' to be sure to use the new value.
 The PLIST is modified by side effects.  */)
   (Lisp_Object plist, Lisp_Object prop, Lisp_Object val)
 {
-  ENTER_LISP_FRAME (plist, prop, val);
-  LISP_LOCALS (newcell, prev, tail);
+  ENTER_LISP_FRAME ((plist, prop, val), newcell, prev, tail);
   prev = Qnil, tail = plist;
   FOR_EACH_TAIL (tail)
     {
@@ -2153,7 +2127,7 @@ DEFUN ("put", Fput, Sput, 3, 3, 0,
 It can be retrieved with `(get SYMBOL PROPNAME)'.  */)
   (Lisp_Object symbol, Lisp_Object propname, Lisp_Object value)
 {
-  ENTER_LISP_FRAME (symbol, propname, value);
+  ENTER_LISP_FRAME ((symbol, propname, value));
   CHECK_SYMBOL (symbol);
   set_symbol_plist
     (symbol, Fplist_put (XSYMBOL (symbol)->u.s.plist, propname, value));
@@ -2168,8 +2142,7 @@ corresponding to the given PROP, or nil if PROP is not
 one of the properties on the list.  */)
   (Lisp_Object plist, Lisp_Object prop)
 {
-  ENTER_LISP_FRAME (plist, prop);
-  LISP_LOCALS (tail);
+  ENTER_LISP_FRAME ((plist, prop), tail);
   tail = plist;
 
   FOR_EACH_TAIL (tail)
@@ -2198,8 +2171,7 @@ use `(setq x (lax-plist-put x prop val))' to be sure to use the new value.
 The PLIST is modified by side effects.  */)
   (Lisp_Object plist, Lisp_Object prop, Lisp_Object val)
 {
-  ENTER_LISP_FRAME (plist, prop, val);
-  LISP_LOCALS (prev, tail, newcell);
+  ENTER_LISP_FRAME ((plist, prop, val), prev, tail, newcell);
   prev = Qnil;
   tail = plist;
 
@@ -2233,7 +2205,7 @@ DEFUN ("eql", Feql, Seql, 2, 2, 0,
 Floating-point numbers of equal value are `eql', but they may not be `eq'.  */)
   (Lisp_Object obj1, Lisp_Object obj2)
 {
-  ENTER_LISP_FRAME (obj1, obj2);
+  ENTER_LISP_FRAME ((obj1, obj2));
   if (FLOATP (obj1))
     EXIT_LISP_FRAME (equal_no_quit (obj1, obj2) ? Qt : Qnil);
   else
@@ -2250,7 +2222,7 @@ Numbers are compared by value, but integers cannot equal floats.
 Symbols must match exactly.  */)
   (Lisp_Object o1, Lisp_Object o2)
 {
-  ENTER_LISP_FRAME (o1, o2);
+  ENTER_LISP_FRAME ((o1, o2));
   EXIT_LISP_FRAME (internal_equal (o1, o2, EQUAL_PLAIN, 0, Qnil) ? Qt : Qnil);
 }
 
@@ -2260,7 +2232,7 @@ This is like `equal' except that it compares the text properties
 of strings.  (`equal' ignores text properties.)  */)
   (Lisp_Object o1, Lisp_Object o2)
 {
-  ENTER_LISP_FRAME (o1, o2);
+  ENTER_LISP_FRAME ((o1, o2));
   EXIT_LISP_FRAME ((internal_equal (o1, o2, EQUAL_INCLUDING_PROPERTIES, 0, Qnil)
 	  ? Qt : Qnil));
 }
@@ -2272,7 +2244,7 @@ of strings.  (`equal' ignores text properties.)  */)
 bool
 equal_no_quit (Lisp_Object o1, Lisp_Object o2)
 {
-  ENTER_LISP_FRAME_T (bool, o1, o2);
+  ENTER_LISP_FRAME_T (bool, (o1, o2));
   EXIT_LISP_FRAME (internal_equal (o1, o2, EQUAL_NO_QUIT, 0, Qnil));
 }
 
@@ -2291,8 +2263,7 @@ static bool
 internal_equal (Lisp_Object o1, Lisp_Object o2, enum equal_kind equal_kind,
 		int depth, Lisp_Object ht)
 {
-  ENTER_LISP_FRAME_T (bool, o1, o2, ht);
-  LISP_LOCALS (o2s, v1, v2);
+  ENTER_LISP_FRAME_T (bool, (o1, o2, ht), o2s, v1, v2);
  tail_recurse:
   if (depth > 10)
     {
@@ -2462,7 +2433,7 @@ DEFUN ("fillarray", Ffillarray, Sfillarray, 2, 2, 0,
 ARRAY is a vector, string, char-table, or bool-vector.  */)
   (Lisp_Object array, Lisp_Object item)
 {
-  ENTER_LISP_FRAME (array, item);
+  ENTER_LISP_FRAME ((array, item));
   register ptrdiff_t size, idx;
 
   if (VECTORP (array))
@@ -2512,7 +2483,7 @@ DEFUN ("clear-string", Fclear_string, Sclear_string,
 This makes STRING unibyte and may change its length.  */)
   (Lisp_Object string)
 {
-  ENTER_LISP_FRAME (string);
+  ENTER_LISP_FRAME ((string));
   ptrdiff_t len;
   CHECK_STRING (string);
   len = SBYTES (string);
@@ -2526,7 +2497,7 @@ This makes STRING unibyte and may change its length.  */)
 Lisp_Object
 nconc2 (Lisp_Object s1, Lisp_Object s2)
 {
-  ENTER_LISP_FRAME (s1, s2);
+  ENTER_LISP_FRAME ((s1, s2));
   EXIT_LISP_FRAME (CALLN (Fnconc, s1, s2));
 }
 
@@ -2536,8 +2507,7 @@ Only the last argument is not altered, and need not be a list.
 usage: (nconc &rest LISTS)  */)
   (ptrdiff_t nargs, Lisp_Object *args)
 {
-  ENTER_LISP_FRAME_VA (nargs, args);
-  LISP_LOCALS (val, tem, tail);
+  ENTER_LISP_FRAME_VA (nargs, args, (), val, tem, tail);
   val = Qnil;
 
 
@@ -2576,8 +2546,7 @@ usage: (nconc &rest LISTS)  */)
 static EMACS_INT
 mapcar1 (EMACS_INT leni, Lisp_Object *vals, Lisp_Object fn, Lisp_Object seq)
 {
-  ENTER_LISP_FRAME_T (EMACS_INT, fn, seq);
-  LISP_LOCALS (tail, dummy);
+  ENTER_LISP_FRAME_T (EMACS_INT, (fn, seq), tail, dummy);
   EMACS_INT i;
 
   if (VECTORP (seq) || COMPILEDP (seq))
@@ -2638,8 +2607,7 @@ SEPARATOR results in spaces between the values returned by FUNCTION.
 SEQUENCE may be a list, a vector, a bool-vector, or a string.  */)
   (Lisp_Object function, Lisp_Object sequence, Lisp_Object separator)
 {
-  ENTER_LISP_FRAME (function, sequence, separator);
-  LISP_LOCALS (ret);
+  ENTER_LISP_FRAME ((function, sequence, separator), ret);
   USE_SAFE_ALLOCA;
   EMACS_INT leni = XFASTINT (Flength (sequence));
   if (CHAR_TABLE_P (sequence))
@@ -2670,8 +2638,7 @@ The result is a list just as long as SEQUENCE.
 SEQUENCE may be a list, a vector, a bool-vector, or a string.  */)
   (Lisp_Object function, Lisp_Object sequence)
 {
-  ENTER_LISP_FRAME (function, sequence);
-  LISP_LOCALS (ret);
+  ENTER_LISP_FRAME ((function, sequence), ret);
   USE_SAFE_ALLOCA;
   EMACS_INT leni = XFASTINT (Flength (sequence));
   if (CHAR_TABLE_P (sequence))
@@ -2691,7 +2658,7 @@ Unlike `mapcar', don't accumulate the results.  Return SEQUENCE.
 SEQUENCE may be a list, a vector, a bool-vector, or a string.  */)
   (Lisp_Object function, Lisp_Object sequence)
 {
-  ENTER_LISP_FRAME (function, sequence);
+  ENTER_LISP_FRAME ((function, sequence));
   register EMACS_INT leni;
 
   leni = XFASTINT (Flength (sequence));
@@ -2708,8 +2675,7 @@ the results by altering them (using `nconc').
 SEQUENCE may be a list, a vector, a bool-vector, or a string. */)
      (Lisp_Object function, Lisp_Object sequence)
 {
-  ENTER_LISP_FRAME (function, sequence);
-  LISP_LOCALS (ret);
+  ENTER_LISP_FRAME ((function, sequence), ret);
   USE_SAFE_ALLOCA;
   EMACS_INT leni = XFASTINT (Flength (sequence));
   if (CHAR_TABLE_P (sequence))
@@ -2729,7 +2695,7 @@ SEQUENCE may be a list, a vector, a bool-vector, or a string. */)
 Lisp_Object
 do_yes_or_no_p (Lisp_Object prompt)
 {
-  ENTER_LISP_FRAME (prompt);
+  ENTER_LISP_FRAME ((prompt));
   EXIT_LISP_FRAME (call1 (intern ("yes-or-no-p"), prompt));
 }
 
@@ -2746,8 +2712,7 @@ If dialog boxes are supported, a dialog box will be used
 if `last-nonmenu-event' is nil, and `use-dialog-box' is non-nil.  */)
   (Lisp_Object prompt)
 {
-  ENTER_LISP_FRAME (prompt);
-  LISP_LOCALS (ans, pane, menu, obj);
+  ENTER_LISP_FRAME ((prompt), ans, pane, menu, obj);
 
   CHECK_STRING (prompt);
 
@@ -2800,8 +2765,7 @@ setgid so that it can read kernel information, and that usually isn't
 advisable.  */)
   (Lisp_Object use_floats)
 {
-  ENTER_LISP_FRAME (use_floats);
-  LISP_LOCALS (ret, load);
+  ENTER_LISP_FRAME ((use_floats), ret, load);
   double load_ave[3];
   int loads = getloadavg (load_ave, 3);
   ret = Qnil;
@@ -2832,8 +2796,7 @@ looks at the value of the variable `features'.  The optional argument
 SUBFEATURE can be used to check a specific subfeature of FEATURE.  */)
   (Lisp_Object feature, Lisp_Object subfeature)
 {
-  ENTER_LISP_FRAME (feature, subfeature);
-  LISP_LOCALS (tem);
+  ENTER_LISP_FRAME ((feature, subfeature), tem);
   CHECK_SYMBOL (feature);
   tem = Fmemq (feature, Vfeatures);
   if (!NILP (tem) && !NILP (subfeature))
@@ -2847,8 +2810,7 @@ The optional argument SUBFEATURES should be a list of symbols listing
 particular subfeatures supported in this version of FEATURE.  */)
   (Lisp_Object feature, Lisp_Object subfeatures)
 {
-  ENTER_LISP_FRAME (feature, subfeatures);
-  LISP_LOCALS (tem);
+  ENTER_LISP_FRAME ((feature, subfeatures), tem);
   CHECK_SYMBOL (feature);
   CHECK_LIST (subfeatures);
   if (!NILP (Vautoload_queue))
@@ -2903,8 +2865,7 @@ The normal messages at start and end of loading FILENAME are
 suppressed.  */)
   (Lisp_Object feature, Lisp_Object filename, Lisp_Object noerror)
 {
-  ENTER_LISP_FRAME (feature, filename, noerror);
-  LISP_LOCALS (tem, tem3);
+  ENTER_LISP_FRAME ((feature, filename, noerror), tem, tem3);
   bool from_file = load_in_progress;
 
   CHECK_SYMBOL (feature);
@@ -3006,8 +2967,7 @@ property and a property with the value nil.
 The value is actually the tail of PLIST whose car is PROP.  */)
   (Lisp_Object plist, Lisp_Object prop)
 {
-  ENTER_LISP_FRAME (plist, prop);
-  LISP_LOCALS (tail);
+  ENTER_LISP_FRAME ((plist, prop), tail);
   tail = plist;
 
   FOR_EACH_TAIL (tail)
@@ -3029,7 +2989,7 @@ DEFUN ("widget-put", Fwidget_put, Swidget_put, 3, 3, 0,
 The value can later be retrieved with `widget-get'.  */)
   (Lisp_Object widget, Lisp_Object property, Lisp_Object value)
 {
-  ENTER_LISP_FRAME (widget, property, value);
+  ENTER_LISP_FRAME ((widget, property, value));
   CHECK_CONS (widget);
   XSETCDR (widget, Fplist_put (XCDR (widget), property, value));
   EXIT_LISP_FRAME (value);
@@ -3041,8 +3001,7 @@ The value could either be specified when the widget was created, or
 later with `widget-put'.  */)
   (Lisp_Object widget, Lisp_Object property)
 {
-  ENTER_LISP_FRAME (widget, property);
-  LISP_LOCALS (tmp);
+  ENTER_LISP_FRAME ((widget, property), tmp);
 
   while (1)
     {
@@ -3068,8 +3027,8 @@ ARGS are passed as extra arguments to the function.
 usage: (widget-apply WIDGET PROPERTY &rest ARGS)  */)
   (ptrdiff_t nargs, Lisp_Object *args)
 {
-  ENTER_LISP_FRAME_VA (nargs, args);
-  LISP_LOCALS (widget, property, propval, trailing_args, result);
+  ENTER_LISP_FRAME_VA (nargs, args, (), widget, property, propval,
+                       trailing_args, result);
   widget = args[0];
 
   property = args[1];
@@ -3108,8 +3067,7 @@ See also Info node `(libc)Locales'.
 The data read from the system are decoded using `locale-coding-system'.  */)
   (Lisp_Object item)
 {
-  ENTER_LISP_FRAME (item);
-  LISP_LOCALS (v);
+  ENTER_LISP_FRAME ((item), v);
   char *str = NULL;
 #ifdef HAVE_LANGINFO_CODESET
   if (EQ (item, Qcodeset))
@@ -3256,7 +3214,7 @@ Optional third argument NO-LINE-BREAK means do not break long lines
 into shorter lines.  */)
   (Lisp_Object beg, Lisp_Object end, Lisp_Object no_line_break)
 {
-  ENTER_LISP_FRAME (beg, end, no_line_break);
+  ENTER_LISP_FRAME ((beg, end, no_line_break));
   char *encoded;
   ptrdiff_t allength, length;
   ptrdiff_t ibeg, iend, encoded_length;
@@ -3316,8 +3274,7 @@ Optional second argument NO-LINE-BREAK means do not break long lines
 into shorter lines.  */)
   (Lisp_Object string, Lisp_Object no_line_break)
 {
-  ENTER_LISP_FRAME (string, no_line_break);
-  LISP_LOCALS (encoded_string);
+  ENTER_LISP_FRAME ((string, no_line_break), encoded_string);
   ptrdiff_t allength, length, encoded_length;
   char *encoded;
   USE_SAFE_ALLOCA;
@@ -3456,7 +3413,7 @@ Return the length of the decoded text.
 If the region can't be decoded, signal an error and don't modify the buffer.  */)
   (Lisp_Object beg, Lisp_Object end)
 {
-  ENTER_LISP_FRAME (beg, end);
+  ENTER_LISP_FRAME ((beg, end));
   ptrdiff_t ibeg, iend, length, allength;
   char *decoded;
   ptrdiff_t old_pos = PT;
@@ -3517,8 +3474,7 @@ DEFUN ("base64-decode-string", Fbase64_decode_string, Sbase64_decode_string,
        doc: /* Base64-decode STRING and return the result.  */)
   (Lisp_Object string)
 {
-  ENTER_LISP_FRAME (string);
-  LISP_LOCALS (decoded_string);
+  ENTER_LISP_FRAME ((string), decoded_string);
   char *decoded;
   ptrdiff_t length, decoded_length;
   USE_SAFE_ALLOCA;
@@ -3665,7 +3621,7 @@ static struct Lisp_Hash_Table *weak_hash_tables;
 static void
 CHECK_HASH_TABLE (Lisp_Object x)
 {
-  ENTER_LISP_FRAME (x);
+  ENTER_LISP_FRAME ((x));
   CHECK_TYPE (HASH_TABLE_P (x), Qhash_table_p, x);
   EXIT_LISP_FRAME_VOID ();
 }
@@ -3693,7 +3649,7 @@ set_hash_hash (struct Lisp_Hash_Table *h, Lisp_Object hash)
 static void
 set_hash_hash_slot (struct Lisp_Hash_Table *h, ptrdiff_t idx, Lisp_Object val)
 {
-  ENTER_LISP_FRAME (val);
+  ENTER_LISP_FRAME ((val));
   gc_aset (h->hash, idx, val);
   EXIT_LISP_FRAME_VOID ();
 }
@@ -3714,7 +3670,7 @@ set_hash_index_slot (struct Lisp_Hash_Table *h, ptrdiff_t idx, ptrdiff_t val)
 static struct Lisp_Hash_Table *
 check_hash_table (Lisp_Object obj)
 {
-  ENTER_LISP_FRAME_T (struct Lisp_Hash_Table *, obj);
+  ENTER_LISP_FRAME_T (struct Lisp_Hash_Table *, (obj));
   CHECK_HASH_TABLE (obj);
   EXIT_LISP_FRAME (XHASH_TABLE (obj));
 }
@@ -3743,7 +3699,7 @@ next_almost_prime (EMACS_INT n)
 static ptrdiff_t
 get_key_arg (Lisp_Object key, ptrdiff_t nargs, Lisp_Object *args, char *used)
 {
-  ENTER_LISP_FRAME_VA_T (ptrdiff_t, nargs, args);
+  ENTER_LISP_FRAME_VA_T (ptrdiff_t, nargs, args, ());
   ptrdiff_t i;
 
   for (i = 1; i < nargs; i++)
@@ -3767,7 +3723,7 @@ get_key_arg (Lisp_Object key, ptrdiff_t nargs, Lisp_Object *args, char *used)
 static Lisp_Object
 larger_vecalloc (Lisp_Object vec, ptrdiff_t incr_min, ptrdiff_t nitems_max)
 {
-  ENTER_LISP_FRAME (vec);
+  ENTER_LISP_FRAME ((vec));
   struct Lisp_Vector *v;
   ptrdiff_t incr, incr_max, old_size, new_size;
   ptrdiff_t C_language_max = min (PTRDIFF_MAX, SIZE_MAX) / sizeof (Lisp_Object);
@@ -3792,8 +3748,7 @@ larger_vecalloc (Lisp_Object vec, ptrdiff_t incr_min, ptrdiff_t nitems_max)
 Lisp_Object
 larger_vector (Lisp_Object vec, ptrdiff_t incr_min, ptrdiff_t nitems_max)
 {
-  ENTER_LISP_FRAME (vec);
-  LISP_LOCALS (v);
+  ENTER_LISP_FRAME ((vec), v);
   ptrdiff_t old_size = ASIZE (vec);
   v = larger_vecalloc (vec, incr_min, nitems_max);
 
@@ -3835,7 +3790,7 @@ cmpfn_eql (struct hash_table_test *ht,
 	   Lisp_Object key1,
 	   Lisp_Object key2)
 {
-  ENTER_LISP_FRAME_T (bool, key1, key2);
+  ENTER_LISP_FRAME_T (bool, (key1, key2));
   EXIT_LISP_FRAME ((FLOATP (key1)
 	  && FLOATP (key2)
 	  && XFLOAT_DATA (key1) == XFLOAT_DATA (key2)));
@@ -3851,7 +3806,7 @@ cmpfn_equal (struct hash_table_test *ht,
 	     Lisp_Object key1,
 	     Lisp_Object key2)
 {
-  ENTER_LISP_FRAME_T (bool, key1, key2);
+  ENTER_LISP_FRAME_T (bool, (key1, key2));
   EXIT_LISP_FRAME (!NILP (Fequal (key1, key2)));
 }
 
@@ -3865,7 +3820,7 @@ cmpfn_user_defined (struct hash_table_test *ht,
 		    Lisp_Object key1,
 		    Lisp_Object key2)
 {
-  ENTER_LISP_FRAME_T (bool, key1, key2);
+  ENTER_LISP_FRAME_T (bool, (key1, key2));
   EXIT_LISP_FRAME (!NILP (call2 (ht->user_cmp_function, key1, key2)));
 }
 
@@ -3876,7 +3831,7 @@ cmpfn_user_defined (struct hash_table_test *ht,
 static EMACS_UINT
 hashfn_eq (struct hash_table_test *ht, Lisp_Object key)
 {
-  ENTER_LISP_FRAME_T (EMACS_UINT, key);
+  ENTER_LISP_FRAME_T (EMACS_UINT, (key));
 #ifdef HAVE_CHEZ_SCHEME
   EXIT_LISP_FRAME (SCHEME_FPTR_CALL(eq_hash, CHEZ (key)));
 #else /* not HAVE_CHEZ_SCHEME */
@@ -3891,7 +3846,7 @@ hashfn_eq (struct hash_table_test *ht, Lisp_Object key)
 static EMACS_UINT
 hashfn_equal (struct hash_table_test *ht, Lisp_Object key)
 {
-  ENTER_LISP_FRAME_T (EMACS_UINT, key);
+  ENTER_LISP_FRAME_T (EMACS_UINT, (key));
   /* bool flag = false; */
   /* if (CONSP(key) && VECTORLIKEP(XCAR(key)) && */
   /*     datum_starts_with(XCAR(key), "#s(cl--generic cl-generic-generalizers ((0 #s(cl--generic-generalizer cl--generic-t-generalizer 0 (closure (cl-struct-cl--generic-generalizer-tags t) (_name &rest _) nil) (closure (cl-struct-cl--generic-generalizer-tags t) (_tag &rest _) (quote (t)))))) (#s(cl--generic-method (t) (:extra \"head\") t (closure (cl-struct-cl--generic-tags cl-struct-cl--generic-method-tags cl-struct-cl--generic-generalizer-tags t) (cl--cnm specializer) \"Support for (head VAL) specializers.")) */
@@ -3912,7 +3867,7 @@ hashfn_equal (struct hash_table_test *ht, Lisp_Object key)
 static EMACS_UINT
 hashfn_eql (struct hash_table_test *ht, Lisp_Object key)
 {
-  ENTER_LISP_FRAME_T (EMACS_UINT, key);
+  ENTER_LISP_FRAME_T (EMACS_UINT, (key));
   EXIT_LISP_FRAME (FLOATP (key) ? hashfn_equal (ht, key) : hashfn_eq (ht, key));
 }
 
@@ -3923,8 +3878,7 @@ hashfn_eql (struct hash_table_test *ht, Lisp_Object key)
 static EMACS_UINT
 hashfn_user_defined (struct hash_table_test *ht, Lisp_Object key)
 {
-  ENTER_LISP_FRAME_T (EMACS_UINT, key);
-  LISP_LOCALS (hash);
+  ENTER_LISP_FRAME_T (EMACS_UINT, (key), hash);
   hash = call1 (ht->user_hash_function, key);
 
   EXIT_LISP_FRAME (hashfn_eq (ht, hash));
@@ -3983,8 +3937,7 @@ make_hash_table (struct hash_table_test test, EMACS_INT size,
 		 float rehash_size, float rehash_threshold,
 		 Lisp_Object weak, bool pure)
 {
-  ENTER_LISP_FRAME (weak);
-  LISP_LOCALS (table);
+  ENTER_LISP_FRAME ((weak), table);
   struct Lisp_Hash_Table *h;
   EMACS_INT index_size;
   ptrdiff_t i;
@@ -4048,8 +4001,7 @@ make_hash_table (struct hash_table_test test, EMACS_INT size,
 static Lisp_Object
 copy_hash_table (struct Lisp_Hash_Table *h1)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (table);
+  ENTER_LISP_FRAME ((), table);
   struct Lisp_Hash_Table *h2;
 
   h2 = allocate_hash_table ();
@@ -4073,7 +4025,7 @@ copy_hash_table (struct Lisp_Hash_Table *h1)
 static EMACS_UINT
 hash_for_key (struct Lisp_Hash_Table *h, Lisp_Object key)
 {
-  ENTER_LISP_FRAME_T (EMACS_UINT, key);
+  ENTER_LISP_FRAME_T (EMACS_UINT, (key));
   EXIT_LISP_FRAME (h->test.hashfn (&h->test, key));
 }
 
@@ -4210,7 +4162,7 @@ maybe_resize_hash_table (struct Lisp_Hash_Table *h)
 ptrdiff_t
 hash_lookup (struct Lisp_Hash_Table *h, Lisp_Object key, EMACS_UINT *hash)
 {
-  ENTER_LISP_FRAME_T (ptrdiff_t, key);
+  ENTER_LISP_FRAME_T (ptrdiff_t, (key));
   check_hash_codes(h);
 
   EMACS_UINT hash_code;
@@ -4242,7 +4194,7 @@ ptrdiff_t
 hash_put (struct Lisp_Hash_Table *h, Lisp_Object key, Lisp_Object value,
 	  EMACS_UINT hash)
 {
-  ENTER_LISP_FRAME_T (ptrdiff_t, key, value);
+  ENTER_LISP_FRAME_T (ptrdiff_t, (key, value));
   check_hash_codes(h);
 
   ptrdiff_t start_of_bucket, i;
@@ -4282,7 +4234,7 @@ hash_put (struct Lisp_Hash_Table *h, Lisp_Object key, Lisp_Object value,
 void
 hash_remove_from_table (struct Lisp_Hash_Table *h, Lisp_Object key)
 {
-  ENTER_LISP_FRAME (key);
+  ENTER_LISP_FRAME ((key));
   check_hash_codes(h);
 
   EMACS_UINT hash_code = h->test.hashfn (&h->test, key);
@@ -4565,7 +4517,7 @@ sxhash_float (double val)
 static EMACS_UINT
 sxhash_list (Lisp_Object list, int depth)
 {
-  ENTER_LISP_FRAME_T (EMACS_UINT, list);
+  ENTER_LISP_FRAME_T (EMACS_UINT, (list));
   EMACS_UINT hash = 0;
   int i;
 
@@ -4594,7 +4546,7 @@ sxhash_list (Lisp_Object list, int depth)
 static EMACS_UINT
 sxhash_vector (Lisp_Object vec, int depth)
 {
-  ENTER_LISP_FRAME_T (EMACS_UINT, vec);
+  ENTER_LISP_FRAME_T (EMACS_UINT, (vec));
   EMACS_UINT hash = ASIZE (vec);
   int i, n;
 
@@ -4613,7 +4565,7 @@ sxhash_vector (Lisp_Object vec, int depth)
 static EMACS_UINT
 sxhash_bool_vector (Lisp_Object vec)
 {
-  ENTER_LISP_FRAME_T (EMACS_UINT, vec);
+  ENTER_LISP_FRAME_T (EMACS_UINT, (vec));
   EMACS_INT size = bool_vector_size (vec);
   EMACS_UINT hash = size;
   int i, n;
@@ -4632,7 +4584,7 @@ sxhash_bool_vector (Lisp_Object vec)
 EMACS_UINT
 sxhash (Lisp_Object obj, int depth)
 {
-  ENTER_LISP_FRAME_T (EMACS_UINT, obj);
+  ENTER_LISP_FRAME_T (EMACS_UINT, (obj));
   EMACS_UINT hash;
 
   if (depth > SXHASH_MAX_DEPTH)
@@ -4695,7 +4647,7 @@ DEFUN ("sxhash-eq", Fsxhash_eq, Ssxhash_eq, 1, 1, 0,
 If (eq A B), then (= (sxhash-eq A) (sxhash-eq B)).  */)
   (Lisp_Object obj)
 {
-  ENTER_LISP_FRAME (obj);
+  ENTER_LISP_FRAME ((obj));
   EXIT_LISP_FRAME (make_number (hashfn_eq (NULL, obj)));
 }
 
@@ -4704,7 +4656,7 @@ DEFUN ("sxhash-eql", Fsxhash_eql, Ssxhash_eql, 1, 1, 0,
 If (eql A B), then (= (sxhash-eql A) (sxhash-eql B)).  */)
   (Lisp_Object obj)
 {
-  ENTER_LISP_FRAME (obj);
+  ENTER_LISP_FRAME ((obj));
   EXIT_LISP_FRAME (make_number (hashfn_eql (NULL, obj)));
 }
 
@@ -4713,7 +4665,7 @@ DEFUN ("sxhash-equal", Fsxhash_equal, Ssxhash_equal, 1, 1, 0,
 If (equal A B), then (= (sxhash-equal A) (sxhash-equal B)).  */)
   (Lisp_Object obj)
 {
-  ENTER_LISP_FRAME (obj);
+  ENTER_LISP_FRAME ((obj));
   EXIT_LISP_FRAME (make_number (hashfn_equal (NULL, obj)));
 }
 
@@ -4756,8 +4708,7 @@ in an error.
 usage: (make-hash-table &rest KEYWORD-ARGS)  */)
   (ptrdiff_t nargs, Lisp_Object *args)
 {
-  ENTER_LISP_FRAME_VA (nargs, args);
-  LISP_LOCALS (test, weak, prop, size_arg);
+  ENTER_LISP_FRAME_VA (nargs, args, (), test, weak, prop, size_arg);
   bool pure;
   struct hash_table_test testdesc;
   ptrdiff_t i;
@@ -4853,7 +4804,7 @@ DEFUN ("copy-hash-table", Fcopy_hash_table, Scopy_hash_table, 1, 1, 0,
        doc: /* Return a copy of hash table TABLE.  */)
   (Lisp_Object table)
 {
-  ENTER_LISP_FRAME (table);
+  ENTER_LISP_FRAME ((table));
   EXIT_LISP_FRAME (copy_hash_table (check_hash_table (table)));
 }
 
@@ -4862,7 +4813,7 @@ DEFUN ("hash-table-count", Fhash_table_count, Shash_table_count, 1, 1, 0,
        doc: /* Return the number of elements in TABLE.  */)
   (Lisp_Object table)
 {
-  ENTER_LISP_FRAME (table);
+  ENTER_LISP_FRAME ((table));
   EXIT_LISP_FRAME (make_number (check_hash_table (table)->count));
 }
 
@@ -4872,7 +4823,7 @@ DEFUN ("hash-table-rehash-size", Fhash_table_rehash_size,
        doc: /* Return the current rehash size of TABLE.  */)
   (Lisp_Object table)
 {
-  ENTER_LISP_FRAME (table);
+  ENTER_LISP_FRAME ((table));
   double rehash_size = check_hash_table (table)->rehash_size;
   if (rehash_size < 0)
     {
@@ -4889,7 +4840,7 @@ DEFUN ("hash-table-rehash-threshold", Fhash_table_rehash_threshold,
        doc: /* Return the current rehash threshold of TABLE.  */)
   (Lisp_Object table)
 {
-  ENTER_LISP_FRAME (table);
+  ENTER_LISP_FRAME ((table));
   EXIT_LISP_FRAME (make_float (check_hash_table (table)->rehash_threshold));
 }
 
@@ -4901,7 +4852,7 @@ a hash table than can hold as many elements as TABLE holds
 without need for resizing.  */)
   (Lisp_Object table)
 {
-  ENTER_LISP_FRAME (table);
+  ENTER_LISP_FRAME ((table));
   struct Lisp_Hash_Table *h = check_hash_table (table);
   EXIT_LISP_FRAME (make_number (HASH_TABLE_SIZE (h)));
 }
@@ -4911,7 +4862,7 @@ DEFUN ("hash-table-test", Fhash_table_test, Shash_table_test, 1, 1, 0,
        doc: /* Return the test TABLE uses.  */)
   (Lisp_Object table)
 {
-  ENTER_LISP_FRAME (table);
+  ENTER_LISP_FRAME ((table));
   EXIT_LISP_FRAME (check_hash_table (table)->test.name);
 }
 
@@ -4921,7 +4872,7 @@ DEFUN ("hash-table-weakness", Fhash_table_weakness, Shash_table_weakness,
        doc: /* Return the weakness of TABLE.  */)
   (Lisp_Object table)
 {
-  ENTER_LISP_FRAME (table);
+  ENTER_LISP_FRAME ((table));
   EXIT_LISP_FRAME (check_hash_table (table)->weak);
 }
 
@@ -4930,7 +4881,7 @@ DEFUN ("hash-table-p", Fhash_table_p, Shash_table_p, 1, 1, 0,
        doc: /* Return t if OBJ is a Lisp hash table object.  */)
   (Lisp_Object obj)
 {
-  ENTER_LISP_FRAME (obj);
+  ENTER_LISP_FRAME ((obj));
   EXIT_LISP_FRAME (HASH_TABLE_P (obj) ? Qt : Qnil);
 }
 
@@ -4939,7 +4890,7 @@ DEFUN ("clrhash", Fclrhash, Sclrhash, 1, 1, 0,
        doc: /* Clear hash table TABLE and return it.  */)
   (Lisp_Object table)
 {
-  ENTER_LISP_FRAME (table);
+  ENTER_LISP_FRAME ((table));
   struct Lisp_Hash_Table *h = check_hash_table (table);
   CHECK_IMPURE (table, h);
   hash_clear (h);
@@ -4953,7 +4904,7 @@ DEFUN ("gethash", Fgethash, Sgethash, 2, 3, 0,
 If KEY is not found, return DFLT which defaults to nil.  */)
   (Lisp_Object key, Lisp_Object table, Lisp_Object dflt)
 {
-  ENTER_LISP_FRAME (key, table, dflt);
+  ENTER_LISP_FRAME ((key, table, dflt));
   struct Lisp_Hash_Table *h = check_hash_table (table);
   ptrdiff_t i = hash_lookup (h, key, NULL);
   EXIT_LISP_FRAME (i >= 0 ? HASH_VALUE (h, i) : dflt);
@@ -4966,7 +4917,7 @@ If KEY is already present in table, replace its current value with
 VALUE.  In any case, return VALUE.  */)
   (Lisp_Object key, Lisp_Object value, Lisp_Object table)
 {
-  ENTER_LISP_FRAME (key, value, table);
+  ENTER_LISP_FRAME ((key, value, table));
   struct Lisp_Hash_Table *h = check_hash_table (table);
   CHECK_IMPURE (table, h);
 
@@ -4986,7 +4937,7 @@ DEFUN ("remhash", Fremhash, Sremhash, 2, 2, 0,
        doc: /* Remove KEY from TABLE.  */)
   (Lisp_Object key, Lisp_Object table)
 {
-  ENTER_LISP_FRAME (key, table);
+  ENTER_LISP_FRAME ((key, table));
   struct Lisp_Hash_Table *h = check_hash_table (table);
   CHECK_IMPURE (table, h);
   hash_remove_from_table (h, key);
@@ -5000,7 +4951,7 @@ FUNCTION is called with two arguments, KEY and VALUE.
 `maphash' always returns nil.  */)
   (Lisp_Object function, Lisp_Object table)
 {
-  ENTER_LISP_FRAME (function, table);
+  ENTER_LISP_FRAME ((function, table));
   struct Lisp_Hash_Table *h = check_hash_table (table);
 
   for (ptrdiff_t i = 0; i < HASH_TABLE_SIZE (h); ++i)
@@ -5025,7 +4976,7 @@ It should be the case that if (eq (funcall HASH x1) (funcall HASH x2))
 returns nil, then (funcall TEST x1 x2) also returns nil.  */)
   (Lisp_Object name, Lisp_Object test, Lisp_Object hash)
 {
-  ENTER_LISP_FRAME (name, test, hash);
+  ENTER_LISP_FRAME ((name, test, hash));
   EXIT_LISP_FRAME (Fput (name, Qhash_table_test, list2 (test, hash)));
 }
 
@@ -5043,7 +4994,7 @@ returns nil, then (funcall TEST x1 x2) also returns nil.  */)
 static Lisp_Object
 make_digest_string (Lisp_Object digest, int digest_size)
 {
-  ENTER_LISP_FRAME (digest);
+  ENTER_LISP_FRAME ((digest));
   unsigned char *p = SDATA (digest);
 
   for (int i = digest_size - 1; i >= 0; i--)
@@ -5079,8 +5030,8 @@ extract_data_from_object (Lisp_Object spec,
                           ptrdiff_t *start_byte,
                           ptrdiff_t *end_byte)
 {
-  ENTER_LISP_FRAME_T (char *, spec);
-  LISP_LOCALS (object, start, end, coding_system, noerror, val);
+  ENTER_LISP_FRAME_T (char *, (spec), object, start, end,
+                      coding_system, noerror, val);
   object = XCAR (spec);
 
 
@@ -5279,8 +5230,8 @@ secure_hash (Lisp_Object algorithm, Lisp_Object object, Lisp_Object start,
 	     Lisp_Object end, Lisp_Object coding_system, Lisp_Object noerror,
 	     Lisp_Object binary)
 {
-  ENTER_LISP_FRAME (algorithm, object, start, end, coding_system, noerror, binary);
-  LISP_LOCALS (digest, spec);
+  ENTER_LISP_FRAME ((algorithm, object, start, end, coding_system,
+                     noerror, binary), digest, spec);
   ptrdiff_t start_byte, end_byte;
   int digest_size;
   void *(*hash_func) (const char *, size_t, void *);
@@ -5371,7 +5322,7 @@ If NOERROR is non-nil, silently assume the `raw-text' coding if the
 guesswork fails.  Normally, an error is signaled in such case.  */)
   (Lisp_Object object, Lisp_Object start, Lisp_Object end, Lisp_Object coding_system, Lisp_Object noerror)
 {
-  ENTER_LISP_FRAME (object, start, end, coding_system, noerror);
+  ENTER_LISP_FRAME ((object, start, end, coding_system, noerror));
   EXIT_LISP_FRAME (secure_hash (Qmd5, object, start, end, coding_system, noerror, Qnil));
 }
 
@@ -5389,7 +5340,7 @@ The full list of algorithms can be obtained with `secure-hash-algorithms'.
 If BINARY is non-nil, returns a string in binary form.  */)
   (Lisp_Object algorithm, Lisp_Object object, Lisp_Object start, Lisp_Object end, Lisp_Object binary)
 {
-  ENTER_LISP_FRAME (algorithm, object, start, end, binary);
+  ENTER_LISP_FRAME ((algorithm, object, start, end, binary));
   EXIT_LISP_FRAME (secure_hash (algorithm, object, start, end, Qnil, Qnil, binary));
 }
 
@@ -5399,8 +5350,7 @@ This hash is performed on the raw internal format of the buffer,
 disregarding any coding systems.  If nil, use the current buffer.  */ )
   (Lisp_Object buffer_or_name)
 {
-  ENTER_LISP_FRAME (buffer_or_name);
-  LISP_LOCALS (buffer, digest);
+  ENTER_LISP_FRAME ((buffer_or_name), buffer, digest);
   struct buffer *b;
   struct sha1_ctx ctx;
 

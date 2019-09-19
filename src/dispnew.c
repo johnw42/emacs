@@ -1583,7 +1583,7 @@ static struct dim
 allocate_matrices_for_frame_redisplay (Lisp_Object window, int x, int y,
 				       bool dim_only_p, int *window_change_flags)
 {
-  ENTER_LISP_FRAME_T (struct dim, window);
+  ENTER_LISP_FRAME_T (struct dim, (window));
   struct frame *f = XFRAME (WINDOW_FRAME (XWINDOW (window)));
   int x0 = x, y0 = y;
   int wmax = 0, hmax = 0;
@@ -1829,7 +1829,7 @@ showing_window_margins_p (struct window *w)
 static void
 fake_current_matrices (Lisp_Object window)
 {
-  ENTER_LISP_FRAME (window);
+  ENTER_LISP_FRAME ((window));
   struct window *w;
 
   for (; !NILP (window); window = PV_LISP_FIELD_REF(w, next))
@@ -2072,8 +2072,7 @@ adjust_frame_glyphs_for_frame_redisplay (struct frame *f)
 static void
 adjust_frame_glyphs_for_window_redisplay (struct frame *f)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (frame);
+  ENTER_LISP_FRAME ((), frame);
   eassert (FRAME_WINDOW_P (f) && FRAME_LIVE_P (f));
 
   /* Allocate/reallocate window matrices.  */
@@ -2262,8 +2261,7 @@ free_window_matrices (struct window *w)
 void
 check_glyph_memory (void)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (tail, frame);
+  ENTER_LISP_FRAME ((), tail, frame);
 
   /* Free glyph memory for all frames.  */
   FOR_EACH_FRAME (tail, frame)
@@ -2396,8 +2394,7 @@ build_frame_matrix_from_window_tree (struct glyph_matrix *matrix, struct window 
 static void
 build_frame_matrix_from_leaf_window (struct glyph_matrix *frame_matrix, struct window *w)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (gc);
+  ENTER_LISP_FRAME ((), gc);
   struct glyph_matrix *window_matrix;
   int window_y, frame_y;
   /* If non-zero, a glyph to insert at the right border of W.  */
@@ -3028,7 +3025,7 @@ DEFUN ("redraw-frame", Fredraw_frame, Sredraw_frame, 0, 1, 0,
 If FRAME is omitted or nil, the selected frame is used.  */)
   (Lisp_Object frame)
 {
-  ENTER_LISP_FRAME (frame);
+  ENTER_LISP_FRAME ((frame));
   redraw_frame (decode_live_frame (frame));
   EXIT_LISP_FRAME (Qnil);
 }
@@ -3037,8 +3034,7 @@ DEFUN ("redraw-display", Fredraw_display, Sredraw_display, 0, 0, "",
        doc: /* Clear and redisplay all visible frames.  */)
   (void)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (tail, frame);
+  ENTER_LISP_FRAME ((), tail, frame);
 
   FOR_EACH_FRAME (tail, frame)
     if (FRAME_VISIBLE_P (XFRAME (frame)))
@@ -3063,8 +3059,7 @@ DEFUN ("redraw-display", Fredraw_display, Sredraw_display, 0, 0, "",
 bool
 update_frame (struct frame *f, bool force_p, bool inhibit_hairy_id_p)
 {
-  ENTER_LISP_FRAME_T (bool);
-  LISP_LOCALS (tem);
+  ENTER_LISP_FRAME_T (bool, (), tem);
   /* True means display has been paused because of pending input.  */
   bool paused_p;
   struct window *root_window = XWINDOW (f->root_window);
@@ -5124,8 +5119,7 @@ update_frame_line (struct frame *f, int vpos, bool updating_menu_p)
 Lisp_Object
 buffer_posn_from_coords (struct window *w, int *x, int *y, struct display_pos *pos, Lisp_Object *object, int *dx, int *dy, int *width, int *height)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (old_current_buffer, string);
+  ENTER_LISP_FRAME ((), old_current_buffer, string);
   struct it it;
   old_current_buffer = Fcurrent_buffer ();
 
@@ -5301,8 +5295,7 @@ mode_line_string (struct window *w, enum window_part part,
 		  int *x, int *y, ptrdiff_t *charpos, Lisp_Object *object,
 		  int *dx, int *dy, int *width, int *height)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (string);
+  ENTER_LISP_FRAME ((), string);
   struct glyph_row *row;
   struct glyph *glyph, *end;
   int x0, y0;
@@ -5373,8 +5366,7 @@ marginal_area_string (struct window *w, enum window_part part,
 		      int *x, int *y, ptrdiff_t *charpos, Lisp_Object *object,
 		      int *dx, int *dy, int *width, int *height)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (string);
+  ENTER_LISP_FRAME ((), string);
   struct glyph_row *row = w->current_matrix->rows;
   struct glyph *glyph, *end;
   int x0, y0, i, wy = *y;
@@ -5467,8 +5459,7 @@ static void deliver_window_change_signal (int);
 static void
 handle_window_change_signal (int sig)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (tail, frame);
+  ENTER_LISP_FRAME ((), tail, frame);
   int width, height;
   struct tty_display_info *tty;
 
@@ -5518,8 +5509,7 @@ deliver_window_change_signal (int sig)
 void
 do_pending_window_change (bool safe)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (tail, frame);
+  ENTER_LISP_FRAME ((), tail, frame);
   /* If window change signal handler should have run before, run it now.  */
   if (redisplaying_p && !safe)
     EXIT_LISP_FRAME_VOID ();
@@ -5596,8 +5586,7 @@ void
 change_frame_size (struct frame *f, int new_width, int new_height,
 		   bool pretend, bool delay, bool safe, bool pixelwise)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (tail, frame);
+  ENTER_LISP_FRAME ((), tail, frame);
 
   if (FRAME_MSDOS_P (f))
     {
@@ -5625,7 +5614,7 @@ DEFUN ("open-termscript", Fopen_termscript, Sopen_termscript,
 FILE = nil means just close any termscript file currently open.  */)
   (Lisp_Object file)
 {
-  ENTER_LISP_FRAME (file);
+  ENTER_LISP_FRAME ((file));
   struct tty_display_info *tty;
 
   if (! FRAME_TERMCAP_P (SELECTED_FRAME ())
@@ -5664,7 +5653,7 @@ the currently selected frame.  In batch mode, STRING is sent to stdout
 when TERMINAL is nil.  */)
   (Lisp_Object string, Lisp_Object terminal)
 {
-  ENTER_LISP_FRAME (string, terminal);
+  ENTER_LISP_FRAME ((string, terminal));
   struct terminal *t = decode_live_terminal (terminal);
   FILE *out;
 
@@ -5703,7 +5692,7 @@ Also, unless an argument is given,
 terminate any keyboard macro currently executing.  */)
   (Lisp_Object arg)
 {
-  ENTER_LISP_FRAME (arg);
+  ENTER_LISP_FRAME ((arg));
   if (!NILP (arg))
     {
       if (noninteractive)
@@ -5746,7 +5735,7 @@ additional wait period, in milliseconds; this is for backwards compatibility.
 \(Not all operating systems support waiting for a fraction of a second.)  */)
   (Lisp_Object seconds, Lisp_Object milliseconds)
 {
-  ENTER_LISP_FRAME (seconds, milliseconds);
+  ENTER_LISP_FRAME ((seconds, milliseconds));
   double duration = extract_float (seconds);
 
   if (!NILP (milliseconds))
@@ -5787,7 +5776,7 @@ additional wait period, in milliseconds; this is for backwards compatibility.
 Lisp_Object
 sit_for (Lisp_Object timeout, bool reading, int display_option)
 {
-  ENTER_LISP_FRAME (timeout);
+  ENTER_LISP_FRAME ((timeout));
   intmax_t sec;
   int nsec;
   bool do_display = display_option > 0;
@@ -5851,7 +5840,7 @@ Return t if redisplay was performed, nil if redisplay was preempted
 immediately by pending input.  */)
   (Lisp_Object force)
 {
-  ENTER_LISP_FRAME (force);
+  ENTER_LISP_FRAME ((force));
   ptrdiff_t count;
 
   swallow_events (true);
@@ -5896,8 +5885,7 @@ If VARIABLE is nil, an internal variable is used.  Users should not
 pass nil for VARIABLE.  */)
   (Lisp_Object variable)
 {
-  ENTER_LISP_FRAME (variable);
-  LISP_LOCALS (state, tail, frame, buf);
+  ENTER_LISP_FRAME ((variable), state, tail, frame, buf);
   ptrdiff_t n, idx;
 
   if (! NILP (variable))
@@ -6222,7 +6210,7 @@ show a cursor in WINDOW in the next redisplay.  SHOW nil means
 don't show a cursor.  */)
   (Lisp_Object window, Lisp_Object show)
 {
-  ENTER_LISP_FRAME (window, show);
+  ENTER_LISP_FRAME ((window, show));
   /* Don't change cursor state while redisplaying.  This could confuse
      output routines.  */
   if (!redisplaying_p)
@@ -6237,7 +6225,7 @@ DEFUN ("internal-show-cursor-p", Finternal_show_cursor_p,
 WINDOW nil or omitted means report on the selected window.  */)
   (Lisp_Object window)
 {
-  ENTER_LISP_FRAME (window);
+  ENTER_LISP_FRAME ((window));
   EXIT_LISP_FRAME (decode_any_window (window)->cursor_off_p ? Qnil : Qt);
 }
 

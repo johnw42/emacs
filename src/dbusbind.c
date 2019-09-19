@@ -168,7 +168,7 @@ static bool xd_in_read_queued_messages = 0;
 static int
 xd_symbol_to_dbus_type (Lisp_Object object)
 {
-  ENTER_LISP_FRAME_T (int, object);
+  ENTER_LISP_FRAME_T (int, (object));
   EXIT_LISP_FRAME ((EQ (object, QCbyte) ? DBUS_TYPE_BYTE
      : EQ (object, QCboolean) ? DBUS_TYPE_BOOLEAN
      : EQ (object, QCint16) ? DBUS_TYPE_INT16
@@ -236,7 +236,7 @@ xd_symbol_to_dbus_type (Lisp_Object object)
 static char *
 XD_OBJECT_TO_STRING (Lisp_Object object)
 {
-  ENTER_LISP_FRAME_T (char *, object);
+  ENTER_LISP_FRAME_T (char *, (object));
   AUTO_STRING (format, "%s");
   EXIT_LISP_FRAME (SSDATA (CALLN (Fformat, format, object)));
 }
@@ -344,8 +344,7 @@ xd_signature_cat (char *signature, char const *x)
 static void
 xd_signature (char *signature, int dtype, int parent_type, Lisp_Object object)
 {
-  ENTER_LISP_FRAME (object);
-  LISP_LOCALS (elt);
+  ENTER_LISP_FRAME ((object), elt);
   int subtype;
   char const *subsig;
   int subsiglen;
@@ -520,7 +519,7 @@ xd_signature (char *signature, int dtype, int parent_type, Lisp_Object object)
 static intmax_t
 xd_extract_signed (Lisp_Object x, intmax_t lo, intmax_t hi)
 {
-  ENTER_LISP_FRAME_T (intmax_t, x);
+  ENTER_LISP_FRAME_T (intmax_t, (x));
   CHECK_NUMBER_OR_FLOAT (x);
   if (INTEGERP (x))
     {
@@ -549,7 +548,7 @@ xd_extract_signed (Lisp_Object x, intmax_t lo, intmax_t hi)
 static uintmax_t
 xd_extract_unsigned (Lisp_Object x, uintmax_t hi)
 {
-  ENTER_LISP_FRAME_T (uintmax_t, x);
+  ENTER_LISP_FRAME_T (uintmax_t, (x));
   CHECK_NUMBER_OR_FLOAT (x);
   if (INTEGERP (x))
     {
@@ -580,7 +579,7 @@ xd_extract_unsigned (Lisp_Object x, uintmax_t hi)
 static void
 xd_append_arg (int dtype, Lisp_Object object, DBusMessageIter *iter)
 {
-  ENTER_LISP_FRAME (object);
+  ENTER_LISP_FRAME ((object));
   char signature[DBUS_MAXIMUM_SIGNATURE_LENGTH];
   DBusMessageIter subiter;
 
@@ -806,8 +805,7 @@ xd_append_arg (int dtype, Lisp_Object object, DBusMessageIter *iter)
 static Lisp_Object
 xd_retrieve_arg (int dtype, DBusMessageIter *iter)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (result);
+  ENTER_LISP_FRAME ((), result);
 
   switch (dtype)
     {
@@ -952,7 +950,7 @@ xd_get_connection_references (DBusConnection *connection)
 static DBusConnection *
 xd_lisp_dbus_to_dbus (Lisp_Object bus)
 {
-  ENTER_LISP_FRAME_T (DBusConnection *, bus);
+  ENTER_LISP_FRAME_T (DBusConnection *, (bus));
   EXIT_LISP_FRAME ((DBusConnection *) XSAVE_POINTER (bus, 0));
 }
 
@@ -961,8 +959,7 @@ xd_lisp_dbus_to_dbus (Lisp_Object bus)
 static DBusConnection *
 xd_get_connection_address (Lisp_Object bus)
 {
-  ENTER_LISP_FRAME_T (DBusConnection *, bus);
-  LISP_LOCALS (val);
+  ENTER_LISP_FRAME_T (DBusConnection *, (bus), val);
   DBusConnection *connection;
 
   val = CDR_SAFE (Fassoc (bus, xd_registered_buses, Qnil));
@@ -1062,8 +1059,7 @@ xd_toggle_watch (DBusWatch *watch, void *data)
 static void
 xd_close_bus (Lisp_Object bus)
 {
-  ENTER_LISP_FRAME (bus);
-  LISP_LOCALS (val, busobj);
+  ENTER_LISP_FRAME ((bus), val, busobj);
   DBusConnection *connection;
 
   /* Check whether we are connected.  */
@@ -1126,8 +1122,7 @@ GTK+.  It should be used with care for at least the `:system' and
 this connection to those buses.  */)
   (Lisp_Object bus, Lisp_Object private)
 {
-  ENTER_LISP_FRAME (bus, private);
-  LISP_LOCALS (val);
+  ENTER_LISP_FRAME ((bus, private), val);
   DBusConnection *connection;
   DBusError derror;
   ptrdiff_t refcount;
@@ -1218,7 +1213,7 @@ DEFUN ("dbus-get-unique-name", Fdbus_get_unique_name, Sdbus_get_unique_name,
        doc: /* Return the unique name of Emacs registered at D-Bus BUS.  */)
   (Lisp_Object bus)
 {
-  ENTER_LISP_FRAME (bus);
+  ENTER_LISP_FRAME ((bus));
   DBusConnection *connection;
   const char *name;
 
@@ -1264,8 +1259,9 @@ The following usages are expected:
 usage: (dbus-message-internal &rest REST)  */)
   (ptrdiff_t nargs, Lisp_Object *args)
 {
-  ENTER_LISP_FRAME_VA (nargs, args);
-  LISP_LOCALS (message_type, bus, service, handler, path, interface, member, result, uname);
+  ENTER_LISP_FRAME_VA (nargs, args, (), message_type, bus, service,
+                       handler, path, interface, member, result,
+                       uname);
   path = Qnil;
 
   interface = Qnil;
@@ -1497,8 +1493,7 @@ usage: (dbus-message-internal &rest REST)  */)
 static void
 xd_read_message_1 (DBusConnection *connection, Lisp_Object bus)
 {
-  ENTER_LISP_FRAME (bus);
-  LISP_LOCALS (args, key, value);
+  ENTER_LISP_FRAME ((bus), args, key, value);
   struct input_event event;
   DBusMessage *dmessage;
   DBusMessageIter iter;
@@ -1645,7 +1640,7 @@ xd_read_message_1 (DBusConnection *connection, Lisp_Object bus)
 static Lisp_Object
 xd_read_message (Lisp_Object bus)
 {
-  ENTER_LISP_FRAME (bus);
+  ENTER_LISP_FRAME ((bus));
   /* Retrieve bus address.  */
   DBusConnection *connection = xd_get_connection_address (bus);
 
@@ -1662,8 +1657,7 @@ xd_read_message (Lisp_Object bus)
 static void
 xd_read_queued_messages (int fd, void *data)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (busp, bus, key);
+  ENTER_LISP_FRAME ((), busp, bus, key);
   busp = xd_registered_buses;
 
   bus = Qnil;

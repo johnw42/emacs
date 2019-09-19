@@ -33,8 +33,7 @@ fchdir_unwind (int dir_fd)
 static void
 chdir_to_default_directory (void)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (new_cwd);
+  ENTER_LISP_FRAME ((), new_cwd);
   int old_cwd_fd = emacs_open (".", O_RDONLY | O_DIRECTORY, 0);
 
   if (old_cwd_fd == -1)
@@ -55,8 +54,7 @@ chdir_to_default_directory (void)
 static Lisp_Object
 conv_filename_to_w32_unicode (Lisp_Object in, int absolute_p)
 {
-  ENTER_LISP_FRAME (in);
-  LISP_LOCALS (converted);
+  ENTER_LISP_FRAME ((in), converted);
   ssize_t converted_len;
   unsigned flags;
   int count = SPECPDL_INDEX ();
@@ -85,8 +83,7 @@ conv_filename_to_w32_unicode (Lisp_Object in, int absolute_p)
 static Lisp_Object
 conv_filename_from_w32_unicode (const wchar_t* in, int absolute_p)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (converted);
+  ENTER_LISP_FRAME ((), converted);
   ssize_t converted_len;
   unsigned flags;
   int count = SPECPDL_INDEX ();
@@ -118,7 +115,7 @@ If ABSOLUTE-P is non-nil, return an absolute file name.
 For the reverse operation, see `cygwin-convert-file-name-from-windows'.  */)
   (Lisp_Object file, Lisp_Object absolute_p)
 {
-  ENTER_LISP_FRAME (file, absolute_p);
+  ENTER_LISP_FRAME ((file, absolute_p));
   EXIT_LISP_FRAME (from_unicode (
     conv_filename_to_w32_unicode (file, EQ (absolute_p, Qnil) ? 0 : 1)));
 }
@@ -132,7 +129,7 @@ If ABSOLUTE-P is non-nil, return an absolute file name.
 For the reverse operation, see `cygwin-convert-file-name-to-windows'.  */)
   (Lisp_Object file, Lisp_Object absolute_p)
 {
-  ENTER_LISP_FRAME (file, absolute_p);
+  ENTER_LISP_FRAME ((file, absolute_p));
   EXIT_LISP_FRAME (conv_filename_from_w32_unicode (to_unicode (file, &file),
                                          EQ (absolute_p, Qnil) ? 0 : 1));
 }

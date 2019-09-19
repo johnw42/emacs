@@ -858,8 +858,8 @@ static struct ccl_prog_stack ccl_prog_stack_struct[256];
 void
 ccl_driver (struct ccl_program *ccl, int *source, int *destination, int src_size, int dst_size, Lisp_Object charset_list)
 {
-  ENTER_LISP_FRAME (charset_list);
-  LISP_LOCALS (slot, opl, map, content, attrib, value);
+  ENTER_LISP_FRAME ((charset_list), slot, opl, map, content, attrib,
+                    value);
   register int *reg = ccl->reg;
   register int ic = ccl->ic;
   register int code = 0, field1, field2;
@@ -1810,8 +1810,7 @@ ccl_driver (struct ccl_program *ccl, int *source, int *destination, int src_size
 static Lisp_Object
 resolve_symbol_ccl_program (Lisp_Object ccl)
 {
-  ENTER_LISP_FRAME (ccl);
-  LISP_LOCALS (result, contents, val);
+  ENTER_LISP_FRAME ((ccl), result, contents, val);
   int i, veclen, unresolved = 0;
 
   if (! (CCL_HEADER_MAIN < ASIZE (ccl) && ASIZE (ccl) <= INT_MAX))
@@ -1882,8 +1881,7 @@ resolve_symbol_ccl_program (Lisp_Object ccl)
 static Lisp_Object
 ccl_get_compiled_code (Lisp_Object ccl_prog, ptrdiff_t *idx)
 {
-  ENTER_LISP_FRAME (ccl_prog);
-  LISP_LOCALS (val, slot);
+  ENTER_LISP_FRAME ((ccl_prog), val, slot);
 
   if (VECTORP (ccl_prog))
     {
@@ -1924,8 +1922,7 @@ ccl_get_compiled_code (Lisp_Object ccl_prog, ptrdiff_t *idx)
 bool
 setup_ccl_program (struct ccl_program *ccl, Lisp_Object ccl_prog)
 {
-  ENTER_LISP_FRAME_T (bool, ccl_prog);
-  LISP_LOCALS (slot);
+  ENTER_LISP_FRAME_T (bool, (ccl_prog), slot);
   if (! NILP (ccl_prog))
     {
       ccl_prog = ccl_get_compiled_code (ccl_prog, &ccl->idx);
@@ -1958,8 +1955,7 @@ DEFUN ("ccl-program-p", Fccl_program_p, Sccl_program_p, 1, 1, 0,
 See the documentation of `define-ccl-program' for the detail of CCL program.  */)
   (Lisp_Object object)
 {
-  ENTER_LISP_FRAME (object);
-  LISP_LOCALS (val);
+  ENTER_LISP_FRAME ((object), val);
 
   if (VECTORP (object))
     {
@@ -1993,7 +1989,7 @@ See the documentation of `define-ccl-program' for a definition of CCL
 programs.  */)
   (Lisp_Object ccl_prog, Lisp_Object reg)
 {
-  ENTER_LISP_FRAME (ccl_prog, reg);
+  ENTER_LISP_FRAME ((ccl_prog, reg));
   struct ccl_program ccl;
   int i;
 
@@ -2048,8 +2044,7 @@ See the documentation of `define-ccl-program' for the detail of CCL program.
 usage: (ccl-execute-on-string CCL-PROGRAM STATUS STRING &optional CONTINUE UNIBYTE-P)  */)
   (Lisp_Object ccl_prog, Lisp_Object status, Lisp_Object str, Lisp_Object contin, Lisp_Object unibyte_p)
 {
-  ENTER_LISP_FRAME (ccl_prog, status, str, contin, unibyte_p);
-  LISP_LOCALS (val);
+  ENTER_LISP_FRAME ((ccl_prog, status, str, contin, unibyte_p), val);
   struct ccl_program ccl;
   int i;
   ptrdiff_t outbufsize;
@@ -2173,8 +2168,7 @@ If it is nil, just reserve NAME as a CCL program name.
 Return index number of the registered CCL program.  */)
      (Lisp_Object name, Lisp_Object ccl_prog)
 {
-  ENTER_LISP_FRAME (name, ccl_prog);
-  LISP_LOCALS (resolved, slot, elt);
+  ENTER_LISP_FRAME ((name, ccl_prog), resolved, slot, elt);
   ptrdiff_t len = ASIZE (Vccl_program_table);
   ptrdiff_t idx;
 
@@ -2248,8 +2242,7 @@ DEFUN ("register-code-conversion-map", Fregister_code_conversion_map,
 Return index number of the registered map.  */)
   (Lisp_Object symbol, Lisp_Object map)
 {
-  ENTER_LISP_FRAME (symbol, map);
-  LISP_LOCALS (idx, slot);
+  ENTER_LISP_FRAME ((symbol, map), idx, slot);
   ptrdiff_t len;
   ptrdiff_t i;
 

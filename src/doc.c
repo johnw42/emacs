@@ -81,8 +81,7 @@ read_bytecode_char (bool unreadflag)
 Lisp_Object
 get_doc_string (Lisp_Object filepos, bool unibyte, bool definition)
 {
-  ENTER_LISP_FRAME (filepos);
-  LISP_LOCALS (file, tem, pos, docdir);
+  ENTER_LISP_FRAME ((filepos), file, tem, pos, docdir);
   char *from, *to, *name, *p, *p1;
   int fd;
   int offset;
@@ -299,14 +298,14 @@ Invalid data in documentation file -- %c followed by code %03o",
 Lisp_Object
 read_doc_string (Lisp_Object filepos)
 {
-  ENTER_LISP_FRAME (filepos);
+  ENTER_LISP_FRAME ((filepos));
   EXIT_LISP_FRAME (get_doc_string (filepos, 0, 1));
 }
 
 static bool
 reread_doc_file (Lisp_Object file)
 {
-  ENTER_LISP_FRAME_T (bool, file);
+  ENTER_LISP_FRAME_T (bool, (file));
   if (NILP (file))
     Fsnarf_documentation (Vdoc_file_name);
   else
@@ -321,8 +320,7 @@ Unless a non-nil second argument RAW is given, the
 string is passed through `substitute-command-keys'.  */)
   (Lisp_Object function, Lisp_Object raw)
 {
-  ENTER_LISP_FRAME (function, raw);
-  LISP_LOCALS (fun, funcar, doc, tem, tem1);
+  ENTER_LISP_FRAME ((function, raw), fun, funcar, doc, tem, tem1);
   bool try_reload = 1;
 
  documentation:
@@ -438,8 +436,7 @@ This differs from `get' in that it can refer to strings stored in the
 aren't strings.  */)
   (Lisp_Object symbol, Lisp_Object prop, Lisp_Object raw)
 {
-  ENTER_LISP_FRAME (symbol, prop, raw);
-  LISP_LOCALS (tem, doc);
+  ENTER_LISP_FRAME ((symbol, prop, raw), tem, doc);
   bool try_reload = 1;
 
  documentation_property:
@@ -477,8 +474,7 @@ aren't strings.  */)
 static void
 store_function_docstring (Lisp_Object obj, EMACS_INT offset)
 {
-  ENTER_LISP_FRAME (obj);
-  LISP_LOCALS (fun, tem);
+  ENTER_LISP_FRAME ((obj), fun, tem);
   /* Don't use indirect_function here, or defaliases will apply their
      docstrings to the base functions (Bug#2603).  */
   fun = SYMBOLP (obj) ? XSYMBOL (obj)->u.s.function : obj;
@@ -539,8 +535,7 @@ That file is found in `../etc' now; later, when the dumped Emacs is run,
 the same file name is found in the `doc-directory'.  */)
   (Lisp_Object filename)
 {
-  ENTER_LISP_FRAME (filename);
-  LISP_LOCALS (sym, delayed_init);
+  ENTER_LISP_FRAME ((filename), sym, delayed_init);
   int fd;
   char buf[1024 + 1];
   int filled;
@@ -692,8 +687,7 @@ the same file name is found in the `doc-directory'.  */)
 static bool
 default_to_grave_quoting_style (void)
 {
-  ENTER_LISP_FRAME_T (bool);
-  LISP_LOCALS (dv);
+  ENTER_LISP_FRAME_T (bool, (), dv);
   if (!text_quoting_flag)
     EXIT_LISP_FRAME (true);
   if (! DISP_TABLE_P (Vstandard_display_table))
@@ -747,8 +741,8 @@ Return the original STRING if no substitutions are made.
 Otherwise, return a new string.  */)
   (Lisp_Object string)
 {
-  ENTER_LISP_FRAME (string);
-  LISP_LOCALS (tem, keymap, name, str, active_maps, earlier_maps);
+  ENTER_LISP_FRAME ((string), tem, keymap, name, str, active_maps,
+                    earlier_maps);
   char *buf;
   bool changed = false;
   bool nonquotes_changed = false;

@@ -121,8 +121,7 @@ signal_quit (void)
 void
 select_palette (struct frame *f, HDC hdc)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (frame, framelist);
+  ENTER_LISP_FRAME ((), frame, framelist);
   struct w32_display_info *display_info = FRAME_DISPLAY_INFO (f);
 
   if (!display_info->has_palette)

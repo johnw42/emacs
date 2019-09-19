@@ -551,7 +551,7 @@ x_cr_accumulate_data (void *closure, const unsigned char *data,
 static void
 x_cr_destroy (Lisp_Object arg)
 {
-  ENTER_LISP_FRAME (arg);
+  ENTER_LISP_FRAME ((arg));
   cairo_t *cr = (cairo_t *) XSAVE_POINTER (arg, 0);
 
   block_input ();
@@ -563,8 +563,7 @@ x_cr_destroy (Lisp_Object arg)
 Lisp_Object
 x_cr_export_frames (Lisp_Object frames, cairo_surface_type_t surface_type)
 {
-  ENTER_LISP_FRAME (frames);
-  LISP_LOCALS (acc);
+  ENTER_LISP_FRAME ((frames), acc);
   struct frame *f;
   cairo_surface_t *surface;
   cairo_t *cr;
@@ -661,8 +660,7 @@ x_cr_export_frames (Lisp_Object frames, cairo_surface_type_t surface_type)
 static void
 x_free_cr_resources (struct frame *f)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (rest, frame);
+  ENTER_LISP_FRAME ((), rest, frame);
 #ifdef USE_CAIRO
   if (f == NULL)
     {
@@ -1739,8 +1737,7 @@ x_set_glyph_string_clipping_exactly (struct glyph_string *src, struct glyph_stri
 static void
 x_compute_glyph_string_overhangs (struct glyph_string *s)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (gstring);
+  ENTER_LISP_FRAME ((), gstring);
   if (s->cmp == NULL
       && (s->first_glyph->type == CHAR_GLYPH
 	  || s->first_glyph->type == COMPOSITE_GLYPH))
@@ -1888,8 +1885,7 @@ x_draw_glyph_string_foreground (struct glyph_string *s)
 static void
 x_draw_composite_glyph_string_foreground (struct glyph_string *s)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (gstring, glyph);
+  ENTER_LISP_FRAME ((), gstring, glyph);
   int i, j, x;
   struct font *font = s->font;
 
@@ -1982,8 +1978,7 @@ x_draw_composite_glyph_string_foreground (struct glyph_string *s)
 static void
 x_draw_glyphless_glyph_string_foreground (struct glyph_string *s)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (acronym);
+  ENTER_LISP_FRAME ((), acronym);
   struct glyph *glyph = s->first_glyph;
   XChar2b char2b[8];
   int x, i, j;
@@ -2067,8 +2062,7 @@ x_draw_glyphless_glyph_string_foreground (struct glyph_string *s)
 static struct frame *
 x_frame_of_widget (Widget widget)
 {
-  ENTER_LISP_FRAME_T (struct frame *);
-  LISP_LOCALS (tail, frame);
+  ENTER_LISP_FRAME_T (struct frame *, (), tail, frame);
   struct x_display_info *dpyinfo;
   struct frame *f;
 
@@ -4439,8 +4433,7 @@ x_focus_changed (int type, int state, struct x_display_info *dpyinfo, struct fra
 static struct frame *
 x_window_to_frame (struct x_display_info *dpyinfo, int wdesc)
 {
-  ENTER_LISP_FRAME_T (struct frame *);
-  LISP_LOCALS (tail, frame);
+  ENTER_LISP_FRAME_T (struct frame *, (), tail, frame);
   struct frame *f;
 
   if (wdesc == None)
@@ -4487,8 +4480,7 @@ x_window_to_frame (struct x_display_info *dpyinfo, int wdesc)
 static struct frame *
 x_any_window_to_frame (struct x_display_info *dpyinfo, int wdesc)
 {
-  ENTER_LISP_FRAME_T (struct frame *);
-  LISP_LOCALS (tail, frame);
+  ENTER_LISP_FRAME_T (struct frame *, (), tail, frame);
   struct frame *f, *found = NULL;
   struct x_output *x;
 
@@ -4538,8 +4530,7 @@ static struct frame *
 x_menubar_window_to_frame (struct x_display_info *dpyinfo,
 			   const XEvent *event)
 {
-  ENTER_LISP_FRAME_T (struct frame *);
-  LISP_LOCALS (tail, frame);
+  ENTER_LISP_FRAME_T (struct frame *, (), tail, frame);
   Window wdesc = event->xany.window;
   struct frame *f;
   struct x_output *x;
@@ -4572,8 +4563,7 @@ x_menubar_window_to_frame (struct x_display_info *dpyinfo,
 struct frame *
 x_top_window_to_frame (struct x_display_info *dpyinfo, int wdesc)
 {
-  ENTER_LISP_FRAME_T (struct frame *);
-  LISP_LOCALS (tail, frame);
+  ENTER_LISP_FRAME_T (struct frame *, (), tail, frame);
   struct frame *f;
   struct x_output *x;
 
@@ -4835,8 +4825,7 @@ x_find_modifier_meanings (struct x_display_info *dpyinfo)
 int
 x_x_to_emacs_modifiers (struct x_display_info *dpyinfo, int state)
 {
-  ENTER_LISP_FRAME_T (int);
-  LISP_LOCALS (tem);
+  ENTER_LISP_FRAME_T (int, (), tem);
   int mod_ctrl = ctrl_modifier;
   int mod_meta = meta_modifier;
   int mod_alt  = alt_modifier;
@@ -4865,8 +4854,7 @@ x_x_to_emacs_modifiers (struct x_display_info *dpyinfo, int state)
 static int
 x_emacs_to_x_modifiers (struct x_display_info *dpyinfo, EMACS_INT state)
 {
-  ENTER_LISP_FRAME_T (int);
-  LISP_LOCALS (tem);
+  ENTER_LISP_FRAME_T (int, (), tem);
   EMACS_INT mod_ctrl = ctrl_modifier;
   EMACS_INT mod_meta = meta_modifier;
   EMACS_INT mod_alt  = alt_modifier;
@@ -5032,8 +5020,7 @@ XTmouse_position (struct frame **fp, int insist, Lisp_Object *bar_window,
 		  enum scroll_bar_part *part, Lisp_Object *x, Lisp_Object *y,
 		  Time *timestamp)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (frame, tail);
+  ENTER_LISP_FRAME ((), frame, tail);
   struct frame *f1;
   struct x_display_info *dpyinfo = FRAME_DISPLAY_INFO (*fp);
 
@@ -5268,8 +5255,8 @@ XTmouse_position (struct frame **fp, int insist, Lisp_Object *bar_window,
 static struct scroll_bar *
 x_window_to_scroll_bar (Display *display, Window window_id, int type)
 {
-  ENTER_LISP_FRAME_T (struct scroll_bar *);
-  LISP_LOCALS (tail, frame, bar, condemned);
+  ENTER_LISP_FRAME_T (struct scroll_bar *, (), tail, frame, bar,
+                      condemned);
 
 #if defined (USE_GTK) && defined (USE_TOOLKIT_SCROLL_BARS)
   window_id = (Window) xg_get_scroll_id_for_window (display, window_id);
@@ -5311,8 +5298,7 @@ x_window_to_scroll_bar (Display *display, Window window_id, int type)
 static Widget
 x_window_to_menu_bar (Window window)
 {
-  ENTER_LISP_FRAME_T (Widget);
-  LISP_LOCALS (tail, frame);
+  ENTER_LISP_FRAME_T (Widget, (), tail, frame);
 
   FOR_EACH_FRAME (tail, frame)
     if (FRAME_X_P (XFRAME (frame)))
@@ -5461,7 +5447,7 @@ static void
 x_send_scroll_bar_event (Lisp_Object window, enum scroll_bar_part part,
 			 int portion, int whole, bool horizontal)
 {
-  ENTER_LISP_FRAME (window);
+  ENTER_LISP_FRAME ((window));
   XEvent event;
   XClientMessageEvent *ev = &event.xclient;
   struct window *w = XWINDOW (window);
@@ -5514,8 +5500,7 @@ static void
 x_scroll_bar_to_input_event (const XEvent *event,
 			     struct input_event *ievent)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (window);
+  ENTER_LISP_FRAME ((), window);
   const XClientMessageEvent *ev = &event->xclient;
   struct window *w;
 
@@ -5551,8 +5536,7 @@ static void
 x_horizontal_scroll_bar_to_input_event (const XEvent *event,
 					struct input_event *ievent)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (window);
+  ENTER_LISP_FRAME ((), window);
   const XClientMessageEvent *ev = &event->xclient;
   struct window *w;
 
@@ -6567,8 +6551,7 @@ static struct scroll_bar *
 x_scroll_bar_create (struct window *w, int top, int left,
 		     int width, int height, bool horizontal)
 {
-  ENTER_LISP_FRAME_T (struct scroll_bar *);
-  LISP_LOCALS (barobj);
+  ENTER_LISP_FRAME_T (struct scroll_bar *, (), barobj);
   struct frame *f = XFRAME (w->frame);
   struct scroll_bar *bar
     = ALLOCATE_PSEUDOVECTOR (struct scroll_bar, x_window, PVEC_OTHER);
@@ -6810,8 +6793,7 @@ x_scroll_bar_remove (struct scroll_bar *bar)
 static void
 XTset_vertical_scroll_bar (struct window *w, int portion, int whole, int position)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (barobj);
+  ENTER_LISP_FRAME ((), barobj);
   struct frame *f = XFRAME (w->frame);
   struct scroll_bar *bar;
   int top, height, left, width;
@@ -6926,8 +6908,7 @@ XTset_vertical_scroll_bar (struct window *w, int portion, int whole, int positio
 static void
 XTset_horizontal_scroll_bar (struct window *w, int portion, int whole, int position)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (barobj);
+  ENTER_LISP_FRAME ((), barobj);
   struct frame *f = XFRAME (w->frame);
   struct scroll_bar *bar;
   int top, height, left, width;
@@ -7070,8 +7051,7 @@ XTset_horizontal_scroll_bar (struct window *w, int portion, int whole, int posit
 static void
 XTcondemn_scroll_bars (struct frame *frame)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (last);
+  ENTER_LISP_FRAME ((), last);
   if (!NILP (FRAME_SCROLL_BARS (frame)))
     {
       if (!NILP (FRAME_CONDEMNED_SCROLL_BARS (frame)))
@@ -7100,8 +7080,7 @@ XTcondemn_scroll_bars (struct frame *frame)
 static void
 XTredeem_scroll_bar (struct window *w)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (barobj);
+  ENTER_LISP_FRAME ((), barobj);
   struct scroll_bar *bar;
   struct frame *f;
 
@@ -7186,8 +7165,7 @@ XTredeem_scroll_bar (struct window *w)
 static void
 XTjudge_scroll_bars (struct frame *f)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (bar, next);
+  ENTER_LISP_FRAME ((), bar, next);
 
   bar = FRAME_CONDEMNED_SCROLL_BARS (f);
 
@@ -7523,8 +7501,7 @@ x_horizontal_scroll_bar_report_motion (struct frame **fp, Lisp_Object *bar_windo
 static void
 x_scroll_bar_clear (struct frame *f)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (bar);
+  ENTER_LISP_FRAME ((), bar);
 #ifndef USE_TOOLKIT_SCROLL_BARS
 
   /* We can have scroll bars even if this is 0,
@@ -7662,8 +7639,7 @@ static void xembed_send_message (struct frame *f, Time,
 static void
 x_net_wm_state (struct frame *f, Window window)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (lval);
+  ENTER_LISP_FRAME ((), lval);
   int value = FULLSCREEN_NONE;
   lval = Qnil;
 
@@ -7700,8 +7676,7 @@ x_net_wm_state (struct frame *f, Window window)
 static void
 flush_dirty_back_buffers (void)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (tail, frame);
+  ENTER_LISP_FRAME ((), tail, frame);
   block_input ();
   FOR_EACH_FRAME (tail, frame)
     {
@@ -7732,8 +7707,7 @@ handle_one_xevent (struct x_display_info *dpyinfo,
 		   const XEvent *event,
 		   int *finish, struct input_event *hold_quit)
 {
-  ENTER_LISP_FRAME_T (int);
-  LISP_LOCALS (coding_system, c, window, frame);
+  ENTER_LISP_FRAME_T (int, (), coding_system, c, window, frame);
   union buffered_input_event inev;
   int count = 0;
   int do_help = 0;
@@ -9533,7 +9507,7 @@ x_draw_window_cursor (struct window *w, struct glyph_row *glyph_row, int x,
 bool
 x_bitmap_icon (struct frame *f, Lisp_Object file)
 {
-  ENTER_LISP_FRAME_T (bool, file);
+  ENTER_LISP_FRAME_T (bool, (file));
   ptrdiff_t bitmap_id;
 
   if (FRAME_X_WINDOW (f) == 0)
@@ -9821,8 +9795,7 @@ static char *error_msg;
 static _Noreturn void
 x_connection_closed (Display *dpy, const char *error_message, bool ioerror)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (frame, tail, minibuf_frame, tmp);
+  ENTER_LISP_FRAME ((), frame, tail, minibuf_frame, tmp);
   struct x_display_info *dpyinfo = x_display_info_for_display (dpy);
   ptrdiff_t idx = SPECPDL_INDEX ();
 
@@ -10001,8 +9974,7 @@ x_io_error_quitter (Display *display)
 Lisp_Object
 x_new_font (struct frame *f, Lisp_Object font_object, int fontset)
 {
-  ENTER_LISP_FRAME (font_object);
-  LISP_LOCALS (fullscreen);
+  ENTER_LISP_FRAME ((font_object), fullscreen);
   struct font *font = XFONT_OBJECT (font_object);
   int unit, font_ascent, font_descent;
 #ifndef USE_X_TOOLKIT
@@ -10098,8 +10070,7 @@ x_new_font (struct frame *f, Lisp_Object font_object, int fontset)
 static void
 xim_destroy_callback (XIM xim, XPointer client_data, XPointer call_data)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (frame, tail);
+  ENTER_LISP_FRAME ((), frame, tail);
   struct x_display_info *dpyinfo = (struct x_display_info *) client_data;
 
   block_input ();
@@ -10174,8 +10145,7 @@ xim_open_dpy (struct x_display_info *dpyinfo, char *resource_name)
 static void
 xim_instantiate_callback (Display *display, XPointer client_data, XPointer call_data)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (tail, frame);
+  ENTER_LISP_FRAME ((), tail, frame);
   struct xim_inst_t *xim_inst = (struct xim_inst_t *) client_data;
   struct x_display_info *dpyinfo = xim_inst->dpyinfo;
 
@@ -10292,8 +10262,7 @@ xim_close_dpy (struct x_display_info *dpyinfo)
 static void
 x_calc_absolute_position (struct frame *f)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (frame, edges);
+  ENTER_LISP_FRAME ((), frame, edges);
   int flags = f->size_hint_flags;
   struct frame *p = FRAME_PARENT_FRAME (f);
 
@@ -10564,7 +10533,7 @@ x_wm_supports (struct frame *f, Atom want_atom)
 static void
 set_wm_state (Lisp_Object frame, bool add, Atom atom, Atom value)
 {
-  ENTER_LISP_FRAME (frame);
+  ENTER_LISP_FRAME ((frame));
   struct x_display_info *dpyinfo = FRAME_DISPLAY_INFO (XFRAME (frame));
 
   x_send_client_event (frame, make_number (0), frame,
@@ -10584,8 +10553,7 @@ set_wm_state (Lisp_Object frame, bool add, Atom atom, Atom value)
 void
 x_set_sticky (struct frame *f, Lisp_Object new_value, Lisp_Object old_value)
 {
-  ENTER_LISP_FRAME (new_value, old_value);
-  LISP_LOCALS (frame);
+  ENTER_LISP_FRAME ((new_value, old_value), frame);
   struct x_display_info *dpyinfo = FRAME_DISPLAY_INFO (f);
 
   XSETFRAME (frame, f);
@@ -10608,8 +10576,7 @@ x_set_sticky (struct frame *f, Lisp_Object new_value, Lisp_Object old_value)
 void
 x_set_skip_taskbar (struct frame *f, Lisp_Object new_value, Lisp_Object old_value)
 {
-  ENTER_LISP_FRAME (new_value, old_value);
-  LISP_LOCALS (frame);
+  ENTER_LISP_FRAME ((new_value, old_value), frame);
   if (!EQ (new_value, old_value))
     {
 #ifdef USE_GTK
@@ -10645,8 +10612,7 @@ x_set_skip_taskbar (struct frame *f, Lisp_Object new_value, Lisp_Object old_valu
 void
 x_set_z_group (struct frame *f, Lisp_Object new_value, Lisp_Object old_value)
 {
-  ENTER_LISP_FRAME (new_value, old_value);
-  LISP_LOCALS (frame);
+  ENTER_LISP_FRAME ((new_value, old_value), frame);
   /* We don't care about old_value.  The window manager might have
      reset the value without telling us.  */
   struct x_display_info *dpyinfo = FRAME_DISPLAY_INFO (f);
@@ -10801,8 +10767,7 @@ get_current_wm_state (struct frame *f,
 static bool
 do_ewmh_fullscreen (struct frame *f)
 {
-  ENTER_LISP_FRAME_T (bool);
-  LISP_LOCALS (frame);
+  ENTER_LISP_FRAME_T (bool, (), frame);
   struct x_display_info *dpyinfo = FRAME_DISPLAY_INFO (f);
   bool have_net_atom = x_wm_supports (f, dpyinfo->Xatom_net_wm_state);
   int cur;
@@ -10945,8 +10910,7 @@ XTfullscreen_hook (struct frame *f)
 static bool
 x_handle_net_wm_state (struct frame *f, const XPropertyEvent *event)
 {
-  ENTER_LISP_FRAME_T (bool);
-  LISP_LOCALS (lval);
+  ENTER_LISP_FRAME_T (bool, (), lval);
   int value = FULLSCREEN_NONE;
   bool sticky = false;
   bool not_hidden = get_current_wm_state (f, event->window, &value, &sticky);
@@ -10983,8 +10947,7 @@ x_handle_net_wm_state (struct frame *f, const XPropertyEvent *event)
 static void
 x_check_fullscreen (struct frame *f)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (lval);
+  ENTER_LISP_FRAME ((), lval);
   lval = Qnil;
 
 
@@ -11197,8 +11160,7 @@ static void
 x_set_window_size_1 (struct frame *f, bool change_gravity,
 		     int width, int height)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (fullscreen);
+  ENTER_LISP_FRAME ((), fullscreen);
   int pixelwidth = FRAME_TEXT_TO_PIXEL_WIDTH (f, width);
   int pixelheight = FRAME_TEXT_TO_PIXEL_HEIGHT (f, height);
   int old_width = FRAME_PIXEL_WIDTH (f);
@@ -11420,8 +11382,7 @@ xembed_request_focus (struct frame *f)
 void
 x_ewmh_activate_frame (struct frame *f)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (frame);
+  ENTER_LISP_FRAME ((), frame);
   /* See Window Manager Specification/Extended Window Manager Hints at
      http://freedesktop.org/wiki/Specifications/wm-spec  */
 
@@ -11504,8 +11465,7 @@ xembed_send_message (struct frame *f, Time t, enum xembed_message msg,
 void
 x_make_frame_visible (struct frame *f)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (frame);
+  ENTER_LISP_FRAME ((), frame);
   if (FRAME_PARENT_FRAME (f))
     {
       if (!FRAME_VISIBLE_P (f))
@@ -11828,8 +11788,7 @@ x_iconify_frame (struct frame *f)
 void
 x_free_frame_resources (struct frame *f)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (bar);
+  ENTER_LISP_FRAME ((), bar);
   struct x_display_info *dpyinfo = FRAME_DISPLAY_INFO (f);
   Mouse_HLInfo *hlinfo = &dpyinfo->mouse_highlight;
 #ifdef USE_X_TOOLKIT
@@ -12256,8 +12215,7 @@ static int x_initialized;
 static bool
 same_x_server (const char *name1, const char *name2)
 {
-  ENTER_LISP_FRAME_T (bool);
-  LISP_LOCALS (sysname);
+  ENTER_LISP_FRAME_T (bool, (), sysname);
   bool seen_colon = false;
   sysname = Fsystem_name ();
 
@@ -12455,8 +12413,8 @@ static unsigned x_display_id;
 struct x_display_info *
 x_term_init (Lisp_Object display_name, char *xrm_option, char *resource_name)
 {
-  ENTER_LISP_FRAME_T (struct x_display_info *, display_name);
-  LISP_LOCALS (s, abs_file, system_name, value);
+  ENTER_LISP_FRAME_T (struct x_display_info *, (display_name), s,
+                      abs_file, system_name, value);
   Display *dpy;
   struct terminal *terminal;
   struct x_display_info *dpyinfo;

@@ -86,8 +86,7 @@ record_point (ptrdiff_t beg)
 void
 record_insert (ptrdiff_t beg, ptrdiff_t length)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (lbeg, lend, elt);
+  ENTER_LISP_FRAME ((), lbeg, lend, elt);
 
   if (EQ (BVAR (current_buffer, undo_list), Qt))
     EXIT_LISP_FRAME_VOID ();
@@ -127,8 +126,7 @@ record_insert (ptrdiff_t beg, ptrdiff_t length)
 static void
 record_marker_adjustments (ptrdiff_t from, ptrdiff_t to)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (marker);
+  ENTER_LISP_FRAME ((), marker);
   register struct Lisp_Marker *m;
   register ptrdiff_t charpos, adjustment;
 
@@ -169,8 +167,7 @@ record_marker_adjustments (ptrdiff_t from, ptrdiff_t to)
 void
 record_delete (ptrdiff_t beg, Lisp_Object string, bool record_markers)
 {
-  ENTER_LISP_FRAME (string);
-  LISP_LOCALS (sbeg);
+  ENTER_LISP_FRAME ((string), sbeg);
 
   if (EQ (BVAR (current_buffer, undo_list), Qt))
     EXIT_LISP_FRAME_VOID ();
@@ -239,8 +236,7 @@ record_property_change (ptrdiff_t beg, ptrdiff_t length,
 			Lisp_Object prop, Lisp_Object value,
 			Lisp_Object buffer)
 {
-  ENTER_LISP_FRAME (prop, value, buffer);
-  LISP_LOCALS (lbeg, lend, entry);
+  ENTER_LISP_FRAME ((prop, value, buffer), lbeg, lend, entry);
   struct buffer *buf = XBUFFER (buffer);
 
   if (EQ (BVAR (buf, undo_list), Qt))
@@ -265,8 +261,7 @@ An undo command will stop at this point,
 but another undo command will undo to the previous boundary.  */)
   (void)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (tem);
+  ENTER_LISP_FRAME ((), tem);
   if (EQ (BVAR (current_buffer, undo_list), Qt))
     EXIT_LISP_FRAME (Qnil);
   tem = Fcar (BVAR (current_buffer, undo_list));
@@ -301,8 +296,7 @@ but another undo command will undo to the previous boundary.  */)
 void
 truncate_undo_list (struct buffer *b)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (list, prev, next, last_boundary, elt, tem);
+  ENTER_LISP_FRAME ((), list, prev, next, last_boundary, elt, tem);
 #ifndef HAVE_CHEZ_SCHEME
   EMACS_INT size_so_far = 0;
 

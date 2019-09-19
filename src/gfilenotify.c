@@ -40,8 +40,8 @@ dir_monitor_callback (GFileMonitor *monitor,
 		      GFileMonitorEvent event_type,
 		      gpointer user_data)
 {
-  ENTER_LISP_FRAME_T (gboolean);
-  LISP_LOCALS (symbol, monitor_object, watch_object, flags, otail);
+  ENTER_LISP_FRAME_T (gboolean, (), symbol, monitor_object,
+                      watch_object, flags, otail);
   char *name = g_file_get_parse_name (file);
   char *oname = other_file ? g_file_get_parse_name (other_file) : NULL;
 
@@ -168,8 +168,8 @@ FILE is the name of the file whose event is being reported.  FILE1
 will be reported only in case of the `moved' event.  */)
   (Lisp_Object file, Lisp_Object flags, Lisp_Object callback)
 {
-  ENTER_LISP_FRAME (file, flags, callback);
-  LISP_LOCALS (watch_object, watch_descriptor);
+  ENTER_LISP_FRAME ((file, flags, callback), watch_object,
+                    watch_descriptor);
   GFile *gfile;
   GFileMonitor *monitor;
   GFileMonitorFlags gflags = G_FILE_MONITOR_NONE;
@@ -237,8 +237,7 @@ DEFUN ("gfile-rm-watch", Fgfile_rm_watch, Sgfile_rm_watch, 1, 1, 0,
 WATCH-DESCRIPTOR should be an object returned by `gfile-add-watch'.  */)
      (Lisp_Object watch_descriptor)
 {
-  ENTER_LISP_FRAME (watch_descriptor);
-  LISP_LOCALS (watch_object);
+  ENTER_LISP_FRAME ((watch_descriptor), watch_object);
   watch_object = assq_no_quit (watch_descriptor, watch_list);
 
 
@@ -273,8 +272,7 @@ reason.  Removing the watch by calling `gfile-rm-watch' also makes it
 invalid.  */)
      (Lisp_Object watch_descriptor)
 {
-  ENTER_LISP_FRAME (watch_descriptor);
-  LISP_LOCALS (watch_object);
+  ENTER_LISP_FRAME ((watch_descriptor), watch_object);
   watch_object = Fassoc (watch_descriptor, watch_list, Qnil);
 
   if (NILP (watch_object))
@@ -296,7 +294,7 @@ WATCH-DESCRIPTOR should be an object returned by `gfile-add-watch'.
 If WATCH-DESCRIPTOR is not valid, nil is returned.  */)
      (Lisp_Object watch_descriptor)
 {
-  ENTER_LISP_FRAME (watch_descriptor);
+  ENTER_LISP_FRAME ((watch_descriptor));
   if (NILP (Fgfile_valid_p (watch_descriptor)))
     EXIT_LISP_FRAME (Qnil);
   else

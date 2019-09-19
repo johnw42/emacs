@@ -62,7 +62,7 @@ REGISTERS should be a vector produced by `make-register' and
 `set-register-value'.  */)
   (Lisp_Object interrupt, Lisp_Object registers)
 {
-  ENTER_LISP_FRAME (interrupt, registers);
+  ENTER_LISP_FRAME ((interrupt, registers));
   register int i;
   int no;
   union REGS inregs, outregs;
@@ -103,7 +103,7 @@ DEFUN ("msdos-memget", Fdos_memget, Sdos_memget, 2, 2, 0,
 Return the updated VECTOR.  */)
   (Lisp_Object address, Lisp_Object vector)
 {
-  ENTER_LISP_FRAME (address, vector);
+  ENTER_LISP_FRAME ((address, vector));
   register int i;
   int offs, len;
   char *buf;
@@ -127,7 +127,7 @@ DEFUN ("msdos-memput", Fdos_memput, Sdos_memput, 2, 2, 0,
        doc: /* Write DOS memory at offset ADDRESS from VECTOR.  */)
   (Lisp_Object address, Lisp_Object vector)
 {
-  ENTER_LISP_FRAME (address, vector);
+  ENTER_LISP_FRAME ((address, vector));
   register int i;
   int offs, len;
   char *buf;
@@ -157,7 +157,7 @@ all keys; otherwise it is only used when the ALT key is pressed.
 The current keyboard layout is available in dos-keyboard-code.  */)
   (Lisp_Object country_code, Lisp_Object allkeys)
 {
-  ENTER_LISP_FRAME (country_code, allkeys);
+  ENTER_LISP_FRAME ((country_code, allkeys));
   CHECK_NUMBER (country_code);
   if (!dos_set_keyboard (XINT (country_code), !NILP (allkeys)))
     EXIT_LISP_FRAME (Qnil);
@@ -463,7 +463,7 @@ w95_set_virtual_machine_title (const char *title_string)
 void
 x_set_title (struct frame *f, Lisp_Object name)
 {
-  ENTER_LISP_FRAME (name);
+  ENTER_LISP_FRAME ((name));
   /* Don't change the title if it's already NAME.  */
   if (EQ (name, f->title))
     EXIT_LISP_FRAME_VOID ();
@@ -493,8 +493,7 @@ storage available to a non-superuser.  All 3 numbers are in bytes.
 If the underlying system call fails, value is nil.  */)
   (Lisp_Object filename)
 {
-  ENTER_LISP_FRAME (filename);
-  LISP_LOCALS (encoded, value);
+  ENTER_LISP_FRAME ((filename), encoded, value);
   struct statfs stfs;
 
   CHECK_STRING (filename);
@@ -518,8 +517,7 @@ If the underlying system call fails, value is nil.  */)
 Lisp_Object
 list_system_processes (void)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (proclist);
+  ENTER_LISP_FRAME ((), proclist);
   proclist = Qnil;
 
 
@@ -531,8 +529,7 @@ list_system_processes (void)
 Lisp_Object
 system_process_attributes (Lisp_Object pid)
 {
-  ENTER_LISP_FRAME (pid);
-  LISP_LOCALS (attrs, cmd_str, decoded_cmd, tem);
+  ENTER_LISP_FRAME ((pid), attrs, cmd_str, decoded_cmd, tem);
   int proc_id;
   attrs = Qnil;
 

@@ -288,7 +288,7 @@ init_eval (void)
 static void
 restore_stack_limits (Lisp_Object data)
 {
-  ENTER_LISP_FRAME (data);
+  ENTER_LISP_FRAME ((data));
   max_specpdl_size = XINT (XCAR (data));
   max_lisp_eval_depth = XINT (XCDR (data));
   EXIT_LISP_FRAME_VOID ();
@@ -301,8 +301,7 @@ static void grow_specpdl (void);
 Lisp_Object
 call_debugger (Lisp_Object arg)
 {
-  ENTER_LISP_FRAME (arg);
-  LISP_LOCALS (val);
+  ENTER_LISP_FRAME ((arg), val);
   bool debug_while_redisplaying;
   ptrdiff_t count = SPECPDL_INDEX ();
   EMACS_INT old_depth = max_lisp_eval_depth;
@@ -374,7 +373,7 @@ call_debugger (Lisp_Object arg)
 static void
 do_debug_on_call (Lisp_Object code, ptrdiff_t count)
 {
-  ENTER_LISP_FRAME (code);
+  ENTER_LISP_FRAME ((code));
   debug_on_next_call = 0;
   set_backtrace_debug_on_exit (specpdl + count, true);
   call_debugger (list1 (code));
@@ -392,8 +391,7 @@ If all args return nil, return nil.
 usage: (or CONDITIONS...)  */)
   (Lisp_Object args)
 {
-  ENTER_LISP_FRAME (args);
-  LISP_LOCALS (val, arg);
+  ENTER_LISP_FRAME ((args), val, arg);
   val = Qnil;
 
 
@@ -417,8 +415,7 @@ If no arg yields nil, return the last arg's value.
 usage: (and CONDITIONS...)  */)
   (Lisp_Object args)
 {
-  ENTER_LISP_FRAME (args);
-  LISP_LOCALS (val, arg);
+  ENTER_LISP_FRAME ((args), val, arg);
   val = Qt;
 
 
@@ -443,8 +440,7 @@ If COND yields nil, and there are no ELSE's, the value is nil.
 usage: (if COND THEN ELSE...)  */)
   (Lisp_Object args)
 {
-  ENTER_LISP_FRAME (args);
-  LISP_LOCALS (cond);
+  ENTER_LISP_FRAME ((args), cond);
 
   cond = eval_sub (XCAR (args));
 
@@ -465,8 +461,7 @@ If no clause succeeds, cond returns nil.
 usage: (cond CLAUSES...)  */)
   (Lisp_Object args)
 {
-  ENTER_LISP_FRAME (args);
-  LISP_LOCALS (val, clause);
+  ENTER_LISP_FRAME ((args), val, clause);
   val = args;
 
 
@@ -492,8 +487,7 @@ DEFUN ("progn", Fprogn, Sprogn, 0, UNEVALLED, 0,
 usage: (progn BODY...)  */)
   (Lisp_Object body)
 {
-  ENTER_LISP_FRAME (body);
-  LISP_LOCALS (val, form);
+  ENTER_LISP_FRAME ((body), val, form);
   val = Qnil;
 
   while (CONSP (body))
@@ -511,7 +505,7 @@ usage: (progn BODY...)  */)
 void
 prog_ignore (Lisp_Object body)
 {
-  ENTER_LISP_FRAME (body);
+  ENTER_LISP_FRAME ((body));
   Fprogn (body);
   EXIT_LISP_FRAME_VOID ();
 }
@@ -523,8 +517,7 @@ whose values are discarded.
 usage: (prog1 FIRST BODY...)  */)
   (Lisp_Object args)
 {
-  ENTER_LISP_FRAME (args);
-  LISP_LOCALS (val);
+  ENTER_LISP_FRAME ((args), val);
   val = eval_sub (XCAR (args));
 
   prog_ignore (XCDR (args));
@@ -538,7 +531,7 @@ remaining args, whose values are discarded.
 usage: (prog2 FORM1 FORM2 BODY...)  */)
   (Lisp_Object args)
 {
-  ENTER_LISP_FRAME (args);
+  ENTER_LISP_FRAME ((args));
   eval_sub (XCAR (args));
   EXIT_LISP_FRAME (Fprog1 (XCDR (args)));
 }
@@ -554,8 +547,7 @@ The return value of the `setq' form is the value of the last VAL.
 usage: (setq [SYM VAL]...)  */)
   (Lisp_Object args)
 {
-  ENTER_LISP_FRAME (args);
-  LISP_LOCALS (val, tail, sym, lex_binding, arg);
+  ENTER_LISP_FRAME ((args), val, tail, sym, lex_binding, arg);
   val = args;
   tail = args;
 
@@ -598,7 +590,7 @@ of unexpected results when a quoted object is modified.
 usage: (quote ARG)  */)
   (Lisp_Object args)
 {
-  ENTER_LISP_FRAME (args);
+  ENTER_LISP_FRAME ((args));
   if (!NILP (XCDR (args)))
     xsignal2 (Qwrong_number_of_arguments, Qquote, Flength (args));
   EXIT_LISP_FRAME (XCAR (args));
@@ -611,8 +603,7 @@ In byte compilation, `function' causes its argument to be compiled.
 usage: (function ARG)  */)
   (Lisp_Object args)
 {
-  ENTER_LISP_FRAME (args);
-  LISP_LOCALS (quoted, cdr, tmp, docstring);
+  ENTER_LISP_FRAME ((args), quoted, cdr, tmp, docstring);
   quoted = XCAR (args);
 
 
@@ -659,7 +650,7 @@ then the value of BASE-VARIABLE is set to that of NEW-ALIAS.
 The return value is BASE-VARIABLE.  */)
   (Lisp_Object new_alias, Lisp_Object base_variable, Lisp_Object docstring)
 {
-  ENTER_LISP_FRAME (new_alias, base_variable, docstring);
+  ENTER_LISP_FRAME ((new_alias, base_variable, docstring));
   struct Lisp_Symbol *sym;
 
   CHECK_SYMBOL (new_alias);
@@ -718,7 +709,7 @@ The return value is BASE-VARIABLE.  */)
 static union specbinding *
 default_toplevel_binding (Lisp_Object symbol)
 {
-  ENTER_LISP_FRAME_T (union specbinding *, symbol);
+  ENTER_LISP_FRAME_T (union specbinding *, (symbol));
   union specbinding *binding = NULL;
   union specbinding *pdl = specpdl_ptr;
   while (pdl > specpdl)
@@ -751,8 +742,7 @@ DEFUN ("default-toplevel-value", Fdefault_toplevel_value, Sdefault_toplevel_valu
 "Toplevel" means outside of any let binding.  */)
   (Lisp_Object symbol)
 {
-  ENTER_LISP_FRAME (symbol);
-  LISP_LOCALS (value);
+  ENTER_LISP_FRAME ((symbol), value);
   union specbinding *binding = default_toplevel_binding (symbol);
   value = binding ? specpdl_old_value (binding) : Fdefault_value (symbol);
 
@@ -767,7 +757,7 @@ DEFUN ("set-default-toplevel-value", Fset_default_toplevel_value,
 "Toplevel" means outside of any let binding.  */)
      (Lisp_Object symbol, Lisp_Object value)
 {
-  ENTER_LISP_FRAME (symbol, value);
+  ENTER_LISP_FRAME ((symbol, value));
   union specbinding *binding = default_toplevel_binding (symbol);
   if (binding)
     set_specpdl_old_value (binding, value);
@@ -804,8 +794,7 @@ To define a user option, use `defcustom' instead of `defvar'.
 usage: (defvar SYMBOL &optional INITVALUE DOCSTRING)  */)
   (Lisp_Object args)
 {
-  ENTER_LISP_FRAME (args);
-  LISP_LOCALS (sym, tem, tail);
+  ENTER_LISP_FRAME ((args), sym, tem, tail);
 
   sym = XCAR (args);
   tail = XCDR (args);
@@ -876,8 +865,7 @@ The optional DOCSTRING specifies the variable's documentation string.
 usage: (defconst SYMBOL INITVALUE [DOCSTRING])  */)
   (Lisp_Object args)
 {
-  ENTER_LISP_FRAME (args);
-  LISP_LOCALS (sym, tem, docstring);
+  ENTER_LISP_FRAME ((args), sym, tem, docstring);
 
   sym = XCAR (args);
   docstring = Qnil;
@@ -911,7 +899,7 @@ DEFUN ("internal-make-var-non-special", Fmake_var_non_special,
        doc: /* Internal function.  */)
      (Lisp_Object symbol)
 {
-  ENTER_LISP_FRAME (symbol);
+  ENTER_LISP_FRAME ((symbol));
   CHECK_SYMBOL (symbol);
   XSYMBOL (symbol)->u.s.declared_special = false;
   EXIT_LISP_FRAME (Qnil);
@@ -927,8 +915,7 @@ Each VALUEFORM can refer to the symbols already bound by this VARLIST.
 usage: (let* VARLIST BODY...)  */)
   (Lisp_Object args)
 {
-  ENTER_LISP_FRAME (args);
-  LISP_LOCALS (var, val, elt, lexenv, varlist, newenv);
+  ENTER_LISP_FRAME ((args), var, val, elt, lexenv, varlist, newenv);
   ptrdiff_t count = SPECPDL_INDEX ();
 
   lexenv = Vinternal_interpreter_environment;
@@ -988,8 +975,7 @@ All the VALUEFORMs are evalled before any symbols are bound.
 usage: (let VARLIST BODY...)  */)
   (Lisp_Object args)
 {
-  ENTER_LISP_FRAME (args);
-  LISP_LOCALS (tem, lexenv, elt, varlist, var);
+  ENTER_LISP_FRAME ((args), tem, lexenv, elt, varlist, var);
   Lisp_Object *temps;
 
   ptrdiff_t count = SPECPDL_INDEX ();
@@ -1057,8 +1043,7 @@ until TEST returns nil.
 usage: (while TEST BODY...)  */)
   (Lisp_Object args)
 {
-  ENTER_LISP_FRAME (args);
-  LISP_LOCALS (test, body);
+  ENTER_LISP_FRAME ((args), test, body);
 
   test = XCAR (args);
   body = XCDR (args);
@@ -1081,8 +1066,8 @@ The second optional arg ENVIRONMENT specifies an environment of macro
 definitions to shadow the loaded ones for use in file byte-compilation.  */)
   (Lisp_Object form, Lisp_Object environment)
 {
-  ENTER_LISP_FRAME (form, environment);
-  LISP_LOCALS (expander, sym, def, tem, newform);
+  ENTER_LISP_FRAME ((form, environment), expander, sym, def, tem,
+                    newform);
   /* With cleanups from Hallvard Furuseth.  */
 
   while (1)
@@ -1152,8 +1137,7 @@ If a throw happens, it specifies the value to return from `catch'.
 usage: (catch TAG BODY...)  */)
   (Lisp_Object args)
 {
-  ENTER_LISP_FRAME (args);
-  LISP_LOCALS (tag);
+  ENTER_LISP_FRAME ((args), tag);
   tag = eval_sub (XCAR (args));
 
   EXIT_LISP_FRAME (internal_catch (tag, Fprogn, XCDR (args)));
@@ -1173,8 +1157,7 @@ Lisp_Object
 internal_catch (Lisp_Object tag,
 		Lisp_Object (*func) (Lisp_Object), Lisp_Object arg)
 {
-  ENTER_LISP_FRAME (tag, arg);
-  LISP_LOCALS (val);
+  ENTER_LISP_FRAME ((tag, arg), val);
 
   /* This structure is made part of the chain `catchlist'.  */
   struct handler *c = push_handler (tag, CATCHER);
@@ -1216,7 +1199,7 @@ internal_catch (Lisp_Object tag,
 static _Noreturn void
 unwind_to_catch (struct handler *catch, Lisp_Object value)
 {
-  ENTER_LISP_FRAME (value);
+  ENTER_LISP_FRAME ((value));
   bool last_time;
 
   eassert (catch->next);
@@ -1257,7 +1240,7 @@ Both TAG and VALUE are evalled.  */
        attributes: noreturn)
   (Lisp_Object tag, Lisp_Object value)
 {
-  ENTER_LISP_FRAME (tag, value);
+  ENTER_LISP_FRAME ((tag, value));
   struct handler *c;
 
   if (!NILP (tag))
@@ -1280,8 +1263,7 @@ If BODYFORM exits nonlocally, the UNWINDFORMS are executed anyway.
 usage: (unwind-protect BODYFORM UNWINDFORMS...)  */)
   (Lisp_Object args)
 {
-  ENTER_LISP_FRAME (args);
-  LISP_LOCALS (val);
+  ENTER_LISP_FRAME ((args), val);
   ptrdiff_t count = SPECPDL_INDEX ();
 
   record_unwind_protect (prog_ignore, XCDR (args));
@@ -1317,8 +1299,7 @@ See also the function `signal' for more info.
 usage: (condition-case VAR BODYFORM &rest HANDLERS)  */)
   (Lisp_Object args)
 {
-  ENTER_LISP_FRAME (args);
-  LISP_LOCALS (var, bodyform, handlers);
+  ENTER_LISP_FRAME ((args), var, bodyform, handlers);
   var = XCAR (args);
 
   bodyform = XCAR (XCDR (args));
@@ -1336,8 +1317,8 @@ Lisp_Object
 internal_lisp_condition_case (Lisp_Object var, Lisp_Object bodyform,
 			      Lisp_Object handlers)
 {
-  ENTER_LISP_FRAME (var, bodyform, handlers);
-  LISP_LOCALS (tail, tem, clause, condition, val, handler_body, handler_var, result);
+  ENTER_LISP_FRAME ((var, bodyform, handlers), tail, tem, clause,
+                    condition, val, handler_body, handler_var, result);
   struct handler *oldhandlerlist = handlerlist;
   ptrdiff_t CACHEABLE clausenb = 0;
 
@@ -1434,8 +1415,7 @@ Lisp_Object
 internal_condition_case (Lisp_Object (*bfun) (void), Lisp_Object handlers,
 			 Lisp_Object (*hfun) (Lisp_Object))
 {
-  ENTER_LISP_FRAME (handlers);
-  LISP_LOCALS (val);
+  ENTER_LISP_FRAME ((handlers), val);
   struct handler *c = push_handler (handlers, CONDITION_CASE);
   SAVE_LISP_FRAME_PTR();
   if (sys_setjmp (c->jmp))
@@ -1464,8 +1444,7 @@ internal_condition_case_1 (Lisp_Object (*bfun) (Lisp_Object), Lisp_Object arg,
 			   Lisp_Object handlers,
 			   Lisp_Object (*hfun) (Lisp_Object))
 {
-  ENTER_LISP_FRAME (arg, handlers);
-  LISP_LOCALS (val);
+  ENTER_LISP_FRAME ((arg, handlers), val);
   struct handler *c = push_handler (handlers, CONDITION_CASE);
   SAVE_LISP_FRAME_PTR();
   if (sys_setjmp (c->jmp))
@@ -1497,8 +1476,7 @@ internal_condition_case_2 (Lisp_Object (*bfun) (Lisp_Object, Lisp_Object),
 			   Lisp_Object handlers,
 			   Lisp_Object (*hfun) (Lisp_Object))
 {
-  ENTER_LISP_FRAME (arg1, arg2, handlers);
-  LISP_LOCALS (val);
+  ENTER_LISP_FRAME ((arg1, arg2, handlers), val);
   struct handler *c = push_handler (handlers, CONDITION_CASE);
   SAVE_LISP_FRAME_PTR();
   if (sys_setjmp (c->jmp))
@@ -1532,8 +1510,7 @@ internal_condition_case_n (Lisp_Object (*bfun) (ptrdiff_t, Lisp_Object *),
 						ptrdiff_t nargs,
 						Lisp_Object *args))
 {
-  ENTER_LISP_FRAME_VA (nargs, args);
-  LISP_LOCALS (val);
+  ENTER_LISP_FRAME_VA (nargs, args, (), val);
   struct handler *c = push_handler (handlers, CONDITION_CASE);
   SAVE_LISP_FRAME_PTR();
   if (sys_setjmp (c->jmp))
@@ -1558,7 +1535,7 @@ internal_condition_case_n (Lisp_Object (*bfun) (ptrdiff_t, Lisp_Object *),
 struct handler *
 push_handler (Lisp_Object tag_ch_val, enum handlertype handlertype)
 {
-  ENTER_LISP_FRAME_T (struct handler *, tag_ch_val);
+  ENTER_LISP_FRAME_T (struct handler *, (tag_ch_val));
   struct handler *c = push_handler_nosignal (tag_ch_val, handlertype);
   if (!c)
     memory_full (sizeof *c);
@@ -1568,7 +1545,7 @@ push_handler (Lisp_Object tag_ch_val, enum handlertype handlertype)
 struct handler *
 push_handler_nosignal (Lisp_Object tag_ch_val, enum handlertype handlertype)
 {
-  ENTER_LISP_FRAME_T (struct handler *, tag_ch_val);
+  ENTER_LISP_FRAME_T (struct handler *, (tag_ch_val));
   struct handler *CACHEABLE c = handlerlist->nextfree;
   if (!c)
     {
@@ -1605,8 +1582,7 @@ static bool maybe_call_debugger (Lisp_Object conditions, Lisp_Object sig,
 static void
 process_quit_flag (void)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (flag);
+  ENTER_LISP_FRAME ((), flag);
   flag = Vquit_flag;
 
   Vquit_flag = Qnil;
@@ -1660,7 +1636,7 @@ See also the function `condition-case'.  */
        attributes: noreturn)
   (Lisp_Object error_symbol, Lisp_Object data)
 {
-  ENTER_LISP_FRAME (error_symbol, data);
+  ENTER_LISP_FRAME ((error_symbol, data));
   /* If they call us with nonsensical arguments, produce "peculiar error".  */
   if (NILP (error_symbol) && NILP (data))
     error_symbol = Qerror;
@@ -1683,8 +1659,8 @@ quit (void)
 static Lisp_Object
 signal_or_quit (Lisp_Object error_symbol, Lisp_Object data, bool keyboard_quit)
 {
-  ENTER_LISP_FRAME (error_symbol, data);
-  LISP_LOCALS (conditions, string, real_error_symbol, clause, unwind_data);
+  ENTER_LISP_FRAME ((error_symbol, data), conditions, string,
+                    real_error_symbol, clause, unwind_data);
   /* When memory is full, ERROR-SYMBOL is nil,
      and DATA is (REAL-ERROR-SYMBOL . REAL-DATA).
      That is a special case--don't do this in other situations.  */
@@ -1796,28 +1772,28 @@ signal_or_quit (Lisp_Object error_symbol, Lisp_Object data, bool keyboard_quit)
 void
 xsignal0 (Lisp_Object error_symbol)
 {
-  ENTER_LISP_FRAME (error_symbol);
+  ENTER_LISP_FRAME ((error_symbol));
   xsignal (error_symbol, Qnil);
 }
 
 void
 xsignal1 (Lisp_Object error_symbol, Lisp_Object arg)
 {
-  ENTER_LISP_FRAME (error_symbol, arg);
+  ENTER_LISP_FRAME ((error_symbol, arg));
   xsignal (error_symbol, list1 (arg));
 }
 
 void
 xsignal2 (Lisp_Object error_symbol, Lisp_Object arg1, Lisp_Object arg2)
 {
-  ENTER_LISP_FRAME (error_symbol, arg1, arg2);
+  ENTER_LISP_FRAME ((error_symbol, arg1, arg2));
   xsignal (error_symbol, list2 (arg1, arg2));
 }
 
 void
 xsignal3 (Lisp_Object error_symbol, Lisp_Object arg1, Lisp_Object arg2, Lisp_Object arg3)
 {
-  ENTER_LISP_FRAME (error_symbol, arg1, arg2, arg3);
+  ENTER_LISP_FRAME ((error_symbol, arg1, arg2, arg3));
   xsignal (error_symbol, list3 (arg1, arg2, arg3));
 }
 
@@ -1827,8 +1803,7 @@ xsignal3 (Lisp_Object error_symbol, Lisp_Object arg1, Lisp_Object arg2, Lisp_Obj
 void
 signal_error (const char *s, Lisp_Object arg)
 {
-  ENTER_LISP_FRAME (arg);
-  LISP_LOCALS (tortoise, hare);
+  ENTER_LISP_FRAME ((arg), tortoise, hare);
 
   hare = tortoise = arg;
   while (CONSP (hare))
@@ -1857,8 +1832,7 @@ signal_error (const char *s, Lisp_Object arg)
 static bool
 wants_debugger (Lisp_Object list, Lisp_Object conditions)
 {
-  ENTER_LISP_FRAME_T (bool, list, conditions);
-  LISP_LOCALS (this, tail);
+  ENTER_LISP_FRAME_T (bool, (list, conditions), this, tail);
   if (NILP (list))
     EXIT_LISP_FRAME (0);
   if (! CONSP (list))
@@ -1882,8 +1856,8 @@ wants_debugger (Lisp_Object list, Lisp_Object conditions)
 static bool
 skip_debugger (Lisp_Object conditions, Lisp_Object data)
 {
-  ENTER_LISP_FRAME_T (bool, conditions, data);
-  LISP_LOCALS (tail, error_message, contail);
+  ENTER_LISP_FRAME_T (bool, (conditions, data), tail, error_message,
+                      contail);
   bool first_string = 1;
 
   error_message = Qnil;
@@ -1920,8 +1894,7 @@ skip_debugger (Lisp_Object conditions, Lisp_Object data)
 static bool
 maybe_call_debugger (Lisp_Object conditions, Lisp_Object sig, Lisp_Object data)
 {
-  ENTER_LISP_FRAME_T (bool, conditions, sig, data);
-  LISP_LOCALS (combined_data);
+  ENTER_LISP_FRAME_T (bool, (conditions, sig, data), combined_data);
 
   combined_data = Fcons (sig, data);
 
@@ -1948,8 +1921,7 @@ maybe_call_debugger (Lisp_Object conditions, Lisp_Object sig, Lisp_Object data)
 static Lisp_Object
 find_handler_clause (Lisp_Object handlers, Lisp_Object conditions)
 {
-  ENTER_LISP_FRAME (handlers, conditions);
-  LISP_LOCALS (h, handler);
+  ENTER_LISP_FRAME ((handlers, conditions), h, handler);
 
   /* t is used by handlers for all conditions, set up by C code.  */
   if (EQ (handlers, Qt))
@@ -1976,8 +1948,7 @@ find_handler_clause (Lisp_Object handlers, Lisp_Object conditions)
 Lisp_Object
 vformat_string (const char *m, va_list ap)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (string);
+  ENTER_LISP_FRAME ((), string);
   char buf[4000];
   ptrdiff_t size = sizeof buf;
   ptrdiff_t size_max = STRING_BYTES_BOUND + 1;
@@ -2028,8 +1999,8 @@ If the optional argument FOR-CALL-INTERACTIVELY is non-nil,
 then strings and vectors are not accepted.  */)
   (Lisp_Object function, Lisp_Object for_call_interactively)
 {
-  ENTER_LISP_FRAME (function, for_call_interactively);
-  LISP_LOCALS (fun, funcar, if_prop, tmp);
+  ENTER_LISP_FRAME ((function, for_call_interactively), fun, funcar,
+                    if_prop, tmp);
   if_prop = Qnil;
 
 
@@ -2096,7 +2067,7 @@ If FUNCTION is already defined other than as an autoload,
 this does nothing and returns nil.  */)
   (Lisp_Object function, Lisp_Object file, Lisp_Object docstring, Lisp_Object interactive, Lisp_Object type)
 {
-  ENTER_LISP_FRAME (function, file, docstring, interactive, type);
+  ENTER_LISP_FRAME ((function, file, docstring, interactive, type));
   CHECK_SYMBOL (function);
   CHECK_STRING (file);
 
@@ -2119,8 +2090,7 @@ this does nothing and returns nil.  */)
 void
 un_autoload (Lisp_Object oldqueue)
 {
-  ENTER_LISP_FRAME (oldqueue);
-  LISP_LOCALS (queue, first, second);
+  ENTER_LISP_FRAME ((oldqueue), queue, first, second);
 
   /* Queue to unwind is current value of Vautoload_queue.
      oldqueue is the shadowed value to leave in Vautoload_queue.  */
@@ -2152,8 +2122,7 @@ If equal to `macro', MACRO-ONLY specifies that FUNDEF should only be loaded if
 it defines a macro.  */)
   (Lisp_Object fundef, Lisp_Object funname, Lisp_Object macro_only)
 {
-  ENTER_LISP_FRAME (fundef, funname, macro_only);
-  LISP_LOCALS (kind, fun);
+  ENTER_LISP_FRAME ((fundef, funname, macro_only), kind, fun);
   ptrdiff_t count = SPECPDL_INDEX ();
 
   if (!CONSP (fundef) || !EQ (Qautoload, XCAR (fundef)))
@@ -2218,11 +2187,10 @@ LEXICAL can also be an actual lexical environment, in the form of an
 alist mapping symbols to their value.  */)
   (Lisp_Object form, Lisp_Object lexical)
 {
-  ENTER_LISP_FRAME (form, lexical);
+  ENTER_LISP_FRAME ((form, lexical), val);
   ptrdiff_t count = SPECPDL_INDEX ();
   specbind (Qinternal_interpreter_environment,
 	    CONSP (lexical) || NILP (lexical) ? lexical : list1 (Qt));
-  LISP_LOCALS (val);
   val = unbind_to (count, eval_sub (form));
   EXIT_LISP_FRAME (val);
 }
@@ -2266,7 +2234,7 @@ grow_specpdl (void)
 ptrdiff_t
 record_in_backtrace (Lisp_Object function, Lisp_Object *args, ptrdiff_t nargs)
 {
-  ENTER_LISP_FRAME_T (ptrdiff_t, function);
+  ENTER_LISP_FRAME_T (ptrdiff_t, (function));
   ptrdiff_t count = SPECPDL_INDEX ();
 
   eassert (nargs >= UNEVALLED);
@@ -2288,9 +2256,8 @@ int gdb_hit_count = 0;
 Lisp_Object
 eval_sub (Lisp_Object form)
 {
-  ENTER_LISP_FRAME (form);
-  LISP_LOCALS (fun, val, original_fun, original_args,
-               funcar, lex_binding, exp, arg, args_left, numargs);
+  ENTER_LISP_FRAME ((form), fun, val, original_fun, original_args,
+                    funcar, lex_binding, exp, arg, args_left, numargs);
   ptrdiff_t count;
 
   /* Declare here, as this array may be accessed by call_debugger near
@@ -2520,8 +2487,7 @@ Thus, (apply \\='+ 1 2 \\='(3 4)) returns 10.
 usage: (apply FUNCTION &rest ARGUMENTS)  */)
   (ptrdiff_t nargs, Lisp_Object *args)
 {
-  ENTER_LISP_FRAME_VA (nargs, args);
-  LISP_LOCALS (spread_arg, fun, retval);
+  ENTER_LISP_FRAME_VA (nargs, args, (), spread_arg, fun, retval);
   ptrdiff_t i, numargs, funcall_nargs;
   register Lisp_Object *funcall_args = NULL;
   spread_arg = args[nargs - 1];
@@ -2593,7 +2559,7 @@ usage: (apply FUNCTION &rest ARGUMENTS)  */)
 static Lisp_Object
 funcall_nil (ptrdiff_t nargs, Lisp_Object *args)
 {
-  ENTER_LISP_FRAME_VA (nargs, args);
+  ENTER_LISP_FRAME_VA (nargs, args, ());
   Ffuncall (nargs, args);
   EXIT_LISP_FRAME (Qnil);
 }
@@ -2615,7 +2581,7 @@ Instead, use `add-hook' and specify t for the LOCAL argument.
 usage: (run-hooks &rest HOOKS)  */)
   (ptrdiff_t nargs, Lisp_Object *args)
 {
-  ENTER_LISP_FRAME_VA (nargs, args);
+  ENTER_LISP_FRAME_VA (nargs, args, ());
   ptrdiff_t i;
 
   for (i = 0; i < nargs; i++)
@@ -2637,7 +2603,7 @@ Instead, use `add-hook' and specify t for the LOCAL argument.
 usage: (run-hook-with-args HOOK &rest ARGS)  */)
   (ptrdiff_t nargs, Lisp_Object *args)
 {
-  ENTER_LISP_FRAME_VA (nargs, args);
+  ENTER_LISP_FRAME_VA (nargs, args, ());
   EXIT_LISP_FRAME (run_hook_with_args (nargs, args, funcall_nil));
 }
 
@@ -2659,14 +2625,14 @@ Instead, use `add-hook' and specify t for the LOCAL argument.
 usage: (run-hook-with-args-until-success HOOK &rest ARGS)  */)
   (ptrdiff_t nargs, Lisp_Object *args)
 {
-  ENTER_LISP_FRAME_VA (nargs, args);
+  ENTER_LISP_FRAME_VA (nargs, args, ());
   EXIT_LISP_FRAME (run_hook_with_args (nargs, args, Ffuncall));
 }
 
 static Lisp_Object
 funcall_not (ptrdiff_t nargs, Lisp_Object *args)
 {
-  ENTER_LISP_FRAME_VA (nargs, args);
+  ENTER_LISP_FRAME_VA (nargs, args, ());
   EXIT_LISP_FRAME (NILP (Ffuncall (nargs, args)) ? Qt : Qnil);
 }
 
@@ -2685,15 +2651,14 @@ Instead, use `add-hook' and specify t for the LOCAL argument.
 usage: (run-hook-with-args-until-failure HOOK &rest ARGS)  */)
   (ptrdiff_t nargs, Lisp_Object *args)
 {
-  ENTER_LISP_FRAME_VA (nargs, args);
+  ENTER_LISP_FRAME_VA (nargs, args, ());
   EXIT_LISP_FRAME (NILP (run_hook_with_args (nargs, args, funcall_not)) ? Qt : Qnil);
 }
 
 static Lisp_Object
 run_hook_wrapped_funcall (ptrdiff_t nargs, Lisp_Object *args)
 {
-  ENTER_LISP_FRAME_VA (nargs, args);
-  LISP_LOCALS (tmp, ret);
+  ENTER_LISP_FRAME_VA (nargs, args, (), tmp, ret);
   tmp = args[0];
 
   args[0] = args[1];
@@ -2713,7 +2678,7 @@ aborts and returns that value.
 usage: (run-hook-wrapped HOOK WRAP-FUNCTION &rest ARGS)  */)
      (ptrdiff_t nargs, Lisp_Object *args)
 {
-  ENTER_LISP_FRAME_VA (nargs, args);
+  ENTER_LISP_FRAME_VA (nargs, args, ());
   EXIT_LISP_FRAME (run_hook_with_args (nargs, args, run_hook_wrapped_funcall));
 }
 
@@ -2726,8 +2691,7 @@ Lisp_Object
 run_hook_with_args (ptrdiff_t nargs, Lisp_Object *args,
 		    Lisp_Object (*funcall) (ptrdiff_t nargs, Lisp_Object *args))
 {
-  ENTER_LISP_FRAME_VA (nargs, args);
-  LISP_LOCALS (sym, val, ret, global_vals);
+  ENTER_LISP_FRAME_VA (nargs, args, (), sym, val, ret, global_vals);
   ret = Qnil;
 
   /* If we are dying or still initializing,
@@ -2795,7 +2759,7 @@ run_hook_with_args (ptrdiff_t nargs, Lisp_Object *args,
 void
 run_hook (Lisp_Object hook)
 {
-  ENTER_LISP_FRAME (hook);
+  ENTER_LISP_FRAME ((hook));
   Frun_hook_with_args (1, &hook);
   EXIT_LISP_FRAME_VOID ();
 }
@@ -2805,7 +2769,7 @@ run_hook (Lisp_Object hook)
 void
 run_hook_with_args_2 (Lisp_Object hook, Lisp_Object arg1, Lisp_Object arg2)
 {
-  ENTER_LISP_FRAME (hook, arg1, arg2);
+  ENTER_LISP_FRAME ((hook, arg1, arg2));
   CALLN (Frun_hook_with_args, hook, arg1, arg2);
   EXIT_LISP_FRAME_VOID ();
 }
@@ -2814,7 +2778,7 @@ run_hook_with_args_2 (Lisp_Object hook, Lisp_Object arg1, Lisp_Object arg2)
 Lisp_Object
 apply1 (Lisp_Object fn, Lisp_Object arg)
 {
-  ENTER_LISP_FRAME (fn, arg);
+  ENTER_LISP_FRAME ((fn, arg));
   EXIT_LISP_FRAME (NILP (arg) ? Ffuncall (1, &fn) : CALLN (Fapply, fn, arg));
 }
 
@@ -2822,7 +2786,7 @@ apply1 (Lisp_Object fn, Lisp_Object arg)
 Lisp_Object
 call0 (Lisp_Object fn)
 {
-  ENTER_LISP_FRAME (fn);
+  ENTER_LISP_FRAME ((fn));
   EXIT_LISP_FRAME (Ffuncall (1, &fn));
 }
 
@@ -2831,7 +2795,7 @@ call0 (Lisp_Object fn)
 Lisp_Object
 call1 (Lisp_Object fn, Lisp_Object arg1)
 {
-  ENTER_LISP_FRAME (fn, arg1);
+  ENTER_LISP_FRAME ((fn, arg1));
   EXIT_LISP_FRAME (CALLN (Ffuncall, fn, arg1));
 }
 
@@ -2840,7 +2804,7 @@ call1 (Lisp_Object fn, Lisp_Object arg1)
 Lisp_Object
 call2 (Lisp_Object fn, Lisp_Object arg1, Lisp_Object arg2)
 {
-  ENTER_LISP_FRAME (fn, arg1, arg2);
+  ENTER_LISP_FRAME ((fn, arg1, arg2));
   EXIT_LISP_FRAME (CALLN (Ffuncall, fn, arg1, arg2));
 }
 
@@ -2849,7 +2813,7 @@ call2 (Lisp_Object fn, Lisp_Object arg1, Lisp_Object arg2)
 Lisp_Object
 call3 (Lisp_Object fn, Lisp_Object arg1, Lisp_Object arg2, Lisp_Object arg3)
 {
-  ENTER_LISP_FRAME (fn, arg1, arg2, arg3);
+  ENTER_LISP_FRAME ((fn, arg1, arg2, arg3));
   EXIT_LISP_FRAME (CALLN (Ffuncall, fn, arg1, arg2, arg3));
 }
 
@@ -2859,7 +2823,7 @@ Lisp_Object
 call4 (Lisp_Object fn, Lisp_Object arg1, Lisp_Object arg2, Lisp_Object arg3,
        Lisp_Object arg4)
 {
-  ENTER_LISP_FRAME (fn, arg1, arg2, arg3, arg4);
+  ENTER_LISP_FRAME ((fn, arg1, arg2, arg3, arg4));
   EXIT_LISP_FRAME (CALLN (Ffuncall, fn, arg1, arg2, arg3, arg4));
 }
 
@@ -2869,7 +2833,7 @@ Lisp_Object
 call5 (Lisp_Object fn, Lisp_Object arg1, Lisp_Object arg2, Lisp_Object arg3,
        Lisp_Object arg4, Lisp_Object arg5)
 {
-  ENTER_LISP_FRAME (fn, arg1, arg2, arg3, arg4, arg5);
+  ENTER_LISP_FRAME ((fn, arg1, arg2, arg3, arg4, arg5));
   EXIT_LISP_FRAME (CALLN (Ffuncall, fn, arg1, arg2, arg3, arg4, arg5));
 }
 
@@ -2879,7 +2843,7 @@ Lisp_Object
 call6 (Lisp_Object fn, Lisp_Object arg1, Lisp_Object arg2, Lisp_Object arg3,
        Lisp_Object arg4, Lisp_Object arg5, Lisp_Object arg6)
 {
-  ENTER_LISP_FRAME (fn, arg1, arg2, arg3, arg4, arg5, arg6);
+  ENTER_LISP_FRAME ((fn, arg1, arg2, arg3, arg4, arg5, arg6));
   EXIT_LISP_FRAME (CALLN (Ffuncall, fn, arg1, arg2, arg3, arg4, arg5, arg6));
 }
 
@@ -2889,7 +2853,7 @@ Lisp_Object
 call7 (Lisp_Object fn, Lisp_Object arg1, Lisp_Object arg2, Lisp_Object arg3,
        Lisp_Object arg4, Lisp_Object arg5, Lisp_Object arg6, Lisp_Object arg7)
 {
-  ENTER_LISP_FRAME (fn, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+  ENTER_LISP_FRAME ((fn, arg1, arg2, arg3, arg4, arg5, arg6, arg7));
   EXIT_LISP_FRAME (CALLN (Ffuncall, fn, arg1, arg2, arg3, arg4, arg5, arg6, arg7));
 }
 
@@ -2901,7 +2865,8 @@ call8 (Lisp_Object fn, Lisp_Object arg1, Lisp_Object arg2, Lisp_Object arg3,
        Lisp_Object arg4, Lisp_Object arg5, Lisp_Object arg6, Lisp_Object arg7,
        Lisp_Object arg8)
 {
-  ENTER_LISP_FRAME (fn, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+  ENTER_LISP_FRAME ((fn, arg1, arg2, arg3, arg4, arg5, arg6, arg7,
+                     arg8));
   EXIT_LISP_FRAME (CALLN (Ffuncall, fn, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8));
 }
 
@@ -2909,7 +2874,7 @@ DEFUN ("functionp", Ffunctionp, Sfunctionp, 1, 1, 0,
        doc: /* Return t if OBJECT is a function.  */)
      (Lisp_Object object)
 {
-  ENTER_LISP_FRAME (object);
+  ENTER_LISP_FRAME ((object));
   if (FUNCTIONP (object))
     EXIT_LISP_FRAME (Qt);
   EXIT_LISP_FRAME (Qnil);
@@ -2918,8 +2883,7 @@ DEFUN ("functionp", Ffunctionp, Sfunctionp, 1, 1, 0,
 bool
 FUNCTIONP (Lisp_Object object)
 {
-  ENTER_LISP_FRAME_T (bool, object);
-  LISP_LOCALS (car);
+  ENTER_LISP_FRAME_T (bool, (object), car);
   if (SYMBOLP (object) && !NILP (Ffboundp (object)))
     {
       object = Findirect_function (object, Qt);
@@ -2956,8 +2920,8 @@ Thus, (funcall \\='cons \\='x \\='y) returns (x . y).
 usage: (funcall FUNCTION &rest ARGUMENTS)  */)
   (ptrdiff_t nargs, Lisp_Object *args)
 {
-  ENTER_LISP_FRAME_VA (nargs, args);
-  LISP_LOCALS (fun, original_fun, funcar, val);
+  ENTER_LISP_FRAME_VA (nargs, args, (), fun, original_fun, funcar,
+                       val);
   ptrdiff_t numargs = nargs - 1;
   ptrdiff_t count;
 
@@ -3030,8 +2994,7 @@ usage: (funcall FUNCTION &rest ARGUMENTS)  */)
 Lisp_Object
 funcall_subr (struct Lisp_Subr *subr, ptrdiff_t numargs, Lisp_Object *args)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (result, fun);
+  ENTER_LISP_FRAME ((), result, fun);
   result = Qnil;
 
   //suspend_scheme_gc();
@@ -3125,8 +3088,7 @@ funcall_subr (struct Lisp_Subr *subr, ptrdiff_t numargs, Lisp_Object *args)
 static Lisp_Object
 apply_lambda (Lisp_Object fun, Lisp_Object args, ptrdiff_t count)
 {
-  ENTER_LISP_FRAME (fun, args);
-  LISP_LOCALS (args_left, tem);
+  ENTER_LISP_FRAME ((fun, args), args_left, tem);
   ptrdiff_t i;
   EMACS_INT numargs;
   Lisp_Object *arg_vector;
@@ -3165,8 +3127,7 @@ static Lisp_Object
 funcall_lambda (Lisp_Object fun, ptrdiff_t nargs,
 		register Lisp_Object *arg_vector)
 {
-  ENTER_LISP_FRAME (fun);
-  LISP_LOCALS (val, syms_left, next, lexenv, cdr, arg);
+  ENTER_LISP_FRAME ((fun), val, syms_left, next, lexenv, cdr, arg);
   ptrdiff_t count = SPECPDL_INDEX ();
   ptrdiff_t i;
   bool optional, rest;
@@ -3309,8 +3270,7 @@ of args.  MAX is the maximum number, or the symbol `many', for a
 function with `&rest' args, or `unevalled' for a special form.  */)
   (Lisp_Object function)
 {
-  ENTER_LISP_FRAME (function);
-  LISP_LOCALS (original, funcar, result);
+  ENTER_LISP_FRAME ((function), original, funcar, result);
 
   original = function;
 
@@ -3363,8 +3323,7 @@ function with `&rest' args, or `unevalled' for a special form.  */)
 static Lisp_Object
 lambda_arity (Lisp_Object fun)
 {
-  ENTER_LISP_FRAME (fun);
-  LISP_LOCALS (syms_left, next);
+  ENTER_LISP_FRAME ((fun), syms_left, next);
 
   if (CONSP (fun))
     {
@@ -3423,8 +3382,7 @@ DEFUN ("fetch-bytecode", Ffetch_bytecode, Sfetch_bytecode,
        doc: /* If byte-compiled OBJECT is lazy-loaded, fetch it now.  */)
   (Lisp_Object object)
 {
-  ENTER_LISP_FRAME (object);
-  LISP_LOCALS (tem);
+  ENTER_LISP_FRAME ((object), tem);
 
   if (COMPILEDP (object))
     {
@@ -3455,8 +3413,7 @@ DEFUN ("fetch-bytecode", Ffetch_bytecode, Sfetch_bytecode,
 bool
 let_shadows_buffer_binding_p (struct Lisp_Symbol *symbol)
 {
-  ENTER_LISP_FRAME_T (bool);
-  LISP_LOCALS (buf);
+  ENTER_LISP_FRAME_T (bool, (), buf);
   union specbinding *p;
   buf = Fcurrent_buffer ();
 
@@ -3478,7 +3435,7 @@ static void
 do_specbind (struct Lisp_Symbol *sym, union specbinding *bind,
              Lisp_Object value, enum Set_Internal_Bind bindflag)
 {
-  ENTER_LISP_FRAME (value);
+  ENTER_LISP_FRAME ((value));
   switch (sym->u.s.redirect)
     {
     case SYMBOL_PLAINVAL:
@@ -3521,8 +3478,7 @@ do_specbind (struct Lisp_Symbol *sym, union specbinding *bind,
 void
 specbind (Lisp_Object symbol, Lisp_Object value)
 {
-  ENTER_LISP_FRAME (symbol, value);
-  LISP_LOCALS (ovalue);
+  ENTER_LISP_FRAME ((symbol, value), ovalue);
   struct Lisp_Symbol *sym;
 
   CHECK_SYMBOL (symbol);
@@ -3594,7 +3550,7 @@ specbind (Lisp_Object symbol, Lisp_Object value)
 void
 record_unwind_protect (void (*function) (Lisp_Object), Lisp_Object arg)
 {
-  ENTER_LISP_FRAME (arg);
+  ENTER_LISP_FRAME ((arg));
   specpdl_ptr->unwind.kind = SPECPDL_UNWIND;
   specpdl_ptr->unwind.func = function;
   specpdl_ptr->unwind.arg = arg;
@@ -3631,8 +3587,7 @@ record_unwind_protect_void (void (*function) (void))
 void
 rebind_for_thread_switch (void)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (value, sym);
+  ENTER_LISP_FRAME ((), value, sym);
   union specbinding *bind;
 
   for (bind = specpdl; bind != specpdl_ptr; ++bind)
@@ -3655,8 +3610,7 @@ static void
 do_one_unbind (union specbinding *this_binding, bool unwinding,
                enum Set_Internal_Bind bindflag)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (sym, symbol, where, old_value);
+  ENTER_LISP_FRAME ((), sym, symbol, where, old_value);
   eassert (unwinding || this_binding->kind >= SPECPDL_LET);
   switch (this_binding->kind)
     {
@@ -3770,8 +3724,7 @@ set_unwind_protect_ptr (ptrdiff_t count, void (*func) (void *), void *arg)
 Lisp_Object
 unbind_to (ptrdiff_t count, Lisp_Object value)
 {
-  ENTER_LISP_FRAME (value);
-  LISP_LOCALS (quitf);
+  ENTER_LISP_FRAME ((value), quitf);
   quitf = Vquit_flag;
 
 
@@ -3800,8 +3753,7 @@ unbind_to (ptrdiff_t count, Lisp_Object value)
 void
 unbind_for_thread_switch (struct thread_state *thr)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (sym);
+  ENTER_LISP_FRAME ((), sym);
   union specbinding *bind;
 
   for (bind = thr->m_specpdl_ptr; bind > thr->m_specpdl;)
@@ -3823,7 +3775,7 @@ A special variable is one that will be bound dynamically, even in a
 context where binding is lexical by default.  */)
   (Lisp_Object symbol)
 {
-  ENTER_LISP_FRAME (symbol);
+  ENTER_LISP_FRAME ((symbol));
    CHECK_SYMBOL (symbol);
    EXIT_LISP_FRAME (XSYMBOL (symbol)->u.s.declared_special ? Qt : Qnil);
 }
@@ -3832,7 +3784,7 @@ context where binding is lexical by default.  */)
 static union specbinding *
 get_backtrace_starting_at (Lisp_Object base)
 {
-  ENTER_LISP_FRAME_T (union specbinding *, base);
+  ENTER_LISP_FRAME_T (union specbinding *, (base));
   union specbinding *pdl = backtrace_top ();
 
   if (!NILP (base))
@@ -3849,7 +3801,7 @@ get_backtrace_starting_at (Lisp_Object base)
 static union specbinding *
 get_backtrace_frame (Lisp_Object nframes, Lisp_Object base)
 {
-  ENTER_LISP_FRAME_T (union specbinding *, nframes, base);
+  ENTER_LISP_FRAME_T (union specbinding *, (nframes, base));
   register EMACS_INT i;
 
   CHECK_NATNUM (nframes);
@@ -3865,8 +3817,7 @@ get_backtrace_frame (Lisp_Object nframes, Lisp_Object base)
 static Lisp_Object
 backtrace_frame_apply (Lisp_Object function, union specbinding *pdl)
 {
-  ENTER_LISP_FRAME (function);
-  LISP_LOCALS (flags, tem);
+  ENTER_LISP_FRAME ((function), flags, tem);
   if (!backtrace_p (pdl))
     EXIT_LISP_FRAME (Qnil);
 
@@ -3890,7 +3841,7 @@ DEFUN ("backtrace-debug", Fbacktrace_debug, Sbacktrace_debug, 2, 2, 0,
 The debugger is entered when that frame exits, if the flag is non-nil.  */)
   (Lisp_Object level, Lisp_Object flag)
 {
-  ENTER_LISP_FRAME (level, flag);
+  ENTER_LISP_FRAME ((level, flag));
   CHECK_NUMBER (level);
   union specbinding *pdl = get_backtrace_frame(level, Qnil);
 
@@ -3914,7 +3865,7 @@ only supported property is :debug-on-exit.  `mapbacktrace' always
 returns nil.  */)
      (Lisp_Object function, Lisp_Object base)
 {
-  ENTER_LISP_FRAME (function, base);
+  ENTER_LISP_FRAME ((function, base));
   union specbinding *pdl = get_backtrace_starting_at (base);
 
   while (backtrace_p (pdl))
@@ -3936,7 +3887,7 @@ DEFUN ("backtrace-frame--internal", Fbacktrace_frame_internal,
 Return the result of FUNCTION, or nil if no matching frame could be found. */)
      (Lisp_Object function, Lisp_Object nframes, Lisp_Object base)
 {
-  ENTER_LISP_FRAME (function, nframes, base);
+  ENTER_LISP_FRAME ((function, nframes, base));
   EXIT_LISP_FRAME (backtrace_frame_apply (function, get_backtrace_frame (nframes, base)));
 }
 
@@ -3950,8 +3901,7 @@ Return the result of FUNCTION, or nil if no matching frame could be found. */)
 static void
 backtrace_eval_unrewind (int distance)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (oldarg, sym, old_value, symbol, where);
+  ENTER_LISP_FRAME ((), oldarg, sym, old_value, symbol, where);
   union specbinding *tmp = specpdl_ptr;
   int step = -1;
   if (distance < 0)
@@ -4047,7 +3997,7 @@ DEFUN ("backtrace-eval", Fbacktrace_eval, Sbacktrace_eval, 2, 3, NULL,
 NFRAMES and BASE specify the activation frame to use, as in `backtrace-frame'.  */)
      (Lisp_Object exp, Lisp_Object nframes, Lisp_Object base)
 {
-  ENTER_LISP_FRAME (exp, nframes, base);
+  ENTER_LISP_FRAME ((exp, nframes, base));
   union specbinding *pdl = get_backtrace_frame (nframes, base);
   ptrdiff_t count = SPECPDL_INDEX ();
   ptrdiff_t distance = specpdl_ptr - pdl;
@@ -4070,8 +4020,7 @@ DEFUN ("backtrace--locals", Fbacktrace__locals, Sbacktrace__locals, 1, 2, NULL,
 NFRAMES and BASE specify the activation frame to use, as in `backtrace-frame'.  */)
   (Lisp_Object nframes, Lisp_Object base)
 {
-  ENTER_LISP_FRAME (nframes, base);
-  LISP_LOCALS (result, sym, val, env, binding);
+  ENTER_LISP_FRAME ((nframes, base), result, sym, val, env, binding);
   union specbinding *frame = get_backtrace_frame (nframes, base);
   union specbinding *prevframe
     = get_backtrace_frame (make_number (XFASTINT (nframes) - 1), base);
@@ -4197,7 +4146,7 @@ mark_specpdl (union specbinding *first, union specbinding *ptr)
 void
 get_backtrace (Lisp_Object array)
 {
-  ENTER_LISP_FRAME (array);
+  ENTER_LISP_FRAME ((array));
   union specbinding *pdl = backtrace_next (backtrace_top ());
   ptrdiff_t i = 0, asize = ASIZE (array);
 

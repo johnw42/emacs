@@ -134,8 +134,7 @@ static void get_boot_time_1 (const char *, bool);
 static time_t
 get_boot_time (void)
 {
-  ENTER_LISP_FRAME_T (time_t);
-  LISP_LOCALS (filename);
+  ENTER_LISP_FRAME_T (time_t, (), filename);
 #if defined (BOOT_TIME)
   int counter;
 #endif
@@ -310,7 +309,7 @@ typedef struct
 static void
 fill_in_lock_file_name (char *lockfile, Lisp_Object fn)
 {
-  ENTER_LISP_FRAME (fn);
+  ENTER_LISP_FRAME ((fn));
   char *last_slash = memrchr (SSDATA (fn), '/', SBYTES (fn));
   char *base = last_slash + 1;
   ptrdiff_t dirlen = base - SSDATA (fn);
@@ -436,8 +435,7 @@ create_lock_file (char *lfname, char *lock_info_str, bool force)
 static int
 lock_file_1 (char *lfname, bool force)
 {
-  ENTER_LISP_FRAME_T (int);
-  LISP_LOCALS (luser_name, lhost_name);
+  ENTER_LISP_FRAME_T (int, (), luser_name, lhost_name);
   /* Call this first because it can GC.  */
   printmax_t boot = get_boot_time ();
 
@@ -523,8 +521,7 @@ read_lock_data (char *lfname, char lfinfo[MAX_LFINFO + 1])
 static int
 current_lock_owner (lock_info_type *owner, char *lfname)
 {
-  ENTER_LISP_FRAME_T (int);
-  LISP_LOCALS (system_name);
+  ENTER_LISP_FRAME_T (int, (), system_name);
   int ret;
   lock_info_type local_owner;
   ptrdiff_t lfinfolen;
@@ -670,8 +667,7 @@ lock_if_free (lock_info_type *clasher, char *lfname)
 void
 lock_file (Lisp_Object fn)
 {
-  ENTER_LISP_FRAME (fn);
-  LISP_LOCALS (orig_fn, encoded_fn, subject_buf, attack);
+  ENTER_LISP_FRAME ((fn), orig_fn, encoded_fn, subject_buf, attack);
   char *lfname;
   lock_info_type lock_info;
   USE_SAFE_ALLOCA;
@@ -737,7 +733,7 @@ lock_file (Lisp_Object fn)
 void
 unlock_file (Lisp_Object fn)
 {
-  ENTER_LISP_FRAME (fn);
+  ENTER_LISP_FRAME ((fn));
   char *lfname;
   USE_SAFE_ALLOCA;
 
@@ -769,8 +765,7 @@ unlock_file (Lisp_Object fn)
 void
 unlock_all_files (void)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (tail, buf);
+  ENTER_LISP_FRAME ((), tail, buf);
   register struct buffer *b;
 
   FOR_EACH_LIVE_BUFFER (tail, buf)
@@ -792,7 +787,7 @@ or else nothing is done if current buffer isn't visiting a file.
 If the option `create-lockfiles' is nil, this does nothing.  */)
   (Lisp_Object file)
 {
-  ENTER_LISP_FRAME (file);
+  ENTER_LISP_FRAME ((file));
   if (NILP (file))
     file = BVAR (current_buffer, file_truename);
   else
@@ -832,8 +827,7 @@ The value is nil if the FILENAME is not locked,
 t if it is locked by you, else a string saying which user has locked it.  */)
   (Lisp_Object filename)
 {
-  ENTER_LISP_FRAME (filename);
-  LISP_LOCALS (ret);
+  ENTER_LISP_FRAME ((filename), ret);
 #ifdef MSDOS
   EXIT_LISP_FRAME (Qnil);
 #else

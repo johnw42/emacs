@@ -1457,8 +1457,7 @@ bidi_fetch_char_skip_isolates (ptrdiff_t charpos, ptrdiff_t bytepos,
 static ptrdiff_t
 bidi_at_paragraph_end (ptrdiff_t charpos, ptrdiff_t bytepos)
 {
-  ENTER_LISP_FRAME_T (ptrdiff_t);
-  LISP_LOCALS (sep_re, start_re);
+  ENTER_LISP_FRAME_T (ptrdiff_t, (), sep_re, start_re);
   ptrdiff_t val;
 
   if (STRINGP (BVAR (current_buffer, bidi_paragraph_separate_re)))
@@ -1542,8 +1541,7 @@ bidi_paragraph_cache_on_off (void)
 static ptrdiff_t
 bidi_find_paragraph_start (ptrdiff_t pos, ptrdiff_t pos_byte)
 {
-  ENTER_LISP_FRAME_T (ptrdiff_t);
-  LISP_LOCALS (re);
+  ENTER_LISP_FRAME_T (ptrdiff_t, (), re);
   re = STRINGP (BVAR (current_buffer, bidi_paragraph_start_re))
     ? BVAR (current_buffer, bidi_paragraph_start_re)
     : paragraph_start_re;

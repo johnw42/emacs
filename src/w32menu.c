@@ -103,8 +103,7 @@ void w32_free_menu_strings (HWND);
 Lisp_Object
 w32_popup_dialog (struct frame *f, Lisp_Object header, Lisp_Object contents)
 {
-  ENTER_LISP_FRAME (header, contents);
-  LISP_LOCALS (title, selection);
+  ENTER_LISP_FRAME ((header, contents), title, selection);
 
   check_window_system (f);
 
@@ -172,8 +171,7 @@ void menubar_selection_callback (struct frame *, void *);
 void
 menubar_selection_callback (struct frame *f, void * client_data)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (prefix, entry, vector, frame);
+  ENTER_LISP_FRAME ((), prefix, entry, vector, frame);
   Lisp_Object *subprefix_stack;
   int submenu_depth = 0;
   int i;
@@ -264,8 +262,7 @@ menubar_selection_callback (struct frame *f, void * client_data)
 void
 set_frame_menubar (struct frame *f, bool first_time, bool deep_p)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (items, buffer, key, string, maps);
+  ENTER_LISP_FRAME ((), items, buffer, key, string, maps);
   HMENU menubar_widget = f->output_data.w32->menubar_widget;
   widget_value *wv, *first_wv, *prev_wv = 0;
   int i, last_i = 0;
@@ -550,8 +547,8 @@ Lisp_Object
 w32_menu_show (struct frame *f, int x, int y, int menuflags,
 	       Lisp_Object title, const char **error)
 {
-  ENTER_LISP_FRAME (title);
-  LISP_LOCALS (pane_name, prefix, item_name, enable, descrip, def, type, selected, help, entry);
+  ENTER_LISP_FRAME ((title), pane_name, prefix, item_name, enable,
+                    descrip, def, type, selected, help, entry);
   int i;
   int menu_item_selection;
   HMENU menu;
@@ -864,8 +861,8 @@ static Lisp_Object
 w32_dialog_show (struct frame *f, Lisp_Object title,
 		 Lisp_Object header, char **error)
 {
-  ENTER_LISP_FRAME (title, header);
-  LISP_LOCALS (pane_name, item_name, enable, descrip, help, entry);
+  ENTER_LISP_FRAME ((title, header), pane_name, item_name, enable,
+                    descrip, help, entry);
   int i, nb_buttons = 0;
   char dialog_name[6];
   int menu_item_selection;
@@ -1029,8 +1026,7 @@ w32_dialog_show (struct frame *f, Lisp_Object title,
 static bool
 is_simple_dialog (Lisp_Object contents)
 {
-  ENTER_LISP_FRAME_T (bool, contents);
-  LISP_LOCALS (options, name, yes, no, other);
+  ENTER_LISP_FRAME_T (bool, (contents), options, name, yes, no, other);
 
   if (!CONSP (contents))
     EXIT_LISP_FRAME (false);
@@ -1073,8 +1069,8 @@ is_simple_dialog (Lisp_Object contents)
 static Lisp_Object
 simple_dialog_show (struct frame *f, Lisp_Object contents, Lisp_Object header)
 {
-  ENTER_LISP_FRAME (contents, header);
-  LISP_LOCALS (lispy_answer, temp, item, name, value);
+  ENTER_LISP_FRAME ((contents, header), lispy_answer, temp, item,
+                    name, value);
   int answer;
   UINT type;
   lispy_answer = Qnil;
@@ -1464,8 +1460,7 @@ void w32_menu_display_help (HWND, HMENU, UINT, UINT);
 void
 w32_menu_display_help (HWND owner, HMENU menu, UINT item, UINT flags)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (frame, help);
+  ENTER_LISP_FRAME ((), frame, help);
   if (get_menu_item_info)
     {
       struct frame *f = x_window_to_frame (&one_w32_display_info, owner);

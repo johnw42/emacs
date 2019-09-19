@@ -204,7 +204,7 @@ convert_to_handle_as_ascii (void)
 static HGLOBAL
 convert_to_handle_as_coded (Lisp_Object coding_system)
 {
-  ENTER_LISP_FRAME_T (HGLOBAL, coding_system);
+  ENTER_LISP_FRAME_T (HGLOBAL, (coding_system));
   HGLOBAL htext;
   unsigned char *dst = NULL;
   struct coding_system coding;
@@ -241,8 +241,7 @@ convert_to_handle_as_coded (Lisp_Object coding_system)
 static Lisp_Object
 render (Lisp_Object oformat)
 {
-  ENTER_LISP_FRAME (oformat);
-  LISP_LOCALS (cs);
+  ENTER_LISP_FRAME ((oformat), cs);
   HGLOBAL htext = NULL;
   UINT format = XFASTINT (oformat);
 
@@ -326,7 +325,7 @@ render_locale (void)
 static Lisp_Object
 render_all (Lisp_Object ignore)
 {
-  ENTER_LISP_FRAME (ignore);
+  ENTER_LISP_FRAME ((ignore));
   ONTRACE (fprintf (stderr, "render_all\n"));
 
   /* According to the docs we should not call OpenClipboard() here,
@@ -385,7 +384,7 @@ render_all (Lisp_Object ignore)
 static void
 run_protected (Lisp_Object (*code) (Lisp_Object), Lisp_Object arg)
 {
-  ENTER_LISP_FRAME (arg);
+  ENTER_LISP_FRAME ((arg));
   /* FIXME: This works but it doesn't feel right.  Too much fiddling
      with global variables and calling strange looking functions.  Is
      this really the right way to run Lisp callbacks?  */
@@ -410,7 +409,7 @@ run_protected (Lisp_Object (*code) (Lisp_Object), Lisp_Object arg)
 static Lisp_Object
 lisp_error_handler (Lisp_Object error)
 {
-  ENTER_LISP_FRAME (error);
+  ENTER_LISP_FRAME ((error));
   Vsignaling_function = Qnil;
   cmd_error_internal (error, "Error in delayed clipboard rendering: ");
   Vinhibit_quit = Qt;
@@ -486,8 +485,7 @@ term_w32select (void)
 static void
 setup_config (void)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (coding_system, dos_coding_system);
+  ENTER_LISP_FRAME ((), coding_system, dos_coding_system);
   const char *coding_name;
   const char *cp;
   char *end;
@@ -627,8 +625,7 @@ coding_from_cp (UINT codepage)
 static Lisp_Object
 validate_coding_system (Lisp_Object coding_system)
 {
-  ENTER_LISP_FRAME (coding_system);
-  LISP_LOCALS (eol_type);
+  ENTER_LISP_FRAME ((coding_system), eol_type);
 
   /* Make sure the input is valid. */
   if (NILP (Fcoding_system_p (coding_system)))
@@ -657,7 +654,7 @@ static void
 setup_windows_coding_system (Lisp_Object coding_system,
 			     struct coding_system * coding)
 {
-  ENTER_LISP_FRAME (coding_system);
+  ENTER_LISP_FRAME ((coding_system));
   memset (coding, 0, sizeof (*coding));
   setup_coding_system (coding_system, coding);
 
@@ -683,7 +680,7 @@ DEFUN ("w32-set-clipboard-data", Fw32_set_clipboard_data,
        doc: /* This sets the clipboard data to the given text.  */)
   (Lisp_Object string, Lisp_Object ignored)
 {
-  ENTER_LISP_FRAME (string, ignored);
+  ENTER_LISP_FRAME ((string, ignored));
   BOOL ok = TRUE;
   int nbytes;
   unsigned char *src;
@@ -804,8 +801,7 @@ DEFUN ("w32-get-clipboard-data", Fw32_get_clipboard_data,
        doc: /* This gets the clipboard data in text format.  */)
   (Lisp_Object ignored)
 {
-  ENTER_LISP_FRAME (ignored);
-  LISP_LOCALS (ret, coding_system, dos_coding_system);
+  ENTER_LISP_FRAME ((ignored), ret, coding_system, dos_coding_system);
   HGLOBAL htext;
   ret = Qnil;
 
@@ -1034,8 +1030,7 @@ server to query.  If omitted or nil, that stands for the selected
 frame's display, or the first available X display.  */)
   (Lisp_Object selection, Lisp_Object terminal)
 {
-  ENTER_LISP_FRAME (selection, terminal);
-  LISP_LOCALS (val);
+  ENTER_LISP_FRAME ((selection, terminal), val);
   CHECK_SYMBOL (selection);
 
   /* Return nil for PRIMARY and SECONDARY selections; for CLIPBOARD, check
@@ -1086,8 +1081,7 @@ for `CLIPBOARD'.  The return value is a vector of symbols, each symbol
 representing a data format that is currently available in the clipboard.  */)
   (Lisp_Object selection, Lisp_Object terminal)
 {
-  ENTER_LISP_FRAME (selection, terminal);
-  LISP_LOCALS (val);
+  ENTER_LISP_FRAME ((selection, terminal), val);
   /* Xlib-like names for standard Windows clipboard data formats.
      They are in upper-case to mimic xselect.c.  A couple of the names
      were changed to be more like their X counterparts.  */

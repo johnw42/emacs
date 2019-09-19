@@ -40,8 +40,7 @@ static struct hash_table_test hashtest_profiler;
 static Lisp_Object
 make_log (EMACS_INT heap_size, EMACS_INT max_stack_depth)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (log);
+  ENTER_LISP_FRAME ((), log);
   /* We use a standard Elisp hash-table object, but we use it in
      a special way.  This is OK as long as the object is not exposed
      to Elisp, i.e. until it is returned by *-profiler-log, after which
@@ -106,8 +105,7 @@ static EMACS_INT approximate_median (log_t *log,
 
 static void evict_lower_half (log_t *log)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (key, tmp);
+  ENTER_LISP_FRAME ((), key, tmp);
   ptrdiff_t size = ASIZE (log->key_and_value) / 2;
   EMACS_INT median = approximate_median (log, 0, size);
   ptrdiff_t i;
@@ -141,8 +139,7 @@ static void evict_lower_half (log_t *log)
 static void
 record_backtrace (log_t *log, EMACS_INT count)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (backtrace);
+  ENTER_LISP_FRAME ((), backtrace);
   ptrdiff_t index;
 
   if (log->next_free < 0)
@@ -269,7 +266,7 @@ deliver_profiler_signal (int signal)
 static int
 setup_cpu_timer (Lisp_Object sampling_interval)
 {
-  ENTER_LISP_FRAME_T (int, sampling_interval);
+  ENTER_LISP_FRAME_T (int, (sampling_interval));
   struct sigaction action;
   struct itimerval timer;
   struct timespec interval;
@@ -343,7 +340,7 @@ It takes call-stack samples each SAMPLING-INTERVAL nanoseconds, approximately.
 See also `profiler-log-size' and `profiler-max-stack-depth'.  */)
   (Lisp_Object sampling_interval)
 {
-  ENTER_LISP_FRAME (sampling_interval);
+  ENTER_LISP_FRAME ((sampling_interval));
   if (profiler_cpu_running)
     error ("CPU profiler is already running");
 
@@ -425,8 +422,7 @@ of functions, where the last few elements may be nil.
 Before returning, a new log is allocated for future samples.  */)
   (void)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (result);
+  ENTER_LISP_FRAME ((), result);
   result = cpu_log;
 
   /* Here we're making the log visible to Elisp, so it's not safe any
@@ -503,8 +499,7 @@ of functions, where the last few elements may be nil.
 Before returning, a new log is allocated for future samples.  */)
   (void)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (result);
+  ENTER_LISP_FRAME ((), result);
   result = memory_log;
 
   /* Here we're making the log visible to Elisp , so it's not safe any
@@ -533,7 +528,7 @@ Used to determine if different closures are just different instances of
 the same lambda expression, or are really unrelated function.  */)
      (Lisp_Object f1, Lisp_Object f2)
 {
-  ENTER_LISP_FRAME (f1, f2);
+  ENTER_LISP_FRAME ((f1, f2));
   bool res;
   if (EQ (f1, f2))
     res = true;
@@ -552,7 +547,7 @@ static bool
 cmpfn_profiler (struct hash_table_test *t,
 		Lisp_Object bt1, Lisp_Object bt2)
 {
-  ENTER_LISP_FRAME_T (bool, bt1, bt2);
+  ENTER_LISP_FRAME_T (bool, (bt1, bt2));
   if (VECTORP (bt1) && VECTORP (bt2))
     {
       ptrdiff_t i, l = ASIZE (bt1);
@@ -570,8 +565,7 @@ cmpfn_profiler (struct hash_table_test *t,
 static EMACS_UINT
 hashfn_profiler (struct hash_table_test *ht, Lisp_Object bt)
 {
-  ENTER_LISP_FRAME_T (EMACS_UINT, bt);
-  LISP_LOCALS (f);
+  ENTER_LISP_FRAME_T (EMACS_UINT, (bt), f);
   if (VECTORP (bt))
     {
       EMACS_UINT hash = 0;

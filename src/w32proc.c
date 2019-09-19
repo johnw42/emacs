@@ -1728,8 +1728,7 @@ merge_and_sort_env (char **envp1, char **envp2, char **new_envp)
 int
 sys_spawnve (int mode, char *cmdname, char **argv, char **envp)
 {
-  ENTER_LISP_FRAME_T (int);
-  LISP_LOCALS (program, full);
+  ENTER_LISP_FRAME_T (int, (), program, full);
   char *cmdline, *env, *parg, **targ;
   int arglen, numenv;
   pid_t pid;
@@ -2899,8 +2898,7 @@ the value of `system-name' and should supplant it), otherwise t is
 returned to indicate winsock support is present.  */)
   (Lisp_Object load_now)
 {
-  ENTER_LISP_FRAME (load_now);
-  LISP_LOCALS (orig_hostname, hostname);
+  ENTER_LISP_FRAME ((load_now), orig_hostname, hostname);
   int have_winsock;
 
   have_winsock = init_winsock (!NILP (load_now));
@@ -2945,7 +2943,7 @@ If FILENAME does not exist, return nil.
 All path elements in FILENAME are converted to their short names.  */)
   (Lisp_Object filename)
 {
-  ENTER_LISP_FRAME (filename);
+  ENTER_LISP_FRAME ((filename));
   char shortname[MAX_PATH];
 
   CHECK_STRING (filename);
@@ -2972,7 +2970,7 @@ If FILENAME does not exist, return nil.
 All path elements in FILENAME are converted to their long names.  */)
   (Lisp_Object filename)
 {
-  ENTER_LISP_FRAME (filename);
+  ENTER_LISP_FRAME ((filename));
   char longname[ MAX_UTF8_PATH ];
   int drive_only = 0;
 
@@ -3011,8 +3009,7 @@ any other symbol will be interpreted as normal.
 If successful, the return value is t, otherwise nil.  */)
   (Lisp_Object process, Lisp_Object priority)
 {
-  ENTER_LISP_FRAME (process, priority);
-  LISP_LOCALS (result);
+  ENTER_LISP_FRAME ((process, priority), result);
   HANDLE proc_handle = GetCurrentProcess ();
   DWORD  priority_class = NORMAL_PRIORITY_CLASS;
   result = Qnil;
@@ -3082,8 +3079,7 @@ include characters not supported by the current ANSI codepage, as
 such programs cannot be invoked by Emacs anyway.  */)
      (Lisp_Object program)
 {
-  ENTER_LISP_FRAME (program);
-  LISP_LOCALS (encoded_progname);
+  ENTER_LISP_FRAME ((program), encoded_progname);
   int is_dos_app, is_cygwin_app, is_msys_app, dummy;
   char *progname, progname_a[MAX_PATH];
 
@@ -3190,7 +3186,7 @@ locale information is returned.
 If LCID (a 16-bit number) is not a valid locale, the result is nil.  */)
   (Lisp_Object lcid, Lisp_Object longform)
 {
-  ENTER_LISP_FRAME (lcid, longform);
+  ENTER_LISP_FRAME ((lcid, longform));
   int got_abbrev;
   int got_full;
   char abbrev_name[32] = { 0 };
@@ -3298,7 +3294,7 @@ This is a numerical value; use `w32-get-locale-info' to convert to a
 human-readable form.  */)
   (Lisp_Object userp)
 {
-  ENTER_LISP_FRAME (userp);
+  ENTER_LISP_FRAME ((userp));
   if (NILP (userp))
     EXIT_LISP_FRAME (make_number (GetSystemDefaultLCID ()));
   EXIT_LISP_FRAME (make_number (GetUserDefaultLCID ()));
@@ -3310,7 +3306,7 @@ DEFUN ("w32-set-current-locale", Fw32_set_current_locale, Sw32_set_current_local
 If successful, the new locale id is returned, otherwise nil.  */)
   (Lisp_Object lcid)
 {
-  ENTER_LISP_FRAME (lcid);
+  ENTER_LISP_FRAME ((lcid));
   CHECK_NUMBER (lcid);
 
   if (!IsValidLocale (XINT (lcid), LCID_SUPPORTED))
@@ -3370,7 +3366,7 @@ This codepage setting affects keyboard input in tty mode.
 If successful, the new CP is returned, otherwise nil.  */)
   (Lisp_Object cp)
 {
-  ENTER_LISP_FRAME (cp);
+  ENTER_LISP_FRAME ((cp));
   CHECK_NUMBER (cp);
 
   if (!IsValidCodePage (XINT (cp)))
@@ -3399,7 +3395,7 @@ This codepage setting affects display in tty mode.
 If successful, the new CP is returned, otherwise nil.  */)
   (Lisp_Object cp)
 {
-  ENTER_LISP_FRAME (cp);
+  ENTER_LISP_FRAME ((cp));
   CHECK_NUMBER (cp);
 
   if (!IsValidCodePage (XINT (cp)))
@@ -3423,7 +3419,7 @@ codepages; most console codepages are not supported and will
 yield nil.  */)
   (Lisp_Object cp)
 {
-  ENTER_LISP_FRAME (cp);
+  ENTER_LISP_FRAME ((cp));
   CHARSETINFO info;
   DWORD_PTR dwcp;
 
@@ -3449,8 +3445,7 @@ DEFUN ("w32-get-valid-keyboard-layouts", Fw32_get_valid_keyboard_layouts,
 The return value is a list of pairs of language id and layout id.  */)
   (void)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (obj);
+  ENTER_LISP_FRAME ((), obj);
   int num_layouts = GetKeyboardLayoutList (0, NULL);
   HKL * layouts = (HKL *) alloca (num_layouts * sizeof (HKL));
   obj = Qnil;
@@ -3492,7 +3487,7 @@ The keyboard layout setting affects interpretation of keyboard input.
 If successful, the new layout id is returned, otherwise nil.  */)
   (Lisp_Object layout)
 {
-  ENTER_LISP_FRAME (layout);
+  ENTER_LISP_FRAME ((layout));
   HKL kl;
 
   CHECK_CONS (layout);

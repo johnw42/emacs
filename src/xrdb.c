@@ -370,8 +370,7 @@ get_user_db (Display *display)
 static XrmDatabase
 get_environ_db (void)
 {
-  ENTER_LISP_FRAME_T (XrmDatabase);
-  LISP_LOCALS (system_name);
+  ENTER_LISP_FRAME_T (XrmDatabase, (), system_name);
   XrmDatabase db;
   char *p = getenv ("XENVIRONMENT");
   char *filename = 0;

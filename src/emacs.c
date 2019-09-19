@@ -406,8 +406,8 @@ terminate_due_to_signal (int sig, int backtrace_limit)
 static void
 init_cmdargs (int argc, char **argv, int skip_args, char *original_pwd)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (name, dir, handler, raw_name, found, odir, tem, lib_src_exists, etc_exists, info_exists);
+  ENTER_LISP_FRAME ((), name, dir, handler, raw_name, found, odir,
+                    tem, lib_src_exists, etc_exists, info_exists);
   int i;
   ptrdiff_t count = SPECPDL_INDEX ();
   AUTO_STRING (slash_colon, "/:");
@@ -783,8 +783,7 @@ main (int argc, char **argv)
 #ifdef HAVE_CHEZ_SCHEME
   scheme_init ();
 #endif /* HAVE_CHEZ_SCHEME */
-  ENTER_LISP_FRAME_T (int);
-  LISP_LOCALS (tem, tem2, old_log_max);
+  ENTER_LISP_FRAME_T (int, (), tem, tem2, old_log_max);
 
   if (argmatch (argv, argc, "-version", "--version", 3, NULL, &skip_args))
     {
@@ -2037,8 +2036,7 @@ all of which are called before Emacs is actually killed.  */
        attributes: noreturn)
   (Lisp_Object arg)
 {
-  ENTER_LISP_FRAME (arg);
-  LISP_LOCALS (listfile);
+  ENTER_LISP_FRAME ((arg), listfile);
   int exit_code;
 
 /* #ifdef HAVE_CHEZ_SCHEME */
@@ -2098,7 +2096,7 @@ all of which are called before Emacs is actually killed.  */
 void
 shut_down_emacs (int sig, Lisp_Object stuff)
 {
-  ENTER_LISP_FRAME (stuff);
+  ENTER_LISP_FRAME ((stuff));
   /* Prevent running of hooks from now on.  */
   Vrun_hooks = Qnil;
 
@@ -2182,8 +2180,7 @@ This is used in the file `loadup.el' when building Emacs.
 You must run Emacs in batch mode in order to dump it.  */)
   (Lisp_Object filename, Lisp_Object symfile)
 {
-  ENTER_LISP_FRAME (filename, symfile);
-  LISP_LOCALS (tem, symbol);
+  ENTER_LISP_FRAME ((filename, symfile), tem, symbol);
   ptrdiff_t count = SPECPDL_INDEX ();
 
   check_pure_size ();
@@ -2292,7 +2289,7 @@ fixup_locale (void)
 static void
 synchronize_locale (int category, Lisp_Object *plocale, Lisp_Object desired_locale)
 {
-  ENTER_LISP_FRAME (desired_locale);
+  ENTER_LISP_FRAME ((desired_locale));
   if (! EQ (*plocale, desired_locale))
     {
       *plocale = desired_locale;
@@ -2349,8 +2346,7 @@ emacs_strerror (int error_number)
 Lisp_Object
 decode_env_path (const char *evarname, const char *defalt, bool empty)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (lpath, element, tem, empty_element, prop);
+  ENTER_LISP_FRAME ((), lpath, element, tem, empty_element, prop);
   const char *path, *p;
   /* Default is to use "." for empty path elements.
      But if argument EMPTY is true, use nil instead.  */

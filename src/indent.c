@@ -59,8 +59,7 @@ static ptrdiff_t position_indentation (ptrdiff_t);
 struct Lisp_Char_Table *
 buffer_display_table (void)
 {
-  ENTER_LISP_FRAME_T (struct Lisp_Char_Table *);
-  LISP_LOCALS (thisbuf);
+  ENTER_LISP_FRAME_T (struct Lisp_Char_Table *, (), thisbuf);
 
   thisbuf = BVAR (current_buffer, display_table);
   if (DISP_TABLE_P (thisbuf))
@@ -77,8 +76,7 @@ buffer_display_table (void)
 static int
 character_width (int c, struct Lisp_Char_Table *dp)
 {
-  ENTER_LISP_FRAME_T (int);
-  LISP_LOCALS (elt);
+  ENTER_LISP_FRAME_T (int, (), elt);
 
   /* These width computations were determined by examining the cases
      in display_text_line.  */
@@ -112,7 +110,7 @@ character_width (int c, struct Lisp_Char_Table *dp)
 bool
 disptab_matches_widthtab (struct Lisp_Char_Table *disptab, Lisp_Object widthtab)
 {
-  ENTER_LISP_FRAME_T (bool, widthtab);
+  ENTER_LISP_FRAME_T (bool, (widthtab));
   int i;
 
   struct Lisp_Vector *cache = XVECTOR (widthtab);
@@ -131,8 +129,7 @@ disptab_matches_widthtab (struct Lisp_Char_Table *disptab, Lisp_Object widthtab)
 void
 recompute_width_table (struct buffer *buf, struct Lisp_Char_Table *disptab)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (widthtab);
+  ENTER_LISP_FRAME ((), widthtab);
 #ifdef HAVE_CHEZ_SCHEME
   if (!VECTORP (BVAR (buf, width_table)))
     bset_width_table (buf, make_uninit_vector (256));
@@ -234,8 +231,8 @@ width_run_cache_on_off (void)
 ptrdiff_t
 skip_invisible (ptrdiff_t pos, ptrdiff_t *next_boundary_p, ptrdiff_t to, Lisp_Object window)
 {
-  ENTER_LISP_FRAME_T (ptrdiff_t, window);
-  LISP_LOCALS (prop, position, overlay_limit, proplimit, buffer, tmp);
+  ENTER_LISP_FRAME_T (ptrdiff_t, (window), prop, position,
+                      overlay_limit, proplimit, buffer, tmp);
   ptrdiff_t end;
   int inv_p;
 
@@ -332,8 +329,7 @@ Text that has an invisible property is considered as having width 0, unless
 `buffer-invisibility-spec' specifies that it is replaced by an ellipsis.  */)
   (void)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (temp);
+  ENTER_LISP_FRAME ((), temp);
   XSETFASTINT (temp, current_column ());
   EXIT_LISP_FRAME (temp);
 }
@@ -349,8 +345,7 @@ invalidate_current_column (void)
 ptrdiff_t
 current_column (void)
 {
-  ENTER_LISP_FRAME_T (ptrdiff_t);
-  LISP_LOCALS (charvec, entry);
+  ENTER_LISP_FRAME_T (ptrdiff_t, (), charvec, entry);
   ptrdiff_t col;
   unsigned char *ptr, *stop;
   bool tab_seen;
@@ -489,8 +484,7 @@ current_column (void)
 static int
 check_display_width (ptrdiff_t pos, ptrdiff_t col, ptrdiff_t *endpos)
 {
-  ENTER_LISP_FRAME_T (int);
-  LISP_LOCALS (val, overlay, plist, prop);
+  ENTER_LISP_FRAME_T (int, (), val, overlay, plist, prop);
 
   if (CONSP (val = get_char_property_and_overlay
 	     (make_number (pos), Qdisplay, Qnil, &overlay))
@@ -553,8 +547,7 @@ check_display_width (ptrdiff_t pos, ptrdiff_t col, ptrdiff_t *endpos)
 static void
 scan_for_column (ptrdiff_t *endpos, EMACS_INT *goalcol, ptrdiff_t *prevcol)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (window, charvec, entry);
+  ENTER_LISP_FRAME ((), window, charvec, entry);
   int tab_width = SANE_TAB_WIDTH (current_buffer);
   bool ctl_arrow = !NILP (BVAR (current_buffer, ctl_arrow));
   struct Lisp_Char_Table *dp = buffer_display_table ();
@@ -761,7 +754,7 @@ current_column_1 (void)
 static double
 string_display_width (Lisp_Object string, Lisp_Object beg, Lisp_Object end)
 {
-  ENTER_LISP_FRAME_T (double, string, beg, end);
+  ENTER_LISP_FRAME_T (double, (string, beg, end));
   int col;
   unsigned char *ptr, *stop;
   bool tab_seen;
@@ -841,8 +834,7 @@ even if that goes past COLUMN; by default, MINIMUM is zero.
 The return value is the column where the insertion ends.  */)
   (Lisp_Object column, Lisp_Object minimum)
 {
-  ENTER_LISP_FRAME (column, minimum);
-  LISP_LOCALS (n);
+  ENTER_LISP_FRAME ((column, minimum), n);
   EMACS_INT mincol;
   register ptrdiff_t fromcol;
   int tab_width = SANE_TAB_WIDTH (current_buffer);
@@ -1016,7 +1008,7 @@ COLUMN, add spaces/tabs to get there.
 The return value is the current column.  */)
   (Lisp_Object column, Lisp_Object force)
 {
-  ENTER_LISP_FRAME (column, force);
+  ENTER_LISP_FRAME ((column, force));
   ptrdiff_t pos, prev_col;
   EMACS_INT col;
   EMACS_INT goal;
@@ -1145,8 +1137,7 @@ compute_motion (ptrdiff_t from, ptrdiff_t frombyte, EMACS_INT fromvpos,
 		EMACS_INT tovpos, EMACS_INT tohpos, EMACS_INT width,
 		ptrdiff_t hscroll, int tab_offset, struct window *win)
 {
-  ENTER_LISP_FRAME_T (struct position *);
-  LISP_LOCALS (window, charvec, entry);
+  ENTER_LISP_FRAME_T (struct position *, (), window, charvec, entry);
   EMACS_INT hpos = fromhpos;
   EMACS_INT vpos = fromvpos;
 
@@ -1778,8 +1769,8 @@ visible section of the buffer, and pass LINE and COL as TOPOS.  */)
   (Lisp_Object from, Lisp_Object frompos, Lisp_Object to, Lisp_Object topos,
    Lisp_Object width, Lisp_Object offsets, Lisp_Object window)
 {
-  ENTER_LISP_FRAME (from, frompos, to, topos, width, offsets, window);
-  LISP_LOCALS (bufpos, hpos, vpos, prevhpos);
+  ENTER_LISP_FRAME ((from, frompos, to, topos, width, offsets, window),
+                    bufpos, hpos, vpos, prevhpos);
   struct window *w;
   struct position *pos;
   ptrdiff_t hscroll;
@@ -1854,8 +1845,8 @@ struct position *
 vmotion (register ptrdiff_t from, register ptrdiff_t from_byte,
 	 register EMACS_INT vtarget, struct window *w)
 {
-  ENTER_LISP_FRAME_T (struct position *);
-  LISP_LOCALS (window, text_prop_object, propval);
+  ENTER_LISP_FRAME_T (struct position *, (), window, text_prop_object,
+                      propval);
   ptrdiff_t hscroll = w->hscroll;
   struct position pos;
   /* VPOS is cumulative vertical position, changed as from is changed.  */
@@ -2036,7 +2027,7 @@ case, the value doesn't include the 2 columns used for padding the
 numbers on display.  */)
   (Lisp_Object pixelwise)
 {
-  ENTER_LISP_FRAME (pixelwise);
+  ENTER_LISP_FRAME ((pixelwise));
   int width, pixel_width;
   struct window *w = XWINDOW (selected_window);
   line_number_display_width (XWINDOW (selected_window), &width, &pixel_width);
@@ -2056,7 +2047,7 @@ static int
 window_column_x (struct window *w, Lisp_Object window,
 		 double col, Lisp_Object column)
 {
-  ENTER_LISP_FRAME_T (int, window, column);
+  ENTER_LISP_FRAME_T (int, (window, column));
   double x = col * FRAME_COLUMN_WIDTH (XFRAME (w->frame)) + 0.5;
 
   /* FIXME: Should this be limited to W's dimensions?  */
@@ -2071,7 +2062,7 @@ window_column_x (struct window *w, Lisp_Object window,
 static void
 restore_window_buffer (Lisp_Object list)
 {
-  ENTER_LISP_FRAME (list);
+  ENTER_LISP_FRAME ((list));
   struct window *w = decode_live_window (XCAR (list));
   list = XCDR (list);
   wset_buffer (w, XCAR (list));
@@ -2118,8 +2109,7 @@ and makes it possible to use `vertical-motion' in any buffer,
 whether or not it is currently displayed in some window.  */)
   (Lisp_Object lines, Lisp_Object window, Lisp_Object cur_col)
 {
-  ENTER_LISP_FRAME (lines, window, cur_col);
-  LISP_LOCALS (lcols, old);
+  ENTER_LISP_FRAME ((lines, window, cur_col), lcols, old);
   struct it it;
   struct text_pos pt;
   struct window *w;

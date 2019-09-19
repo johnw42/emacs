@@ -102,8 +102,7 @@ static int
 case_character_impl (struct casing_str_buf *buf,
 		     struct casing_context *ctx, int ch)
 {
-  ENTER_LISP_FRAME_T (int);
-  LISP_LOCALS (prop);
+  ENTER_LISP_FRAME_T (int, (), prop);
   enum case_action flag;
   int cased;
 
@@ -224,7 +223,7 @@ case_character (struct casing_str_buf *buf, struct casing_context *ctx,
 static Lisp_Object
 do_casify_natnum (struct casing_context *ctx, Lisp_Object obj)
 {
-  ENTER_LISP_FRAME (obj);
+  ENTER_LISP_FRAME ((obj));
   int flagbits = (CHAR_ALT | CHAR_SUPER | CHAR_HYPER
 		  | CHAR_SHIFT | CHAR_CTL | CHAR_META);
   int ch = XFASTINT (obj);
@@ -258,7 +257,7 @@ do_casify_natnum (struct casing_context *ctx, Lisp_Object obj)
 static Lisp_Object
 do_casify_multibyte_string (struct casing_context *ctx, Lisp_Object obj)
 {
-  ENTER_LISP_FRAME (obj);
+  ENTER_LISP_FRAME ((obj));
   /* Verify that ‘data’ is the first member of struct casing_str_buf
      so that when casting char * to struct casing_str_buf *, the
      representation of the character is at the beginning of the
@@ -296,7 +295,7 @@ do_casify_multibyte_string (struct casing_context *ctx, Lisp_Object obj)
 static Lisp_Object
 do_casify_unibyte_string (struct casing_context *ctx, Lisp_Object obj)
 {
-  ENTER_LISP_FRAME (obj);
+  ENTER_LISP_FRAME ((obj));
   ptrdiff_t i, size = SCHARS (obj);
   int ch, cased;
 
@@ -320,7 +319,7 @@ do_casify_unibyte_string (struct casing_context *ctx, Lisp_Object obj)
 static Lisp_Object
 casify_object (enum case_action flag, Lisp_Object obj)
 {
-  ENTER_LISP_FRAME (obj);
+  ENTER_LISP_FRAME ((obj));
   struct casing_context ctx;
   prepare_casing_context (&ctx, flag, false);
 
@@ -345,7 +344,7 @@ cased, e.g. ﬁ, are returned unchanged.
 See also `capitalize', `downcase' and `upcase-initials'.  */)
   (Lisp_Object obj)
 {
-  ENTER_LISP_FRAME (obj);
+  ENTER_LISP_FRAME ((obj));
   EXIT_LISP_FRAME (casify_object (CASE_UP, obj));
 }
 
@@ -355,7 +354,7 @@ The argument may be a character or string.  The result has the same type.
 The argument object is not altered--the value is a copy.  */)
   (Lisp_Object obj)
 {
-  ENTER_LISP_FRAME (obj);
+  ENTER_LISP_FRAME ((obj));
   EXIT_LISP_FRAME (casify_object (CASE_DOWN, obj));
 }
 
@@ -369,7 +368,7 @@ is a character, characters which map to multiple code points when
 cased, e.g. ﬁ, are returned unchanged.  */)
   (Lisp_Object obj)
 {
-  ENTER_LISP_FRAME (obj);
+  ENTER_LISP_FRAME ((obj));
   EXIT_LISP_FRAME (casify_object (CASE_CAPITALIZE, obj));
 }
 
@@ -385,7 +384,7 @@ is a character, characters which map to multiple code points when
 cased, e.g. ﬁ, are returned unchanged.  */)
   (Lisp_Object obj)
 {
-  ENTER_LISP_FRAME (obj);
+  ENTER_LISP_FRAME ((obj));
   EXIT_LISP_FRAME (casify_object (CASE_CAPITALIZE_UP, obj));
 }
 
@@ -490,7 +489,7 @@ do_casify_multibyte_region (struct casing_context *ctx,
 static ptrdiff_t
 casify_region (enum case_action flag, Lisp_Object b, Lisp_Object e)
 {
-  ENTER_LISP_FRAME_T (ptrdiff_t, b, e);
+  ENTER_LISP_FRAME_T (ptrdiff_t, (b, e));
   ptrdiff_t added;
   struct casing_context ctx;
 
@@ -535,8 +534,7 @@ point and the mark is operated on.
 See also `capitalize-region'.  */)
   (Lisp_Object beg, Lisp_Object end, Lisp_Object region_noncontiguous_p)
 {
-  ENTER_LISP_FRAME (beg, end, region_noncontiguous_p);
-  LISP_LOCALS (bounds);
+  ENTER_LISP_FRAME ((beg, end, region_noncontiguous_p), bounds);
   bounds = Qnil;
 
 
@@ -565,8 +563,7 @@ the region to operate on.  When used as a command, the text between
 point and the mark is operated on.  */)
   (Lisp_Object beg, Lisp_Object end, Lisp_Object region_noncontiguous_p)
 {
-  ENTER_LISP_FRAME (beg, end, region_noncontiguous_p);
-  LISP_LOCALS (bounds);
+  ENTER_LISP_FRAME ((beg, end, region_noncontiguous_p), bounds);
   bounds = Qnil;
 
 
@@ -595,7 +592,7 @@ In programs, give two arguments, the starting and ending
 character positions to operate on.  */)
   (Lisp_Object beg, Lisp_Object end)
 {
-  ENTER_LISP_FRAME (beg, end);
+  ENTER_LISP_FRAME ((beg, end));
   casify_region (CASE_CAPITALIZE, beg, end);
   EXIT_LISP_FRAME (Qnil);
 }
@@ -611,7 +608,7 @@ In programs, give two arguments, the starting and ending
 character positions to operate on.  */)
   (Lisp_Object beg, Lisp_Object end)
 {
-  ENTER_LISP_FRAME (beg, end);
+  ENTER_LISP_FRAME ((beg, end));
   casify_region (CASE_CAPITALIZE_UP, beg, end);
   EXIT_LISP_FRAME (Qnil);
 }
@@ -619,7 +616,7 @@ character positions to operate on.  */)
 static Lisp_Object
 casify_word (enum case_action flag, Lisp_Object arg)
 {
-  ENTER_LISP_FRAME (arg);
+  ENTER_LISP_FRAME ((arg));
   CHECK_NUMBER (arg);
   ptrdiff_t farend = scan_words (PT, XINT (arg));
   if (!farend)
@@ -638,7 +635,7 @@ With negative argument, convert previous words but do not move.
 See also `capitalize-word'.  */)
   (Lisp_Object arg)
 {
-  ENTER_LISP_FRAME (arg);
+  ENTER_LISP_FRAME ((arg));
   EXIT_LISP_FRAME (casify_word (CASE_UP, arg));
 }
 
@@ -651,7 +648,7 @@ is ignored when moving forward.
 With negative argument, convert previous words but do not move.  */)
   (Lisp_Object arg)
 {
-  ENTER_LISP_FRAME (arg);
+  ENTER_LISP_FRAME ((arg));
   EXIT_LISP_FRAME (casify_word (CASE_DOWN, arg));
 }
 
@@ -667,7 +664,7 @@ is ignored when moving forward.
 With negative argument, capitalize previous words but do not move.  */)
   (Lisp_Object arg)
 {
-  ENTER_LISP_FRAME (arg);
+  ENTER_LISP_FRAME ((arg));
   EXIT_LISP_FRAME (casify_word (CASE_CAPITALIZE, arg));
 }
 

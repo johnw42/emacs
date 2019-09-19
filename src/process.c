@@ -350,7 +350,7 @@ pset_encoding_buf (struct Lisp_Process *p, Lisp_Object val)
 static void
 pset_filter (struct Lisp_Process *p, Lisp_Object val)
 {
-  ENTER_LISP_FRAME (val);
+  ENTER_LISP_FRAME ((val));
   p->filter = NILP (val) ? Qinternal_default_process_filter : val;
   EXIT_LISP_FRAME_VOID ();
 }
@@ -382,7 +382,7 @@ pset_plist (struct Lisp_Process *p, Lisp_Object val)
 static void
 pset_sentinel (struct Lisp_Process *p, Lisp_Object val)
 {
-  ENTER_LISP_FRAME (val);
+  ENTER_LISP_FRAME ((val));
   p->sentinel = NILP (val) ? Qinternal_default_process_sentinel : val;
   EXIT_LISP_FRAME_VOID ();
 }
@@ -692,7 +692,7 @@ status_convert (int w)
 static bool
 connecting_status (Lisp_Object status)
 {
-  ENTER_LISP_FRAME_T (bool, status);
+  ENTER_LISP_FRAME_T (bool, (status));
   EXIT_LISP_FRAME (CONSP (status) && EQ (XCAR (status), Qconnect));
 }
 
@@ -703,8 +703,7 @@ static void
 decode_status (Lisp_Object l, Lisp_Object *symbol, Lisp_Object *code,
 	       bool *coredump)
 {
-  ENTER_LISP_FRAME (l);
-  LISP_LOCALS (tem);
+  ENTER_LISP_FRAME ((l), tem);
 
   if (connecting_status (l))
     l = XCAR (l);
@@ -731,8 +730,7 @@ decode_status (Lisp_Object l, Lisp_Object *symbol, Lisp_Object *code,
 static Lisp_Object
 status_message (struct Lisp_Process *p)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (status, symbol, code, string);
+  ENTER_LISP_FRAME ((), status, symbol, code, string);
   status = p->status;
 
   bool coredump;
@@ -860,8 +858,7 @@ allocate_process (void)
 static Lisp_Object
 make_process (Lisp_Object name)
 {
-  ENTER_LISP_FRAME (name);
-  LISP_LOCALS (name1, tem, val);
+  ENTER_LISP_FRAME ((name), name1, tem, val);
   struct Lisp_Process *p = allocate_process ();
   /* Initialize Lisp data.  Note that allocate_process initializes all
      Lisp data to nil, so do it only for slots which should not be nil.  */
@@ -909,8 +906,7 @@ make_process (Lisp_Object name)
 static void
 remove_process (Lisp_Object proc)
 {
-  ENTER_LISP_FRAME (proc);
-  LISP_LOCALS (pair);
+  ENTER_LISP_FRAME ((proc), pair);
 
   pair = Frassq (proc, Vprocess_alist);
   Vprocess_alist = Fdelq (pair, Vprocess_alist);
@@ -922,8 +918,7 @@ remove_process (Lisp_Object proc)
 void
 update_processes_for_thread_death (Lisp_Object dying_thread)
 {
-  ENTER_LISP_FRAME (dying_thread);
-  LISP_LOCALS (pair, process);
+  ENTER_LISP_FRAME ((dying_thread), pair, process);
 
   for (pair = Vprocess_alist; !NILP (pair); pair = XCDR (pair))
     {
@@ -947,7 +942,7 @@ update_processes_for_thread_death (Lisp_Object dying_thread)
 static void
 free_dns_request (Lisp_Object proc)
 {
-  ENTER_LISP_FRAME (proc);
+  ENTER_LISP_FRAME ((proc));
   struct Lisp_Process *p = XPROCESS (proc);
 
   if (p->dns_request->ar_result)
@@ -963,7 +958,7 @@ DEFUN ("processp", Fprocessp, Sprocessp, 1, 1, 0,
        doc: /* Return t if OBJECT is a process.  */)
   (Lisp_Object object)
 {
-  ENTER_LISP_FRAME (object);
+  ENTER_LISP_FRAME ((object));
   EXIT_LISP_FRAME (PROCESSP (object) ? Qt : Qnil);
 }
 
@@ -971,7 +966,7 @@ DEFUN ("get-process", Fget_process, Sget_process, 1, 1, 0,
        doc: /* Return the process named NAME, or nil if there is none.  */)
   (Lisp_Object name)
 {
-  ENTER_LISP_FRAME (name);
+  ENTER_LISP_FRAME ((name));
   if (PROCESSP (name))
     EXIT_LISP_FRAME (name);
   CHECK_STRING (name);
@@ -986,8 +981,7 @@ DEFUN ("get-process", Fget_process, Sget_process, 1, 1, 0,
 static Lisp_Object
 get_process (Lisp_Object name)
 {
-  ENTER_LISP_FRAME (name);
-  LISP_LOCALS (proc, obj);
+  ENTER_LISP_FRAME ((name), proc, obj);
   if (STRINGP (name))
     {
       obj = Fget_process (name);
@@ -1034,7 +1028,7 @@ static Lisp_Object deleted_pid_list = NIL_INIT;
 void
 record_deleted_pid (pid_t pid, Lisp_Object filename)
 {
-  ENTER_LISP_FRAME (filename);
+  ENTER_LISP_FRAME ((filename));
   deleted_pid_list = Fcons (Fcons (make_fixnum_or_float (pid), filename),
 			    /* GC treated elements set to nil.  */
 			    Fdelq (Qnil, deleted_pid_list));
@@ -1048,8 +1042,7 @@ PROCESS may be a process, a buffer, the name of a process or buffer, or
 nil, indicating the current buffer's process.  */)
   (Lisp_Object process)
 {
-  ENTER_LISP_FRAME (process);
-  LISP_LOCALS (symbol);
+  ENTER_LISP_FRAME ((process), symbol);
   register struct Lisp_Process *p;
 
   process = get_process (process);
@@ -1123,8 +1116,7 @@ PROCESS may be a process, a buffer, the name of a process, or
 nil, indicating the current buffer's process.  */)
   (Lisp_Object process)
 {
-  ENTER_LISP_FRAME (process);
-  LISP_LOCALS (status);
+  ENTER_LISP_FRAME ((process), status);
   register struct Lisp_Process *p;
 
   if (STRINGP (process))
@@ -1159,7 +1151,7 @@ DEFUN ("process-exit-status", Fprocess_exit_status, Sprocess_exit_status,
 If PROCESS has not yet exited or died, return 0.  */)
   (Lisp_Object process)
 {
-  ENTER_LISP_FRAME (process);
+  ENTER_LISP_FRAME ((process));
   CHECK_PROCESS (process);
   if (XPROCESS (process)->raw_status_new)
     update_status (XPROCESS (process));
@@ -1174,7 +1166,7 @@ This is the pid of the external process which PROCESS uses or talks to.
 For a network, serial, and pipe connections, this value is nil.  */)
   (Lisp_Object process)
 {
-  ENTER_LISP_FRAME (process);
+  ENTER_LISP_FRAME ((process));
   pid_t pid;
 
   CHECK_PROCESS (process);
@@ -1188,7 +1180,7 @@ This is the name of the program invoked in PROCESS,
 possibly modified to make it unique among process names.  */)
   (Lisp_Object process)
 {
-  ENTER_LISP_FRAME (process);
+  ENTER_LISP_FRAME ((process));
   CHECK_PROCESS (process);
   EXIT_LISP_FRAME (XPROCESS (process)->name);
 }
@@ -1201,7 +1193,7 @@ For a network or serial or pipe connection, this is nil (process is running)
 or t (process is stopped).  */)
   (Lisp_Object process)
 {
-  ENTER_LISP_FRAME (process);
+  ENTER_LISP_FRAME ((process));
   CHECK_PROCESS (process);
   EXIT_LISP_FRAME (XPROCESS (process)->command);
 }
@@ -1212,7 +1204,7 @@ This is the terminal that the process itself reads and writes on,
 not the name of the pty that Emacs uses to talk with that terminal.  */)
   (Lisp_Object process)
 {
-  ENTER_LISP_FRAME (process);
+  ENTER_LISP_FRAME ((process));
   CHECK_PROCESS (process);
   EXIT_LISP_FRAME (XPROCESS (process)->tty_name);
 }
@@ -1223,7 +1215,7 @@ DEFUN ("set-process-buffer", Fset_process_buffer, Sset_process_buffer,
 Return BUFFER.  */)
   (Lisp_Object process, Lisp_Object buffer)
 {
-  ENTER_LISP_FRAME (process, buffer);
+  ENTER_LISP_FRAME ((process, buffer));
   struct Lisp_Process *p;
 
   CHECK_PROCESS (process);
@@ -1243,7 +1235,7 @@ DEFUN ("process-buffer", Fprocess_buffer, Sprocess_buffer,
 The default process filter inserts output from PROCESS into this buffer.  */)
   (Lisp_Object process)
 {
-  ENTER_LISP_FRAME (process);
+  ENTER_LISP_FRAME ((process));
   CHECK_PROCESS (process);
   EXIT_LISP_FRAME (XPROCESS (process)->buffer);
 }
@@ -1253,7 +1245,7 @@ DEFUN ("process-mark", Fprocess_mark, Sprocess_mark,
        doc: /* Return the marker for the end of the last output from PROCESS.  */)
   (Lisp_Object process)
 {
-  ENTER_LISP_FRAME (process);
+  ENTER_LISP_FRAME ((process));
   CHECK_PROCESS (process);
   EXIT_LISP_FRAME (XPROCESS (process)->mark);
 }
@@ -1287,7 +1279,7 @@ The string argument is normally a multibyte string, except:
   string to unibyte with `string-make-unibyte').  */)
   (Lisp_Object process, Lisp_Object filter)
 {
-  ENTER_LISP_FRAME (process, filter);
+  ENTER_LISP_FRAME ((process, filter));
   CHECK_PROCESS (process);
   struct Lisp_Process *p = XPROCESS (process);
 
@@ -1319,7 +1311,7 @@ DEFUN ("process-filter", Fprocess_filter, Sprocess_filter,
 See `set-process-filter' for more info on filter functions.  */)
   (Lisp_Object process)
 {
-  ENTER_LISP_FRAME (process);
+  ENTER_LISP_FRAME ((process));
   CHECK_PROCESS (process);
   EXIT_LISP_FRAME (XPROCESS (process)->filter);
 }
@@ -1331,7 +1323,7 @@ The sentinel is called as a function when the process changes state.
 It gets two arguments: the process, and a string describing the change.  */)
   (Lisp_Object process, Lisp_Object sentinel)
 {
-  ENTER_LISP_FRAME (process, sentinel);
+  ENTER_LISP_FRAME ((process, sentinel));
   struct Lisp_Process *p;
 
   CHECK_PROCESS (process);
@@ -1352,7 +1344,7 @@ DEFUN ("process-sentinel", Fprocess_sentinel, Sprocess_sentinel,
 See `set-process-sentinel' for more info on sentinels.  */)
   (Lisp_Object process)
 {
-  ENTER_LISP_FRAME (process);
+  ENTER_LISP_FRAME ((process));
   CHECK_PROCESS (process);
   EXIT_LISP_FRAME (XPROCESS (process)->sentinel);
 }
@@ -1363,7 +1355,7 @@ DEFUN ("set-process-thread", Fset_process_thread, Sset_process_thread,
 If THREAD is nil, the process is unlocked.  */)
   (Lisp_Object process, Lisp_Object thread)
 {
-  ENTER_LISP_FRAME (process, thread);
+  ENTER_LISP_FRAME ((process, thread));
   struct Lisp_Process *proc;
   struct thread_state *tstate;
 
@@ -1392,7 +1384,7 @@ DEFUN ("process-thread", Fprocess_thread, Sprocess_thread,
 If PROCESS is unlocked, this function returns nil.  */)
   (Lisp_Object process)
 {
-  ENTER_LISP_FRAME (process);
+  ENTER_LISP_FRAME ((process));
   CHECK_PROCESS (process);
   EXIT_LISP_FRAME (XPROCESS (process)->thread);
 }
@@ -1404,7 +1396,7 @@ Value is t if PROCESS was successfully told about the window size,
 nil otherwise.  */)
   (Lisp_Object process, Lisp_Object height, Lisp_Object width)
 {
-  ENTER_LISP_FRAME (process, height, width);
+  ENTER_LISP_FRAME ((process, height, width));
   CHECK_PROCESS (process);
 
   /* All known platforms store window sizes as 'unsigned short'.  */
@@ -1442,7 +1434,7 @@ for the process which will run.
 This function returns FLAG.  */)
   (Lisp_Object process, Lisp_Object flag)
 {
-  ENTER_LISP_FRAME (process, flag);
+  ENTER_LISP_FRAME ((process, flag));
   CHECK_PROCESS (process);
   XPROCESS (process)->inherit_coding_system_flag = !NILP (flag);
   EXIT_LISP_FRAME (flag);
@@ -1457,7 +1449,7 @@ exiting or killing a buffer if PROCESS is running.  This function
 returns FLAG.  */)
   (Lisp_Object process, Lisp_Object flag)
 {
-  ENTER_LISP_FRAME (process, flag);
+  ENTER_LISP_FRAME ((process, flag));
   CHECK_PROCESS (process);
   XPROCESS (process)->kill_without_query = NILP (flag);
   EXIT_LISP_FRAME (flag);
@@ -1469,7 +1461,7 @@ DEFUN ("process-query-on-exit-flag",
        doc: /* Return the current value of query-on-exit flag for PROCESS.  */)
   (Lisp_Object process)
 {
-  ENTER_LISP_FRAME (process);
+  ENTER_LISP_FRAME ((process));
   CHECK_PROCESS (process);
   EXIT_LISP_FRAME ((XPROCESS (process)->kill_without_query ? Qnil : Qt));
 }
@@ -1488,8 +1480,7 @@ If PROCESS is a non-blocking network process that hasn't been fully
 set up yet, this function will block until socket setup has completed.  */)
   (Lisp_Object process, Lisp_Object key)
 {
-  ENTER_LISP_FRAME (process, key);
-  LISP_LOCALS (contact);
+  ENTER_LISP_FRAME ((process, key), contact);
 
   CHECK_PROCESS (process);
   contact = XPROCESS (process)->childp;
@@ -1527,7 +1518,7 @@ DEFUN ("process-plist", Fprocess_plist, Sprocess_plist,
        doc: /* Return the plist of PROCESS.  */)
   (Lisp_Object process)
 {
-  ENTER_LISP_FRAME (process);
+  ENTER_LISP_FRAME ((process));
   CHECK_PROCESS (process);
   EXIT_LISP_FRAME (XPROCESS (process)->plist);
 }
@@ -1537,7 +1528,7 @@ DEFUN ("set-process-plist", Fset_process_plist, Sset_process_plist,
        doc: /* Replace the plist of PROCESS with PLIST.  Return PLIST.  */)
   (Lisp_Object process, Lisp_Object plist)
 {
-  ENTER_LISP_FRAME (process, plist);
+  ENTER_LISP_FRAME ((process, plist));
   CHECK_PROCESS (process);
   CHECK_LIST (plist);
 
@@ -1553,7 +1544,7 @@ The value is nil for a pipe, t or `pty' for a pty, or `stream' for
 a socket connection.  */)
   (Lisp_Object process)
 {
-  ENTER_LISP_FRAME (process);
+  ENTER_LISP_FRAME ((process));
   EXIT_LISP_FRAME (XPROCESS (process)->type);
 }
 #endif
@@ -1565,8 +1556,7 @@ PROCESS may be a process, a buffer, the name of a process or buffer, or
 nil, indicating the current buffer's process.  */)
   (Lisp_Object process)
 {
-  ENTER_LISP_FRAME (process);
-  LISP_LOCALS (proc);
+  ENTER_LISP_FRAME ((process), proc);
   proc = get_process (process);
   EXIT_LISP_FRAME (XPROCESS (proc)->type);
 }
@@ -1581,7 +1571,7 @@ number in the string, even when present in ADDRESS.
 Return nil if format of ADDRESS is invalid.  */)
   (Lisp_Object address, Lisp_Object omit_port)
 {
-  ENTER_LISP_FRAME (address, omit_port);
+  ENTER_LISP_FRAME ((address, omit_port));
   if (NILP (address))
     EXIT_LISP_FRAME (Qnil);
 
@@ -1702,10 +1692,10 @@ to the standard error of subprocess.  Specifying this implies
 usage: (make-process &rest ARGS)  */)
   (ptrdiff_t nargs, Lisp_Object *args)
 {
-  ENTER_LISP_FRAME_VA (nargs, args);
-  LISP_LOCALS (buffer, name, command, program, proc, contact,
-               current_dir, tem, xstderr, stderrproc, coding_systems,
-               val, tem2, program_args, arg_encoding, arg);
+  ENTER_LISP_FRAME_VA (nargs, args, (), buffer, name, command,
+                       program, proc, contact, current_dir, tem,
+                       xstderr, stderrproc, coding_systems, val, tem2,
+                       program_args, arg_encoding, arg);
   ptrdiff_t count = SPECPDL_INDEX ();
 
   if (nargs == 0)
@@ -1977,7 +1967,7 @@ usage: (make-process &rest ARGS)  */)
 static void
 start_process_unwind (Lisp_Object proc)
 {
-  ENTER_LISP_FRAME (proc);
+  ENTER_LISP_FRAME ((proc));
   if (XPROCESS (proc)->pid <= 0 && XPROCESS (proc)->pid != -2)
     remove_process (proc);
   EXIT_LISP_FRAME_VOID ();
@@ -2018,8 +2008,7 @@ verify (PROCESS_OPEN_FDS == EXEC_MONITOR_OUTPUT + 1);
 static void
 create_process (Lisp_Object process, char **new_argv, Lisp_Object current_dir)
 {
-  ENTER_LISP_FRAME (process, current_dir);
-  LISP_LOCALS (lisp_pty_name);
+  ENTER_LISP_FRAME ((process, current_dir), lisp_pty_name);
   struct Lisp_Process *p = XPROCESS (process);
   int inchannel, outchannel;
   pid_t pid;
@@ -2305,7 +2294,7 @@ create_process (Lisp_Object process, char **new_argv, Lisp_Object current_dir)
 static void
 create_pty (Lisp_Object process)
 {
-  ENTER_LISP_FRAME (process);
+  ENTER_LISP_FRAME ((process));
   struct Lisp_Process *p = XPROCESS (process);
   char pty_name[PTY_NAME_SIZE];
   int pty_fd = !p->pty_flag ? -1 : allocate_pty (pty_name);
@@ -2395,8 +2384,8 @@ but you can send outgoing data.  The stopped state is cleared by
 usage:  (make-pipe-process &rest ARGS)  */)
   (ptrdiff_t nargs, Lisp_Object *args)
 {
-  ENTER_LISP_FRAME_VA (nargs, args);
-  LISP_LOCALS (proc, contact, name, buffer, tem, coding_systems, val);
+  ENTER_LISP_FRAME_VA (nargs, args, (), proc, contact, name, buffer,
+                       tem, coding_systems, val);
   struct Lisp_Process *p;
   ptrdiff_t specpdl_count;
   int inchannel, outchannel;
@@ -2539,8 +2528,7 @@ usage:  (make-pipe-process &rest ARGS)  */)
 Lisp_Object
 conv_sockaddr_to_lisp (struct sockaddr *sa, ptrdiff_t len)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (address);
+  ENTER_LISP_FRAME ((), address);
   ptrdiff_t i;
   unsigned char *cp;
   struct Lisp_Vector *p = XVECTOR_CACHE_INIT;
@@ -2621,8 +2609,7 @@ conv_sockaddr_to_lisp (struct sockaddr *sa, ptrdiff_t len)
 static Lisp_Object
 conv_addrinfo_to_lisp (struct addrinfo *res)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (protocol);
+  ENTER_LISP_FRAME ((), protocol);
   protocol = make_number (res->ai_protocol);
 
   eassert (XINT (protocol) == res->ai_protocol);
@@ -2635,7 +2622,7 @@ conv_addrinfo_to_lisp (struct addrinfo *res)
 static ptrdiff_t
 get_lisp_to_sockaddr_size (Lisp_Object address, int *familyp)
 {
-  ENTER_LISP_FRAME_T (ptrdiff_t, address);
+  ENTER_LISP_FRAME_T (ptrdiff_t, (address));
   struct Lisp_Vector *p;
 
   if (VECTORP (address))
@@ -2684,7 +2671,7 @@ get_lisp_to_sockaddr_size (Lisp_Object address, int *familyp)
 static void
 conv_lisp_to_sockaddr (int family, Lisp_Object address, struct sockaddr *sa, int len)
 {
-  ENTER_LISP_FRAME (address);
+  ENTER_LISP_FRAME ((address));
   struct Lisp_Vector *p = XVECTOR_CACHE_INIT;
   register unsigned char *cp = NULL;
   register int i;
@@ -2761,7 +2748,7 @@ If PROCESS is a non-blocking network process that hasn't been fully
 set up yet, this function will block until socket setup has completed.  */)
   (Lisp_Object process)
 {
-  ENTER_LISP_FRAME (process);
+  ENTER_LISP_FRAME ((process));
   int channel;
 
   CHECK_PROCESS (process);
@@ -2786,7 +2773,7 @@ If PROCESS is a non-blocking network process that hasn't been fully
 set up yet, this function will block until socket setup has completed.  */)
   (Lisp_Object process, Lisp_Object address)
 {
-  ENTER_LISP_FRAME (process, address);
+  ENTER_LISP_FRAME ((process, address));
   int channel;
   int family;
   ptrdiff_t len;
@@ -2858,7 +2845,7 @@ static const struct socket_options {
 static int
 set_socket_option (int s, Lisp_Object opt, Lisp_Object val)
 {
-  ENTER_LISP_FRAME_T (int, opt, val);
+  ENTER_LISP_FRAME_T (int, (opt, val));
   char *name;
   const struct socket_options *sopt;
   int ret = 0;
@@ -2960,7 +2947,7 @@ If PROCESS is a non-blocking network process that hasn't been fully
 set up yet, this function will block until socket setup has completed. */)
   (Lisp_Object process, Lisp_Object option, Lisp_Object value, Lisp_Object no_error)
 {
-  ENTER_LISP_FRAME (process, option, value, no_error);
+  ENTER_LISP_FRAME ((process, option, value, no_error));
   int s;
   struct Lisp_Process *p;
 
@@ -3049,8 +3036,7 @@ Examples:
 usage: (serial-process-configure &rest ARGS)  */)
   (ptrdiff_t nargs, Lisp_Object *args)
 {
-  ENTER_LISP_FRAME_VA (nargs, args);
-  LISP_LOCALS (contact, proc);
+  ENTER_LISP_FRAME_VA (nargs, args, (), contact, proc);
   struct Lisp_Process *p;
   contact = Qnil;
 
@@ -3153,8 +3139,8 @@ Examples:
 usage:  (make-serial-process &rest ARGS)  */)
   (ptrdiff_t nargs, Lisp_Object *args)
 {
-  ENTER_LISP_FRAME_VA (nargs, args);
-  LISP_LOCALS (proc, contact, port, name, buffer, tem, val);
+  ENTER_LISP_FRAME_VA (nargs, args, (), proc, contact, port, name,
+                       buffer, tem, val);
   int fd = -1;
   struct Lisp_Process *p;
   ptrdiff_t specpdl_count;
@@ -3269,8 +3255,8 @@ static void
 set_network_socket_coding_system (Lisp_Object proc, Lisp_Object host,
 				  Lisp_Object service, Lisp_Object name)
 {
-  ENTER_LISP_FRAME (proc, host, service, name);
-  LISP_LOCALS (tem, contact, coding_systems, val);
+  ENTER_LISP_FRAME ((proc, host, service, name), tem, contact,
+                    coding_systems, val);
   struct Lisp_Process *p = XPROCESS (proc);
   contact = p->childp;
 
@@ -3361,8 +3347,7 @@ set_network_socket_coding_system (Lisp_Object proc, Lisp_Object host,
 static void
 finish_after_tls_connection (Lisp_Object proc)
 {
-  ENTER_LISP_FRAME (proc);
-  LISP_LOCALS (contact, result);
+  ENTER_LISP_FRAME ((proc), contact, result);
   struct Lisp_Process *p = XPROCESS (proc);
   contact = p->childp;
 
@@ -3408,8 +3393,9 @@ static void
 connect_network_socket (Lisp_Object proc, Lisp_Object addrinfos,
                         Lisp_Object use_external_socket_p)
 {
-  ENTER_LISP_FRAME (proc, addrinfos, use_external_socket_p);
-  LISP_LOCALS (contact, addrinfo, ip_address, params, key, val, service, remote, data, boot);
+  ENTER_LISP_FRAME ((proc, addrinfos, use_external_socket_p), contact,
+                    addrinfo, ip_address, params, key, val, service,
+                    remote, data, boot);
   int s = -1, outch, inch;
   int xerrno = 0;
   int family;
@@ -3943,10 +3929,10 @@ information, is available via the `process-contact' function.
 usage: (make-network-process &rest ARGS)  */)
   (ptrdiff_t nargs, Lisp_Object *args)
 {
-  ENTER_LISP_FRAME_VA (nargs, args);
-  LISP_LOCALS (proc, contact, tem, name, buffer, host, service,
-               address, filter, sentinel, use_external_socket_p,
-               addrinfos, server);
+  ENTER_LISP_FRAME_VA (nargs, args, (), proc, contact, tem, name,
+                       buffer, host, service, address, filter,
+                       sentinel, use_external_socket_p, addrinfos,
+                       server);
   struct Lisp_Process *p;
   const char *portstring UNINIT;
   ptrdiff_t portstringlen ATTRIBUTE_UNUSED;
@@ -4298,8 +4284,7 @@ usage: (make-network-process &rest ARGS)  */)
 static Lisp_Object
 network_interface_list (void)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (res);
+  ENTER_LISP_FRAME ((), res);
   struct ifconf ifconf;
   struct ifreq *ifreq;
   void *buf = NULL;
@@ -4442,8 +4427,7 @@ static const struct ifflag_def ifflag_table[] = {
 static Lisp_Object
 network_interface_info (Lisp_Object ifname)
 {
-  ENTER_LISP_FRAME (ifname);
-  LISP_LOCALS (res, elt, hwaddr);
+  ENTER_LISP_FRAME ((ifname), res, elt, hwaddr);
   struct ifreq rq;
   res = Qnil;
 
@@ -4619,7 +4603,7 @@ FLAGS is the current flags of the interface.
 Data that is unavailable is returned as nil.  */)
   (Lisp_Object ifname)
 {
-  ENTER_LISP_FRAME (ifname);
+  ENTER_LISP_FRAME ((ifname));
 #if ((defined HAVE_NET_IF_H			       \
       && (defined SIOCGIFADDR || defined SIOCGIFHWADDR \
 	  || defined SIOCGIFFLAGS))		       \
@@ -4635,7 +4619,7 @@ Data that is unavailable is returned as nil.  */)
 static void
 deactivate_process (Lisp_Object proc)
 {
-  ENTER_LISP_FRAME (proc);
+  ENTER_LISP_FRAME ((proc));
   int inchannel;
   struct Lisp_Process *p = XPROCESS (proc);
   int i;
@@ -4704,8 +4688,8 @@ corresponding connection was closed.  */)
   (Lisp_Object process, Lisp_Object seconds, Lisp_Object millisec,
    Lisp_Object just_this_one)
 {
-  ENTER_LISP_FRAME (process, seconds, millisec, just_this_one);
-  LISP_LOCALS (proc_thread_name);
+  ENTER_LISP_FRAME ((process, seconds, millisec, just_this_one),
+                    proc_thread_name);
   intmax_t secs;
   int nsecs;
 
@@ -4787,8 +4771,8 @@ static EMACS_INT connect_counter = 0;
 static void
 server_accept_connection (Lisp_Object server, int channel)
 {
-  ENTER_LISP_FRAME (server);
-  LISP_LOCALS (buffer, contact, host, service, name, proc, host_string);
+  ENTER_LISP_FRAME ((server), buffer, contact, host, service, name,
+                    proc, host_string);
   struct Lisp_Process *ps = XPROCESS (server);
   struct Lisp_Process *p;
   int s;
@@ -4987,8 +4971,7 @@ server_accept_connection (Lisp_Object server, int channel)
 static Lisp_Object
 check_for_dns (Lisp_Object proc)
 {
-  ENTER_LISP_FRAME (proc);
-  LISP_LOCALS (addrinfos);
+  ENTER_LISP_FRAME ((proc), addrinfos);
   struct Lisp_Process *p = XPROCESS (proc);
   addrinfos = Qnil;
 
@@ -5036,7 +5019,7 @@ check_for_dns (Lisp_Object proc)
 static void
 wait_for_socket_fds (Lisp_Object process, char const *name)
 {
-  ENTER_LISP_FRAME (process);
+  ENTER_LISP_FRAME ((process));
   while (XPROCESS (process)->infd < 0
 	 && connecting_status (XPROCESS (process)->status))
     {
@@ -5049,7 +5032,7 @@ wait_for_socket_fds (Lisp_Object process, char const *name)
 static void
 wait_while_connecting (Lisp_Object process)
 {
-  ENTER_LISP_FRAME (process);
+  ENTER_LISP_FRAME ((process));
   while (connecting_status (XPROCESS (process)->status))
     {
       add_to_log ("Waiting for connection...");
@@ -5061,7 +5044,7 @@ wait_while_connecting (Lisp_Object process)
 static void
 wait_for_tls_negotiation (Lisp_Object process)
 {
-  ENTER_LISP_FRAME (process);
+  ENTER_LISP_FRAME ((process));
 #ifdef HAVE_GNUTLS
   while (XPROCESS (process)->gnutls_p
 	 && XPROCESS (process)->gnutls_initstage != GNUTLS_STAGE_READY)
@@ -5129,8 +5112,8 @@ wait_reading_process_output (intmax_t time_limit, int nsecs, int read_kbd,
 			     Lisp_Object wait_for_cell,
 			     struct Lisp_Process *wait_proc, int just_wait_proc)
 {
-  ENTER_LISP_FRAME_T (int, wait_for_cell);
-  LISP_LOCALS (proc, process_list_head, aproc, addrinfos, old_window);
+  ENTER_LISP_FRAME_T (int, (wait_for_cell), proc, process_list_head,
+                      aproc, addrinfos, old_window);
   int channel, nfds;
   fd_set Available;
   fd_set Writeok;
@@ -5942,14 +5925,14 @@ wait_reading_process_output (intmax_t time_limit, int nsecs, int read_kbd,
 static Lisp_Object
 read_process_output_call (Lisp_Object fun_and_args)
 {
-  ENTER_LISP_FRAME (fun_and_args);
+  ENTER_LISP_FRAME ((fun_and_args));
   EXIT_LISP_FRAME (apply1 (XCAR (fun_and_args), XCDR (fun_and_args)));
 }
 
 static Lisp_Object
 read_process_output_error_handler (Lisp_Object error_val)
 {
-  ENTER_LISP_FRAME (error_val);
+  ENTER_LISP_FRAME ((error_val));
   cmd_error_internal (error_val, "error in process filter: ");
   Vinhibit_quit = Qt;
   update_echo_area ();
@@ -5976,8 +5959,7 @@ read_and_dispose_of_process_output (struct Lisp_Process *p, char *chars,
 static int
 read_process_output (Lisp_Object proc, int channel)
 {
-  ENTER_LISP_FRAME_T (int, proc);
-  LISP_LOCALS (odeactivate);
+  ENTER_LISP_FRAME_T (int, (proc), odeactivate);
   ssize_t nbytes;
   struct Lisp_Process *p = XPROCESS (proc);
   struct coding_system *coding = proc_decode_coding_system[channel];
@@ -6081,8 +6063,7 @@ read_and_dispose_of_process_output (struct Lisp_Process *p, char *chars,
 				    ssize_t nbytes,
 				    struct coding_system *coding)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (outstream, text, obuffer, okeymap, tem);
+  ENTER_LISP_FRAME ((), outstream, text, obuffer, okeymap, tem);
   outstream = p->filter;
 
   bool outer_running_asynch_code = running_asynch_code;
@@ -6190,8 +6171,7 @@ This inserts the process's output into its buffer, if there is one.
 Otherwise it discards the output.  */)
   (Lisp_Object proc, Lisp_Object text)
 {
-  ENTER_LISP_FRAME (proc, text);
-  LISP_LOCALS (old_read_only);
+  ENTER_LISP_FRAME ((proc, text), old_read_only);
   struct Lisp_Process *p;
   ptrdiff_t opoint;
 
@@ -6307,8 +6287,7 @@ static void
 write_queue_push (struct Lisp_Process *p, Lisp_Object input_obj,
                   const char *buf, ptrdiff_t len, bool front)
 {
-  ENTER_LISP_FRAME (input_obj);
-  LISP_LOCALS (entry, obj);
+  ENTER_LISP_FRAME ((input_obj), entry, obj);
   ptrdiff_t offset;
 
   if (STRINGP (input_obj))
@@ -6339,8 +6318,7 @@ static bool
 write_queue_pop (struct Lisp_Process *p, Lisp_Object *obj,
 		 const char **buf, ptrdiff_t *len)
 {
-  ENTER_LISP_FRAME_T (bool);
-  LISP_LOCALS (entry, offset_length);
+  ENTER_LISP_FRAME_T (bool, (), entry, offset_length);
   ptrdiff_t offset;
 
   if (NILP (p->write_queue))
@@ -6373,8 +6351,7 @@ static void
 send_process (Lisp_Object proc, const char *buf, ptrdiff_t len,
 	      Lisp_Object object)
 {
-  ENTER_LISP_FRAME (proc, object);
-  LISP_LOCALS (cur_object);
+  ENTER_LISP_FRAME ((proc, object), cur_object);
   struct Lisp_Process *p = XPROCESS (proc);
   ssize_t rv;
   struct coding_system *coding;
@@ -6606,8 +6583,7 @@ If PROCESS is a non-blocking network process that hasn't been fully
 set up yet, this function will block until socket setup has completed.  */)
   (Lisp_Object process, Lisp_Object start, Lisp_Object end)
 {
-  ENTER_LISP_FRAME (process, start, end);
-  LISP_LOCALS (proc);
+  ENTER_LISP_FRAME ((process, start, end), proc);
   proc = get_process (process);
 
   ptrdiff_t start_byte, end_byte;
@@ -6643,8 +6619,7 @@ If PROCESS is a non-blocking network process that hasn't been fully
 set up yet, this function will block until socket setup has completed.  */)
   (Lisp_Object process, Lisp_Object string)
 {
-  ENTER_LISP_FRAME (process, string);
-  LISP_LOCALS (proc);
+  ENTER_LISP_FRAME ((process, string), proc);
   CHECK_STRING (string);
   proc = get_process (process);
 
@@ -6687,8 +6662,7 @@ return t.  If we can find out, return the numeric ID of the foreground
 process group.  */)
   (Lisp_Object process)
 {
-  ENTER_LISP_FRAME (process);
-  LISP_LOCALS (proc);
+  ENTER_LISP_FRAME ((process), proc);
   /* Initialize in case ioctl doesn't exist or gives an error,
      in a way that will cause returning t.  */
   proc = get_process (process);
@@ -6729,8 +6703,7 @@ static void
 process_send_signal (Lisp_Object process, int signo, Lisp_Object current_group,
 		     bool nomsg)
 {
-  ENTER_LISP_FRAME (process, current_group);
-  LISP_LOCALS (proc);
+  ENTER_LISP_FRAME ((process, current_group), proc);
   struct Lisp_Process *p;
   pid_t gid;
   bool no_pgrp = 0;
@@ -6871,7 +6844,7 @@ It shall be the last element in list `interrupt-process-functions'.
 See function `interrupt-process' for more details on usage.  */)
   (Lisp_Object process, Lisp_Object current_group)
 {
-  ENTER_LISP_FRAME (process, current_group);
+  ENTER_LISP_FRAME ((process, current_group));
   process_send_signal (process, SIGINT, current_group, 0);
   EXIT_LISP_FRAME (process);
 }
@@ -6893,7 +6866,7 @@ This function calls the functions of `interrupt-process-functions' in
 the order of the list, until one of them returns non-`nil'.  */)
   (Lisp_Object process, Lisp_Object current_group)
 {
-  ENTER_LISP_FRAME (process, current_group);
+  ENTER_LISP_FRAME ((process, current_group));
   EXIT_LISP_FRAME (CALLN (Frun_hook_with_args_until_success, Qinterrupt_process_functions,
 		process, current_group));
 }
@@ -6903,7 +6876,7 @@ DEFUN ("kill-process", Fkill_process, Skill_process, 0, 2, 0,
 See function `interrupt-process' for more details on usage.  */)
   (Lisp_Object process, Lisp_Object current_group)
 {
-  ENTER_LISP_FRAME (process, current_group);
+  ENTER_LISP_FRAME ((process, current_group));
   process_send_signal (process, SIGKILL, current_group, 0);
   EXIT_LISP_FRAME (process);
 }
@@ -6913,7 +6886,7 @@ DEFUN ("quit-process", Fquit_process, Squit_process, 0, 2, 0,
 See function `interrupt-process' for more details on usage.  */)
   (Lisp_Object process, Lisp_Object current_group)
 {
-  ENTER_LISP_FRAME (process, current_group);
+  ENTER_LISP_FRAME ((process, current_group));
   process_send_signal (process, SIGQUIT, current_group, 0);
   EXIT_LISP_FRAME (process);
 }
@@ -6925,7 +6898,7 @@ If PROCESS is a network or serial or pipe connection, inhibit handling
 of incoming traffic.  */)
   (Lisp_Object process, Lisp_Object current_group)
 {
-  ENTER_LISP_FRAME (process, current_group);
+  ENTER_LISP_FRAME ((process, current_group));
   if (PROCESSP (process) && (NETCONN_P (process) || SERIALCONN_P (process)
 			     || PIPECONN_P (process)))
     {
@@ -6953,7 +6926,7 @@ If PROCESS is a network or serial process, resume handling of incoming
 traffic.  */)
   (Lisp_Object process, Lisp_Object current_group)
 {
-  ENTER_LISP_FRAME (process, current_group);
+  ENTER_LISP_FRAME ((process, current_group));
   if (PROCESSP (process) && (NETCONN_P (process) || SERIALCONN_P (process)
 			     || PIPECONN_P (process)))
     {
@@ -7013,8 +6986,7 @@ this Emacs.
 SIGCODE may be an integer, or a symbol whose name is a signal name.  */)
   (Lisp_Object process, Lisp_Object sigcode)
 {
-  ENTER_LISP_FRAME (process, sigcode);
-  LISP_LOCALS (tem, process_number);
+  ENTER_LISP_FRAME ((process, sigcode), tem, process_number);
   pid_t pid;
   int signo;
 
@@ -7079,8 +7051,7 @@ If PROCESS is a serial process, wait until all output written to the
 process has been transmitted to the serial port.  */)
   (Lisp_Object process)
 {
-  ENTER_LISP_FRAME (process);
-  LISP_LOCALS (proc);
+  ENTER_LISP_FRAME ((process), proc);
   struct coding_system *coding = NULL;
   int outfd;
 
@@ -7219,8 +7190,7 @@ static signal_handler_t volatile lib_child_handler;
 static void
 handle_child_signal (int sig)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (tail, proc, head, xpid);
+  ENTER_LISP_FRAME ((), tail, proc, head, xpid);
 
   /* Find the process that signaled us, and record its status.  */
 
@@ -7300,7 +7270,7 @@ deliver_child_signal (int sig)
 static Lisp_Object
 exec_sentinel_error_handler (Lisp_Object error_val)
 {
-  ENTER_LISP_FRAME (error_val);
+  ENTER_LISP_FRAME ((error_val));
   /* Make sure error_val is a cons cell, as all the rest of error
      handling expects that, and will barf otherwise.  */
   if (!CONSP (error_val))
@@ -7315,8 +7285,8 @@ exec_sentinel_error_handler (Lisp_Object error_val)
 static void
 exec_sentinel (Lisp_Object proc, Lisp_Object reason)
 {
-  ENTER_LISP_FRAME (proc, reason);
-  LISP_LOCALS (sentinel, odeactivate, obuffer, okeymap, tem);
+  ENTER_LISP_FRAME ((proc, reason), sentinel, odeactivate, obuffer,
+                    okeymap, tem);
   struct Lisp_Process *p = XPROCESS (proc);
   ptrdiff_t count = SPECPDL_INDEX ();
   bool outer_running_asynch_code = running_asynch_code;
@@ -7399,8 +7369,7 @@ static int
 status_notify (struct Lisp_Process *deleting_process,
 	       struct Lisp_Process *wait_proc)
 {
-  ENTER_LISP_FRAME_T (int);
-  LISP_LOCALS (proc, tail, msg, symbol);
+  ENTER_LISP_FRAME_T (int, (), proc, tail, msg, symbol);
   int got_some_output = -1;
 
   tail = Qnil;
@@ -7475,8 +7444,7 @@ DEFUN ("internal-default-process-sentinel", Finternal_default_process_sentinel,
 This inserts a status message into the process's buffer, if there is one.  */)
      (Lisp_Object proc, Lisp_Object msg)
 {
-  ENTER_LISP_FRAME (proc, msg);
-  LISP_LOCALS (buffer, symbol, tem, tem2);
+  ENTER_LISP_FRAME ((proc, msg), buffer, symbol, tem, tem2);
   struct Lisp_Process *p;
   CHECK_PROCESS (proc);
   p = XPROCESS (proc);
@@ -7544,7 +7512,7 @@ DECODING will be used to decode subprocess output and ENCODING to
 encode subprocess input. */)
   (Lisp_Object process, Lisp_Object decoding, Lisp_Object encoding)
 {
-  ENTER_LISP_FRAME (process, decoding, encoding);
+  ENTER_LISP_FRAME ((process, decoding, encoding));
   CHECK_PROCESS (process);
 
   struct Lisp_Process *p = XPROCESS (process);
@@ -7570,7 +7538,7 @@ DEFUN ("process-coding-system",
        doc: /* Return a cons of coding systems for decoding and encoding of PROCESS.  */)
   (Lisp_Object process)
 {
-  ENTER_LISP_FRAME (process);
+  ENTER_LISP_FRAME ((process));
   CHECK_PROCESS (process);
   EXIT_LISP_FRAME (Fcons (XPROCESS (process)->decode_coding_system,
 		XPROCESS (process)->encode_coding_system));
@@ -7585,7 +7553,7 @@ all character code conversion except for end-of-line conversion is
 suppressed.  */)
   (Lisp_Object process, Lisp_Object flag)
 {
-  ENTER_LISP_FRAME (process, flag);
+  ENTER_LISP_FRAME ((process, flag));
   CHECK_PROCESS (process);
 
   struct Lisp_Process *p = XPROCESS (process);
@@ -7608,7 +7576,7 @@ DEFUN ("process-filter-multibyte-p", Fprocess_filter_multibyte_p,
        doc: /* Return t if a multibyte string is given to PROCESS's filter.*/)
   (Lisp_Object process)
 {
-  ENTER_LISP_FRAME (process);
+  ENTER_LISP_FRAME ((process));
   CHECK_PROCESS (process);
   struct Lisp_Process *p = XPROCESS (process);
   if (p->infd < 0)
@@ -7705,7 +7673,7 @@ wait_reading_process_output (intmax_t time_limit, int nsecs, int read_kbd,
 			     Lisp_Object wait_for_cell,
 			     struct Lisp_Process *wait_proc, int just_wait_proc)
 {
-  ENTER_LISP_FRAME_T (int, wait_for_cell);
+  ENTER_LISP_FRAME_T (int, (wait_for_cell));
   register int nfds;
   struct timespec end_time, timeout;
   enum { MINIMUM = -1, TIMEOUT, INFINITY } wait;
@@ -7906,7 +7874,7 @@ add_timer_wait_descriptor (int fd)
 Lisp_Object
 remove_slash_colon (Lisp_Object name)
 {
-  ENTER_LISP_FRAME (name);
+  ENTER_LISP_FRAME ((name));
   EXIT_LISP_FRAME ((SREF (name, 0) == '/' && SREF (name, 1) == ':'
      ? make_specified_string (SSDATA (name) + 2, SCHARS (name) - 2,
 			      SBYTES (name) - 2, STRING_MULTIBYTE (name))
@@ -7947,8 +7915,7 @@ delete_keyboard_wait_descriptor (int desc)
 void
 setup_process_coding_systems (Lisp_Object process)
 {
-  ENTER_LISP_FRAME (process);
-  LISP_LOCALS (coding_system);
+  ENTER_LISP_FRAME ((process), coding_system);
 #ifdef subprocesses
   struct Lisp_Process *p = XPROCESS (process);
   int inch = p->infd;
@@ -7983,8 +7950,7 @@ Return nil if all processes associated with BUFFER have been
 deleted or killed.  */)
   (Lisp_Object buffer)
 {
-  ENTER_LISP_FRAME (buffer);
-  LISP_LOCALS (buf, tail, proc);
+  ENTER_LISP_FRAME ((buffer), buf, tail, proc);
 #ifdef subprocesses
 
   if (NILP (buffer)) EXIT_LISP_FRAME (Qnil);
@@ -8007,7 +7973,7 @@ associated with PROCESS will inherit the coding system used to decode
 the process output.  */)
   (Lisp_Object process)
 {
-  ENTER_LISP_FRAME (process);
+  ENTER_LISP_FRAME ((process));
 #ifdef subprocesses
   CHECK_PROCESS (process);
   EXIT_LISP_FRAME (XPROCESS (process)->inherit_coding_system_flag ? Qt : Qnil);
@@ -8024,8 +7990,7 @@ the process output.  */)
 void
 kill_buffer_processes (Lisp_Object buffer)
 {
-  ENTER_LISP_FRAME (buffer);
-  LISP_LOCALS (tail, proc);
+  ENTER_LISP_FRAME ((buffer), tail, proc);
 #ifdef subprocesses
 
   FOR_EACH_PROCESS (tail, proc)
@@ -8147,7 +8112,7 @@ integer or floating point values.
  args    -- command line which invoked the process (string).  */)
   ( Lisp_Object pid)
 {
-  ENTER_LISP_FRAME (pid);
+  ENTER_LISP_FRAME ((pid));
   EXIT_LISP_FRAME (system_process_attributes (pid));
 }
 
@@ -8279,8 +8244,7 @@ init_process_emacs (int sockfd)
 void
 syms_of_process (void)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (subfeatures);
+  ENTER_LISP_FRAME ((), subfeatures);
 #ifdef subprocesses
 
   DEFSYM (Qprocessp, "processp");

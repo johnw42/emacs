@@ -484,7 +484,7 @@ int max_used_fringe_bitmap = MAX_STANDARD_FRINGE_BITMAPS;
 int
 lookup_fringe_bitmap (Lisp_Object bitmap)
 {
-  ENTER_LISP_FRAME_T (int, bitmap);
+  ENTER_LISP_FRAME_T (int, (bitmap));
   EMACS_INT bn;
 
   bitmap = Fget (bitmap, Qfringe);
@@ -511,8 +511,7 @@ lookup_fringe_bitmap (Lisp_Object bitmap)
 static Lisp_Object
 get_fringe_bitmap_name (int bn)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (bitmaps, num, bitmap);
+  ENTER_LISP_FRAME ((), bitmaps, num, bitmap);
 
   /* Zero means no bitmap -- return nil.  */
   if (bn <= 0)
@@ -558,8 +557,7 @@ get_fringe_bitmap_data (int bn)
 static void
 draw_fringe_bitmap_1 (struct window *w, struct glyph_row *row, int left_p, int overlay, int which)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (face);
+  ENTER_LISP_FRAME ((), face);
   struct frame *f = XFRAME (WINDOW_FRAME (w));
   struct draw_fringe_bitmap_params p;
   struct fringe_bitmap *fb;
@@ -700,8 +698,7 @@ draw_fringe_bitmap_1 (struct window *w, struct glyph_row *row, int left_p, int o
 static int
 get_logical_cursor_bitmap (struct window *w, Lisp_Object cursor)
 {
-  ENTER_LISP_FRAME_T (int, cursor);
-  LISP_LOCALS (cmap, bm);
+  ENTER_LISP_FRAME_T (int, (cursor), cmap, bm);
   bm = Qnil;
 
 
@@ -726,8 +723,7 @@ get_logical_cursor_bitmap (struct window *w, Lisp_Object cursor)
 static int
 get_logical_fringe_bitmap (struct window *w, Lisp_Object bitmap, int right_p, int partial_p)
 {
-  ENTER_LISP_FRAME_T (int, bitmap);
-  LISP_LOCALS (cmap, bm1, bm2, bm);
+  ENTER_LISP_FRAME_T (int, (bitmap), cmap, bm1, bm2, bm);
   bm1 = Qnil;
   bm2 = Qnil;
 
@@ -830,8 +826,7 @@ get_logical_fringe_bitmap (struct window *w, Lisp_Object bitmap, int right_p, in
 void
 draw_fringe_bitmap (struct window *w, struct glyph_row *row, int left_p)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (cursor);
+  ENTER_LISP_FRAME ((), cursor);
   int overlay = 0;
 
   if (left_p == row->reversed_p && row->cursor_in_fringe_p)
@@ -954,8 +949,8 @@ draw_window_fringes (struct window *w, bool no_fringe_p)
 bool
 update_window_fringes (struct window *w, bool keep_current_p)
 {
-  ENTER_LISP_FRAME_T (bool);
-  LISP_LOCALS (boundary_top, boundary_bot, arrow_top, arrow_bot, empty_pos, ind, pos);
+  ENTER_LISP_FRAME_T (bool, (), boundary_top, boundary_bot, arrow_top,
+                      arrow_bot, empty_pos, ind, pos);
   struct glyph_row *row, *cur = 0;
   int yb = window_text_bottom_y (w);
   int rn, nrows = w->current_matrix->nrows;
@@ -1378,7 +1373,7 @@ DEFUN ("destroy-fringe-bitmap", Fdestroy_fringe_bitmap, Sdestroy_fringe_bitmap,
 If BITMAP overrides a standard fringe bitmap, the original bitmap is restored.  */)
   (Lisp_Object bitmap)
 {
-  ENTER_LISP_FRAME (bitmap);
+  ENTER_LISP_FRAME ((bitmap));
   int n;
 
   CHECK_SYMBOL (bitmap);
@@ -1519,8 +1514,7 @@ should be repeated.
 If BITMAP already exists, the existing definition is replaced.  */)
   (Lisp_Object bitmap, Lisp_Object bits, Lisp_Object height, Lisp_Object width, Lisp_Object align)
 {
-  ENTER_LISP_FRAME (bitmap, bits, height, width, align);
-  LISP_LOCALS (period, elt);
+  ENTER_LISP_FRAME ((bitmap, bits, height, width, align), period, elt);
   int n, h, i, j;
   unsigned short *b;
   struct fringe_bitmap fb, *xfb;
@@ -1650,7 +1644,7 @@ only the foreground color.
 If FACE is nil, reset face to default fringe face.  */)
   (Lisp_Object bitmap, Lisp_Object face)
 {
-  ENTER_LISP_FRAME (bitmap, face);
+  ENTER_LISP_FRAME ((bitmap, face));
   int n;
 
   CHECK_SYMBOL (bitmap);
@@ -1687,7 +1681,7 @@ overlay arrow in the left fringe.
 Return nil if POS is not visible in WINDOW.  */)
   (Lisp_Object pos, Lisp_Object window)
 {
-  ENTER_LISP_FRAME (pos, window);
+  ENTER_LISP_FRAME ((pos, window));
   struct window *w;
   struct glyph_row *row;
   ptrdiff_t textpos;

@@ -813,7 +813,7 @@ DEFUN ("set-screen-color", Fset_screen_color, Sset_screen_color, 2, 2, 0,
 Arguments should be indices between 0 and 15, see w32console.el.  */)
   (Lisp_Object foreground, Lisp_Object background)
 {
-  ENTER_LISP_FRAME (foreground, background);
+  ENTER_LISP_FRAME ((foreground, background));
   char_attr_normal = XFASTINT (foreground) + (XFASTINT (background) << 4);
 
   Frecenter (Qnil);
@@ -836,7 +836,7 @@ DEFUN ("set-cursor-size", Fset_cursor_size, Sset_cursor_size, 1, 1, 0,
        doc: /* Set cursor size.  */)
   (Lisp_Object size)
 {
-  ENTER_LISP_FRAME (size);
+  ENTER_LISP_FRAME ((size));
   CONSOLE_CURSOR_INFO cci;
   cci.dwSize = XFASTINT (size);
   cci.bVisible = TRUE;

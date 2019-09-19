@@ -1527,8 +1527,7 @@ w32_init_file_name_codepage (void)
 int
 codepage_for_filenames (CPINFO *cp_info)
 {
-  ENTER_LISP_FRAME_T (int);
-  LISP_LOCALS (current_encoding);
+  ENTER_LISP_FRAME_T (int, (), current_encoding);
   /* A simple cache to avoid calling GetCPInfo every time we need to
      encode/decode a file name.  The file-name encoding is not
      supposed to be changed too frequently, if ever.  */
@@ -2466,8 +2465,7 @@ w32_get_short_filename (const char * name, char * buf, int size)
 Lisp_Object
 ansi_encode_filename (Lisp_Object filename)
 {
-  ENTER_LISP_FRAME (filename);
-  LISP_LOCALS (encoded_filename);
+  ENTER_LISP_FRAME ((filename), encoded_filename);
   char fname[MAX_PATH];
 
   filename_to_ansi (SSDATA (filename), fname);
@@ -2629,8 +2627,7 @@ w32_get_resource (const char *key, LPDWORD lpdwtype)
 void
 init_environment (char ** argv)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (env, entry);
+  ENTER_LISP_FRAME ((), env, entry);
   static const char * const tempdirs[] = {
     "$TMPDIR", "$TEMP", "$TMP", "c:/"
   };
@@ -6796,8 +6793,7 @@ global_memory_status_ex (MEMORY_STATUS_EX *buf)
 Lisp_Object
 list_system_processes (void)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (proclist);
+  ENTER_LISP_FRAME ((), proclist);
   proclist = Qnil;
 
   HANDLE h_snapshot;
@@ -6947,8 +6943,8 @@ process_times (HANDLE h_proc, Lisp_Object *ctime, Lisp_Object *etime,
 Lisp_Object
 system_process_attributes (Lisp_Object pid)
 {
-  ENTER_LISP_FRAME (pid);
-  LISP_LOCALS (attrs, cmd_str, decoded_cmd, tem, ctime, stime, utime, etime, ttime);
+  ENTER_LISP_FRAME ((pid), attrs, cmd_str, decoded_cmd, tem, ctime,
+                    stime, utime, etime, ttime);
   attrs = Qnil;
 
   HANDLE h_snapshot, h_proc;
@@ -9027,8 +9023,7 @@ sys_write (int fd, const void * buffer, unsigned int count)
 static Lisp_Object
 network_interface_get_info (Lisp_Object ifname)
 {
-  ENTER_LISP_FRAME (ifname);
-  LISP_LOCALS (res, hwaddr, flags);
+  ENTER_LISP_FRAME ((ifname), res, hwaddr, flags);
   ULONG ainfo_len = sizeof (IP_ADAPTER_INFO);
   IP_ADAPTER_INFO *adapter, *ainfo = xmalloc (ainfo_len);
   DWORD retval = get_adapters_info (ainfo, &ainfo_len);
@@ -9281,7 +9276,7 @@ network_interface_list (void)
 Lisp_Object
 network_interface_info (Lisp_Object ifname)
 {
-  ENTER_LISP_FRAME (ifname);
+  ENTER_LISP_FRAME ((ifname));
   CHECK_STRING (ifname);
   EXIT_LISP_FRAME (network_interface_get_info (ifname));
 }
@@ -9314,8 +9309,7 @@ sys_localtime (const time_t *t)
 HMODULE
 w32_delayed_load (Lisp_Object library_id)
 {
-  ENTER_LISP_FRAME_T (HMODULE, library_id);
-  LISP_LOCALS (found, dlls, dll);
+  ENTER_LISP_FRAME_T (HMODULE, (library_id), found, dlls, dll);
   HMODULE dll_handle = NULL;
 
   CHECK_SYMBOL (library_id);
@@ -9395,8 +9389,7 @@ w32_delayed_load (Lisp_Object library_id)
 void
 check_windows_init_file (void)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (init_file, load_path_print);
+  ENTER_LISP_FRAME ((), init_file, load_path_print);
   /* A common indication that Emacs is not installed properly is when
      it cannot find the Windows installation file.  If this file does
      not exist in the expected place, tell the user.  */
@@ -9759,7 +9752,7 @@ globals_of_w32 (void)
 int
 serial_open (Lisp_Object port_obj)
 {
-  ENTER_LISP_FRAME_T (int, port_obj);
+  ENTER_LISP_FRAME_T (int, (port_obj));
   char *port = SSDATA (port_obj);
   HANDLE hnd;
   child_process *cp;
@@ -9800,8 +9793,7 @@ serial_open (Lisp_Object port_obj)
 void
 serial_configure (struct Lisp_Process *p, Lisp_Object contact)
 {
-  ENTER_LISP_FRAME (contact);
-  LISP_LOCALS (childp2, tem);
+  ENTER_LISP_FRAME ((contact), childp2, tem);
   childp2 = Qnil;
 
   tem = Qnil;

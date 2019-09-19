@@ -201,8 +201,7 @@ emacs_string_char (const unsigned char *p, const unsigned char **advanced, int *
 int
 translate_char (Lisp_Object table, int c)
 {
-  ENTER_LISP_FRAME_T (int, table);
-  LISP_LOCALS (ch);
+  ENTER_LISP_FRAME_T (int, (table), ch);
   if (CHAR_TABLE_P (table))
     {
 
@@ -227,7 +226,7 @@ usage: (characterp OBJECT)  */
        attributes: const)
   (Lisp_Object object, Lisp_Object ignore)
 {
-  ENTER_LISP_FRAME (object, ignore);
+  ENTER_LISP_FRAME ((object, ignore));
   EXIT_LISP_FRAME ((CHARACTERP (object) ? Qt : Qnil));
 }
 
@@ -244,7 +243,7 @@ DEFUN ("unibyte-char-to-multibyte", Funibyte_char_to_multibyte,
        doc: /* Convert the byte CH to multibyte character.  */)
   (Lisp_Object ch)
 {
-  ENTER_LISP_FRAME (ch);
+  ENTER_LISP_FRAME ((ch));
   int c;
 
   CHECK_CHARACTER (ch);
@@ -261,7 +260,7 @@ DEFUN ("multibyte-char-to-unibyte", Fmultibyte_char_to_unibyte,
 If the multibyte character does not represent a byte, return -1.  */)
   (Lisp_Object ch)
 {
-  ENTER_LISP_FRAME (ch);
+  ENTER_LISP_FRAME ((ch));
   int cm;
 
   CHECK_CHARACTER (ch);
@@ -283,8 +282,7 @@ If the multibyte character does not represent a byte, return -1.  */)
 static ptrdiff_t
 char_width (int c, struct Lisp_Char_Table *dp)
 {
-  ENTER_LISP_FRAME_T (ptrdiff_t);
-  LISP_LOCALS (disp, ch);
+  ENTER_LISP_FRAME_T (ptrdiff_t, (), disp, ch);
   ptrdiff_t width = CHARACTER_WIDTH (c);
 
   if (dp)
@@ -321,7 +319,7 @@ Tab is taken to occupy `tab-width' columns.
 usage: (char-width CHAR)  */)
   (Lisp_Object ch)
 {
-  ENTER_LISP_FRAME (ch);
+  ENTER_LISP_FRAME ((ch));
   int c;
   ptrdiff_t width;
 
@@ -394,8 +392,7 @@ ptrdiff_t
 lisp_string_width (Lisp_Object string, ptrdiff_t precision,
 		   ptrdiff_t *nchars, ptrdiff_t *nbytes)
 {
-  ENTER_LISP_FRAME_T (ptrdiff_t, string);
-  LISP_LOCALS (val);
+  ENTER_LISP_FRAME_T (ptrdiff_t, (string), val);
   ptrdiff_t len = SCHARS (string);
   /* This set multibyte to 0 even if STRING is multibyte when it
      contains only ascii and eight-bit-graphic, but that's
@@ -467,8 +464,7 @@ taken to occupy `tab-width' columns.
 usage: (string-width STRING)  */)
   (Lisp_Object str)
 {
-  ENTER_LISP_FRAME (str);
-  LISP_LOCALS (val);
+  ENTER_LISP_FRAME ((str), val);
 
   CHECK_STRING (str);
   XSETFASTINT (val, lisp_string_width (str, -1, NULL, NULL));
@@ -755,7 +751,7 @@ str_to_unibyte (const unsigned char *src, unsigned char *dst, ptrdiff_t chars)
 static ptrdiff_t
 string_count_byte8 (Lisp_Object string)
 {
-  ENTER_LISP_FRAME_T (ptrdiff_t, string);
+  ENTER_LISP_FRAME_T (ptrdiff_t, (string));
   bool multibyte = STRING_MULTIBYTE (string);
   ptrdiff_t nbytes = SBYTES (string);
   unsigned char *p = SDATA (string);
@@ -786,8 +782,7 @@ string_count_byte8 (Lisp_Object string)
 Lisp_Object
 string_escape_byte8 (Lisp_Object string)
 {
-  ENTER_LISP_FRAME (string);
-  LISP_LOCALS (val);
+  ENTER_LISP_FRAME ((string), val);
   ptrdiff_t nchars = SCHARS (string);
   ptrdiff_t nbytes = SBYTES (string);
   bool multibyte = STRING_MULTIBYTE (string);
@@ -861,8 +856,7 @@ Concatenate all the argument characters and make the result a string.
 usage: (string &rest CHARACTERS)  */)
   (ptrdiff_t n, Lisp_Object *args)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (str);
+  ENTER_LISP_FRAME ((), str);
   ptrdiff_t i;
   int c;
   unsigned char *buf, *p;
@@ -888,8 +882,7 @@ DEFUN ("unibyte-string", Funibyte_string, Sunibyte_string, 0, MANY, 0,
 usage: (unibyte-string &rest BYTES)  */)
   (ptrdiff_t n, Lisp_Object *args)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (str);
+  ENTER_LISP_FRAME ((), str);
   ptrdiff_t i;
   USE_SAFE_ALLOCA;
   unsigned char *buf = SAFE_ALLOCA (n);
@@ -914,7 +907,7 @@ code.  Unresolved modifiers are kept in the value.
 usage: (char-resolve-modifiers CHAR)  */)
   (Lisp_Object character)
 {
-  ENTER_LISP_FRAME (character);
+  ENTER_LISP_FRAME ((character));
   EMACS_INT c;
 
   CHECK_NUMBER (character);
@@ -934,7 +927,7 @@ If the current buffer (or STRING) is multibyte, and the target
 character is not ASCII nor 8-bit character, an error is signaled.  */)
   (Lisp_Object position, Lisp_Object string)
 {
-  ENTER_LISP_FRAME (position, string);
+  ENTER_LISP_FRAME ((position, string));
   int c;
   ptrdiff_t pos;
   unsigned char *p;
@@ -986,8 +979,7 @@ character is not ASCII nor 8-bit character, an error is signaled.  */)
 bool
 alphabeticp (int c)
 {
-  ENTER_LISP_FRAME_T (bool);
-  LISP_LOCALS (category);
+  ENTER_LISP_FRAME_T (bool, (), category);
   category = CHAR_TABLE_REF (Vunicode_category_table, c);
 
   if (! INTEGERP (category))
@@ -1012,8 +1004,7 @@ alphabeticp (int c)
 bool
 alphanumericp (int c)
 {
-  ENTER_LISP_FRAME_T (bool);
-  LISP_LOCALS (category);
+  ENTER_LISP_FRAME_T (bool, (), category);
   category = CHAR_TABLE_REF (Vunicode_category_table, c);
 
   if (! INTEGERP (category))
@@ -1037,8 +1028,7 @@ alphanumericp (int c)
 bool
 graphicp (int c)
 {
-  ENTER_LISP_FRAME_T (bool);
-  LISP_LOCALS (category);
+  ENTER_LISP_FRAME_T (bool, (), category);
   category = CHAR_TABLE_REF (Vunicode_category_table, c);
 
   if (! INTEGERP (category))
@@ -1058,8 +1048,7 @@ graphicp (int c)
 bool
 printablep (int c)
 {
-  ENTER_LISP_FRAME_T (bool);
-  LISP_LOCALS (category);
+  ENTER_LISP_FRAME_T (bool, (), category);
   category = CHAR_TABLE_REF (Vunicode_category_table, c);
 
   if (! INTEGERP (category))

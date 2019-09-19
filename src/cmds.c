@@ -35,7 +35,7 @@ DEFUN ("forward-point", Fforward_point, Sforward_point, 1, 1, 0,
        doc: /* Return buffer position N characters after (before if N negative) point.  */)
   (Lisp_Object n)
 {
-  ENTER_LISP_FRAME (n);
+  ENTER_LISP_FRAME ((n));
   CHECK_NUMBER (n);
 
   EXIT_LISP_FRAME (make_number (PT + XINT (n)));
@@ -46,7 +46,7 @@ DEFUN ("forward-point", Fforward_point, Sforward_point, 1, 1, 0,
 static Lisp_Object
 move_point (Lisp_Object n, bool forward)
 {
-  ENTER_LISP_FRAME (n);
+  ENTER_LISP_FRAME ((n));
   /* This used to just set point to point + XINT (n), and then check
      to see if it was within boundaries.  But now that SET_PT can
      potentially do a lot of stuff (calling entering and exiting
@@ -88,7 +88,7 @@ right or to the left on the screen.  This is in contrast with
 \\[right-char], which see.  */)
   (Lisp_Object n)
 {
-  ENTER_LISP_FRAME (n);
+  ENTER_LISP_FRAME ((n));
   EXIT_LISP_FRAME (move_point (n, 1));
 }
 
@@ -103,7 +103,7 @@ right or to the left on the screen.  This is in contrast with
 \\[left-char], which see.  */)
   (Lisp_Object n)
 {
-  ENTER_LISP_FRAME (n);
+  ENTER_LISP_FRAME ((n));
   EXIT_LISP_FRAME (move_point (n, 0));
 }
 
@@ -125,7 +125,7 @@ it as a line moved across, even though there is no next line to
 go to its beginning.  */)
   (Lisp_Object n)
 {
-  ENTER_LISP_FRAME (n);
+  ENTER_LISP_FRAME ((n));
   ptrdiff_t opoint = PT, pos, pos_byte, shortage, count;
 
   if (NILP (n))
@@ -164,7 +164,7 @@ instead.  For instance, `(forward-line 0)' does the same thing as
 `(beginning-of-line)', except that it ignores field boundaries.  */)
   (Lisp_Object n)
 {
-  ENTER_LISP_FRAME (n);
+  ENTER_LISP_FRAME ((n));
   if (NILP (n))
     XSETFASTINT (n, 1);
   else
@@ -188,7 +188,7 @@ not move.  To ignore field boundaries bind `inhibit-field-text-motion'
 to t.  */)
   (Lisp_Object n)
 {
-  ENTER_LISP_FRAME (n);
+  ENTER_LISP_FRAME ((n));
   ptrdiff_t newpos;
 
   if (NILP (n))
@@ -235,7 +235,7 @@ The command `delete-forward-char' is preferable for interactive use, e.g.
 because it respects values of `delete-active-region' and `overwrite-mode'.  */)
   (Lisp_Object n, Lisp_Object killflag)
 {
-  ENTER_LISP_FRAME (n, killflag);
+  ENTER_LISP_FRAME ((n, killflag));
   EMACS_INT pos;
 
   CHECK_NUMBER (n);
@@ -282,7 +282,7 @@ a non-nil value for the inserted character.  At the end, it runs
 `post-self-insert-hook'.  */)
   (Lisp_Object n)
 {
-  ENTER_LISP_FRAME (n);
+  ENTER_LISP_FRAME ((n));
   CHECK_NUMBER (n);
 
   if (XINT (n) < 0)
@@ -315,8 +315,8 @@ a non-nil value for the inserted character.  At the end, it runs
 static int
 internal_self_insert (int c, EMACS_INT n)
 {
-  ENTER_LISP_FRAME_T (int);
-  LISP_LOCALS (tem, overwrite, sym, prop, string, auto_fill_result);
+  ENTER_LISP_FRAME_T (int, (), tem, overwrite, sym, prop, string,
+                      auto_fill_result);
   int hairy = 0;
   register enum syntaxcode synt;
   /* Length of multi-byte form of C.  */

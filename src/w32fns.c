@@ -292,7 +292,7 @@ extern HANDLE keyboard_handle;
 struct w32_display_info *
 check_x_display_info (Lisp_Object object)
 {
-  ENTER_LISP_FRAME_T (struct w32_display_info *, object);
+  ENTER_LISP_FRAME_T (struct w32_display_info *, (object));
   if (NILP (object))
     {
       struct frame *sf = XFRAME (selected_frame);
@@ -331,8 +331,7 @@ check_x_display_info (Lisp_Object object)
 struct frame *
 x_window_to_frame (struct w32_display_info *dpyinfo, HWND wdesc)
 {
-  ENTER_LISP_FRAME_T (struct frame *);
-  LISP_LOCALS (tail, frame);
+  ENTER_LISP_FRAME_T (struct frame *, (), tail, frame);
   struct frame *f;
 
   FOR_EACH_FRAME (tail, frame)
@@ -455,8 +454,7 @@ available for use.  The original entry's RGB ref is returned, or nil
 if the entry is new.  */)
   (Lisp_Object red, Lisp_Object green, Lisp_Object blue, Lisp_Object name)
 {
-  ENTER_LISP_FRAME (red, green, blue, name);
-  LISP_LOCALS (rgb, oldrgb, entry);
+  ENTER_LISP_FRAME ((red, green, blue, name), rgb, oldrgb, entry);
   oldrgb = Qnil;
 
 
@@ -741,8 +739,7 @@ colormap_t w32_color_map[] =
 static Lisp_Object
 w32_default_color_map (void)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (cmap);
+  ENTER_LISP_FRAME ((), cmap);
   int i;
   colormap_t *pc = w32_color_map;
 
@@ -770,8 +767,7 @@ DEFUN ("w32-default-color-map", Fw32_default_color_map, Sw32_default_color_map,
 static Lisp_Object
 w32_color_map_lookup (const char *colorname)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (tail, ret, elt, tem);
+  ENTER_LISP_FRAME ((), tail, ret, elt, tem);
   ret = Qnil;
 
 
@@ -851,8 +847,7 @@ add_system_logical_colors_to_map (Lisp_Object *system_colors)
 static Lisp_Object
 x_to_w32_color (const char * colorname)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (ret);
+  ENTER_LISP_FRAME ((), ret);
   ret = Qnil;
 
 
@@ -1181,8 +1176,7 @@ int
 w32_defined_color (struct frame *f, const char *color, XColor *color_def,
 		   bool alloc_p)
 {
-  ENTER_LISP_FRAME_T (int);
-  LISP_LOCALS (tem);
+  ENTER_LISP_FRAME_T (int, (), tem);
   COLORREF w32_color_ref;
 
   tem = x_to_w32_color (color);
@@ -1253,7 +1247,7 @@ w32_defined_color (struct frame *f, const char *color, XColor *color_def,
 static int
 x_decode_color (struct frame *f, Lisp_Object arg, int def)
 {
-  ENTER_LISP_FRAME_T (int, arg);
+  ENTER_LISP_FRAME_T (int, (arg));
   XColor cdef;
 
   CHECK_STRING (arg);
@@ -1288,7 +1282,7 @@ x_decode_color (struct frame *f, Lisp_Object arg, int def)
 void
 x_set_foreground_color (struct frame *f, Lisp_Object arg, Lisp_Object oldval)
 {
-  ENTER_LISP_FRAME (arg, oldval);
+  ENTER_LISP_FRAME ((arg, oldval));
   struct w32_output *x = f->output_data.w32;
   PIX_TYPE fg, old_fg;
 
@@ -1314,7 +1308,7 @@ x_set_foreground_color (struct frame *f, Lisp_Object arg, Lisp_Object oldval)
 void
 x_set_background_color (struct frame *f, Lisp_Object arg, Lisp_Object oldval)
 {
-  ENTER_LISP_FRAME (arg, oldval);
+  ENTER_LISP_FRAME ((arg, oldval));
   FRAME_BACKGROUND_PIXEL (f)
     = x_decode_color (f, arg, WHITE_PIX_DEFAULT (f));
 
@@ -1334,7 +1328,7 @@ x_set_background_color (struct frame *f, Lisp_Object arg, Lisp_Object oldval)
 void
 x_set_mouse_color (struct frame *f, Lisp_Object arg, Lisp_Object oldval)
 {
-  ENTER_LISP_FRAME (arg, oldval);
+  ENTER_LISP_FRAME ((arg, oldval));
 #if 0
   Cursor cursor, nontext_cursor, mode_cursor, hand_cursor;
   int count;
@@ -1496,7 +1490,7 @@ x_set_mouse_color (struct frame *f, Lisp_Object arg, Lisp_Object oldval)
 void
 x_set_cursor_color (struct frame *f, Lisp_Object arg, Lisp_Object oldval)
 {
-  ENTER_LISP_FRAME (arg, oldval);
+  ENTER_LISP_FRAME ((arg, oldval));
   unsigned long fore_pixel, pixel;
 
   if (!NILP (Vx_cursor_fore_pixel))
@@ -1564,7 +1558,7 @@ x_set_border_pixel (struct frame *f, int pix)
 void
 x_set_border_color (struct frame *f, Lisp_Object arg, Lisp_Object oldval)
 {
-  ENTER_LISP_FRAME (arg, oldval);
+  ENTER_LISP_FRAME ((arg, oldval));
   int pix;
 
   CHECK_STRING (arg);
@@ -1578,7 +1572,7 @@ x_set_border_color (struct frame *f, Lisp_Object arg, Lisp_Object oldval)
 void
 x_set_cursor_type (struct frame *f, Lisp_Object arg, Lisp_Object oldval)
 {
-  ENTER_LISP_FRAME (arg, oldval);
+  ENTER_LISP_FRAME ((arg, oldval));
   set_frame_cursor_types (f, arg);
   EXIT_LISP_FRAME_VOID ();
 }
@@ -1586,7 +1580,7 @@ x_set_cursor_type (struct frame *f, Lisp_Object arg, Lisp_Object oldval)
 void
 x_set_icon_type (struct frame *f, Lisp_Object arg, Lisp_Object oldval)
 {
-  ENTER_LISP_FRAME (arg, oldval);
+  ENTER_LISP_FRAME ((arg, oldval));
   bool result;
 
   if (NILP (arg) && NILP (oldval))
@@ -1615,7 +1609,7 @@ x_set_icon_type (struct frame *f, Lisp_Object arg, Lisp_Object oldval)
 void
 x_set_icon_name (struct frame *f, Lisp_Object arg, Lisp_Object oldval)
 {
-  ENTER_LISP_FRAME (arg, oldval);
+  ENTER_LISP_FRAME ((arg, oldval));
   if (STRINGP (arg))
     {
       if (STRINGP (oldval) && EQ (Fstring_equal (oldval, arg), Qt))
@@ -1713,7 +1707,7 @@ x_clear_under_internal_border (struct frame *f)
 void
 x_set_internal_border_width (struct frame *f, Lisp_Object arg, Lisp_Object oldval)
 {
-  ENTER_LISP_FRAME (arg, oldval);
+  ENTER_LISP_FRAME ((arg, oldval));
   int border;
 
   CHECK_TYPE_RANGED_INTEGER (int, arg);
@@ -1746,7 +1740,7 @@ x_set_internal_border_width (struct frame *f, Lisp_Object arg, Lisp_Object oldva
 void
 x_set_menu_bar_lines (struct frame *f, Lisp_Object value, Lisp_Object oldval)
 {
-  ENTER_LISP_FRAME (value, oldval);
+  ENTER_LISP_FRAME ((value, oldval));
   /* Right now, menu bars don't work properly in minibuf-only frames;
      most of the commands try to apply themselves to the minibuffer
      frame itself, and get an error because you can't switch buffers in
@@ -1804,7 +1798,7 @@ x_set_menu_bar_lines (struct frame *f, Lisp_Object value, Lisp_Object oldval)
 void
 x_set_tool_bar_lines (struct frame *f, Lisp_Object value, Lisp_Object oldval)
 {
-  ENTER_LISP_FRAME (value, oldval);
+  ENTER_LISP_FRAME ((value, oldval));
   int nlines;
 
   /* Treat tool bars like menu bars.  */
@@ -1826,8 +1820,7 @@ x_set_tool_bar_lines (struct frame *f, Lisp_Object value, Lisp_Object oldval)
 void
 x_change_tool_bar_height (struct frame *f, int height)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (fullscreen);
+  ENTER_LISP_FRAME ((), fullscreen);
   int unit = FRAME_LINE_HEIGHT (f);
   int old_height = FRAME_TOOL_BAR_HEIGHT (f);
   int lines = (height + unit - 1) / unit;
@@ -1883,8 +1876,7 @@ x_change_tool_bar_height (struct frame *f, int height)
 static void
 w32_set_title_bar_text (struct frame *f, Lisp_Object name)
 {
-  ENTER_LISP_FRAME (name);
-  LISP_LOCALS (encoded_title);
+  ENTER_LISP_FRAME ((name), encoded_title);
   if (FRAME_W32_WINDOW (f))
     {
       block_input ();
@@ -1943,7 +1935,7 @@ w32_set_title_bar_text (struct frame *f, Lisp_Object name)
 static void
 x_set_name (struct frame *f, Lisp_Object name, bool explicit)
 {
-  ENTER_LISP_FRAME (name);
+  ENTER_LISP_FRAME ((name));
   /* Make sure that requests from lisp code override requests from
      Emacs redisplay code.  */
   if (explicit)
@@ -1992,7 +1984,7 @@ x_set_name (struct frame *f, Lisp_Object name, bool explicit)
 void
 x_explicitly_set_name (struct frame *f, Lisp_Object arg, Lisp_Object oldval)
 {
-  ENTER_LISP_FRAME (arg, oldval);
+  ENTER_LISP_FRAME ((arg, oldval));
   x_set_name (f, arg, true);
   EXIT_LISP_FRAME_VOID ();
 }
@@ -2003,7 +1995,7 @@ x_explicitly_set_name (struct frame *f, Lisp_Object arg, Lisp_Object oldval)
 void
 x_implicitly_set_name (struct frame *f, Lisp_Object arg, Lisp_Object oldval)
 {
-  ENTER_LISP_FRAME (arg, oldval);
+  ENTER_LISP_FRAME ((arg, oldval));
   x_set_name (f, arg, false);
   EXIT_LISP_FRAME_VOID ();
 }
@@ -2014,7 +2006,7 @@ x_implicitly_set_name (struct frame *f, Lisp_Object arg, Lisp_Object oldval)
 void
 x_set_title (struct frame *f, Lisp_Object name, Lisp_Object old_name)
 {
-  ENTER_LISP_FRAME (name, old_name);
+  ENTER_LISP_FRAME ((name, old_name));
   /* Don't change the title if it's already NAME.  */
   if (EQ (name, f->title))
     EXIT_LISP_FRAME_VOID ();
@@ -2066,8 +2058,7 @@ x_set_scroll_bar_default_height (struct frame *f)
 static void
 x_set_undecorated (struct frame *f, Lisp_Object new_value, Lisp_Object old_value)
 {
-  ENTER_LISP_FRAME (new_value, old_value);
-  LISP_LOCALS (border_width);
+  ENTER_LISP_FRAME ((new_value, old_value), border_width);
   HWND hwnd = FRAME_W32_WINDOW (f);
   DWORD dwStyle = GetWindowLong (hwnd, GWL_STYLE);
   border_width = Fcdr (Fassq (Qborder_width, f->param_alist));
@@ -2129,7 +2120,7 @@ x_set_undecorated (struct frame *f, Lisp_Object new_value, Lisp_Object old_value
 static void
 x_set_parent_frame (struct frame *f, Lisp_Object new_value, Lisp_Object old_value)
 {
-  ENTER_LISP_FRAME (new_value, old_value);
+  ENTER_LISP_FRAME ((new_value, old_value));
   struct frame *p = NULL;
 
   if (!NILP (new_value)
@@ -2176,7 +2167,7 @@ x_set_parent_frame (struct frame *f, Lisp_Object new_value, Lisp_Object old_valu
 static void
 x_set_skip_taskbar (struct frame *f, Lisp_Object new_value, Lisp_Object old_value)
 {
-  ENTER_LISP_FRAME (new_value, old_value);
+  ENTER_LISP_FRAME ((new_value, old_value));
   if (!EQ (new_value, old_value))
     {
       HWND hwnd = FRAME_W32_WINDOW (f);
@@ -2212,7 +2203,7 @@ x_set_skip_taskbar (struct frame *f, Lisp_Object new_value, Lisp_Object old_valu
 static void
 x_set_no_focus_on_map (struct frame *f, Lisp_Object new_value, Lisp_Object old_value)
 {
-  ENTER_LISP_FRAME (new_value, old_value);
+  ENTER_LISP_FRAME ((new_value, old_value));
   if (!EQ (new_value, old_value))
     FRAME_NO_FOCUS_ON_MAP (f) = !NILP (new_value);
   EXIT_LISP_FRAME_VOID ();
@@ -2233,7 +2224,7 @@ x_set_no_focus_on_map (struct frame *f, Lisp_Object new_value, Lisp_Object old_v
 static void
 x_set_no_accept_focus (struct frame *f, Lisp_Object new_value, Lisp_Object old_value)
 {
-  ENTER_LISP_FRAME (new_value, old_value);
+  ENTER_LISP_FRAME ((new_value, old_value));
   if (!EQ (new_value, old_value))
     FRAME_NO_ACCEPT_FOCUS (f) = !NILP (new_value);
   EXIT_LISP_FRAME_VOID ();
@@ -2260,7 +2251,7 @@ x_set_no_accept_focus (struct frame *f, Lisp_Object new_value, Lisp_Object old_v
 static void
 x_set_z_group (struct frame *f, Lisp_Object new_value, Lisp_Object old_value)
 {
-  ENTER_LISP_FRAME (new_value, old_value);
+  ENTER_LISP_FRAME ((new_value, old_value));
   HWND hwnd = FRAME_W32_WINDOW (f);
 
   if (NILP (new_value))
@@ -2382,8 +2373,7 @@ w32_createhscrollbar (struct frame *f, struct scroll_bar * bar)
 static void
 w32_createwindow (struct frame *f, int *coords)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (border_width);
+  ENTER_LISP_FRAME ((), border_width);
   HWND hwnd = NULL, parent_hwnd = NULL;
   RECT rect;
   int top, left;
@@ -3056,8 +3046,7 @@ unsigned int w32_key_to_modifier (int);
 unsigned int
 w32_key_to_modifier (int key)
 {
-  ENTER_LISP_FRAME_T (unsigned int);
-  LISP_LOCALS (key_mapping);
+  ENTER_LISP_FRAME_T (unsigned int, (), key_mapping);
 
   switch (key)
     {
@@ -3198,8 +3187,7 @@ static Lisp_Object w32_grabbed_keys = NIL_INIT;
 static void
 register_hot_keys (HWND hwnd)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (keylist, key);
+  ENTER_LISP_FRAME ((), keylist, key);
 
   /* Use CONSP, since we are called asynchronously.  */
   for (keylist = w32_grabbed_keys; CONSP (keylist); keylist = XCDR (keylist))
@@ -3220,8 +3208,7 @@ register_hot_keys (HWND hwnd)
 static void
 unregister_hot_keys (HWND hwnd)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (keylist, key);
+  ENTER_LISP_FRAME ((), keylist, key);
 
   for (keylist = w32_grabbed_keys; CONSP (keylist); keylist = XCDR (keylist))
     {
@@ -4077,8 +4064,7 @@ deliver_wm_chars (int do_translate, HWND hwnd, UINT msg, UINT wParam,
 static LRESULT CALLBACK
 w32_wnd_proc (HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
-  ENTER_LISP_FRAME_T (LRESULT CALLBACK);
-  LISP_LOCALS (frame);
+  ENTER_LISP_FRAME_T (LRESULT CALLBACK, (), frame);
   struct frame *f;
   struct w32_display_info *dpyinfo = &one_w32_display_info;
   W32Msg wmsg;
@@ -5474,8 +5460,7 @@ w32_wnd_proc (HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 static void
 my_create_window (struct frame * f)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (left, top);
+  ENTER_LISP_FRAME ((), left, top);
   MSG msg;
   static int coords[2];
   struct w32_display_info *dpyinfo = &one_w32_display_info;
@@ -5551,8 +5536,7 @@ my_create_tip_window (struct frame *f)
 static void
 w32_window (struct frame *f, long window_prompting, bool minibuffer_only)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (name);
+  ENTER_LISP_FRAME ((), name);
   block_input ();
 
   /* Use the resource name as the top-level window name
@@ -5597,8 +5581,7 @@ w32_window (struct frame *f, long window_prompting, bool minibuffer_only)
 static void
 x_icon (struct frame *f, Lisp_Object parms)
 {
-  ENTER_LISP_FRAME (parms);
-  LISP_LOCALS (icon_x, icon_y);
+  ENTER_LISP_FRAME ((parms), icon_x, icon_y);
   struct w32_display_info *dpyinfo = &one_w32_display_info;
 
   /* Set the position of the icon.  Note that Windows 95 groups all
@@ -5668,7 +5651,7 @@ x_make_gc (struct frame *f)
 static Lisp_Object
 unwind_create_frame (Lisp_Object frame)
 {
-  ENTER_LISP_FRAME (frame);
+  ENTER_LISP_FRAME ((frame));
   struct frame *f = XFRAME (frame);
 
   /* If frame is ``official'', nothing to do.  */
@@ -5709,7 +5692,7 @@ unwind_create_frame (Lisp_Object frame)
 static void
 do_unwind_create_frame (Lisp_Object frame)
 {
-  ENTER_LISP_FRAME (frame);
+  ENTER_LISP_FRAME ((frame));
   unwind_create_frame (frame);
   EXIT_LISP_FRAME_VOID ();
 }
@@ -5717,8 +5700,7 @@ do_unwind_create_frame (Lisp_Object frame)
 static void
 x_default_font_parameter (struct frame *f, Lisp_Object parms)
 {
-  ENTER_LISP_FRAME (parms);
-  LISP_LOCALS (font_param, font);
+  ENTER_LISP_FRAME ((parms), font_param, font);
   struct w32_display_info *dpyinfo = FRAME_DISPLAY_INFO (f);
   font_param = x_get_arg (dpyinfo, parms, Qfont, NULL, NULL,
 				RES_TYPE_STRING);
@@ -5771,8 +5753,8 @@ be shared by the new frame.
 This function is an internal primitive--use `make-frame' instead.  */)
   (Lisp_Object parameters)
 {
-  ENTER_LISP_FRAME (parameters);
-  LISP_LOCALS (frame, tem, name, display, parent, parent_frame, value, visibility);
+  ENTER_LISP_FRAME ((parameters), frame, tem, name, display, parent,
+                    parent_frame, value, visibility);
   struct frame *f;
   bool minibuffer_only = false;
   long window_prompting = 0;
@@ -6174,8 +6156,7 @@ This function is an internal primitive--use `make-frame' instead.  */)
 Lisp_Object
 x_get_focus_frame (struct frame *frame)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (xfocus);
+  ENTER_LISP_FRAME ((), xfocus);
   struct w32_display_info *dpyinfo = FRAME_DISPLAY_INFO (frame);
   if (! dpyinfo->w32_focus_frame)
     EXIT_LISP_FRAME (Qnil);
@@ -6189,7 +6170,7 @@ DEFUN ("xw-color-defined-p", Fxw_color_defined_p, Sxw_color_defined_p, 1, 2, 0,
 \(Note that the Nextstep version of this function ignores FRAME.)  */)
   (Lisp_Object color, Lisp_Object frame)
 {
-  ENTER_LISP_FRAME (color, frame);
+  ENTER_LISP_FRAME ((color, frame));
   XColor foo;
   struct frame *f = decode_window_system_frame (frame);
 
@@ -6205,7 +6186,7 @@ DEFUN ("xw-color-values", Fxw_color_values, Sxw_color_values, 1, 2, 0,
        doc: /* Internal function called by `color-values', which see.  */)
   (Lisp_Object color, Lisp_Object frame)
 {
-  ENTER_LISP_FRAME (color, frame);
+  ENTER_LISP_FRAME ((color, frame));
   XColor foo;
   struct frame *f = decode_window_system_frame (frame);
 
@@ -6223,7 +6204,7 @@ DEFUN ("xw-display-color-p", Fxw_display_color_p, Sxw_display_color_p, 0, 1, 0,
        doc: /* Internal function called by `display-color-p', which see.  */)
   (Lisp_Object display)
 {
-  ENTER_LISP_FRAME (display);
+  ENTER_LISP_FRAME ((display));
   struct w32_display_info *dpyinfo = check_x_display_info (display);
 
   if ((dpyinfo->n_planes * dpyinfo->n_cbits) <= 2)
@@ -6241,7 +6222,7 @@ DISPLAY should be either a frame or a display name (a string).
 If omitted or nil, that stands for the selected frame's display.  */)
   (Lisp_Object display)
 {
-  ENTER_LISP_FRAME (display);
+  ENTER_LISP_FRAME ((display));
   struct w32_display_info *dpyinfo = check_x_display_info (display);
 
   if ((dpyinfo->n_planes * dpyinfo->n_cbits) <= 1)
@@ -6262,7 +6243,7 @@ physical monitors associated with DISPLAY.  To get information for
 each physical monitor, use `display-monitor-attributes-list'.  */)
   (Lisp_Object display)
 {
-  ENTER_LISP_FRAME (display);
+  ENTER_LISP_FRAME ((display));
   struct w32_display_info *dpyinfo = check_x_display_info (display);
 
   EXIT_LISP_FRAME (make_number (x_display_pixel_width (dpyinfo)));
@@ -6280,7 +6261,7 @@ physical monitors associated with DISPLAY.  To get information for
 each physical monitor, use `display-monitor-attributes-list'.  */)
   (Lisp_Object display)
 {
-  ENTER_LISP_FRAME (display);
+  ENTER_LISP_FRAME ((display));
   struct w32_display_info *dpyinfo = check_x_display_info (display);
 
   EXIT_LISP_FRAME (make_number (x_display_pixel_height (dpyinfo)));
@@ -6294,7 +6275,7 @@ DISPLAY should be either a frame or a display name (a string).
 If omitted or nil, that stands for the selected frame's display.  */)
   (Lisp_Object display)
 {
-  ENTER_LISP_FRAME (display);
+  ENTER_LISP_FRAME ((display));
   struct w32_display_info *dpyinfo = check_x_display_info (display);
 
   EXIT_LISP_FRAME (make_number (dpyinfo->n_planes * dpyinfo->n_cbits));
@@ -6308,7 +6289,7 @@ DISPLAY should be either a frame or a display name (a string).
 If omitted or nil, that stands for the selected frame's display.  */)
   (Lisp_Object display)
 {
-  ENTER_LISP_FRAME (display);
+  ENTER_LISP_FRAME ((display));
   struct w32_display_info *dpyinfo = check_x_display_info (display);
   int cap;
 
@@ -6330,7 +6311,7 @@ DISPLAY should be either a frame or a display name (a string).
 If omitted or nil, that stands for the selected frame's display.  */)
   (Lisp_Object display)
 {
-  ENTER_LISP_FRAME (display);
+  ENTER_LISP_FRAME ((display));
   EXIT_LISP_FRAME (make_number (1));
 }
 
@@ -6348,7 +6329,7 @@ TERMINAL should be a terminal object, a frame or a display name (a string).
 If omitted or nil, that stands for the selected frame's display.  */)
   (Lisp_Object terminal)
 {
-  ENTER_LISP_FRAME (terminal);
+  ENTER_LISP_FRAME ((terminal));
   EXIT_LISP_FRAME (build_string ("Microsoft Corp."));
 }
 
@@ -6369,7 +6350,7 @@ TERMINAL should be a terminal object, a frame or a display name (a string).
 If omitted or nil, that stands for the selected frame's display.  */)
   (Lisp_Object terminal)
 {
-  ENTER_LISP_FRAME (terminal);
+  ENTER_LISP_FRAME ((terminal));
   EXIT_LISP_FRAME (list3i (w32_major_version, w32_minor_version, w32_build_number));
 }
 
@@ -6380,7 +6361,7 @@ DISPLAY should be either a frame or a display name (a string).
 If omitted or nil, that stands for the selected frame's display.  */)
   (Lisp_Object display)
 {
-  ENTER_LISP_FRAME (display);
+  ENTER_LISP_FRAME ((display));
   EXIT_LISP_FRAME (make_number (1));
 }
 
@@ -6396,7 +6377,7 @@ all physical monitors associated with DISPLAY.  To get information
 for each physical monitor, use `display-monitor-attributes-list'.  */)
   (Lisp_Object display)
 {
-  ENTER_LISP_FRAME (display);
+  ENTER_LISP_FRAME ((display));
   struct w32_display_info *dpyinfo = check_x_display_info (display);
   HDC hdc;
   double mm_per_pixel;
@@ -6420,7 +6401,7 @@ all physical monitors associated with TERMINAL.  To get information
 for each physical monitor, use `display-monitor-attributes-list'.  */)
   (Lisp_Object display)
 {
-  ENTER_LISP_FRAME (display);
+  ENTER_LISP_FRAME ((display));
   struct w32_display_info *dpyinfo = check_x_display_info (display);
   HDC hdc;
   double mm_per_pixel;
@@ -6442,7 +6423,7 @@ DISPLAY should be either a frame or a display name (a string).
 If omitted or nil, that stands for the selected frame's display.  */)
   (Lisp_Object display)
 {
-  ENTER_LISP_FRAME (display);
+  ENTER_LISP_FRAME ((display));
   EXIT_LISP_FRAME (intern ("not-useful"));
 }
 
@@ -6457,8 +6438,7 @@ DISPLAY should be either a frame or a display name (a string).
 If omitted or nil, that stands for the selected frame's display.  */)
   (Lisp_Object display)
 {
-  ENTER_LISP_FRAME (display);
-  LISP_LOCALS (result);
+  ENTER_LISP_FRAME ((display), result);
   struct w32_display_info *dpyinfo = check_x_display_info (display);
   result = Qnil;
 
@@ -6499,8 +6479,9 @@ w32_monitor_enum (HMONITOR monitor, HDC hdc, RECT *rcMonitor, LPARAM dwData)
 static Lisp_Object
 w32_display_monitor_attributes_list (void)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (attributes_list, primary_monitor_attributes, monitor_list, monitor_frames, rest, frame, geometry, workarea, name, attributes);
+  ENTER_LISP_FRAME ((), attributes_list, primary_monitor_attributes,
+                    monitor_list, monitor_frames, rest, frame,
+                    geometry, workarea, name, attributes);
   attributes_list = Qnil;
   primary_monitor_attributes = Qnil;
 
@@ -6605,8 +6586,8 @@ w32_display_monitor_attributes_list (void)
 static Lisp_Object
 w32_display_monitor_attributes_list_fallback (struct w32_display_info *dpyinfo)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (geometry, workarea, frames, rest, frame, attributes);
+  ENTER_LISP_FRAME ((), geometry, workarea, frames, rest, frame,
+                    attributes);
   attributes = Qnil;
 
   HDC hdc;
@@ -6674,8 +6655,7 @@ If omitted or nil, that stands for the selected frame's display.
 Internal use only, use `display-monitor-attributes-list' instead.  */)
   (Lisp_Object display)
 {
-  ENTER_LISP_FRAME (display);
-  LISP_LOCALS (attributes_list);
+  ENTER_LISP_FRAME ((display), attributes_list);
   struct w32_display_info *dpyinfo = check_x_display_info (display);
 
   block_input ();
@@ -6695,7 +6675,7 @@ prevents Emacs from making any sound at all.
 SOUND is nil to use the normal beep.  */)
   (Lisp_Object sound)
 {
-  ENTER_LISP_FRAME (sound);
+  ENTER_LISP_FRAME ((sound));
   CHECK_SYMBOL (sound);
 
   if (NILP (sound))
@@ -6732,7 +6712,7 @@ x_screen_planes (register struct frame *f)
 struct w32_display_info *
 x_display_info_for_name (Lisp_Object name)
 {
-  ENTER_LISP_FRAME_T (struct w32_display_info *, name);
+  ENTER_LISP_FRAME_T (struct w32_display_info *, (name));
   struct w32_display_info *dpyinfo;
 
   CHECK_STRING (name);
@@ -6765,8 +6745,7 @@ terminate Emacs if we can't open the connection.
 \(In the Nextstep version, the last two arguments are currently ignored.)  */)
   (Lisp_Object display, Lisp_Object xrm_string, Lisp_Object must_succeed)
 {
-  ENTER_LISP_FRAME (display, xrm_string, must_succeed);
-  LISP_LOCALS (color_file);
+  ENTER_LISP_FRAME ((display, xrm_string, must_succeed), color_file);
   char *xrm_option;
   struct w32_display_info *dpyinfo;
 
@@ -6850,7 +6829,7 @@ For DISPLAY, specify either a frame or a display name (a string).
 If DISPLAY is nil, that stands for the selected frame's display.  */)
   (Lisp_Object display)
 {
-  ENTER_LISP_FRAME (display);
+  ENTER_LISP_FRAME ((display));
   struct w32_display_info *dpyinfo = check_x_display_info (display);
 
   if (dpyinfo->reference_count > 0)
@@ -6869,8 +6848,7 @@ DEFUN ("x-display-list", Fx_display_list, Sx_display_list, 0, 0, 0,
        doc: /* Return the list of display names that Emacs has connections to.  */)
   (void)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (result);
+  ENTER_LISP_FRAME ((), result);
   result = Qnil;
 
   struct w32_display_info *wdi;
@@ -6926,7 +6904,7 @@ FRAME.  Default is to change on the edit X window.  */)
   (Lisp_Object prop, Lisp_Object value, Lisp_Object frame,
    Lisp_Object type, Lisp_Object format, Lisp_Object outer_p)
 {
-  ENTER_LISP_FRAME (prop, value, frame, type, format, outer_p);
+  ENTER_LISP_FRAME ((prop, value, frame, type, format, outer_p));
   struct frame *f = decode_window_system_frame (frame);
   Atom prop_atom;
 
@@ -6953,7 +6931,7 @@ DEFUN ("x-delete-window-property", Fx_delete_window_property,
 FRAME nil or omitted means use the selected frame.  Value is PROP.  */)
   (Lisp_Object prop, Lisp_Object frame)
 {
-  ENTER_LISP_FRAME (prop, frame);
+  ENTER_LISP_FRAME ((prop, frame));
   struct frame *f = decode_window_system_frame (frame);
   Atom prop_atom;
 
@@ -6990,8 +6968,8 @@ no value of TYPE (always string in the MS Windows case).  */)
   (Lisp_Object prop, Lisp_Object frame, Lisp_Object type,
    Lisp_Object source, Lisp_Object delete_p, Lisp_Object vector_ret_p)
 {
-  ENTER_LISP_FRAME (prop, frame, type, source, delete_p, vector_ret_p);
-  LISP_LOCALS (prop_value);
+  ENTER_LISP_FRAME ((prop, frame, type, source, delete_p,
+                     vector_ret_p), prop_value);
   struct frame *f = decode_window_system_frame (frame);
   Atom prop_atom;
   int rc;
@@ -7063,8 +7041,7 @@ Lisp_Object last_show_tip_args = NIL_INIT;
 static void
 unwind_create_tip_frame (Lisp_Object frame)
 {
-  ENTER_LISP_FRAME (frame);
-  LISP_LOCALS (deleted);
+  ENTER_LISP_FRAME ((frame), deleted);
 
   deleted = unwind_create_frame (frame);
   if (EQ (deleted, Qt))
@@ -7087,8 +7064,7 @@ unwind_create_tip_frame (Lisp_Object frame)
 static Lisp_Object
 x_create_tip_frame (struct w32_display_info *dpyinfo, Lisp_Object parms)
 {
-  ENTER_LISP_FRAME (parms);
-  LISP_LOCALS (frame, name, value, bg, fg, colors);
+  ENTER_LISP_FRAME ((parms), frame, name, value, bg, fg, colors);
   struct frame *f;
   int width, height;
   ptrdiff_t count = SPECPDL_INDEX ();
@@ -7309,8 +7285,7 @@ compute_tip_xy (struct frame *f,
 		Lisp_Object parms, Lisp_Object dx, Lisp_Object dy,
 		int width, int height, int *root_x, int *root_y)
 {
-  ENTER_LISP_FRAME (parms, dx, dy);
-  LISP_LOCALS (left, top, right, bottom);
+  ENTER_LISP_FRAME ((parms, dx, dy), left, top, right, bottom);
   int min_x = 0, min_y = 0, max_x = 0, max_y = 0;
 
   /* User-specified position?  */
@@ -7399,8 +7374,7 @@ compute_tip_xy (struct frame *f,
 static Lisp_Object
 x_hide_tip (bool delete)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (was_open);
+  ENTER_LISP_FRAME ((), was_open);
   if (!NILP (tip_timer))
     {
       call1 (Qcancel_timer, tip_timer);
@@ -7473,9 +7447,9 @@ A tooltip's maximum size is specified by `x-max-tooltip-size'.
 Text larger than the specified size is clipped.  */)
   (Lisp_Object string, Lisp_Object frame, Lisp_Object parms, Lisp_Object timeout, Lisp_Object dx, Lisp_Object dy)
 {
-  ENTER_LISP_FRAME (string, frame, parms, timeout, dx, dy);
-  LISP_LOCALS (window, size, tip_buf, last_string, last_frame,
-               last_parms, timer, tail, elt, parm, last);
+  ENTER_LISP_FRAME ((string, frame, parms, timeout, dx, dy), window,
+                    size, tip_buf, last_string, last_frame,
+                    last_parms, timer, tail, elt, parm, last);
   struct frame *tip_f;
   struct window *w;
   int root_x, root_y;
@@ -7885,8 +7859,7 @@ file_dialog_callback (HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 void
 w32_dialog_in_progress (Lisp_Object in_progress)
 {
-  ENTER_LISP_FRAME (in_progress);
-  LISP_LOCALS (frames, frame);
+  ENTER_LISP_FRAME ((in_progress), frames, frame);
 
   /* Don't let frames in `above' z-group obscure dialog windows.  */
   FOR_EACH_FRAME (frames, frame)
@@ -7916,8 +7889,8 @@ instead of DIR on subsequent invocations of this function with the same
 value of DIR as in previous invocations; this is standard Windows behavior.  */)
   (Lisp_Object prompt, Lisp_Object dir, Lisp_Object default_filename, Lisp_Object mustmatch, Lisp_Object only_dir_p)
 {
-  ENTER_LISP_FRAME (prompt, dir, default_filename, mustmatch, only_dir_p);
-  LISP_LOCALS (filename, orig_dir, orig_prompt);
+  ENTER_LISP_FRAME ((prompt, dir, default_filename, mustmatch,
+                     only_dir_p), filename, orig_dir, orig_prompt);
   /* Filter index: 1: All Files, 2: Directories only  */
   static const wchar_t filter_w[] = L"All Files (*.*)\0*.*\0Directories\0*|*\0";
 #ifndef NTGUI_UNICODE
@@ -8221,8 +8194,7 @@ DEFUN ("system-move-file-to-trash", Fsystem_move_file_to_trash,
        doc: /* Move file or directory named FILENAME to the recycle bin.  */)
   (Lisp_Object filename)
 {
-  ENTER_LISP_FRAME (filename);
-  LISP_LOCALS (handler, encoded_file, operation);
+  ENTER_LISP_FRAME ((filename), handler, encoded_file, operation);
 
   operation = Qdelete_file;
   if (!NILP (Ffile_directory_p (filename))
@@ -8327,7 +8299,7 @@ screen saver if defined.
 If optional parameter FRAME is not specified, use selected frame.  */)
   (Lisp_Object command, Lisp_Object frame)
 {
-  ENTER_LISP_FRAME (command, frame);
+  ENTER_LISP_FRAME ((command, frame));
   struct frame *f = decode_window_system_frame (frame);
 
   CHECK_NUMBER (command);
@@ -8406,8 +8378,9 @@ a ShowWindow flag:
  10 - start as the application itself specifies; this is the default.  */)
   (Lisp_Object operation, Lisp_Object document, Lisp_Object parameters, Lisp_Object show_flag)
 {
-  ENTER_LISP_FRAME (operation, document, parameters, show_flag);
-  LISP_LOCALS (current_dir, absdoc, handler, absdoc_encoded, decoded);
+  ENTER_LISP_FRAME ((operation, document, parameters, show_flag),
+                    current_dir, absdoc, handler, absdoc_encoded,
+                    decoded);
   char *errstr;
   current_dir = BVAR (current_buffer, directory);
 ;
@@ -8694,8 +8667,7 @@ lookup_vk_code (char *key)
 static Lisp_Object
 w32_parse_and_hook_hot_key (Lisp_Object key, int hook)
 {
-  ENTER_LISP_FRAME (key);
-  LISP_LOCALS (c, res);
+  ENTER_LISP_FRAME ((key), c, res);
   /* Copied from Fdefine_key and store_in_keymap.  */
   int vk_code = 0;
   int lisp_modifiers = 0;
@@ -8819,8 +8791,7 @@ system keyboard shortcuts.  The return value is t if the call affected
 any key combinations, otherwise nil.  */)
   (Lisp_Object key)
 {
-  ENTER_LISP_FRAME (key);
-  LISP_LOCALS (item);
+  ENTER_LISP_FRAME ((key), item);
   key = w32_parse_and_hook_hot_key (key, 1);
 
   if (!w32_kbdhook_active
@@ -8850,8 +8821,7 @@ DEFUN ("w32-unregister-hot-key", Fw32_unregister_hot_key,
        doc: /* Unregister KEY as a hot-key combination.  */)
   (Lisp_Object key)
 {
-  ENTER_LISP_FRAME (key);
-  LISP_LOCALS (item);
+  ENTER_LISP_FRAME ((key), item);
 
   if (!INTEGERP (key))
     key = w32_parse_and_hook_hot_key (key, 0);
@@ -8897,8 +8867,7 @@ DEFUN ("w32-reconstruct-hot-key", Fw32_reconstruct_hot_key,
 usage: (w32-reconstruct-hot-key ID)  */)
   (Lisp_Object hotkeyid)
 {
-  ENTER_LISP_FRAME (hotkeyid);
-  LISP_LOCALS (key);
+  ENTER_LISP_FRAME ((hotkeyid), key);
   int vk_code, w32_modifiers;
 
   CHECK_NUMBER (hotkeyid);
@@ -8936,7 +8905,7 @@ Value is the new state of the key, or nil if the function failed
 to change the state.  */)
   (Lisp_Object key, Lisp_Object new_state)
 {
-  ENTER_LISP_FRAME (key, new_state);
+  ENTER_LISP_FRAME ((key, new_state));
   int vk_code;
   LPARAM lparam;
 
@@ -8973,7 +8942,7 @@ DEFUN ("w32-window-exists-p", Fw32_window_exists_p, Sw32_window_exists_p,
 This is a direct interface to the Windows API FindWindow function.  */)
   (Lisp_Object class, Lisp_Object name)
 {
-  ENTER_LISP_FRAME (class, name);
+  ENTER_LISP_FRAME ((class, name));
   HWND hnd;
 
   if (!NILP (class))
@@ -9029,7 +8998,7 @@ and width values are in pixels.
   FRAME.  */)
   (Lisp_Object frame)
 {
-  ENTER_LISP_FRAME (frame);
+  ENTER_LISP_FRAME ((frame));
   struct frame *f = decode_live_frame (frame);
 
   MENUBARINFO menu_bar;
@@ -9143,7 +9112,7 @@ the inner edges of FRAME.  These edges exclude title bar, any borders,
 menu bar or tool bar of FRAME.  */)
   (Lisp_Object frame, Lisp_Object type)
 {
-  ENTER_LISP_FRAME (frame, type);
+  ENTER_LISP_FRAME ((frame, type));
   struct frame *f = decode_live_frame (frame);
 
   if (FRAME_INITIAL_P (f) || !FRAME_W32_P (f))
@@ -9225,8 +9194,7 @@ menu bar or tool bar of FRAME.  */)
 static Lisp_Object
 w32_frame_list_z_order (struct w32_display_info *dpyinfo, HWND window)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (frame, frames);
+  ENTER_LISP_FRAME ((), frame, frames);
   frames = Qnil;
 
 
@@ -9261,7 +9229,7 @@ return the child frames of that frame in Z (stacking) order.
 Frames are listed from topmost (first) to bottommost (last).  */)
   (Lisp_Object display)
 {
-  ENTER_LISP_FRAME (display);
+  ENTER_LISP_FRAME ((display));
   struct w32_display_info *dpyinfo = check_x_display_info (display);
   HWND window;
 
@@ -9334,7 +9302,7 @@ unaltered.
 Some window managers may refuse to restack windows.  */)
      (Lisp_Object frame1, Lisp_Object frame2, Lisp_Object above)
 {
-  ENTER_LISP_FRAME (frame1, frame2, above);
+  ENTER_LISP_FRAME ((frame1, frame2, above));
   struct frame *f1 = decode_live_frame (frame1);
   struct frame *f2 = decode_live_frame (frame2);
 
@@ -9374,7 +9342,7 @@ The coordinates X and Y are interpreted in pixels relative to a position
 \(0, 0) of the selected frame's display.  */)
   (Lisp_Object x, Lisp_Object y)
 {
-  ENTER_LISP_FRAME (x, y);
+  ENTER_LISP_FRAME ((x, y));
   UINT trail_num = 0;
   BOOL ret = false;
 
@@ -9411,8 +9379,9 @@ The following %-sequences are provided:
 %t Remaining time (to charge or discharge) in the form `h:min'  */)
   (void)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (status, line_status, battery_status, battery_status_symbol, load_percentage, seconds, minutes, hours, remain);
+  ENTER_LISP_FRAME ((), status, line_status, battery_status,
+                    battery_status_symbol, load_percentage, seconds,
+                    minutes, hours, remain);
   status = Qnil;
 
 
@@ -9521,8 +9490,7 @@ storage available to a non-superuser.  All 3 numbers are in bytes.
 If the underlying system call fails, value is nil.  */)
   (Lisp_Object filename)
 {
-  ENTER_LISP_FRAME (filename);
-  LISP_LOCALS (encoded, value);
+  ENTER_LISP_FRAME ((filename), encoded, value);
 
   CHECK_STRING (filename);
   filename = Fexpand_file_name (filename, Qnil);
@@ -9849,7 +9817,7 @@ _DebPrint (const char *fmt, ...)
 int
 w32_console_toggle_lock_key (int vk_code, Lisp_Object new_state)
 {
-  ENTER_LISP_FRAME_T (int, new_state);
+  ENTER_LISP_FRAME_T (int, (new_state));
   int cur_state = (GetKeyState (vk_code) & 1);
 
   if (NILP (new_state)
@@ -10426,8 +10394,7 @@ before a new one can be shown.
 usage: (w32-notification-notify &rest PARAMS)  */)
   (ptrdiff_t nargs, Lisp_Object *args)
 {
-  ENTER_LISP_FRAME_VA (nargs, args);
-  LISP_LOCALS (arg_plist, lres);
+  ENTER_LISP_FRAME_VA (nargs, args, (), arg_plist, lres);
   struct frame *f = SELECTED_FRAME ();
   EMACS_INT retval;
   char *icon, *tip, *title, *msg;
@@ -10491,7 +10458,7 @@ DEFUN ("w32-notification-close",
        doc: /* Remove the MS-Windows tray notification specified by its ID.  */)
   (Lisp_Object id)
 {
-  ENTER_LISP_FRAME (id);
+  ENTER_LISP_FRAME ((id));
   struct frame *f = SELECTED_FRAME ();
 
   if (INTEGERP (id))
@@ -11286,8 +11253,7 @@ globals_of_w32fns (void)
 Lisp_Object
 ntgui_encode_system (Lisp_Object str)
 {
-  ENTER_LISP_FRAME (str);
-  LISP_LOCALS (encoded);
+  ENTER_LISP_FRAME ((str), encoded);
   to_unicode (str, &encoded);
   EXIT_LISP_FRAME (encoded);
 }

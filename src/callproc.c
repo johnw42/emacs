@@ -109,8 +109,7 @@ static Lisp_Object call_process (ptrdiff_t, Lisp_Object *, int, ptrdiff_t);
 Lisp_Object
 encode_current_directory (void)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (dir);
+  ENTER_LISP_FRAME ((), dir);
 
   dir = BVAR (current_buffer, directory);
 
@@ -144,7 +143,7 @@ encode_current_directory (void)
 void
 record_kill_process (struct Lisp_Process *p, Lisp_Object tempfile)
 {
-  ENTER_LISP_FRAME (tempfile);
+  ENTER_LISP_FRAME ((tempfile));
 #ifndef MSDOS
   sigset_t oldset;
   block_child_signal (&oldset);
@@ -166,7 +165,7 @@ record_kill_process (struct Lisp_Process *p, Lisp_Object tempfile)
 static void
 delete_temp_file (Lisp_Object name)
 {
-  ENTER_LISP_FRAME (name);
+  ENTER_LISP_FRAME ((name));
   unlink (SSDATA (name));
   EXIT_LISP_FRAME_VOID ();
 }
@@ -198,7 +197,7 @@ call_process_kill (void *ptr)
 static void
 call_process_cleanup (Lisp_Object buffer)
 {
-  ENTER_LISP_FRAME (buffer);
+  ENTER_LISP_FRAME ((buffer));
   Fset_buffer (buffer);
 
 #ifndef MSDOS
@@ -262,8 +261,7 @@ you want to run a process in a remote directory use `process-file'.
 usage: (call-process PROGRAM &optional INFILE DESTINATION DISPLAY &rest ARGS)  */)
   (ptrdiff_t nargs, Lisp_Object *args)
 {
-  ENTER_LISP_FRAME_VA (nargs, args);
-  LISP_LOCALS (infile, encoded_infile);
+  ENTER_LISP_FRAME_VA (nargs, args, (), infile, encoded_infile);
   int filefd;
   ptrdiff_t count = SPECPDL_INDEX ();
 
@@ -296,10 +294,9 @@ static Lisp_Object
 call_process (ptrdiff_t nargs, Lisp_Object *args, int filefd,
 	      ptrdiff_t tempfile_index)
 {
-  ENTER_LISP_FRAME_VA (nargs, args);
-  LISP_LOCALS (buffer, current_dir, path, error_file, output_file,
-               coding_systems, val, coding_attrs, stderr_file,
-               spec_buffer, curbuf);
+  ENTER_LISP_FRAME_VA (nargs, args, (), buffer, current_dir, path,
+                       error_file, output_file, coding_systems, val,
+                       coding_attrs, stderr_file, spec_buffer, curbuf);
   bool display_p;
   int fd0;
   int callproc_fd[CALLPROC_FDS];
@@ -932,8 +929,9 @@ static int
 create_temp_file (ptrdiff_t nargs, Lisp_Object *args,
 		  Lisp_Object *filename_string_ptr)
 {
-  ENTER_LISP_FRAME_VA_T (int, nargs, args);
-  LISP_LOCALS (filename_string, val, start, end, tmpdir, pattern, dirname, coding_systems);
+  ENTER_LISP_FRAME_VA_T (int, nargs, args, (), filename_string, val,
+                         start, end, tmpdir, pattern, dirname,
+                         coding_systems);
   int fd;
 
   if (STRINGP (Vtemporary_file_directory))
@@ -1066,8 +1064,7 @@ If you quit, the process is killed with SIGINT, or SIGKILL if you quit again.
 usage: (call-process-region START END PROGRAM &optional DELETE BUFFER DISPLAY &rest ARGS)  */)
   (ptrdiff_t nargs, Lisp_Object *args)
 {
-  ENTER_LISP_FRAME_VA (nargs, args);
-  LISP_LOCALS (infile, val, start, end);
+  ENTER_LISP_FRAME_VA (nargs, args, (), infile, val, start, end);
   ptrdiff_t count = SPECPDL_INDEX ();
   start = args[0];
 
@@ -1206,12 +1203,8 @@ CHILD_SETUP_TYPE
 child_setup (int in, int out, int err, char **new_argv, bool set_pgrp,
 	     Lisp_Object current_dir)
 {
-#ifndef DOS_NT
-  ENTER_LISP_FRAME (current_dir);
-#else
-  ENTER_LISP_FRAME_T (int, current_dir);
-#endif
-  LISP_LOCALS (tem, display, tmp);
+  ENTER_LISP_FRAME_T (child_setup_type, (current_dir),
+                      tem, display, tmp);
   char **env;
   char *pwd_var;
 #ifdef WINDOWSNT
@@ -1390,8 +1383,7 @@ static bool
 getenv_internal_1 (const char *var, ptrdiff_t varlen, char **value,
 		   ptrdiff_t *valuelen, Lisp_Object env)
 {
-  ENTER_LISP_FRAME_T (bool, env);
-  LISP_LOCALS (entry);
+  ENTER_LISP_FRAME_T (bool, (env), entry);
   for (; CONSP (env); env = XCDR (env))
     {
       entry = XCAR (env);
@@ -1428,8 +1420,7 @@ static bool
 getenv_internal (const char *var, ptrdiff_t varlen, char **value,
 		 ptrdiff_t *valuelen, Lisp_Object frame)
 {
-  ENTER_LISP_FRAME_T (bool, frame);
-  LISP_LOCALS (display);
+  ENTER_LISP_FRAME_T (bool, (frame), display);
   /* Try to find VAR in Vprocess_environment first.  */
   if (getenv_internal_1 (var, varlen, value, valuelen,
 			 Vprocess_environment))
@@ -1481,7 +1472,7 @@ If optional parameter ENV is a list, then search this list instead of
 \(an entry for a variable with no value).  */)
   (Lisp_Object variable, Lisp_Object env)
 {
-  ENTER_LISP_FRAME (variable, env);
+  ENTER_LISP_FRAME ((variable, env));
   char *value;
   ptrdiff_t valuelen;
 
@@ -1557,8 +1548,8 @@ init_callproc_1 (void)
 void
 init_callproc (void)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (tempdir, tem, tem1, srcdir, lispdir, newdir, gamedir, path_game);
+  ENTER_LISP_FRAME ((), tempdir, tem, tem1, srcdir, lispdir, newdir,
+                    gamedir, path_game);
   bool data_dir = egetenv ("EMACSDATA") != 0;
 
   char *sh;

@@ -465,8 +465,7 @@ static int
 do_mouse_event (MOUSE_EVENT_RECORD *event,
 		struct input_event *emacs_ev)
 {
-  ENTER_LISP_FRAME_T (int);
-  LISP_LOCALS (mouse_window);
+  ENTER_LISP_FRAME_T (int, (), mouse_window);
   static DWORD button_state = 0;
   static Lisp_Object last_mouse_window;
   DWORD but_change, mask, flags = event->dwEventFlags;
@@ -623,8 +622,8 @@ maybe_generate_resize_event (void)
 int
 handle_file_notifications (struct input_event *hold_quit)
 {
-  ENTER_LISP_FRAME_T (int);
-  LISP_LOCALS (cs, obj, callback, utf_16_fn, fname, action);
+  ENTER_LISP_FRAME_T (int, (), cs, obj, callback, utf_16_fn, fname,
+                      action);
   struct notifications_set *ns = NULL;
   int nevents = 0;
   int done = 0;

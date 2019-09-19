@@ -142,8 +142,7 @@ xtzfree (timezone_t tz)
 static timezone_t
 tzlookup (Lisp_Object zone, bool settz)
 {
-  ENTER_LISP_FRAME_T (timezone_t, zone);
-  LISP_LOCALS (abbr);
+  ENTER_LISP_FRAME_T (timezone_t, (zone), abbr);
   static char const tzbuf_format[] = "<%+.*"pI"d>%s%"pI"d:%02d:%02d";
   char const *trailing_tzbuf_format = tzbuf_format + sizeof "<%+.*"pI"d" - 1;
   char tzbuf[sizeof tzbuf_format + 2 * INT_STRLEN_BOUND (EMACS_INT)];
@@ -227,8 +226,7 @@ tzlookup (Lisp_Object zone, bool settz)
 void
 init_editfns (bool dumping)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (tem);
+  ENTER_LISP_FRAME ((), tem);
 #if !defined CANNOT_DUMP
   /* A valid but unlikely setting for the TZ environment variable.
      It is OK (though a bit slower) if the user chooses this value.  */
@@ -334,7 +332,7 @@ DEFUN ("char-to-string", Fchar_to_string, Schar_to_string, 1, 1, 0,
 usage: (char-to-string CHAR)  */)
   (Lisp_Object character)
 {
-  ENTER_LISP_FRAME (character);
+  ENTER_LISP_FRAME ((character));
   int c, len;
   unsigned char str[MAX_MULTIBYTE_LENGTH];
 
@@ -349,7 +347,7 @@ DEFUN ("byte-to-string", Fbyte_to_string, Sbyte_to_string, 1, 1, 0,
        doc: /* Convert arg BYTE to a unibyte string containing that byte.  */)
   (Lisp_Object byte)
 {
-  ENTER_LISP_FRAME (byte);
+  ENTER_LISP_FRAME ((byte));
   unsigned char b;
   CHECK_NUMBER (byte);
   if (XINT (byte) < 0 || XINT (byte) > 255)
@@ -362,8 +360,7 @@ DEFUN ("string-to-char", Fstring_to_char, Sstring_to_char, 1, 1, 0,
        doc: /* Return the first character in STRING.  */)
   (Lisp_Object string)
 {
-  ENTER_LISP_FRAME (string);
-  LISP_LOCALS (val);
+  ENTER_LISP_FRAME ((string), val);
   CHECK_STRING (string);
   if (SCHARS (string))
     {
@@ -382,8 +379,7 @@ DEFUN ("point", Fpoint, Spoint, 0, 0, 0,
 Beginning of buffer is position (point-min).  */)
   (void)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (temp);
+  ENTER_LISP_FRAME ((), temp);
   XSETFASTINT (temp, PT);
   EXIT_LISP_FRAME (temp);
 }
@@ -402,7 +398,7 @@ Beginning of buffer is position (point-min), end is (point-max).
 The return value is POSITION.  */)
   (Lisp_Object position)
 {
-  ENTER_LISP_FRAME (position);
+  ENTER_LISP_FRAME ((position));
   if (MARKERP (position))
     set_point_from_marker (position);
   else if (INTEGERP (position))
@@ -420,8 +416,7 @@ The return value is POSITION.  */)
 static Lisp_Object
 region_limit (bool beginningp)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (m);
+  ENTER_LISP_FRAME ((), m);
 
   if (!NILP (Vtransient_mark_mode)
       && NILP (Vmark_even_if_inactive)
@@ -469,8 +464,7 @@ If you set the marker not to point anywhere, the buffer will have no mark.  */)
 static ptrdiff_t
 overlays_around (EMACS_INT pos, Lisp_Object *vec, ptrdiff_t len)
 {
-  ENTER_LISP_FRAME_T (ptrdiff_t);
-  LISP_LOCALS (overlay, start, end);
+  ENTER_LISP_FRAME_T (ptrdiff_t, (), overlay, start, end);
   struct Lisp_Overlay *tail;
   ptrdiff_t startpos, endpos;
   ptrdiff_t idx = 0;
@@ -525,8 +519,7 @@ i.e. the property that a char would inherit if it were inserted
 at POSITION.  */)
   (Lisp_Object position, Lisp_Object prop, Lisp_Object object)
 {
-  ENTER_LISP_FRAME (position, prop, object);
-  LISP_LOCALS (tem, ol, start, finish);
+  ENTER_LISP_FRAME ((position, prop, object), tem, ol, start, finish);
   CHECK_NUMBER_COERCE_MARKER (position);
 
   if (NILP (object))
@@ -632,8 +625,8 @@ find_field (Lisp_Object pos, Lisp_Object merge_at_boundary,
 	    Lisp_Object beg_limit,
 	    ptrdiff_t *beg, Lisp_Object end_limit, ptrdiff_t *end)
 {
-  ENTER_LISP_FRAME (pos, merge_at_boundary, beg_limit, end_limit);
-  LISP_LOCALS (before_field, after_field, field, p);
+  ENTER_LISP_FRAME ((pos, merge_at_boundary, beg_limit, end_limit),
+                    before_field, after_field, field, p);
   /* Fields right before and after the point.  */
   /* True if POS counts as the start of a field.  */
   bool at_field_start = 0;
@@ -750,7 +743,7 @@ A field is a region of text with the same `field' property.
 If POS is nil, the value of point is used for POS.  */)
   (Lisp_Object pos)
 {
-  ENTER_LISP_FRAME (pos);
+  ENTER_LISP_FRAME ((pos));
   ptrdiff_t beg, end;
   find_field (pos, Qnil, Qnil, &beg, Qnil, &end);
   if (beg != end)
@@ -764,7 +757,7 @@ A field is a region of text with the same `field' property.
 If POS is nil, the value of point is used for POS.  */)
   (Lisp_Object pos)
 {
-  ENTER_LISP_FRAME (pos);
+  ENTER_LISP_FRAME ((pos));
   ptrdiff_t beg, end;
   find_field (pos, Qnil, Qnil, &beg, Qnil, &end);
   EXIT_LISP_FRAME (make_buffer_string (beg, end, 1));
@@ -776,7 +769,7 @@ A field is a region of text with the same `field' property.
 If POS is nil, the value of point is used for POS.  */)
   (Lisp_Object pos)
 {
-  ENTER_LISP_FRAME (pos);
+  ENTER_LISP_FRAME ((pos));
   ptrdiff_t beg, end;
   find_field (pos, Qnil, Qnil, &beg, Qnil, &end);
   EXIT_LISP_FRAME (make_buffer_string (beg, end, 0));
@@ -792,7 +785,7 @@ If LIMIT is non-nil, it is a buffer position; if the beginning of the field
 is before LIMIT, then LIMIT will be returned instead.  */)
   (Lisp_Object pos, Lisp_Object escape_from_edge, Lisp_Object limit)
 {
-  ENTER_LISP_FRAME (pos, escape_from_edge, limit);
+  ENTER_LISP_FRAME ((pos, escape_from_edge, limit));
   ptrdiff_t beg;
   find_field (pos, escape_from_edge, limit, &beg, Qnil, 0);
   EXIT_LISP_FRAME (make_number (beg));
@@ -808,7 +801,7 @@ If LIMIT is non-nil, it is a buffer position; if the end of the field
 is after LIMIT, then LIMIT will be returned instead.  */)
   (Lisp_Object pos, Lisp_Object escape_from_edge, Lisp_Object limit)
 {
-  ENTER_LISP_FRAME (pos, escape_from_edge, limit);
+  ENTER_LISP_FRAME ((pos, escape_from_edge, limit));
   ptrdiff_t end;
   find_field (pos, escape_from_edge, Qnil, 0, limit, &end);
   EXIT_LISP_FRAME (make_number (end));
@@ -845,8 +838,9 @@ Field boundaries are not noticed if `inhibit-field-text-motion' is non-nil.  */)
   (Lisp_Object new_pos, Lisp_Object old_pos, Lisp_Object escape_from_edge,
    Lisp_Object only_in_line, Lisp_Object inhibit_capture_property)
 {
-  ENTER_LISP_FRAME (new_pos, old_pos, escape_from_edge, only_in_line, inhibit_capture_property);
-  LISP_LOCALS (prev_old, prev_new, field_bound);
+  ENTER_LISP_FRAME ((new_pos, old_pos, escape_from_edge, only_in_line,
+                     inhibit_capture_property), prev_old, prev_new,
+                    field_bound);
   /* If non-zero, then the original point, before re-positioning.  */
   ptrdiff_t orig_point = 0;
   bool fwd;
@@ -946,7 +940,7 @@ boundaries, bind `inhibit-field-text-motion' to t.
 This function does not move point.  */)
   (Lisp_Object n)
 {
-  ENTER_LISP_FRAME (n);
+  ENTER_LISP_FRAME ((n));
   ptrdiff_t charpos, bytepos;
 
   if (NILP (n))
@@ -980,7 +974,7 @@ boundaries bind `inhibit-field-text-motion' to t.
 This function does not move point.  */)
   (Lisp_Object n)
 {
-  ENTER_LISP_FRAME (n);
+  ENTER_LISP_FRAME ((n));
   ptrdiff_t clipped_n;
   ptrdiff_t end_pos;
   ptrdiff_t orig = PT;
@@ -1020,8 +1014,7 @@ save_excursion_save (void)
 void
 save_excursion_restore (Lisp_Object info)
 {
-  ENTER_LISP_FRAME (info);
-  LISP_LOCALS (tem, tem1);
+  ENTER_LISP_FRAME ((info), tem, tem1);
 
   tem = Fmarker_buffer (XSAVE_OBJECT (info, 0));
   /* If we're unwinding to top level, saved buffer may be deleted.  This
@@ -1071,8 +1064,7 @@ To save the mark state as well as point and the current buffer, use
 usage: (save-excursion &rest BODY)  */)
   (Lisp_Object args)
 {
-  ENTER_LISP_FRAME (args);
-  LISP_LOCALS (val);
+  ENTER_LISP_FRAME ((args), val);
   ptrdiff_t count = SPECPDL_INDEX ();
 
   record_unwind_protect (save_excursion_restore, save_excursion_save ());
@@ -1087,7 +1079,7 @@ BODY is executed just like `progn'.
 usage: (save-current-buffer &rest BODY)  */)
   (Lisp_Object args)
 {
-  ENTER_LISP_FRAME (args);
+  ENTER_LISP_FRAME ((args));
   ptrdiff_t count = SPECPDL_INDEX ();
 
   record_unwind_current_buffer ();
@@ -1106,7 +1098,7 @@ in some other BUFFER, use
 `(with-current-buffer BUFFER (- (point-max) (point-min)))'.  */)
   (Lisp_Object buffer)
 {
-  ENTER_LISP_FRAME (buffer);
+  ENTER_LISP_FRAME ((buffer));
   if (NILP (buffer))
     EXIT_LISP_FRAME (make_number (Z - BEG));
   else
@@ -1122,8 +1114,7 @@ DEFUN ("point-min", Fpoint_min, Spoint_min, 0, 0, 0,
 This is 1, unless narrowing (a buffer restriction) is in effect.  */)
   (void)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (temp);
+  ENTER_LISP_FRAME ((), temp);
   XSETFASTINT (temp, BEGV);
   EXIT_LISP_FRAME (temp);
 }
@@ -1142,8 +1133,7 @@ This is (1+ (buffer-size)), unless narrowing (a buffer restriction)
 is in effect, in which case it is less.  */)
   (void)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (temp);
+  ENTER_LISP_FRAME ((), temp);
   XSETFASTINT (temp, ZV);
   EXIT_LISP_FRAME (temp);
 }
@@ -1162,8 +1152,7 @@ DEFUN ("gap-position", Fgap_position, Sgap_position, 0, 0, 0,
 See also `gap-size'.  */)
   (void)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (temp);
+  ENTER_LISP_FRAME ((), temp);
   XSETFASTINT (temp, GPT);
   EXIT_LISP_FRAME (temp);
 }
@@ -1173,8 +1162,7 @@ DEFUN ("gap-size", Fgap_size, Sgap_size, 0, 0, 0,
 See also `gap-position'.  */)
   (void)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (temp);
+  ENTER_LISP_FRAME ((), temp);
   XSETFASTINT (temp, GAP_SIZE);
   EXIT_LISP_FRAME (temp);
 }
@@ -1184,7 +1172,7 @@ DEFUN ("position-bytes", Fposition_bytes, Sposition_bytes, 1, 1, 0,
 If POSITION is out of range, the value is nil.  */)
   (Lisp_Object position)
 {
-  ENTER_LISP_FRAME (position);
+  ENTER_LISP_FRAME ((position));
   CHECK_NUMBER_COERCE_MARKER (position);
   if (XINT (position) < BEG || XINT (position) > Z)
     EXIT_LISP_FRAME (Qnil);
@@ -1196,7 +1184,7 @@ DEFUN ("byte-to-position", Fbyte_to_position, Sbyte_to_position, 1, 1, 0,
 If BYTEPOS is out of range, the value is nil.  */)
   (Lisp_Object bytepos)
 {
-  ENTER_LISP_FRAME (bytepos);
+  ENTER_LISP_FRAME ((bytepos));
   ptrdiff_t pos_byte;
 
   CHECK_NUMBER (bytepos);
@@ -1218,8 +1206,7 @@ DEFUN ("following-char", Ffollowing_char, Sfollowing_char, 0, 0, 0,
 At the end of the buffer or accessible region, return 0.  */)
   (void)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (temp);
+  ENTER_LISP_FRAME ((), temp);
   if (PT >= ZV)
     XSETFASTINT (temp, 0);
   else
@@ -1232,8 +1219,7 @@ DEFUN ("preceding-char", Fprevious_char, Sprevious_char, 0, 0, 0,
 At the beginning of the buffer or accessible region, return 0.  */)
   (void)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (temp);
+  ENTER_LISP_FRAME ((), temp);
   if (PT <= BEGV)
     XSETFASTINT (temp, 0);
   else if (!NILP (BVAR (current_buffer, enable_multibyte_characters)))
@@ -1292,7 +1278,7 @@ POS is an integer or a marker and defaults to point.
 If POS is out of range, the value is nil.  */)
   (Lisp_Object pos)
 {
-  ENTER_LISP_FRAME (pos);
+  ENTER_LISP_FRAME ((pos));
   register ptrdiff_t pos_byte;
 
   if (NILP (pos))
@@ -1325,8 +1311,7 @@ POS is an integer or a marker and defaults to point.
 If POS is out of range, the value is nil.  */)
   (Lisp_Object pos)
 {
-  ENTER_LISP_FRAME (pos);
-  LISP_LOCALS (val);
+  ENTER_LISP_FRAME ((pos), val);
   register ptrdiff_t pos_byte;
 
   if (NILP (pos))
@@ -1375,7 +1360,7 @@ If optional argument UID is an integer or a float, return the login name
 of the user with that uid, or nil if there is no such user.  */)
   (Lisp_Object uid)
 {
-  ENTER_LISP_FRAME (uid);
+  ENTER_LISP_FRAME ((uid));
   struct passwd *pw;
   uid_t id;
 
@@ -1457,8 +1442,7 @@ If UID is a string, return the full name of the user with that login
 name, or nil if there is no such user.  */)
   (Lisp_Object uid)
 {
-  ENTER_LISP_FRAME (uid);
-  LISP_LOCALS (full, login);
+  ENTER_LISP_FRAME ((uid), full, login);
   struct passwd *pw;
   register char *p, *q;
 
@@ -1627,8 +1611,7 @@ static Lisp_Object
 time_arith (Lisp_Object a, Lisp_Object b,
 	    struct lisp_time (*op) (struct lisp_time, struct lisp_time))
 {
-  ENTER_LISP_FRAME (a, b);
-  LISP_LOCALS (val);
+  ENTER_LISP_FRAME ((a, b), val);
   int alen, blen;
   struct lisp_time ta = lisp_time_struct (a, &alen);
   struct lisp_time tb = lisp_time_struct (b, &blen);
@@ -1661,7 +1644,7 @@ A nil value for either argument stands for the current time.
 See `current-time-string' for the various forms of a time value.  */)
   (Lisp_Object a, Lisp_Object b)
 {
-  ENTER_LISP_FRAME (a, b);
+  ENTER_LISP_FRAME ((a, b));
   EXIT_LISP_FRAME (time_arith (a, b, time_add));
 }
 
@@ -1672,7 +1655,7 @@ A nil value for either argument stands for the current time.
 See `current-time-string' for the various forms of a time value.  */)
   (Lisp_Object a, Lisp_Object b)
 {
-  ENTER_LISP_FRAME (a, b);
+  ENTER_LISP_FRAME ((a, b));
   EXIT_LISP_FRAME (time_arith (a, b, time_subtract));
 }
 
@@ -1682,7 +1665,7 @@ A nil value for either argument stands for the current time.
 See `current-time-string' for the various forms of a time value.  */)
   (Lisp_Object t1, Lisp_Object t2)
 {
-  ENTER_LISP_FRAME (t1, t2);
+  ENTER_LISP_FRAME ((t1, t2));
   int t1len, t2len;
   struct lisp_time a = lisp_time_struct (t1, &t1len);
   struct lisp_time b = lisp_time_struct (t2, &t2len);
@@ -1753,8 +1736,8 @@ disassemble_lisp_time (Lisp_Object specified_time, Lisp_Object *phigh,
 		       Lisp_Object *plow, Lisp_Object *pusec,
 		       Lisp_Object *ppsec)
 {
-  ENTER_LISP_FRAME_T (int, specified_time);
-  LISP_LOCALS (high, low, usec, psec, low_tail);
+  ENTER_LISP_FRAME_T (int, (specified_time), high, low, usec, psec,
+                      low_tail);
   high = make_number (0);
 
   low = specified_time;
@@ -1860,7 +1843,7 @@ decode_time_components (Lisp_Object high, Lisp_Object low, Lisp_Object usec,
 			Lisp_Object psec,
 			struct lisp_time *result, double *dresult)
 {
-  ENTER_LISP_FRAME_T (int, high, low, usec, psec);
+  ENTER_LISP_FRAME_T (int, (high, low, usec, psec));
   EMACS_INT hi, lo, us, ps;
   if (! (INTEGERP (high)
 	 && INTEGERP (usec) && INTEGERP (psec)))
@@ -1945,8 +1928,8 @@ lisp_to_timespec (struct lisp_time t)
 static struct lisp_time
 lisp_time_struct (Lisp_Object specified_time, int *plen)
 {
-  ENTER_LISP_FRAME_T (struct lisp_time, specified_time);
-  LISP_LOCALS (high, low, usec, psec);
+  ENTER_LISP_FRAME_T (struct lisp_time, (specified_time), high, low,
+                      usec, psec);
   struct lisp_time t;
   int len = disassemble_lisp_time (specified_time, &high, &low, &usec, &psec);
   if (!len)
@@ -1962,7 +1945,7 @@ lisp_time_struct (Lisp_Object specified_time, int *plen)
 struct timespec
 lisp_time_argument (Lisp_Object specified_time)
 {
-  ENTER_LISP_FRAME_T (struct timespec, specified_time);
+  ENTER_LISP_FRAME_T (struct timespec, (specified_time));
   int len;
   struct lisp_time lt = lisp_time_struct (specified_time, &len);
   struct timespec t = lisp_to_timespec (lt);
@@ -1976,8 +1959,7 @@ lisp_time_argument (Lisp_Object specified_time)
 static time_t
 lisp_seconds_argument (Lisp_Object specified_time)
 {
-  ENTER_LISP_FRAME_T (time_t, specified_time);
-  LISP_LOCALS (high, low, usec, psec);
+  ENTER_LISP_FRAME_T (time_t, (specified_time), high, low, usec, psec);
   struct lisp_time t;
 
   int val = disassemble_lisp_time (specified_time, &high, &low, &usec, &psec);
@@ -2010,8 +1992,7 @@ If precise time stamps are required, use either `current-time',
 or (if you need time as a string) `format-time-string'.  */)
   (Lisp_Object specified_time)
 {
-  ENTER_LISP_FRAME (specified_time);
-  LISP_LOCALS (high, low, usec, psec);
+  ENTER_LISP_FRAME ((specified_time), high, low, usec, psec);
   double t;
   if (! (disassemble_lisp_time (specified_time, &high, &low, &usec, &psec)
 	 && decode_time_components (high, low, usec, psec, 0, &t)))
@@ -2135,7 +2116,7 @@ For example, to produce full ISO 8601 format, use "%FT%T%z".
 usage: (format-time-string FORMAT-STRING &optional TIME ZONE)  */)
   (Lisp_Object format_string, Lisp_Object timeval, Lisp_Object zone)
 {
-  ENTER_LISP_FRAME (format_string, timeval, zone);
+  ENTER_LISP_FRAME ((format_string, timeval, zone));
   struct timespec t = lisp_time_argument (timeval);
   struct tm tm;
 
@@ -2150,8 +2131,7 @@ static Lisp_Object
 format_time_string (char const *format, ptrdiff_t formatlen,
 		    struct timespec t, Lisp_Object zone, struct tm *tmp)
 {
-  ENTER_LISP_FRAME (zone);
-  LISP_LOCALS (result);
+  ENTER_LISP_FRAME ((zone), result);
   char buffer[4000];
   char *buf = buffer;
   ptrdiff_t size = sizeof buffer;
@@ -2226,7 +2206,7 @@ Common Lisp has different meanings for DOW and UTCOFF.)
 usage: (decode-time &optional TIME ZONE)  */)
   (Lisp_Object specified_time, Lisp_Object zone)
 {
-  ENTER_LISP_FRAME (specified_time, zone);
+  ENTER_LISP_FRAME ((specified_time, zone));
   time_t time_spec = lisp_seconds_argument (specified_time);
   struct tm local_tm, gmt_tm;
   timezone_t tz = tzlookup (zone, false);
@@ -2262,7 +2242,7 @@ usage: (decode-time &optional TIME ZONE)  */)
 static int
 check_tm_member (Lisp_Object obj, int offset)
 {
-  ENTER_LISP_FRAME_T (int, obj);
+  ENTER_LISP_FRAME_T (int, (obj));
   CHECK_NUMBER (obj);
   EMACS_INT n = XINT (obj);
   int result;
@@ -2297,8 +2277,7 @@ year values as low as 1901 do work.
 usage: (encode-time SECOND MINUTE HOUR DAY MONTH YEAR &optional ZONE)  */)
   (ptrdiff_t nargs, Lisp_Object *args)
 {
-  ENTER_LISP_FRAME_VA (nargs, args);
-  LISP_LOCALS (zone);
+  ENTER_LISP_FRAME_VA (nargs, args, (), zone);
   time_t value;
   struct tm tm;
   zone = (nargs > 6 ? args[nargs - 1] : Qnil);
@@ -2346,7 +2325,7 @@ the TZ environment variable.  It can also be a list (as from
 without consideration for daylight saving time.  */)
   (Lisp_Object specified_time, Lisp_Object zone)
 {
-  ENTER_LISP_FRAME (specified_time, zone);
+  ENTER_LISP_FRAME ((specified_time, zone));
   time_t value = lisp_seconds_argument (specified_time);
   timezone_t tz = tzlookup (zone, false);
 
@@ -2433,8 +2412,7 @@ in this case, `current-time-zone' returns a list containing nil for
 the data it can't find.  */)
   (Lisp_Object specified_time, Lisp_Object zone)
 {
-  ENTER_LISP_FRAME (specified_time, zone);
-  LISP_LOCALS (zone_offset, zone_name);
+  ENTER_LISP_FRAME ((specified_time, zone), zone_offset, zone_name);
   struct timespec value;
   struct tm local_tm, gmt_tm;
 
@@ -2490,7 +2468,7 @@ environment of the Emacs process and the variable
 former.  */)
   (Lisp_Object tz)
 {
-  ENTER_LISP_FRAME (tz);
+  ENTER_LISP_FRAME ((tz));
   tzlookup (NILP (tz) ? Qwall : tz, true);
   EXIT_LISP_FRAME (Qnil);
 }
@@ -2587,8 +2565,7 @@ general_insert_function (void (*insert_func)
 			       ptrdiff_t, ptrdiff_t, bool),
 			 bool inherit, ptrdiff_t nargs, Lisp_Object *args)
 {
-  ENTER_LISP_FRAME_VA (nargs, args);
-  LISP_LOCALS (val);
+  ENTER_LISP_FRAME_VA (nargs, args, (), val);
   ptrdiff_t argnum;
 
   for (argnum = 0; argnum < nargs; argnum++)
@@ -2625,7 +2602,7 @@ general_insert_function (void (*insert_func)
 void
 insert1 (Lisp_Object arg)
 {
-  ENTER_LISP_FRAME (arg);
+  ENTER_LISP_FRAME ((arg));
   Finsert (1, &arg);
   EXIT_LISP_FRAME_VOID ();
 }
@@ -2650,7 +2627,7 @@ and insert the result.
 usage: (insert &rest ARGS)  */)
   (ptrdiff_t nargs, Lisp_Object *args)
 {
-  ENTER_LISP_FRAME_VA (nargs, args);
+  ENTER_LISP_FRAME_VA (nargs, args, ());
   general_insert_function (insert, insert_from_string, 0, nargs, args);
   EXIT_LISP_FRAME (Qnil);
 }
@@ -2670,7 +2647,7 @@ to unibyte for insertion.
 usage: (insert-and-inherit &rest ARGS)  */)
   (ptrdiff_t nargs, Lisp_Object *args)
 {
-  ENTER_LISP_FRAME_VA (nargs, args);
+  ENTER_LISP_FRAME_VA (nargs, args, ());
   general_insert_function (insert_and_inherit, insert_from_string, 1,
 			   nargs, args);
   EXIT_LISP_FRAME (Qnil);
@@ -2692,7 +2669,7 @@ point, the inserted text falls inside that overlay.
 usage: (insert-before-markers &rest ARGS)  */)
   (ptrdiff_t nargs, Lisp_Object *args)
 {
-  ENTER_LISP_FRAME_VA (nargs, args);
+  ENTER_LISP_FRAME_VA (nargs, args, ());
   general_insert_function (insert_before_markers,
 			   insert_from_string_before_markers, 0,
 			   nargs, args);
@@ -2712,7 +2689,7 @@ to unibyte for insertion.
 usage: (insert-before-markers-and-inherit &rest ARGS)  */)
   (ptrdiff_t nargs, Lisp_Object *args)
 {
-  ENTER_LISP_FRAME_VA (nargs, args);
+  ENTER_LISP_FRAME_VA (nargs, args, ());
   general_insert_function (insert_before_markers_and_inherit,
 			   insert_from_string_before_markers, 1,
 			   nargs, args);
@@ -2750,7 +2727,7 @@ properties from adjoining text, if those properties are sticky.  If
 called interactively, INHERIT is t.  */)
   (Lisp_Object character, Lisp_Object count, Lisp_Object inherit)
 {
-  ENTER_LISP_FRAME (character, count, inherit);
+  ENTER_LISP_FRAME ((character, count, inherit));
   int i, stringlen;
   register ptrdiff_t n;
   int c, len;
@@ -2804,7 +2781,7 @@ The optional third arg INHERIT, if non-nil, says to inherit text properties
 from adjoining text, if those properties are sticky.  */)
   (Lisp_Object byte, Lisp_Object count, Lisp_Object inherit)
 {
-  ENTER_LISP_FRAME (byte, count, inherit);
+  ENTER_LISP_FRAME ((byte, count, inherit));
   CHECK_NUMBER (byte);
   if (XINT (byte) < 0 || XINT (byte) > 255)
     args_out_of_range_3 (byte, make_number (0), make_number (255));
@@ -2858,8 +2835,7 @@ Lisp_Object
 make_buffer_string_both (ptrdiff_t start, ptrdiff_t start_byte,
 			 ptrdiff_t end, ptrdiff_t end_byte, bool props)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (result, tem, tem1);
+  ENTER_LISP_FRAME ((), result, tem, tem1);
   ptrdiff_t beg0, end0, beg1, end1, size;
 
   if (start_byte < GPT_BYTE && GPT_BYTE < end_byte)
@@ -2911,8 +2887,7 @@ make_buffer_string_both (ptrdiff_t start, ptrdiff_t start_byte,
 static void
 update_buffer_properties (ptrdiff_t start, ptrdiff_t end)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (tem);
+  ENTER_LISP_FRAME ((), tem);
   /* If this buffer has some access functions,
      call them, specifying the range of the buffer being accessed.  */
   if (!NILP (Vbuffer_access_fontify_functions))
@@ -2946,7 +2921,7 @@ into the result string; if you don't want the text properties,
 use `buffer-substring-no-properties' instead.  */)
   (Lisp_Object start, Lisp_Object end)
 {
-  ENTER_LISP_FRAME (start, end);
+  ENTER_LISP_FRAME ((start, end));
   register ptrdiff_t b, e;
 
   validate_region (&start, &end);
@@ -2963,7 +2938,7 @@ The two arguments START and END are character positions;
 they can be in either order.  */)
   (Lisp_Object start, Lisp_Object end)
 {
-  ENTER_LISP_FRAME (start, end);
+  ENTER_LISP_FRAME ((start, end));
   register ptrdiff_t b, e;
 
   validate_region (&start, &end);
@@ -2998,8 +2973,7 @@ versa, strings are converted from unibyte to multibyte or vice versa
 using `string-make-multibyte' or `string-make-unibyte', which see.  */)
   (Lisp_Object buffer, Lisp_Object start, Lisp_Object end)
 {
-  ENTER_LISP_FRAME (buffer, start, end);
-  LISP_LOCALS (buf);
+  ENTER_LISP_FRAME ((buffer, start, end), buf);
   register EMACS_INT b, e, temp;
   register struct buffer *bp, *obuf;
 
@@ -3055,8 +3029,8 @@ The value of `case-fold-search' in the current buffer
 determines whether case is significant or ignored.  */)
   (Lisp_Object buffer1, Lisp_Object start1, Lisp_Object end1, Lisp_Object buffer2, Lisp_Object start2, Lisp_Object end2)
 {
-  ENTER_LISP_FRAME (buffer1, start1, end1, buffer2, start2, end2);
-  LISP_LOCALS (trt, buf1, buf2);
+  ENTER_LISP_FRAME ((buffer1, start1, end1, buffer2, start2, end2),
+                    trt, buf1, buf2);
   register EMACS_INT begp1, endp1, begp2, endp2, temp;
   register struct buffer *bp1, *bp2;
   trt = (!NILP (BVAR (current_buffer, case_fold_search))
@@ -3253,8 +3227,7 @@ Warning: this function can be slow if there's a large number of small
 differences between the two buffers.  */)
   (Lisp_Object source)
 {
-  ENTER_LISP_FRAME (source);
-  LISP_LOCALS (source_buffer);
+  ENTER_LISP_FRAME ((source), source_buffer);
   struct buffer *a = current_buffer;
   source_buffer = Fget_buffer (source);
 
@@ -3468,7 +3441,7 @@ buffer_chars_equal (struct context *ctx,
 static void
 subst_char_in_region_unwind (Lisp_Object arg)
 {
-  ENTER_LISP_FRAME (arg);
+  ENTER_LISP_FRAME ((arg));
   bset_undo_list (current_buffer, arg);
   EXIT_LISP_FRAME_VOID ();
 }
@@ -3476,7 +3449,7 @@ subst_char_in_region_unwind (Lisp_Object arg)
 static void
 subst_char_in_region_unwind_1 (Lisp_Object arg)
 {
-  ENTER_LISP_FRAME (arg);
+  ENTER_LISP_FRAME ((arg));
   bset_filename (current_buffer, arg);
   EXIT_LISP_FRAME_VOID ();
 }
@@ -3489,8 +3462,8 @@ and don't mark the buffer as really changed.
 Both characters must have the same length of multi-byte form.  */)
   (Lisp_Object start, Lisp_Object end, Lisp_Object fromchar, Lisp_Object tochar, Lisp_Object noundo)
 {
-  ENTER_LISP_FRAME (start, end, fromchar, tochar, noundo);
-  LISP_LOCALS (tem, string);
+  ENTER_LISP_FRAME ((start, end, fromchar, tochar, noundo), tem,
+                    string);
   register ptrdiff_t pos, pos_byte, stop, i, len, end_byte;
   /* Keep track of the first change in the buffer:
      if 0 we haven't found it yet.
@@ -3676,8 +3649,7 @@ static Lisp_Object
 check_translation (ptrdiff_t pos, ptrdiff_t pos_byte, ptrdiff_t end,
 		   Lisp_Object val)
 {
-  ENTER_LISP_FRAME (val);
-  LISP_LOCALS (result, elt);
+  ENTER_LISP_FRAME ((val), result, elt);
   int initial_buf[16];
   int *buf = initial_buf;
   ptrdiff_t buf_size = ARRAYELTS (initial_buf);
@@ -3742,8 +3714,7 @@ mapping for the character with code N.
 It returns the number of characters changed.  */)
   (Lisp_Object start, Lisp_Object end, Lisp_Object table)
 {
-  ENTER_LISP_FRAME (start, end, table);
-  LISP_LOCALS (val, string);
+  ENTER_LISP_FRAME ((start, end, table), val, string);
   register unsigned char *tt;	/* Trans table. */
   register int nc;		/* New character. */
   int cnt;			/* Number of changes made. */
@@ -3903,7 +3874,7 @@ If called interactively, delete the region between point and mark.
 This command deletes buffer text without modifying the kill ring.  */)
   (Lisp_Object start, Lisp_Object end)
 {
-  ENTER_LISP_FRAME (start, end);
+  ENTER_LISP_FRAME ((start, end));
   validate_region (&start, &end);
   del_range (XINT (start), XINT (end));
   EXIT_LISP_FRAME (Qnil);
@@ -3914,7 +3885,7 @@ DEFUN ("delete-and-extract-region", Fdelete_and_extract_region,
        doc: /* Delete the text between START and END and return it.  */)
   (Lisp_Object start, Lisp_Object end)
 {
-  ENTER_LISP_FRAME (start, end);
+  ENTER_LISP_FRAME ((start, end));
   validate_region (&start, &end);
   if (XINT (start) == XINT (end))
     EXIT_LISP_FRAME (empty_unibyte_string);
@@ -3948,8 +3919,7 @@ positions (integers or markers) bounding the text that should
 remain visible.  */)
   (Lisp_Object start, Lisp_Object end)
 {
-  ENTER_LISP_FRAME (start, end);
-  LISP_LOCALS (tem);
+  ENTER_LISP_FRAME ((start, end), tem);
   CHECK_NUMBER_COERCE_MARKER (start);
   CHECK_NUMBER_COERCE_MARKER (end);
 
@@ -3978,8 +3948,7 @@ remain visible.  */)
 Lisp_Object
 save_restriction_save (void)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (beg, end);
+  ENTER_LISP_FRAME ((), beg, end);
   if (BEGV == BEG && ZV == Z)
     /* The common case that the buffer isn't narrowed.
        We return just the buffer object, which save_restriction_restore
@@ -4003,7 +3972,7 @@ save_restriction_save (void)
 void
 save_restriction_restore (Lisp_Object data)
 {
-  ENTER_LISP_FRAME (data);
+  ENTER_LISP_FRAME ((data));
   struct buffer *cur = NULL;
   struct buffer *buf = (CONSP (data)
 			? XMARKER (XCAR (data))->buffer
@@ -4090,8 +4059,7 @@ use `save-excursion' outermost:
 usage: (save-restriction &rest BODY)  */)
   (Lisp_Object body)
 {
-  ENTER_LISP_FRAME (body);
-  LISP_LOCALS (val);
+  ENTER_LISP_FRAME ((body), val);
   ptrdiff_t count = SPECPDL_INDEX ();
 
   record_unwind_protect (save_restriction_restore, save_restriction_save ());
@@ -4121,8 +4089,7 @@ also `current-message'.
 usage: (message FORMAT-STRING &rest ARGS)  */)
   (ptrdiff_t nargs, Lisp_Object *args)
 {
-  ENTER_LISP_FRAME_VA (nargs, args);
-  LISP_LOCALS (val);
+  ENTER_LISP_FRAME_VA (nargs, args, (), val);
   if (NILP (args[0])
       || (STRINGP (args[0])
 	  && SBYTES (args[0]) == 0))
@@ -4152,8 +4119,7 @@ message; let the minibuffer contents show.
 usage: (message-box FORMAT-STRING &rest ARGS)  */)
   (ptrdiff_t nargs, Lisp_Object *args)
 {
-  ENTER_LISP_FRAME_VA (nargs, args);
-  LISP_LOCALS (val, pane, menu);
+  ENTER_LISP_FRAME_VA (nargs, args, (), val, pane, menu);
   if (NILP (args[0]))
     {
       message1 (0);
@@ -4186,7 +4152,7 @@ message; let the minibuffer contents show.
 usage: (message-or-box FORMAT-STRING &rest ARGS)  */)
   (ptrdiff_t nargs, Lisp_Object *args)
 {
-  ENTER_LISP_FRAME_VA (nargs, args);
+  ENTER_LISP_FRAME_VA (nargs, args, ());
   if ((NILP (last_nonmenu_event) || CONSP (last_nonmenu_event))
       && use_dialog_box)
     EXIT_LISP_FRAME (Fmessage_box (nargs, args));
@@ -4209,8 +4175,7 @@ properties to add to the result.
 usage: (propertize STRING &rest PROPERTIES)  */)
   (ptrdiff_t nargs, Lisp_Object *args)
 {
-  ENTER_LISP_FRAME_VA (nargs, args);
-  LISP_LOCALS (properties, string);
+  ENTER_LISP_FRAME_VA (nargs, args, (), properties, string);
   ptrdiff_t i;
 
   /* Number of args must be odd.  */
@@ -4320,7 +4285,7 @@ produced text.
 usage: (format STRING &rest OBJECTS)  */)
   (ptrdiff_t nargs, Lisp_Object *args)
 {
-  ENTER_LISP_FRAME_VA (nargs, args);
+  ENTER_LISP_FRAME_VA (nargs, args, ());
   EXIT_LISP_FRAME (styled_format (nargs, args, false));
 }
 
@@ -4337,7 +4302,7 @@ and right quote replacement characters are specified by
 usage: (format-message STRING &rest OBJECTS)  */)
   (ptrdiff_t nargs, Lisp_Object *args)
 {
-  ENTER_LISP_FRAME_VA (nargs, args);
+  ENTER_LISP_FRAME_VA (nargs, args, ());
   EXIT_LISP_FRAME (styled_format (nargs, args, true));
 }
 
@@ -4346,8 +4311,8 @@ usage: (format-message STRING &rest OBJECTS)  */)
 static Lisp_Object
 styled_format (ptrdiff_t nargs, Lisp_Object *args, bool message)
 {
-  ENTER_LISP_FRAME_VA (nargs, args);
-  LISP_LOCALS (val, arg, noescape, len, props, list, item, new_len);
+  ENTER_LISP_FRAME_VA (nargs, args, (), val, arg, noescape, len,
+                       props, list, item, new_len);
   ptrdiff_t n;		/* The number of the next arg to substitute.  */
   char initial_buffer[4000];
   char *buf = initial_buffer;
@@ -5185,7 +5150,7 @@ Both arguments must be characters (i.e. integers).
 Case is ignored if `case-fold-search' is non-nil in the current buffer.  */)
   (Lisp_Object c1, Lisp_Object c2)
 {
-  ENTER_LISP_FRAME (c1, c2);
+  ENTER_LISP_FRAME ((c1, c2));
   int i1, i2;
   /* Check they're chars, not just integers, otherwise we could get array
      bounds violations in downcase.  */
@@ -5312,8 +5277,8 @@ any markers that happen to be located in the regions.
 Transposing beyond buffer boundaries is an error.  */)
   (Lisp_Object startr1, Lisp_Object endr1, Lisp_Object startr2, Lisp_Object endr2, Lisp_Object leave_markers)
 {
-  ENTER_LISP_FRAME (startr1, endr1, startr2, endr2, leave_markers);
-  LISP_LOCALS (buf);
+  ENTER_LISP_FRAME ((startr1, endr1, startr2, endr2, leave_markers),
+                    buf);
   register ptrdiff_t start1, end1, start2, end2;
   ptrdiff_t start1_byte, start2_byte, len1_byte, len2_byte, end2_byte;
   ptrdiff_t gap, len1, len_mid, len2;
@@ -5609,8 +5574,7 @@ Transposing beyond buffer boundaries is an error.  */)
 void
 syms_of_editfns (void)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (obuf);
+  ENTER_LISP_FRAME ((), obuf);
   DEFSYM (Qbuffer_access_fontify_functions, "buffer-access-fontify-functions");
   DEFSYM (Qwall, "wall");
 

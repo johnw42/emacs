@@ -2455,8 +2455,7 @@ static struct Lisp_String *
 allocate_string (void)
 {
 #ifdef HAVE_CHEZ_SCHEME
-  ENTER_LISP_FRAME_T (struct Lisp_String *);
-  LISP_LOCALS (vec);
+  ENTER_LISP_FRAME_T (struct Lisp_String *, (), vec);
   struct Lisp_String *s = scheme_allocate (sizeof (struct Lisp_String), scheme_string_symbol, &vec);
   update_scheme_obj (&s->u.s.scheme_obj, vec);
   eassert(STRINGP(vec));
@@ -3328,8 +3327,7 @@ DEFUN ("cons", Fcons, Scons, 2, 2, 0,
        doc: /* Create a new cons, give it CAR and CDR as components, and return it.  */)
   (Lisp_Object car, Lisp_Object cdr)
 {
-  ENTER_LISP_FRAME (car, cdr);
-  LISP_LOCALS (val);
+  ENTER_LISP_FRAME ((car, cdr), val);
 #ifdef HAVE_CHEZ_SCHEME
   val = UNCHEZ (chez_cons (CHEZ (car), CHEZ (cdr)));
   scheme_dont_track (val, "cons");

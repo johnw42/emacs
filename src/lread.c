@@ -199,8 +199,7 @@ static int unread_char;
 static int
 readchar (Lisp_Object readcharfun, bool *multibyte)
 {
-  ENTER_LISP_FRAME_T (int, readcharfun);
-  LISP_LOCALS (tem);
+  ENTER_LISP_FRAME_T (int, (readcharfun), tem);
   register int c;
   int (*readbyte) (int, Lisp_Object);
   unsigned char buf[MAX_MULTIBYTE_LENGTH];
@@ -374,7 +373,7 @@ readchar (Lisp_Object readcharfun, bool *multibyte)
 static void
 skip_dyn_bytes (Lisp_Object readcharfun, ptrdiff_t n)
 {
-  ENTER_LISP_FRAME (readcharfun);
+  ENTER_LISP_FRAME ((readcharfun));
   if (FROM_FILE_P (readcharfun))
     {
       block_input ();		/* FIXME: Not sure if it's needed.  */
@@ -400,7 +399,7 @@ skip_dyn_bytes (Lisp_Object readcharfun, ptrdiff_t n)
 static void
 skip_dyn_eof (Lisp_Object readcharfun)
 {
-  ENTER_LISP_FRAME (readcharfun);
+  ENTER_LISP_FRAME ((readcharfun));
   if (FROM_FILE_P (readcharfun))
     {
       block_input ();		/* FIXME: Not sure if it's needed.  */
@@ -419,7 +418,7 @@ skip_dyn_eof (Lisp_Object readcharfun)
 static void
 unreadchar (Lisp_Object readcharfun, int c)
 {
-  ENTER_LISP_FRAME (readcharfun);
+  ENTER_LISP_FRAME ((readcharfun));
   readchar_count--;
   if (c == -1)
     /* Don't back up the pointer if we're unreading the end-of-input mark,
@@ -477,7 +476,7 @@ unreadchar (Lisp_Object readcharfun, int c)
 static int
 readbyte_for_lambda (int c, Lisp_Object readcharfun)
 {
-  ENTER_LISP_FRAME_T (int, readcharfun);
+  ENTER_LISP_FRAME_T (int, (readcharfun));
   EXIT_LISP_FRAME (read_bytecode_char (c >= 0));
 }
 
@@ -511,7 +510,7 @@ readbyte_from_stdio (void)
 static int
 readbyte_from_file (int c, Lisp_Object readcharfun)
 {
-  ENTER_LISP_FRAME_T (int, readcharfun);
+  ENTER_LISP_FRAME_T (int, (readcharfun));
   if (c >= 0)
     {
       eassert (infile->lookahead < sizeof infile->buf);
@@ -525,8 +524,7 @@ readbyte_from_file (int c, Lisp_Object readcharfun)
 static int
 readbyte_from_string (int c, Lisp_Object readcharfun)
 {
-  ENTER_LISP_FRAME_T (int, readcharfun);
-  LISP_LOCALS (string);
+  ENTER_LISP_FRAME_T (int, (readcharfun), string);
   string = XCAR (readcharfun);
 
 
@@ -554,7 +552,7 @@ readbyte_from_string (int c, Lisp_Object readcharfun)
 static int
 read_emacs_mule_char (int c, int (*readbyte) (int, Lisp_Object), Lisp_Object readcharfun)
 {
-  ENTER_LISP_FRAME_T (int, readcharfun);
+  ENTER_LISP_FRAME_T (int, (readcharfun));
   /* Emacs-mule coding uses at most 4-byte for one character.  */
   unsigned char buf[4];
   int len = emacs_mule_bytes[c];
@@ -664,8 +662,7 @@ static Lisp_Object
 read_filtered_event (bool no_switch_frame, bool ascii_required,
 		     bool error_nonascii, bool input_method, Lisp_Object seconds)
 {
-  ENTER_LISP_FRAME (seconds);
-  LISP_LOCALS (val, delayed_switch_frame, tem, tem1);
+  ENTER_LISP_FRAME ((seconds), val, delayed_switch_frame, tem, tem1);
   struct timespec end_time;
 
 #ifdef HAVE_WINDOW_SYSTEM
@@ -777,8 +774,7 @@ input arrives in that time, return nil.  SECONDS may be a
 floating-point value.  */)
   (Lisp_Object prompt, Lisp_Object inherit_input_method, Lisp_Object seconds)
 {
-  ENTER_LISP_FRAME (prompt, inherit_input_method, seconds);
-  LISP_LOCALS (val);
+  ENTER_LISP_FRAME ((prompt, inherit_input_method, seconds), val);
 
   if (! NILP (prompt))
     message_with_string ("%s", prompt, 0);
@@ -800,7 +796,7 @@ input arrives in that time, return nil.  SECONDS may be a
 floating-point value.  */)
   (Lisp_Object prompt, Lisp_Object inherit_input_method, Lisp_Object seconds)
 {
-  ENTER_LISP_FRAME (prompt, inherit_input_method, seconds);
+  ENTER_LISP_FRAME ((prompt, inherit_input_method, seconds));
   if (! NILP (prompt))
     message_with_string ("%s", prompt, 0);
   EXIT_LISP_FRAME (read_filtered_event (0, 0, 0, ! NILP (inherit_input_method), seconds));
@@ -826,8 +822,7 @@ input arrives in that time, return nil.  SECONDS may be a
 floating-point value.  */)
   (Lisp_Object prompt, Lisp_Object inherit_input_method, Lisp_Object seconds)
 {
-  ENTER_LISP_FRAME (prompt, inherit_input_method, seconds);
-  LISP_LOCALS (val);
+  ENTER_LISP_FRAME ((prompt, inherit_input_method, seconds), val);
 
   if (! NILP (prompt))
     message_with_string ("%s", prompt, 0);
@@ -858,7 +853,7 @@ DEFUN ("get-file-char", Fget_file_char, Sget_file_char, 0, 0, 0,
 static bool
 lisp_file_lexically_bound_p (Lisp_Object readcharfun)
 {
-  ENTER_LISP_FRAME_T (bool, readcharfun);
+  ENTER_LISP_FRAME_T (bool, (readcharfun));
   int ch = READCHAR;
 
   if (ch == '#')
@@ -1036,7 +1031,7 @@ load_error_handler (Lisp_Object data)
 static void
 load_warn_old_style_backquotes (Lisp_Object file)
 {
-  ENTER_LISP_FRAME (file);
+  ENTER_LISP_FRAME ((file));
   if (!NILP (Vlread_old_style_backquotes))
     {
       AUTO_STRING (format, "Loading `%s': old-style backquotes detected!");
@@ -1048,8 +1043,7 @@ load_warn_old_style_backquotes (Lisp_Object file)
 static void
 load_warn_unescaped_character_literals (Lisp_Object file)
 {
-  ENTER_LISP_FRAME (file);
-  LISP_LOCALS (format, separator, inner_format);
+  ENTER_LISP_FRAME ((file), format, separator, inner_format);
   if (NILP (Vlread_unescaped_character_literals)) EXIT_LISP_FRAME_VOID ();
   CHECK_CONS (Vlread_unescaped_character_literals);
   format = build_string ("Loading `%s': unescaped character literals %s detected!");
@@ -1073,8 +1067,7 @@ required.
 This uses the variables `load-suffixes' and `load-file-rep-suffixes'.  */)
   (void)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (lst, suffixes, suffix, ext, exts);
+  ENTER_LISP_FRAME ((), lst, suffixes, suffix, ext, exts);
   lst = Qnil;
   suffixes = Vload_suffixes;
 
@@ -1098,7 +1091,7 @@ This uses the variables `load-suffixes' and `load-file-rep-suffixes'.  */)
 static bool
 suffix_p (Lisp_Object string, const char *suffix)
 {
-  ENTER_LISP_FRAME_T (bool, string);
+  ENTER_LISP_FRAME_T (bool, (string));
   ptrdiff_t suffix_len = strlen (suffix);
   ptrdiff_t string_len = SBYTES (string);
 
@@ -1162,8 +1155,9 @@ Return t if the file exists and loads successfully.  */)
   (Lisp_Object file, Lisp_Object noerror, Lisp_Object nomessage,
    Lisp_Object nosuffix, Lisp_Object must_suffix)
 {
-  ENTER_LISP_FRAME (file, noerror, nomessage, nosuffix, must_suffix);
-  LISP_LOCALS (found, efound, hist_file_name, handler, suffixes, tem, msg_file, val);
+  ENTER_LISP_FRAME ((file, noerror, nomessage, nosuffix, must_suffix),
+                    found, efound, hist_file_name, handler, suffixes,
+                    tem, msg_file, val);
   SUSPEND_GC();
 
   FILE *stream;
@@ -1512,7 +1506,7 @@ Return t if the file exists and loads successfully.  */)
 static bool
 complete_filename_p (Lisp_Object pathname)
 {
-  ENTER_LISP_FRAME_T (bool, pathname);
+  ENTER_LISP_FRAME_T (bool, (pathname));
   const unsigned char *s = SDATA (pathname);
   EXIT_LISP_FRAME ((IS_DIRECTORY_SEP (s[0])
 	  || (SCHARS (pathname) > 2
@@ -1531,8 +1525,7 @@ This function will normally skip directories, so if you want it to find
 directories, make sure the PREDICATE function returns `dir-ok' for them.  */)
   (Lisp_Object filename, Lisp_Object path, Lisp_Object suffixes, Lisp_Object predicate)
 {
-  ENTER_LISP_FRAME (filename, path, suffixes, predicate);
-  LISP_LOCALS (file);
+  ENTER_LISP_FRAME ((filename, path, suffixes, predicate), file);
   int fd = openp (path, filename, suffixes, &file, predicate, false);
   if (NILP (predicate) && fd >= 0)
     emacs_close (fd);
@@ -1569,8 +1562,9 @@ int
 openp (Lisp_Object path, Lisp_Object str, Lisp_Object suffixes,
        Lisp_Object *storeptr, Lisp_Object predicate, bool newer)
 {
-  ENTER_LISP_FRAME_T (int, path, str, suffixes, predicate);
-  LISP_LOCALS (filename, string, tail, encoded_fn, save_string, suffix, handler, tmp);
+  ENTER_LISP_FRAME_T (int, (path, str, suffixes, predicate), filename,
+                      string, tail, encoded_fn, save_string, suffix,
+                      handler, tmp);
   ptrdiff_t fn_size = 100;
   char buf[100];
   char *fn = buf;
@@ -1803,8 +1797,7 @@ openp (Lisp_Object path, Lisp_Object str, Lisp_Object suffixes,
 static void
 build_load_history (Lisp_Object filename, bool entire)
 {
-  ENTER_LISP_FRAME (filename);
-  LISP_LOCALS (tail, prev, newelt, tem, tem2);
+  ENTER_LISP_FRAME ((filename), tail, prev, newelt, tem, tem2);
   bool foundit = 0;
 
   tail = Vload_history;
@@ -1882,8 +1875,7 @@ end_of_file_error (void)
 static Lisp_Object
 readevalloop_eager_expand_eval (Lisp_Object val, Lisp_Object macroexpand)
 {
-  ENTER_LISP_FRAME (val, macroexpand);
-  LISP_LOCALS (subforms);
+  ENTER_LISP_FRAME ((val, macroexpand), subforms);
   /* If we macroexpand the toplevel form non-recursively and it ends
      up being a `progn' (or if it was a progn to start), treat each
      form in the progn as a top-level form.  This way, if one form in
@@ -1919,8 +1911,8 @@ readevalloop (Lisp_Object readcharfun,
 	      Lisp_Object unibyte, Lisp_Object readfun,
 	      Lisp_Object start, Lisp_Object end)
 {
-  ENTER_LISP_FRAME (readcharfun, sourcename, unibyte, readfun, start, end);
-  LISP_LOCALS (val, lex_bound, macroexpand);
+  ENTER_LISP_FRAME ((readcharfun, sourcename, unibyte, readfun, start,
+                     end), val, lex_bound, macroexpand);
   int c;
   ptrdiff_t count = SPECPDL_INDEX ();
   struct buffer *b = 0;
@@ -2132,8 +2124,8 @@ DO-ALLOW-PRINT, if non-nil, specifies that output functions in the
 This function preserves the position of point.  */)
   (Lisp_Object buffer, Lisp_Object printflag, Lisp_Object filename, Lisp_Object unibyte, Lisp_Object do_allow_print)
 {
-  ENTER_LISP_FRAME (buffer, printflag, filename, unibyte, do_allow_print);
-  LISP_LOCALS (tem, buf);
+  ENTER_LISP_FRAME ((buffer, printflag, filename, unibyte,
+                     do_allow_print), tem, buf);
   ptrdiff_t count = SPECPDL_INDEX ();
 
   if (NILP (buffer))
@@ -2179,8 +2171,7 @@ which is the input stream for reading characters.
 This function does not move point.  */)
   (Lisp_Object start, Lisp_Object end, Lisp_Object printflag, Lisp_Object read_function)
 {
-  ENTER_LISP_FRAME (start, end, printflag, read_function);
-  LISP_LOCALS (tem, cbuf);
+  ENTER_LISP_FRAME ((start, end, printflag, read_function), tem, cbuf);
   /* FIXME: Do the eval-sexp-add-defvars dance!  */
   ptrdiff_t count = SPECPDL_INDEX ();
 
@@ -2215,7 +2206,7 @@ STREAM or the value of `standard-input' may be:
     standard input in batch mode).  */)
   (Lisp_Object stream)
 {
-  ENTER_LISP_FRAME (stream);
+  ENTER_LISP_FRAME ((stream));
   if (NILP (stream))
     stream = Vstandard_input;
   if (EQ (stream, Qt))
@@ -2238,8 +2229,7 @@ a substring of STRING from which to read;  they default to 0 and
 the end of STRING.  */)
   (Lisp_Object string, Lisp_Object start, Lisp_Object end)
 {
-  ENTER_LISP_FRAME (string, start, end);
-  LISP_LOCALS (ret);
+  ENTER_LISP_FRAME ((string, start, end), ret);
   CHECK_STRING (string);
   /* `read_internal_start' sets `read_from_string_index'.  */
   ret = read_internal_start (string, start, end);
@@ -2251,8 +2241,7 @@ the end of STRING.  */)
 static Lisp_Object
 read_internal_start (Lisp_Object stream, Lisp_Object start, Lisp_Object end)
 {
-  ENTER_LISP_FRAME (stream, start, end);
-  LISP_LOCALS (retval, string);
+  ENTER_LISP_FRAME ((stream, start, end), retval, string);
 
   readchar_count = 0;
   new_backquote_flag = 0;
@@ -2321,8 +2310,7 @@ invalid_syntax (const char *s)
 static Lisp_Object
 read0 (Lisp_Object readcharfun)
 {
-  ENTER_LISP_FRAME (readcharfun);
-  LISP_LOCALS (val);
+  ENTER_LISP_FRAME ((readcharfun), val);
   int c;
 
   val = read1 (readcharfun, &c, 0);
@@ -2362,8 +2350,7 @@ grow_read_buffer (char *buf, ptrdiff_t offset,
 static int
 character_name_to_code (char const *name, ptrdiff_t name_len)
 {
-  ENTER_LISP_FRAME_T (int);
-  LISP_LOCALS (code);
+  ENTER_LISP_FRAME_T (int, (), code);
   /* For "U+XXXX", pass the leading '+' to string_to_number to reject
      monstrosities like "U+-0000".  */
   code = (name[0] == 'U' && name[1] == '+'
@@ -2392,7 +2379,7 @@ enum { UNICODE_CHARACTER_NAME_LENGTH_BOUND = 200 };
 static int
 read_escape (Lisp_Object readcharfun, bool stringp)
 {
-  ENTER_LISP_FRAME_T (int, readcharfun);
+  ENTER_LISP_FRAME_T (int, (readcharfun));
   int c = READCHAR;
   /* \u allows up to four hex digits, \U up to eight.  Default to the
      behavior for \u, and change this value in the case that \U is seen.  */
@@ -2665,7 +2652,7 @@ digit_to_number (int character, int base)
 static Lisp_Object
 read_integer (Lisp_Object readcharfun, EMACS_INT radix)
 {
-  ENTER_LISP_FRAME (readcharfun);
+  ENTER_LISP_FRAME ((readcharfun));
   /* Room for sign, leading 0, other digits, trailing null byte.
      Also, room for invalid syntax diagnostic.  */
   char buf[max (1 + 1 + UINTMAX_WIDTH + 1,
@@ -2737,10 +2724,10 @@ read_integer (Lisp_Object readcharfun, EMACS_INT radix)
 static Lisp_Object
 read1 (Lisp_Object readcharfun, int *pch, bool first_in_list)
 {
-  ENTER_LISP_FRAME (readcharfun);
-  LISP_LOCALS (tmp, head, data, val, ht, key, record, tbl, length, beg,
-               end, plist, tem, placeholder, number, value, comma_type,
-               char_obj, result, name, obarray);
+  ENTER_LISP_FRAME ((readcharfun), tmp, head, data, val, ht, key,
+                    record, tbl, length, beg, end, plist, tem,
+                    placeholder, number, value, comma_type, char_obj,
+                    result, name, obarray);
   int c;
   bool uninterned_symbol = false;
   bool multibyte;
@@ -3624,8 +3611,7 @@ COMPLETED is a hash table of objects that might be circular, or is t
 if any object might be circular.  */)
   (Lisp_Object object, Lisp_Object placeholder, Lisp_Object completed)
 {
-  ENTER_LISP_FRAME (object, placeholder, completed);
-  LISP_LOCALS (check_object);
+  ENTER_LISP_FRAME ((object, placeholder, completed), check_object);
   struct subst subst = { object, placeholder, completed, Qnil };
   check_object = substitute_object_recurse (&subst, object);
 
@@ -3640,7 +3626,7 @@ if any object might be circular.  */)
 static Lisp_Object
 substitute_object_recurse (struct subst *subst, Lisp_Object subtree)
 {
-  ENTER_LISP_FRAME (subtree);
+  ENTER_LISP_FRAME ((subtree));
   /* If we find the placeholder, return the target object.  */
   if (EQ (subst->placeholder, subtree))
     EXIT_LISP_FRAME (subst->object);
@@ -3859,8 +3845,7 @@ string_to_number (char const *string, int base, bool ignore_trailing)
 static Lisp_Object
 read_vector (Lisp_Object readcharfun, bool bytecodeflag)
 {
-  ENTER_LISP_FRAME (readcharfun);
-  LISP_LOCALS (tem, item, vector, len, bytestr);
+  ENTER_LISP_FRAME ((readcharfun), tem, item, vector, len, bytestr);
   ptrdiff_t i, size;
 #ifndef HAVE_CHEZ_SCHEME
   struct Lisp_Cons *otem;
@@ -3949,8 +3934,7 @@ read_vector (Lisp_Object readcharfun, bool bytecodeflag)
 static Lisp_Object
 read_list (bool flag, Lisp_Object readcharfun)
 {
-  ENTER_LISP_FRAME (readcharfun);
-  LISP_LOCALS (val, tail, elt, tem);
+  ENTER_LISP_FRAME ((readcharfun), val, tail, elt, tem);
   /* 0 is the normal case.
      1 means this list is a doc reference; replace it with the number 0.
      2 means this list is a doc reference; replace it with the doc string.  */
@@ -4101,7 +4085,7 @@ static Lisp_Object initial_obarray = NIL_INIT;
 chez_ptr
 scheme_obarray_table (Lisp_Object obarray)
 {
-  ENTER_LISP_FRAME_T (chez_ptr, obarray);
+  ENTER_LISP_FRAME_T (chez_ptr, (obarray));
   if (NILP (obarray)) obarray = Vobarray;
   if (!fatal_error_in_progress && (!VECTORP (obarray) || ASIZE (obarray) == 0))
     {
@@ -4123,8 +4107,7 @@ scheme_obarray_table (Lisp_Object obarray)
 Lisp_Object
 scheme_oblookup(Lisp_Object obarray, Lisp_Object name, bool add_if_missing)
 {
-  ENTER_LISP_FRAME (obarray, name);
-  LISP_LOCALS (lisp_str, found, scheme_symbol);
+  ENTER_LISP_FRAME ((obarray, name), lisp_str, found, scheme_symbol);
   if (NILP (obarray))
     obarray = Vobarray;
   obarray = check_obarray (obarray);
@@ -4178,7 +4161,7 @@ static size_t oblookup_last_bucket_number;
 Lisp_Object
 check_obarray (Lisp_Object obarray)
 {
-  ENTER_LISP_FRAME (obarray);
+  ENTER_LISP_FRAME ((obarray));
   /* We don't want to signal a wrong-type-argument error when we are
      shutting down due to a fatal error, and we don't want to hit
      assertions in VECTORP and ASIZE if the fatal error was during GC.  */
@@ -4198,7 +4181,7 @@ check_obarray (Lisp_Object obarray)
 static Lisp_Object
 intern_sym (Lisp_Object sym, Lisp_Object obarray, Lisp_Object index)
 {
-  ENTER_LISP_FRAME (sym, obarray, index);
+  ENTER_LISP_FRAME ((sym, obarray, index));
   Lisp_Object *ptr;
 
   XSYMBOL (sym)->u.s.interned = (EQ (obarray, initial_obarray)
@@ -4225,7 +4208,7 @@ intern_sym (Lisp_Object sym, Lisp_Object obarray, Lisp_Object index)
 Lisp_Object
 intern_driver (Lisp_Object string, Lisp_Object obarray, Lisp_Object index)
 {
-  ENTER_LISP_FRAME (string, obarray, index);
+  ENTER_LISP_FRAME ((string, obarray, index));
   EXIT_LISP_FRAME (intern_sym (Fmake_symbol (string), obarray, index));
 }
 #endif /* not HAVE_CHEZ_SCHEME */
@@ -4237,8 +4220,7 @@ intern_driver (Lisp_Object string, Lisp_Object obarray, Lisp_Object index)
 Lisp_Object
 intern_1 (const char *str, ptrdiff_t len)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (obarray, tem);
+  ENTER_LISP_FRAME ((), obarray, tem);
   obarray = check_obarray (Vobarray);
 
   tem = oblookup (obarray, str, len, len);
@@ -4256,8 +4238,7 @@ intern_1 (const char *str, ptrdiff_t len)
 Lisp_Object
 intern_c_string_1 (const char *str, ptrdiff_t len)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (obarray, tem);
+  ENTER_LISP_FRAME ((), obarray, tem);
   obarray = check_obarray (Vobarray);
 
   tem = oblookup (obarray, str, len, len);
@@ -4276,8 +4257,7 @@ intern_c_string_1 (const char *str, ptrdiff_t len)
 static void
 define_symbol (Lisp_Object sym, char const *str)
 {
-  ENTER_LISP_FRAME (sym);
-  LISP_LOCALS (string, bucket);
+  ENTER_LISP_FRAME ((sym), string, bucket);
   ptrdiff_t len = strlen (str);
   string = make_pure_c_string (str, len);
 
@@ -4303,8 +4283,7 @@ A second optional argument specifies the obarray to use;
 it defaults to the value of `obarray'.  */)
   (Lisp_Object string, Lisp_Object obarray)
 {
-  ENTER_LISP_FRAME (string, obarray);
-  LISP_LOCALS (tem);
+  ENTER_LISP_FRAME ((string, obarray), tem);
 
   obarray = check_obarray (NILP (obarray) ? Vobarray : obarray);
   CHECK_STRING (string);
@@ -4328,8 +4307,7 @@ A second optional argument specifies the obarray to use;
 it defaults to the value of `obarray'.  */)
   (Lisp_Object name, Lisp_Object obarray)
 {
-  ENTER_LISP_FRAME (name, obarray);
-  LISP_LOCALS (tem, string);
+  ENTER_LISP_FRAME ((name, obarray), tem, string);
 
   if (NILP (obarray)) obarray = Vobarray;
   obarray = check_obarray (obarray);
@@ -4365,8 +4343,8 @@ OBARRAY, if nil, defaults to the value of the variable `obarray'.
 usage: (unintern NAME OBARRAY)  */)
   (Lisp_Object name, Lisp_Object obarray)
 {
-  ENTER_LISP_FRAME (name, obarray);
-  LISP_LOCALS (sym, string, tem, tail, following);
+  ENTER_LISP_FRAME ((name, obarray), sym, string, tem, tail,
+                    following);
 #ifdef HAVE_CHEZ_SCHEME
   if (NILP (obarray)) obarray = Vobarray;
   name = to_lisp_string (name);
@@ -4453,8 +4431,7 @@ usage: (unintern NAME OBARRAY)  */)
 Lisp_Object
 oblookup (Lisp_Object obarray, register const char *ptr, ptrdiff_t size, ptrdiff_t size_byte)
 {
-  ENTER_LISP_FRAME (obarray);
-  LISP_LOCALS (tail, bucket, tem);
+  ENTER_LISP_FRAME ((obarray), tail, bucket, tem);
 #ifdef HAVE_CHEZ_SCHEME
   EXIT_LISP_FRAME (scheme_oblookup
     (obarray, make_specified_string
@@ -4492,8 +4469,7 @@ oblookup (Lisp_Object obarray, register const char *ptr, ptrdiff_t size, ptrdiff
 void
 map_obarray (Lisp_Object obarray, void (*fn) (Lisp_Object, Lisp_Object), Lisp_Object arg)
 {
-  ENTER_LISP_FRAME (obarray, arg);
-  LISP_LOCALS (sym, tail);
+  ENTER_LISP_FRAME ((obarray, arg), sym, tail);
 #ifdef HAVE_CHEZ_SCHEME
   chez_ptr table = scheme_obarray_table(obarray);
   chez_ptr values_vec = SCHEME_FPTR_CALL (hashtable_values, table);
@@ -4531,7 +4507,7 @@ map_obarray (Lisp_Object obarray, void (*fn) (Lisp_Object, Lisp_Object), Lisp_Ob
 static void
 mapatoms_1 (Lisp_Object sym, Lisp_Object function)
 {
-  ENTER_LISP_FRAME (sym, function);
+  ENTER_LISP_FRAME ((sym, function));
   call1 (function, sym);
   EXIT_LISP_FRAME_VOID ();
 }
@@ -4541,7 +4517,7 @@ DEFUN ("mapatoms", Fmapatoms, Smapatoms, 1, 2, 0,
 OBARRAY defaults to the value of `obarray'.  */)
   (Lisp_Object function, Lisp_Object obarray)
 {
-  ENTER_LISP_FRAME (function, obarray);
+  ENTER_LISP_FRAME ((function, obarray));
   if (NILP (obarray)) obarray = Vobarray;
   obarray = check_obarray (obarray);
 
@@ -4591,8 +4567,7 @@ init_obarray (void)
 void
 defsubr (struct Lisp_Subr *sname)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (sym, tem);
+  ENTER_LISP_FRAME ((), sym, tem);
 #ifdef HAVE_CHEZ_SCHEME
   sym = intern_c_string (sname->init_symbol_name);
   struct Lisp_Subr *subr =
@@ -4619,8 +4594,7 @@ defsubr (struct Lisp_Subr *sname)
 void
 defalias (struct Lisp_Subr *sname, char *string)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (sym);
+  ENTER_LISP_FRAME ((), sym);
   sym = intern (string);
   XSETSUBR (XSYMBOL (sym)->u.s.function, sname);
   EXIT_LISP_FRAME_VOID ();
@@ -4634,8 +4608,7 @@ void
 defvar_int (struct Lisp_Intfwd *i_fwd,
 	    const char *namestring, EMACS_INT *address)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (sym);
+  ENTER_LISP_FRAME ((), sym);
   sym = intern_c_string (namestring);
   i_fwd->type = Lisp_Fwd_Int;
   i_fwd->intvar = address;
@@ -4651,8 +4624,7 @@ void
 defvar_bool (struct Lisp_Boolfwd *b_fwd,
 	     const char *namestring, bool *address)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (sym);
+  ENTER_LISP_FRAME ((), sym);
   sym = intern_c_string (namestring);
   b_fwd->type = Lisp_Fwd_Bool;
   b_fwd->boolvar = address;
@@ -4672,8 +4644,7 @@ void
 defvar_lisp_nopro (struct Lisp_Objfwd *o_fwd,
 		   const char *namestring, Lisp_Object *address)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (sym);
+  ENTER_LISP_FRAME ((), sym);
   (void) XLI (*address);
   sym = intern_c_string (namestring);
   o_fwd->type = Lisp_Fwd_Obj;
@@ -4699,8 +4670,7 @@ void
 defvar_kboard (struct Lisp_Kboard_Objfwd *ko_fwd,
 	       const char *namestring, int offset)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (sym);
+  ENTER_LISP_FRAME ((), sym);
   sym = intern_c_string (namestring);
   ko_fwd->type = Lisp_Fwd_Kboard_Obj;
   ko_fwd->offset = offset;
@@ -4715,8 +4685,7 @@ defvar_kboard (struct Lisp_Kboard_Objfwd *ko_fwd,
 static void
 load_path_check (Lisp_Object lpath)
 {
-  ENTER_LISP_FRAME (lpath);
-  LISP_LOCALS (path_tail, dirfile);
+  ENTER_LISP_FRAME ((lpath), path_tail, dirfile);
 
   /* The only elements that might not exist are those from
      PATH_LOADSEARCH, EMACSLOADPATH.  Anything else is only added if
@@ -4769,8 +4738,7 @@ load_path_check (Lisp_Object lpath)
 static Lisp_Object
 load_path_default (void)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (lpath, tem, tem1, dump_path, tem2);
+  ENTER_LISP_FRAME ((), lpath, tem, tem1, dump_path, tem2);
   lpath = Qnil;
 
   const char *normal;
@@ -4902,8 +4870,7 @@ load_path_default (void)
 void
 init_lread (void)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (elem, elpath, default_lpath, sitelisp);
+  ENTER_LISP_FRAME ((), elem, elpath, default_lpath, sitelisp);
   if (NILP (Vpurify_flag) && !NILP (Ffboundp (Qfile_truename)))
     Vsource_directory = call1 (Qfile_truename, Vsource_directory);
 
@@ -4990,8 +4957,7 @@ init_lread (void)
 void
 dir_warning (char const *use, Lisp_Object dirname)
 {
-  ENTER_LISP_FRAME (dirname);
-  LISP_LOCALS (s);
+  ENTER_LISP_FRAME ((dirname), s);
   static char const format[] = "Warning: %s '%s': %s\n";
   char *diagnostic = emacs_strerror (errno);
   fprintf (stderr, format, use, SSDATA (ENCODE_SYSTEM (dirname)), diagnostic);

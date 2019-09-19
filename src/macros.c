@@ -50,8 +50,7 @@ If optional second arg, NO-EXEC, is non-nil, do not re-execute last
 macro before appending to it.  */)
   (Lisp_Object append, Lisp_Object no_exec)
 {
-  ENTER_LISP_FRAME (append, no_exec);
-  LISP_LOCALS (c);
+  ENTER_LISP_FRAME ((append, no_exec), c);
   if (!NILP (KVAR (current_kboard, defining_kbd_macro)))
     error ("Already defining kbd macro");
 
@@ -149,7 +148,7 @@ In Lisp, optional second arg LOOPFUNC may be a function that is called prior to
 each iteration of the macro.  Iteration stops if LOOPFUNC returns nil.  */)
   (Lisp_Object repeat, Lisp_Object loopfunc)
 {
-  ENTER_LISP_FRAME (repeat, loopfunc);
+  ENTER_LISP_FRAME ((repeat, loopfunc));
   if (NILP (KVAR (current_kboard, defining_kbd_macro)))
     error ("Not defining kbd macro");
 
@@ -180,7 +179,7 @@ each iteration of the macro.  Iteration stops if LOOPFUNC returns nil.  */)
 void
 store_kbd_macro_char (Lisp_Object c)
 {
-  ENTER_LISP_FRAME (c);
+  ENTER_LISP_FRAME ((c));
   struct kboard *kb = current_kboard;
 
   if (!NILP (KVAR (kb, defining_kbd_macro)))
@@ -224,7 +223,7 @@ DEFUN ("store-kbd-macro-event", Fstore_kbd_macro_event,
        doc: /* Store EVENT into the keyboard macro being defined.  */)
   (Lisp_Object event)
 {
-  ENTER_LISP_FRAME (event);
+  ENTER_LISP_FRAME ((event));
   store_kbd_macro_char (event);
   EXIT_LISP_FRAME (Qnil);
 }
@@ -242,7 +241,7 @@ In Lisp, optional second arg LOOPFUNC may be a function that is called prior to
 each iteration of the macro.  Iteration stops if LOOPFUNC returns nil.  */)
   (Lisp_Object prefix, Lisp_Object loopfunc)
 {
-  ENTER_LISP_FRAME (prefix, loopfunc);
+  ENTER_LISP_FRAME ((prefix, loopfunc));
   /* Don't interfere with recognition of the previous command
      from before this macro started.  */
   Vthis_command = KVAR (current_kboard, Vlast_command);
@@ -270,8 +269,7 @@ each iteration of the macro.  Iteration stops if LOOPFUNC returns nil.  */)
 static void
 pop_kbd_macro (Lisp_Object info)
 {
-  ENTER_LISP_FRAME (info);
-  LISP_LOCALS (tem);
+  ENTER_LISP_FRAME ((info), tem);
   Vexecuting_kbd_macro = XCAR (info);
   tem = XCDR (info);
   executing_kbd_macro_index = XINT (XCAR (tem));
@@ -290,8 +288,7 @@ Optional third arg LOOPFUNC may be a function that is called prior to
 each iteration of the macro.  Iteration stops if LOOPFUNC returns nil.  */)
   (Lisp_Object macro, Lisp_Object count, Lisp_Object loopfunc)
 {
-  ENTER_LISP_FRAME (macro, count, loopfunc);
-  LISP_LOCALS (final, tem, cont);
+  ENTER_LISP_FRAME ((macro, count, loopfunc), final, tem, cont);
   ptrdiff_t pdlcount = SPECPDL_INDEX ();
   EMACS_INT repeat = 1;
   EMACS_INT success_count = 0;

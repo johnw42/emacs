@@ -4799,9 +4799,11 @@ extern void setup_process_coding_systems (Lisp_Object);
 
 /* Defined in callproc.c.  */
 #ifndef DOS_NT
-# define CHILD_SETUP_TYPE _Noreturn void
+typedef void child_setup_type;
+# define CHILD_SETUP_TYPE _Noreturn child_setup_type
 #else
-# define CHILD_SETUP_TYPE int
+typedef child_setup_type int
+# define CHILD_SETUP_TYPE child_setup_type
 #endif
 extern CHILD_SETUP_TYPE child_setup (int, int, int, char **, bool, Lisp_Object);
 extern void init_callproc_1 (void);

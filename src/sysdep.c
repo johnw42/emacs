@@ -1069,8 +1069,7 @@ init_all_sys_modes (void)
 void
 init_sys_modes (struct tty_display_info *tty_out)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (terminal, tail, frame);
+  ENTER_LISP_FRAME ((), terminal, tail, frame);
   struct emacs_tty tty;
 #ifndef DOS_NT
 #endif
@@ -2769,7 +2768,7 @@ safe_strsignal (int code)
 int
 serial_open (Lisp_Object port)
 {
-  ENTER_LISP_FRAME_T (int, port);
+  ENTER_LISP_FRAME_T (int, (port));
   int fd = emacs_open (SSDATA (port), O_RDWR | O_NOCTTY | O_NONBLOCK, 0);
   if (fd < 0)
     report_file_error ("Opening serial port", port);
@@ -2809,8 +2808,7 @@ void
 serial_configure (struct Lisp_Process *p,
 		  Lisp_Object contact)
 {
-  ENTER_LISP_FRAME (contact);
-  LISP_LOCALS (childp2, tem);
+  ENTER_LISP_FRAME ((contact), childp2, tem);
   childp2 = Qnil;
 
   tem = Qnil;
@@ -2980,8 +2978,7 @@ serial_configure (struct Lisp_Process *p,
 Lisp_Object
 list_system_processes (void)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (procdir, match, proclist, next, tail);
+  ENTER_LISP_FRAME ((), procdir, match, proclist, next, tail);
 
   /* For every process on the system, there's a directory in the
      "/proc" pseudo-directory whose name is the numeric ID of that
@@ -3009,8 +3006,7 @@ list_system_processes (void)
 Lisp_Object
 list_system_processes (void)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (proclist);
+  ENTER_LISP_FRAME ((), proclist);
 #ifdef DARWIN_OS
   int mib[] = {CTL_KERN, KERN_PROC, KERN_PROC_ALL};
 #else
@@ -3225,8 +3221,7 @@ procfs_get_total_memory (void)
 Lisp_Object
 system_process_attributes (Lisp_Object pid)
 {
-  ENTER_LISP_FRAME (pid);
-  LISP_LOCALS (attrs, decoded_cmd);
+  ENTER_LISP_FRAME ((pid), attrs, decoded_cmd);
   char procfn[PATH_MAX], fn[PATH_MAX];
   struct stat st;
   struct passwd *pw;
@@ -3474,8 +3469,7 @@ system_process_attributes (Lisp_Object pid)
 Lisp_Object
 system_process_attributes (Lisp_Object pid)
 {
-  ENTER_LISP_FRAME (pid);
-  LISP_LOCALS (attrs, decoded_cmd);
+  ENTER_LISP_FRAME ((pid), attrs, decoded_cmd);
   char procfn[PATH_MAX], fn[PATH_MAX];
   struct stat st;
   struct passwd *pw;
@@ -3609,8 +3603,7 @@ make_lisp_timeval (struct timeval t)
 Lisp_Object
 system_process_attributes (Lisp_Object pid)
 {
-  ENTER_LISP_FRAME (pid);
-  LISP_LOCALS (attrs, decoded_comm);
+  ENTER_LISP_FRAME ((pid), attrs, decoded_comm);
   int proc_id;
   int pagesize = getpagesize ();
   unsigned long npages;
@@ -3791,8 +3784,7 @@ make_lisp_timeval (struct timeval t)
 Lisp_Object
 system_process_attributes (Lisp_Object pid)
 {
-  ENTER_LISP_FRAME (pid);
-  LISP_LOCALS (attrs, decoded_comm);
+  ENTER_LISP_FRAME ((pid), attrs, decoded_comm);
   int proc_id;
   struct passwd *pw;
   struct group  *gr;
@@ -4043,7 +4035,7 @@ int
 str_collate (Lisp_Object s1, Lisp_Object s2,
 	     Lisp_Object locale, Lisp_Object ignore_case)
 {
-  ENTER_LISP_FRAME_T (int, s1, s2, locale, ignore_case);
+  ENTER_LISP_FRAME_T (int, (s1, s2, locale, ignore_case));
   int res, err;
   ptrdiff_t len, i, i_byte;
   wchar_t *p1, *p2;
@@ -4115,7 +4107,7 @@ int
 str_collate (Lisp_Object s1, Lisp_Object s2,
 	     Lisp_Object locale, Lisp_Object ignore_case)
 {
-  ENTER_LISP_FRAME_T (int, s1, s2, locale, ignore_case);
+  ENTER_LISP_FRAME_T (int, (s1, s2, locale, ignore_case));
 
   char *loc = STRINGP (locale) ? SSDATA (locale) : NULL;
   int res, err = errno;

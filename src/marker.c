@@ -130,7 +130,7 @@ clear_charpos_cache (struct buffer *b)
 static void
 CHECK_MARKER (Lisp_Object x)
 {
-  ENTER_LISP_FRAME (x);
+  ENTER_LISP_FRAME ((x));
   CHECK_TYPE (MARKERP (x), Qmarkerp, x);
   EXIT_LISP_FRAME_VOID ();
 }
@@ -398,8 +398,7 @@ DEFUN ("marker-buffer", Fmarker_buffer, Smarker_buffer, 1, 1, 0,
 Returns nil if MARKER points into a dead buffer.  */)
   (Lisp_Object marker)
 {
-  ENTER_LISP_FRAME (marker);
-  LISP_LOCALS (buf);
+  ENTER_LISP_FRAME ((marker), buf);
   CHECK_MARKER (marker);
   if (XMARKER (marker)->buffer)
     {
@@ -418,7 +417,7 @@ DEFUN ("marker-position", Fmarker_position, Smarker_position, 1, 1, 0,
        doc: /* Return the position of MARKER, or nil if it points nowhere.  */)
   (Lisp_Object marker)
 {
-  ENTER_LISP_FRAME (marker);
+  ENTER_LISP_FRAME ((marker));
   CHECK_MARKER (marker);
   if (XMARKER (marker)->buffer)
     EXIT_LISP_FRAME (make_number (XMARKER (marker)->charpos));
@@ -458,7 +457,7 @@ attach_marker (struct Lisp_Marker *m, struct buffer *b,
 static struct buffer *
 live_buffer (Lisp_Object buffer)
 {
-  ENTER_LISP_FRAME_T (struct buffer *, buffer);
+  ENTER_LISP_FRAME_T (struct buffer *, (buffer));
   struct buffer *b = decode_buffer (buffer);
   EXIT_LISP_FRAME (BUFFER_LIVE_P (b) ? b : NULL);
 }
@@ -470,7 +469,7 @@ static Lisp_Object
 set_marker_internal (Lisp_Object marker, Lisp_Object position,
 		     Lisp_Object buffer, bool restricted)
 {
-  ENTER_LISP_FRAME (marker, position, buffer);
+  ENTER_LISP_FRAME ((marker, position, buffer));
   struct Lisp_Marker *m;
   struct buffer *b = live_buffer (buffer);
 
@@ -536,7 +535,7 @@ POSITION is nil, makes marker point nowhere so it no longer slows down
 editing in any buffer.  Returns MARKER.  */)
   (Lisp_Object marker, Lisp_Object position, Lisp_Object buffer)
 {
-  ENTER_LISP_FRAME (marker, position, buffer);
+  ENTER_LISP_FRAME ((marker, position, buffer));
   EXIT_LISP_FRAME (set_marker_internal (marker, position, buffer, false));
 }
 
@@ -546,7 +545,7 @@ Lisp_Object
 set_marker_restricted (Lisp_Object marker, Lisp_Object position,
 		       Lisp_Object buffer)
 {
-  ENTER_LISP_FRAME (marker, position, buffer);
+  ENTER_LISP_FRAME ((marker, position, buffer));
   EXIT_LISP_FRAME (set_marker_internal (marker, position, buffer, true));
 }
 
@@ -557,7 +556,7 @@ Lisp_Object
 set_marker_both (Lisp_Object marker, Lisp_Object buffer,
 		 ptrdiff_t charpos, ptrdiff_t bytepos)
 {
-  ENTER_LISP_FRAME (marker, buffer);
+  ENTER_LISP_FRAME ((marker, buffer));
   register struct Lisp_Marker *m;
   register struct buffer *b = live_buffer (buffer);
 
@@ -577,7 +576,7 @@ Lisp_Object
 set_marker_restricted_both (Lisp_Object marker, Lisp_Object buffer,
 			    ptrdiff_t charpos, ptrdiff_t bytepos)
 {
-  ENTER_LISP_FRAME (marker, buffer);
+  ENTER_LISP_FRAME ((marker, buffer));
   register struct Lisp_Marker *m;
   register struct buffer *b = live_buffer (buffer);
 
@@ -602,7 +601,7 @@ set_marker_restricted_both (Lisp_Object marker, Lisp_Object buffer,
 void
 detach_marker (Lisp_Object marker)
 {
-  ENTER_LISP_FRAME (marker);
+  ENTER_LISP_FRAME ((marker));
   Fset_marker (marker, Qnil, Qnil);
   EXIT_LISP_FRAME_VOID ();
 }
@@ -655,7 +654,7 @@ unchain_marker (register struct Lisp_Marker *marker)
 ptrdiff_t
 marker_position (Lisp_Object marker)
 {
-  ENTER_LISP_FRAME_T (ptrdiff_t, marker);
+  ENTER_LISP_FRAME_T (ptrdiff_t, (marker));
   register struct Lisp_Marker *m = XMARKER (marker);
   register struct buffer *buf = m->buffer;
 
@@ -672,7 +671,7 @@ marker_position (Lisp_Object marker)
 ptrdiff_t
 marker_byte_position (Lisp_Object marker)
 {
-  ENTER_LISP_FRAME_T (ptrdiff_t, marker);
+  ENTER_LISP_FRAME_T (ptrdiff_t, (marker));
   register struct Lisp_Marker *m = XMARKER (marker);
   register struct buffer *buf = m->buffer;
 
@@ -693,8 +692,7 @@ The optional argument TYPE specifies the insertion type of the new marker;
 see `marker-insertion-type'.  */)
   (Lisp_Object marker, Lisp_Object type)
 {
-  ENTER_LISP_FRAME (marker, type);
-  LISP_LOCALS (new);
+  ENTER_LISP_FRAME ((marker, type), new);
 
   if (!NILP (marker))
   CHECK_TYPE (INTEGERP (marker) || MARKERP (marker), Qinteger_or_marker_p, marker);
@@ -712,7 +710,7 @@ DEFUN ("marker-insertion-type", Fmarker_insertion_type,
 The value nil means the marker stays before text inserted there.  */)
   (Lisp_Object marker)
 {
-  ENTER_LISP_FRAME (marker);
+  ENTER_LISP_FRAME ((marker));
   CHECK_MARKER (marker);
   EXIT_LISP_FRAME (XMARKER (marker)->insertion_type ? Qt : Qnil);
 }
@@ -724,7 +722,7 @@ If TYPE is t, it means the marker advances when you insert text at it.
 If TYPE is nil, it means the marker stays behind when you insert text at it.  */)
   (Lisp_Object marker, Lisp_Object type)
 {
-  ENTER_LISP_FRAME (marker, type);
+  ENTER_LISP_FRAME ((marker, type));
   CHECK_MARKER (marker);
 
   XMARKER (marker)->insertion_type = ! NILP (type);
@@ -736,7 +734,7 @@ DEFUN ("buffer-has-markers-at", Fbuffer_has_markers_at, Sbuffer_has_markers_at,
        doc: /* Return t if there are markers pointing at POSITION in the current buffer.  */)
   (Lisp_Object position)
 {
-  ENTER_LISP_FRAME (position);
+  ENTER_LISP_FRAME ((position));
   register struct Lisp_Marker *tail;
   register ptrdiff_t charpos;
 

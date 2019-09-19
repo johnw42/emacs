@@ -158,8 +158,7 @@ smc_save_yourself_CB (SmcConn smcConn,
 		      int interactStyle,
 		      Bool fast)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (user_login_name);
+  ENTER_LISP_FRAME ((), user_login_name);
 #define NR_PROPS 5
 
   SmProp *props[NR_PROPS];
@@ -508,7 +507,7 @@ is told to abort the window system shutdown.
 Do not call this function yourself. */)
   (Lisp_Object event)
 {
-  ENTER_LISP_FRAME (event);
+  ENTER_LISP_FRAME ((event));
   bool kill_emacs = (CONSP (event) && CONSP (XCDR (event))
 		     && EQ (Qt, XCAR (XCDR (event))));
 

@@ -55,7 +55,7 @@ static Lisp_Object otf_features (HDC context, const char *table);
 static int
 memq_no_quit (Lisp_Object elt, Lisp_Object list)
 {
-  ENTER_LISP_FRAME_T (int, elt, list);
+  ENTER_LISP_FRAME_T (int, (elt, list));
   while (CONSP (list) && ! EQ (XCAR (list), elt))
     list = XCDR (list);
   EXIT_LISP_FRAME ((CONSP (list)));
@@ -66,8 +66,7 @@ memq_no_quit (Lisp_Object elt, Lisp_Object list)
 static Lisp_Object
 uniscribe_list (struct frame *f, Lisp_Object font_spec)
 {
-  ENTER_LISP_FRAME (font_spec);
-  LISP_LOCALS (fonts);
+  ENTER_LISP_FRAME ((font_spec), fonts);
   fonts = w32font_list_internal (f, font_spec, true);
 
   FONT_ADD_LOG ("uniscribe-list", font_spec, fonts);
@@ -77,8 +76,7 @@ uniscribe_list (struct frame *f, Lisp_Object font_spec)
 static Lisp_Object
 uniscribe_match (struct frame *f, Lisp_Object font_spec)
 {
-  ENTER_LISP_FRAME (font_spec);
-  LISP_LOCALS (entity);
+  ENTER_LISP_FRAME ((font_spec), entity);
   entity = w32font_match_internal (f, font_spec, true);
 
   FONT_ADD_LOG ("uniscribe-match", font_spec, entity);
@@ -88,8 +86,7 @@ uniscribe_match (struct frame *f, Lisp_Object font_spec)
 static Lisp_Object
 uniscribe_list_family (struct frame *f)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (list, prev_quit);
+  ENTER_LISP_FRAME ((), list, prev_quit);
   list = Qnil;
 
   LOGFONT font_match_pattern;
@@ -120,8 +117,7 @@ uniscribe_list_family (struct frame *f)
 static Lisp_Object
 uniscribe_open (struct frame *f, Lisp_Object font_entity, int pixel_size)
 {
-  ENTER_LISP_FRAME (font_entity);
-  LISP_LOCALS (font_object);
+  ENTER_LISP_FRAME ((font_entity), font_object);
   font_object = font_make_object (VECSIZE (struct uniscribe_font_info),
 			font_entity, pixel_size);
 
@@ -182,8 +178,7 @@ uniscribe_close (struct font *font)
 static Lisp_Object
 uniscribe_otf_capability (struct font *font)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (capability, features, prev_quit);
+  ENTER_LISP_FRAME ((), capability, features, prev_quit);
   HDC context;
   HFONT old_font;
   struct frame *f;
@@ -229,8 +224,7 @@ uniscribe_otf_capability (struct font *font)
 static Lisp_Object
 uniscribe_shape (Lisp_Object lgstring)
 {
-  ENTER_LISP_FRAME (lgstring);
-  LISP_LOCALS (lglyph, vec);
+  ENTER_LISP_FRAME ((lgstring), lglyph, vec);
   struct font *font = CHECK_FONT_GET_OBJECT (LGSTRING_FONT (lgstring));
   struct uniscribe_font_info *uniscribe_font
     = (struct uniscribe_font_info *) font;
@@ -662,8 +656,7 @@ add_opentype_font_name_to_list (ENUMLOGFONTEX *logical_font,
 				NEWTEXTMETRICEX *physical_font,
 				DWORD font_type, LPARAM list_object)
 {
-  ENTER_LISP_FRAME_T (int CALLBACK ALIGN_STACK);
-  LISP_LOCALS (family);
+  ENTER_LISP_FRAME_T (int CALLBACK ALIGN_STACK, (), family);
   Lisp_Object* list = (Lisp_Object *) list_object;
 
   /* Skip vertical fonts (intended only for printing)  */
@@ -751,8 +744,7 @@ static bool uniscribe_new_apis;
 static bool
 uniscribe_check_features (Lisp_Object features[2], OPENTYPE_TAG *ftags, int n)
 {
-  ENTER_LISP_FRAME_T (bool, features);
-  LISP_LOCALS (rest, feature);
+  ENTER_LISP_FRAME_T (bool, (features), rest, feature);
   int j;
 
   for (j = 0; j < 2; j++)
@@ -806,7 +798,7 @@ static int
 uniscribe_check_otf_1 (HDC context, Lisp_Object script, Lisp_Object lang,
 		       Lisp_Object features[2], int *retval)
 {
-  ENTER_LISP_FRAME_T (int, script, lang, features);
+  ENTER_LISP_FRAME_T (int, (script, lang, features));
   SCRIPT_CACHE cache = NULL;
   OPENTYPE_TAG tags[32], script_tag, lang_tag;
   int max_tags = ARRAYELTS (tags);
@@ -899,8 +891,7 @@ uniscribe_check_otf_1 (HDC context, Lisp_Object script, Lisp_Object lang,
 int
 uniscribe_check_otf (LOGFONT *font, Lisp_Object otf_spec)
 {
-  ENTER_LISP_FRAME_T (int, otf_spec);
-  LISP_LOCALS (script, lang, rest);
+  ENTER_LISP_FRAME_T (int, (otf_spec), script, lang, rest);
   Lisp_Object features[2];
   DWORD feature_tables[2];
   DWORD script_tag, default_script, lang_tag = 0;
@@ -1082,8 +1073,8 @@ uniscribe_check_otf (LOGFONT *font, Lisp_Object otf_spec)
 static Lisp_Object
 otf_features (HDC context, const char *table)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (script_list, script_tag, langsys_list, langsys_tag, feature_list);
+  ENTER_LISP_FRAME ((), script_list, script_tag, langsys_list,
+                    langsys_tag, feature_list);
   script_list = Qnil;
 
   unsigned short scriptlist_table, n_scripts, feature_table;

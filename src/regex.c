@@ -2110,8 +2110,7 @@ set_image_of_range_1 (struct range_table_work_area *work_area,
 		      re_wchar_t start, re_wchar_t end,
 		      RE_TRANSLATE_TYPE translate)
 {
-  ENTER_LISP_FRAME_T (int);
-  LISP_LOCALS (eqv_table);
+  ENTER_LISP_FRAME_T (int, (), eqv_table);
   /* `one_case' indicates a character, or a run of characters,
      each of which is an isolate (no case-equivalents).
      This includes all ASCII non-letters.

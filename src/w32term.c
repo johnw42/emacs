@@ -1336,8 +1336,7 @@ x_draw_glyph_string_foreground (struct glyph_string *s)
 static void
 x_draw_composite_glyph_string_foreground (struct glyph_string *s)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (gstring, glyph);
+  ENTER_LISP_FRAME ((), gstring, glyph);
   int i, j, x;
   struct font *font = s->font;
 
@@ -1434,8 +1433,7 @@ x_draw_composite_glyph_string_foreground (struct glyph_string *s)
 static void
 x_draw_glyphless_glyph_string_foreground (struct glyph_string *s)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (acronym);
+  ENTER_LISP_FRAME ((), acronym);
   struct glyph *glyph = s->first_glyph;
   XChar2b char2b[8];
   int x, i, j;
@@ -3154,8 +3152,7 @@ construct_mouse_wheel (struct input_event *result, W32Msg *msg, struct frame *f)
 static Lisp_Object
 construct_drag_n_drop (struct input_event *result, W32Msg *msg, struct frame *f)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (files, frame);
+  ENTER_LISP_FRAME ((), files, frame);
   HDROP hdrop;
   POINT p;
   WORD num_files;
@@ -3233,8 +3230,7 @@ construct_drag_n_drop (struct input_event *result, W32Msg *msg, struct frame *f)
 Lisp_Object
 lispy_file_action (DWORD action)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (retval);
+  ENTER_LISP_FRAME ((), retval);
   static char unknown_fmt[] = "unknown-action(%d)";
 
   switch (action)
@@ -3275,8 +3271,8 @@ static void
 queue_notifications (struct input_event *event, W32Msg *msg, struct frame *f,
 		     int *evcount)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (frame, cs, obj, callback, utf_16_fn, fname, action);
+  ENTER_LISP_FRAME ((), frame, cs, obj, callback, utf_16_fn, fname,
+                    action);
   struct notifications_set *ns = NULL;
   int done = 0;
 
@@ -3467,8 +3463,7 @@ w32_mouse_position (struct frame **fp, int insist, Lisp_Object *bar_window,
 		    enum scroll_bar_part *part, Lisp_Object *x, Lisp_Object *y,
 		    Time *time)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (frame, tail);
+  ENTER_LISP_FRAME ((), frame, tail);
   struct w32_display_info *dpyinfo = FRAME_DISPLAY_INFO (*fp);
 
   block_input ();
@@ -3606,8 +3601,8 @@ w32_handle_tool_bar_click (struct frame *f, struct input_event *button_event)
 static struct scroll_bar *
 x_window_to_scroll_bar (Window window_id, int type)
 {
-  ENTER_LISP_FRAME_T (struct scroll_bar *);
-  LISP_LOCALS (tail, frame, bar, condemned);
+  ENTER_LISP_FRAME_T (struct scroll_bar *, (), tail, frame, bar,
+                      condemned);
 
   FOR_EACH_FRAME (tail, frame)
     {
@@ -3825,8 +3820,7 @@ my_bring_window_to_top (HWND hwnd)
 static struct scroll_bar *
 x_scroll_bar_create (struct window *w, int left, int top, int width, int height, bool horizontal)
 {
-  ENTER_LISP_FRAME_T (struct scroll_bar *);
-  LISP_LOCALS (barobj);
+  ENTER_LISP_FRAME_T (struct scroll_bar *, (), barobj);
   struct frame *f = XFRAME (WINDOW_FRAME (w));
   HWND hwnd;
   SCROLLINFO si;
@@ -3912,8 +3906,7 @@ static void
 w32_set_vertical_scroll_bar (struct window *w,
 			     int portion, int whole, int position)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (barobj);
+  ENTER_LISP_FRAME ((), barobj);
   struct frame *f = XFRAME (w->frame);
   struct scroll_bar *bar;
   int top, height, left, width;
@@ -4018,8 +4011,7 @@ static void
 w32_set_horizontal_scroll_bar (struct window *w,
 			       int portion, int whole, int position)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (barobj);
+  ENTER_LISP_FRAME ((), barobj);
   struct frame *f = XFRAME (w->frame);
   struct scroll_bar *bar;
   int top, height, left, width;
@@ -4132,8 +4124,7 @@ w32_set_horizontal_scroll_bar (struct window *w,
 static void
 w32_condemn_scroll_bars (struct frame *frame)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (last);
+  ENTER_LISP_FRAME ((), last);
   if (!NILP (FRAME_SCROLL_BARS (frame)))
     {
       if (!NILP (FRAME_CONDEMNED_SCROLL_BARS (frame)))
@@ -4162,8 +4153,7 @@ w32_condemn_scroll_bars (struct frame *frame)
 static void
 w32_redeem_scroll_bar (struct window *w)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (barobj);
+  ENTER_LISP_FRAME ((), barobj);
   struct scroll_bar *bar;
   struct frame *f;
 
@@ -4248,8 +4238,7 @@ w32_redeem_scroll_bar (struct window *w)
 static void
 w32_judge_scroll_bars (struct frame *f)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (bar, next);
+  ENTER_LISP_FRAME ((), bar, next);
 
   bar = FRAME_CONDEMNED_SCROLL_BARS (f);
 
@@ -4613,8 +4602,7 @@ x_horizontal_scroll_bar_report_motion (struct frame **fp, Lisp_Object *bar_windo
 void
 x_scroll_bar_clear (struct frame *f)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (bar);
+  ENTER_LISP_FRAME ((), bar);
 
   /* We can have scroll bars even if this is 0,
      if we just turned off scroll bar mode.
@@ -4679,8 +4667,8 @@ static int
 w32_read_socket (struct terminal *terminal,
 		 struct input_event *hold_quit)
 {
-  ENTER_LISP_FRAME_T (int);
-  LISP_LOCALS (window, frame1, fullscreen, frame, tail);
+  ENTER_LISP_FRAME_T (int, (), window, frame1, fullscreen, frame,
+                      tail);
   int count = 0;
   int check_visibility = 0;
   W32Msg msg;
@@ -5956,7 +5944,7 @@ w32_draw_window_cursor (struct window *w, struct glyph_row *glyph_row,
 bool
 x_bitmap_icon (struct frame *f, Lisp_Object icon)
 {
-  ENTER_LISP_FRAME_T (bool, icon);
+  ENTER_LISP_FRAME_T (bool, (icon));
   HANDLE main_icon;
   HANDLE small_icon = NULL;
 
@@ -6045,7 +6033,7 @@ x_io_error_quitter (display)
 Lisp_Object
 x_new_font (struct frame *f, Lisp_Object font_object, int fontset)
 {
-  ENTER_LISP_FRAME (font_object);
+  ENTER_LISP_FRAME ((font_object));
   struct font *font = XFONT_OBJECT (font_object);
   int unit, font_ascent, font_descent;
 
@@ -6114,8 +6102,8 @@ xim_close_dpy (dpyinfo)
 static void
 x_calc_absolute_position (struct frame *f)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (list, attributes, geometry, monitor_left, monitor_top);
+  ENTER_LISP_FRAME ((), list, attributes, geometry, monitor_left,
+                    monitor_top);
   int flags = f->size_hint_flags;
 
   /* The sum of the widths of the frame's left and right borders, and
@@ -6377,8 +6365,7 @@ void
 x_set_window_size (struct frame *f, bool change_gravity,
 		   int width, int height, bool pixelwise)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (fullscreen);
+  ENTER_LISP_FRAME ((), fullscreen);
   int pixelwidth, pixelheight;
   fullscreen = get_frame_param (f, Qfullscreen);
 
@@ -6662,8 +6649,7 @@ w32_frame_raise_lower (struct frame *f, bool raise_flag)
 void
 x_make_frame_visible (struct frame *f)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (frame);
+  ENTER_LISP_FRAME ((), frame);
   block_input ();
 
   x_set_bitmap_icon (f);
@@ -6962,7 +6948,7 @@ static int w32_initialized = 0;
 void
 w32_initialize_display_info (Lisp_Object display_name)
 {
-  ENTER_LISP_FRAME (display_name);
+  ENTER_LISP_FRAME ((display_name));
   struct w32_display_info *dpyinfo = &one_w32_display_info;
 
   memset (dpyinfo, 0, sizeof (*dpyinfo));
@@ -7152,7 +7138,7 @@ x_delete_terminal (struct terminal *terminal)
 struct w32_display_info *
 w32_term_init (Lisp_Object display_name, char *xrm_option, char *resource_name)
 {
-  ENTER_LISP_FRAME_T (struct w32_display_info *, display_name);
+  ENTER_LISP_FRAME_T (struct w32_display_info *, (display_name));
   struct w32_display_info *dpyinfo;
   struct terminal *terminal;
   HDC hdc;

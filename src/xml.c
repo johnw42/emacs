@@ -45,8 +45,7 @@ DEF_DLL_FN (void, xmlCheckVersion, (int));
 static bool
 libxml2_loaded_p (void)
 {
-  ENTER_LISP_FRAME_T (bool);
-  LISP_LOCALS (found);
+  ENTER_LISP_FRAME_T (bool, (), found);
   found = Fassq (Qlibxml2, Vlibrary_cache);
 
 
@@ -124,8 +123,7 @@ init_libxml2_functions (void)
 static Lisp_Object
 make_dom (xmlNode *node)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (result, plist);
+  ENTER_LISP_FRAME ((), result, plist);
   if (node->type == XML_ELEMENT_NODE)
     {
       result = list1 (intern ((char *) node->name));
@@ -184,8 +182,8 @@ static Lisp_Object
 parse_region (Lisp_Object start, Lisp_Object end, Lisp_Object base_url,
 	      Lisp_Object discard_comments, bool htmlp)
 {
-  ENTER_LISP_FRAME (start, end, base_url, discard_comments);
-  LISP_LOCALS (result, r);
+  ENTER_LISP_FRAME ((start, end, base_url, discard_comments), result,
+                    r);
   xmlDoc *doc;
   result = Qnil;
 
@@ -285,7 +283,7 @@ If BASE-URL is non-nil, it is used to expand relative URLs.
 If DISCARD-COMMENTS is non-nil, all HTML comments are discarded. */)
   (Lisp_Object start, Lisp_Object end, Lisp_Object base_url, Lisp_Object discard_comments)
 {
-  ENTER_LISP_FRAME (start, end, base_url, discard_comments);
+  ENTER_LISP_FRAME ((start, end, base_url, discard_comments));
   if (init_libxml2_functions ())
     EXIT_LISP_FRAME (parse_region (start, end, base_url, discard_comments, true));
   EXIT_LISP_FRAME (Qnil);
@@ -299,7 +297,7 @@ If BASE-URL is non-nil, it is used to expand relative URLs.
 If DISCARD-COMMENTS is non-nil, all HTML comments are discarded. */)
   (Lisp_Object start, Lisp_Object end, Lisp_Object base_url, Lisp_Object discard_comments)
 {
-  ENTER_LISP_FRAME (start, end, base_url, discard_comments);
+  ENTER_LISP_FRAME ((start, end, base_url, discard_comments));
   if (init_libxml2_functions ())
     EXIT_LISP_FRAME (parse_region (start, end, base_url, discard_comments, false));
   EXIT_LISP_FRAME (Qnil);

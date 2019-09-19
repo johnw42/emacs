@@ -227,7 +227,7 @@ get_char_width_32_w (HDC hdc, UINT uFirstChar, UINT uLastChar, LPINT lpBuffer)
 static int
 memq_no_quit (Lisp_Object elt, Lisp_Object list)
 {
-  ENTER_LISP_FRAME_T (int, elt, list);
+  ENTER_LISP_FRAME_T (int, (elt, list));
   while (CONSP (list) && ! EQ (XCAR (list), elt))
     list = XCDR (list);
   EXIT_LISP_FRAME ((CONSP (list)));
@@ -236,8 +236,7 @@ memq_no_quit (Lisp_Object elt, Lisp_Object list)
 Lisp_Object
 intern_font_name (char * string)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (str, obarray, tem);
+  ENTER_LISP_FRAME ((), str, obarray, tem);
   str = DECODE_SYSTEM (build_string (string));
 
   ptrdiff_t len = SCHARS (str);
@@ -267,8 +266,7 @@ w32font_get_cache (struct frame *f)
 static Lisp_Object
 w32font_list (struct frame *f, Lisp_Object font_spec)
 {
-  ENTER_LISP_FRAME (font_spec);
-  LISP_LOCALS (fonts);
+  ENTER_LISP_FRAME ((font_spec), fonts);
   fonts = w32font_list_internal (f, font_spec, 0);
 
   FONT_ADD_LOG ("w32font-list", font_spec, fonts);
@@ -282,8 +280,7 @@ w32font_list (struct frame *f, Lisp_Object font_spec)
 static Lisp_Object
 w32font_match (struct frame *f, Lisp_Object font_spec)
 {
-  ENTER_LISP_FRAME (font_spec);
-  LISP_LOCALS (entity);
+  ENTER_LISP_FRAME ((font_spec), entity);
   entity = w32font_match_internal (f, font_spec, 0);
 
   FONT_ADD_LOG ("w32font-match", font_spec, entity);
@@ -296,8 +293,7 @@ w32font_match (struct frame *f, Lisp_Object font_spec)
 static Lisp_Object
 w32font_list_family (struct frame *f)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (list, prev_quit);
+  ENTER_LISP_FRAME ((), list, prev_quit);
   list = Qnil;
 
   prev_quit = Vinhibit_quit;
@@ -330,8 +326,7 @@ w32font_list_family (struct frame *f)
 static Lisp_Object
 w32font_open (struct frame *f, Lisp_Object font_entity, int pixel_size)
 {
-  ENTER_LISP_FRAME (font_entity);
-  LISP_LOCALS (font_object);
+  ENTER_LISP_FRAME ((font_entity), font_object);
   font_object = font_make_object (VECSIZE (struct w32font_info),
                         font_entity, pixel_size);
 
@@ -384,8 +379,7 @@ w32font_close (struct font *font)
 int
 w32font_has_char (Lisp_Object entity, int c)
 {
-  ENTER_LISP_FRAME_T (int, entity);
-  LISP_LOCALS (supported_scripts, extra, script);
+  ENTER_LISP_FRAME_T (int, (entity), supported_scripts, extra, script);
   /* We can't be certain about which characters a font will support until
      we open it.  Checking the scripts that the font supports turns out
      to not be reliable.  */
@@ -452,8 +446,7 @@ void
 w32font_text_extents (struct font *font, unsigned *code,
 		      int nglyphs, struct font_metrics *metrics)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (prev_quit);
+  ENTER_LISP_FRAME ((), prev_quit);
   int i;
   HFONT old_font = NULL;
   HDC dc = NULL;
@@ -822,8 +815,7 @@ Lisp_Object
 w32font_list_internal (struct frame *f, Lisp_Object font_spec,
 		       bool opentype_only)
 {
-  ENTER_LISP_FRAME (font_spec);
-  LISP_LOCALS (spec_charset, prev_quit);
+  ENTER_LISP_FRAME ((font_spec), spec_charset, prev_quit);
   struct font_callback_data match_data;
   HDC dc;
 
@@ -888,8 +880,7 @@ Lisp_Object
 w32font_match_internal (struct frame *f, Lisp_Object font_spec,
 			bool opentype_only)
 {
-  ENTER_LISP_FRAME (font_spec);
-  LISP_LOCALS (prev_quit);
+  ENTER_LISP_FRAME ((font_spec), prev_quit);
   struct font_callback_data match_data;
   HDC dc;
 
@@ -926,8 +917,7 @@ int
 w32font_open_internal (struct frame *f, Lisp_Object font_entity,
 		       int pixel_size, Lisp_Object font_object)
 {
-  ENTER_LISP_FRAME_T (int, font_entity, font_object);
-  LISP_LOCALS (val);
+  ENTER_LISP_FRAME_T (int, (font_entity, font_object), val);
   int len, size;
   LOGFONT logfont;
   HDC dc;
@@ -1059,8 +1049,7 @@ add_font_name_to_list (ENUMLOGFONTEX *logical_font,
 		       NEWTEXTMETRICEX *physical_font,
 		       DWORD font_type, LPARAM list_object)
 {
-  ENTER_LISP_FRAME_T (int CALLBACK ALIGN_STACK);
-  LISP_LOCALS (family);
+  ENTER_LISP_FRAME_T (int CALLBACK ALIGN_STACK, (), family);
   Lisp_Object* list = (Lisp_Object *) list_object;
 
   /* Skip vertical fonts (intended only for printing)  */
@@ -1086,8 +1075,7 @@ w32_enumfont_pattern_entity (Lisp_Object frame,
 			     LOGFONT *requested_font,
 			     Lisp_Object backend)
 {
-  ENTER_LISP_FRAME (frame, backend);
-  LISP_LOCALS (entity, tem);
+  ENTER_LISP_FRAME ((frame, backend), entity, tem);
   LOGFONT *lf = (LOGFONT*) logical_font;
   BYTE generic_type;
   DWORD full_type = physical_font->ntmTm.ntmFlags;
@@ -1193,7 +1181,7 @@ w32_enumfont_pattern_entity (Lisp_Object frame,
 static BYTE
 w32_generic_family (Lisp_Object name)
 {
-  ENTER_LISP_FRAME_T (BYTE, name);
+  ENTER_LISP_FRAME_T (BYTE, (name));
   /* Generic families.  */
   if (EQ (name, Qmonospace) || EQ (name, Qmono))
     EXIT_LISP_FRAME (FF_MODERN);
@@ -1238,8 +1226,8 @@ font_matches_spec (DWORD type, NEWTEXTMETRICEX *font,
 		   Lisp_Object spec, Lisp_Object backend,
 		   LOGFONT *logfont)
 {
-  ENTER_LISP_FRAME_T (int, spec, backend);
-  LISP_LOCALS (extra, val, extra_entry, key, support);
+  ENTER_LISP_FRAME_T (int, (spec, backend), extra, val, extra_entry,
+                      key, support);
 
   /* Check italic. Can't check logfonts, since it is a boolean field,
      so there is no difference between "non-italic" and "don't care".  */
@@ -1509,8 +1497,8 @@ add_font_entity_to_list (ENUMLOGFONTEX *logical_font,
 			 NEWTEXTMETRICEX *physical_font,
 			 DWORD font_type, LPARAM lParam)
 {
-  ENTER_LISP_FRAME_T (int CALLBACK ALIGN_STACK);
-  LISP_LOCALS (backend, entity, spec_charset);
+  ENTER_LISP_FRAME_T (int CALLBACK ALIGN_STACK, (), backend, entity,
+                      spec_charset);
   struct font_callback_data *match_data
     = (struct font_callback_data *) lParam;
   backend = match_data->opentype_only ? Quniscribe : Qgdi;
@@ -1643,8 +1631,7 @@ add_one_font_entity_to_list (ENUMLOGFONTEX *logical_font,
 static LONG
 x_to_w32_charset (char * lpcs)
 {
-  ENTER_LISP_FRAME_T (LONG);
-  LISP_LOCALS (this_entry, w32_charset);
+  ENTER_LISP_FRAME_T (LONG, (), this_entry, w32_charset);
   char *charset;
   int len = strlen (lpcs);
 
@@ -1726,7 +1713,7 @@ x_to_w32_charset (char * lpcs)
 static LONG
 registry_to_w32_charset (Lisp_Object charset)
 {
-  ENTER_LISP_FRAME_T (LONG, charset);
+  ENTER_LISP_FRAME_T (LONG, (charset));
   if (EQ (charset, Qiso10646_1) || EQ (charset, Qunicode_bmp)
       || EQ (charset, Qunicode_sip))
     EXIT_LISP_FRAME (DEFAULT_CHARSET); /* UNICODE_CHARSET not defined in MingW32 */
@@ -1742,8 +1729,8 @@ registry_to_w32_charset (Lisp_Object charset)
 static char *
 w32_to_x_charset (int fncharset, char *matching)
 {
-  ENTER_LISP_FRAME_T (char *);
-  LISP_LOCALS (charset_type, rest, w32_charset, codepage, this_entry);
+  ENTER_LISP_FRAME_T (char *, (), charset_type, rest, w32_charset,
+                      codepage, this_entry);
   static char buf[32];
   int match_len = 0;
 
@@ -1990,8 +1977,7 @@ w32_to_fc_weight (int n)
 static void
 fill_in_logfont (struct frame *f, LOGFONT *logfont, Lisp_Object font_spec)
 {
-  ENTER_LISP_FRAME (font_spec);
-  LISP_LOCALS (tmp, extra, key, val);
+  ENTER_LISP_FRAME ((font_spec), tmp, extra, key, val);
   int dpi = FRAME_RES_Y (f);
 
   tmp = AREF (font_spec, FONT_DPI_INDEX);
@@ -2138,8 +2124,7 @@ fill_in_logfont (struct frame *f, LOGFONT *logfont, Lisp_Object font_spec)
 static void
 list_all_matching_fonts (struct font_callback_data *match_data)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (families, prev_quit, family);
+  ENTER_LISP_FRAME ((), families, prev_quit, family);
   HDC dc;
   families = w32font_list_family (XFRAME (match_data->frame));
 
@@ -2187,8 +2172,7 @@ list_all_matching_fonts (struct font_callback_data *match_data)
 static Lisp_Object
 lispy_antialias_type (BYTE type)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (lispy);
+  ENTER_LISP_FRAME ((), lispy);
 
   switch (type)
     {
@@ -2215,7 +2199,7 @@ lispy_antialias_type (BYTE type)
 static BYTE
 w32_antialias_type (Lisp_Object type)
 {
-  ENTER_LISP_FRAME_T (BYTE, type);
+  ENTER_LISP_FRAME_T (BYTE, (type));
   if (EQ (type, Qnone))
     EXIT_LISP_FRAME (NONANTIALIASED_QUALITY);
   else if (EQ (type, Qstandard))
@@ -2232,8 +2216,7 @@ w32_antialias_type (Lisp_Object type)
 static Lisp_Object
 font_supported_scripts (FONTSIGNATURE * sig)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (supported);
+  ENTER_LISP_FRAME ((), supported);
   DWORD * subranges = sig->fsUsb;
   supported = Qnil;
 
@@ -2409,8 +2392,7 @@ static int
 w32font_full_name (LOGFONT * font, Lisp_Object font_obj,
 		   int pixel_size, char *name, int nbytes)
 {
-  ENTER_LISP_FRAME_T (int, font_obj);
-  LISP_LOCALS (antialiasing, weight);
+  ENTER_LISP_FRAME_T (int, (font_obj), antialiasing, weight);
   int len, height, outline;
   char *p;
   weight = Qnil;
@@ -2484,8 +2466,7 @@ w32font_full_name (LOGFONT * font, Lisp_Object font_obj,
 static int
 logfont_to_fcname (LOGFONT* font, int pointsize, char *fcname, int size)
 {
-  ENTER_LISP_FRAME_T (int);
-  LISP_LOCALS (weight);
+  ENTER_LISP_FRAME_T (int, (), weight);
   int len, height;
   char *p = fcname;
   weight = Qnil;
@@ -2571,8 +2552,7 @@ If EXCLUDE-PROPORTIONAL is non-nil, exclude proportional fonts
 in the font selection dialog. */)
   (Lisp_Object frame, Lisp_Object exclude_proportional)
 {
-  ENTER_LISP_FRAME (frame, exclude_proportional);
-  LISP_LOCALS (value);
+  ENTER_LISP_FRAME ((frame, exclude_proportional), value);
   struct frame *f = decode_window_system_frame (frame);
   CHOOSEFONT cf;
   LOGFONT lf;
@@ -2646,7 +2626,7 @@ static const char *const w32font_non_booleans [] = {
 static void
 w32font_filter_properties (Lisp_Object font, Lisp_Object alist)
 {
-  ENTER_LISP_FRAME (font, alist);
+  ENTER_LISP_FRAME ((font, alist));
   font_filter_properties (font, alist, w32font_booleans, w32font_non_booleans);
   EXIT_LISP_FRAME_VOID ();
 }

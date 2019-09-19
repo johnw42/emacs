@@ -355,7 +355,7 @@ sound_warning (const char *msg)
 static bool
 parse_sound (Lisp_Object sound, Lisp_Object *attrs)
 {
-  ENTER_LISP_FRAME_T (bool, sound);
+  ENTER_LISP_FRAME_T (bool, (sound));
   /* SOUND must be a list starting with the symbol `sound'.  */
   if (!CONSP (sound) || !EQ (XCAR (sound), Qsound))
     EXIT_LISP_FRAME (0);
@@ -424,7 +424,7 @@ parse_sound (Lisp_Object sound, Lisp_Object *attrs)
 static char const *
 string_default (Lisp_Object s, char const *default_value)
 {
-  ENTER_LISP_FRAME_T (char const *, s);
+  ENTER_LISP_FRAME_T (char const *, (s));
   EXIT_LISP_FRAME (STRINGP (s) ? SSDATA (s) : default_value);
 }
 
@@ -1351,8 +1351,7 @@ DEFUN ("play-sound-internal", Fplay_sound_internal, Splay_sound_internal, 1, 1, 
 Internal use only, use `play-sound' instead.  */)
   (Lisp_Object sound)
 {
-  ENTER_LISP_FRAME (sound);
-  LISP_LOCALS (file);
+  ENTER_LISP_FRAME ((sound), file);
   Lisp_Object attrs[SOUND_ATTR_SENTINEL];
   ptrdiff_t count = SPECPDL_INDEX ();
 

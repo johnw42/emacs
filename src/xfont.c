@@ -184,7 +184,7 @@ static bool
 xfont_chars_supported (Lisp_Object chars, XFontStruct *xfont,
 		       struct charset *encoding, struct charset *repertory)
 {
-  ENTER_LISP_FRAME_T (bool, chars);
+  ENTER_LISP_FRAME_T (bool, (chars));
   struct charset *charset = repertory ? repertory : encoding;
 
   if (CONSP (chars))
@@ -254,8 +254,7 @@ static Lisp_Object
 xfont_supported_scripts (Display *display, char *fontname, Lisp_Object props,
 			 struct charset *encoding)
 {
-  ENTER_LISP_FRAME (props);
-  LISP_LOCALS (scripts, val, script, chars);
+  ENTER_LISP_FRAME ((props), scripts, val, script, chars);
 
   /* Two special cases to avoid opening rather big fonts.  */
   if (EQ (AREF (props, 2), Qja))
@@ -300,8 +299,8 @@ static Lisp_Object
 xfont_list_pattern (Display *display, const char *pattern,
 		    Lisp_Object registry, Lisp_Object script)
 {
-  ENTER_LISP_FRAME (registry, script);
-  LISP_LOCALS (list, chars, scripts, entity, tail, elt);
+  ENTER_LISP_FRAME ((registry, script), list, chars, scripts, entity,
+                    tail, elt);
   list = Qnil;
 
   chars = Qnil;
@@ -472,8 +471,7 @@ xfont_list_pattern (Display *display, const char *pattern,
 static Lisp_Object
 xfont_list (struct frame *f, Lisp_Object spec)
 {
-  ENTER_LISP_FRAME (spec);
-  LISP_LOCALS (registry, list, val, extra, script, alter);
+  ENTER_LISP_FRAME ((spec), registry, list, val, extra, script, alter);
   Display *display = FRAME_DISPLAY_INFO (f)->display;
   int len;
   /* Large enough to contain the longest XLFD (255 bytes) in UTF-8.  */
@@ -551,8 +549,7 @@ xfont_list (struct frame *f, Lisp_Object spec)
 static Lisp_Object
 xfont_match (struct frame *f, Lisp_Object spec)
 {
-  ENTER_LISP_FRAME (spec);
-  LISP_LOCALS (extra, val, entity);
+  ENTER_LISP_FRAME ((spec), extra, val, entity);
   Display *display = FRAME_DISPLAY_INFO (f)->display;
   char name[512];
   XFontStruct *xfont;
@@ -606,8 +603,7 @@ xfont_match (struct frame *f, Lisp_Object spec)
 static Lisp_Object
 xfont_list_family (struct frame *f)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (list, family);
+  ENTER_LISP_FRAME ((), list, family);
   Display_Info *dpyinfo = FRAME_DISPLAY_INFO (f);
   char **names;
   int num_fonts, i;
@@ -662,8 +658,8 @@ xfont_list_family (struct frame *f)
 static Lisp_Object
 xfont_open (struct frame *f, Lisp_Object entity, int pixel_size)
 {
-  ENTER_LISP_FRAME (entity);
-  LISP_LOCALS (registry, font_object, fullname, temp, val);
+  ENTER_LISP_FRAME ((entity), registry, font_object, fullname, temp,
+                    val);
   Display_Info *dpyinfo = FRAME_DISPLAY_INFO (f);
   Display *display = dpyinfo->display;
   char name[512];
@@ -909,8 +905,7 @@ xfont_prepare_face (struct frame *f, struct face *face)
 static int
 xfont_has_char (Lisp_Object font, int c)
 {
-  ENTER_LISP_FRAME_T (int, font);
-  LISP_LOCALS (registry);
+  ENTER_LISP_FRAME_T (int, (font), registry);
   registry = AREF (font, FONT_REGISTRY_INDEX);
 
   struct charset *encoding;

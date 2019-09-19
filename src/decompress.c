@@ -90,8 +90,7 @@ DEFUN ("zlib-available-p", Fzlib_available_p, Szlib_available_p, 0, 0, 0,
        doc: /* Return t if zlib decompression is available in this instance of Emacs.  */)
      (void)
 {
-  ENTER_LISP_FRAME ();
-  LISP_LOCALS (found, status);
+  ENTER_LISP_FRAME ((), found, status);
 #ifdef WINDOWSNT
   found = Fassq (Qzlib, Vlibrary_cache);
 
@@ -118,7 +117,7 @@ On failure, return nil and leave the data in place.
 This function can be called only in unibyte buffers.  */)
   (Lisp_Object start, Lisp_Object end)
 {
-  ENTER_LISP_FRAME (start, end);
+  ENTER_LISP_FRAME ((start, end));
   ptrdiff_t istart, iend, pos_byte;
   z_stream stream;
   int inflate_status;

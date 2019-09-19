@@ -17,8 +17,8 @@
 
 // Expands to F(A_1), F(A_2), ..., F(A_n) for each of the n varargs A_i.
 // With no varargs, the expansion is empty.
-#define PP_MAP_COMMA(F, ...) \
-  __VA_OPT__(PP_FOLDMAP(PP_COMMA, F, , __VA_ARGS__))
+/* #define PP_MAP_COMMA(F, ...) \ */
+/*   __VA_OPT__(PP_FOLDMAP(PP_COMMA, F, , __VA_ARGS__)) */
 
 // Expands to G(A_1, G(A_2, G(... G(A_n-1, A_n)))) for each of the n
 // varargs A_i.  If n = 1, expands to A_1.  If n = 0, expands to Z.
@@ -118,7 +118,20 @@
 #define PP_CAT_HELPER(A, B) A ## B
 
 #define PP_ARG(x) x
-#define PP_COMMA(x, y) x, y
+/* #define PP_COMMA_BETWEEN(x, y) x, y */
+/* #define PP_COMMA_BEFORE(x) , x */
+/* #define PP_COMMA_AFTER(x) x */
 #define PP_JUXT(x, y) x y
+
+/* #define PP_COMMAS_BEFORE(...) __VA_OPT__(PP_MAP (PP_COMMA_BEFORE, __VA_ARGS__)) */
+/* #define PP_ADDR(x) , &x */
+/* #define PP_MAP_ADDR(...) __VA_OPT__(PP_MAP(PP_ADDR, __VA_ARGS__)) */
+
+/* #define BAD(x, ...) bad(PP_NARGS x, PP_NARGS(__VA_ARGS__) PP_MAP_ADDR x PP_MAP_ADDR (__VA_ARGS__))) */
+
+/* BAD(()); */
+/* BAD((a)); */
+/* BAD((), x); */
+/* BAD((a, b, c), x, y); */
 
 #endif
