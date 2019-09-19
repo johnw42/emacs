@@ -1211,148 +1211,40 @@ static void print_stack_entry (void *data, Lisp_Object *ptr)
 }
 
 void
-enter_lisp_frame (struct func_frame_info *fi, Lisp_Object *base)
+enter_lisp_frame (struct func_frame_info *fi, void *base)
 {
-  //walk_lisp_stack (print_stack_entry, NULL);
   ensure_lisp_stack_capacity (lisp_stack_size + 3);
   lisp_stack[lisp_stack_size++] = base;
   lisp_stack[lisp_stack_size++] = fi;
   lisp_stack[lisp_stack_size++] = (void *) 0;  // number of arrays
-  ptrdiff_t offset = fi->start_offset;
-  for (int i = 0; i < LISP_LOCAL_OFFSET_BYTES; i++)
-    {
-      uint8_t init_mask = fi->init_mask[i];
-      for (int j = 0; init_mask; j++)
-        {
-          if (init_mask & 1)
-            base[offset + i*8 + j] = UNCHEZ (chez_false);
-          init_mask >>= 1;
-
-        }
-    }
-  //printf("entering %s\n", fi->func_name);
-  //walk_lisp_stack (print_stack_entry, NULL);
-}
-
-static int
-pop_count(uint8_t *words, size_t n)
-{
-  int result = 0;
-  for (size_t i = 0; i < n; i++)
-    {
-      uint8_t byte = words[i];
-      while (byte)
-        {
-          if (byte & 1)
-            result++;
-          byte >>= 1;
-        }
-    }
-  return result;
-}
-
-static void
-shift_left_and_set (uint8_t bytes[LISP_LOCAL_OFFSET_BYTES],
-               int shift_count,
-               int bit_to_set)
-{
-#ifdef ENABLE_CHECKING
-  int orig_pop_count = pop_count (bytes, LISP_LOCAL_OFFSET_BYTES);
-#endif
-  if (shift_count > 0)
-    {
-      int byte_shift_count = shift_count / 8;
-      memmove(bytes + byte_shift_count, bytes,
-              LISP_LOCAL_OFFSET_BYTES - byte_shift_count);
-      memset(bytes, 0, byte_shift_count);
-      int bit_shift_count = shift_count % 8;
-      if (bit_shift_count)
-        {
-          uint8_t carry = 0;
-          for (int i = 0; i < LISP_LOCAL_OFFSET_BYTES; i++)
-            {
-              unsigned shifted = (unsigned) bytes[i] << bit_shift_count;
-              bytes[i] = carry | (shifted & 0xFF);
-              carry = (shifted >> 8) & 0xFF;
-            }
-          eassert (carry == 0);
-        }
-    }
-  else if (shift_count < 0)
-    {
-      int byte_shift_count = (-shift_count) / 8;
-      byte_shift_count *= -1;
-      memmove(bytes, bytes + byte_shift_count,
-              LISP_LOCAL_OFFSET_BYTES - byte_shift_count);
-      memset(bytes + LISP_LOCAL_OFFSET_BYTES - byte_shift_count,
-             0, byte_shift_count);
-      int bit_shift_count = (-shift_count) % 8;
-      if (bit_shift_count)
-        {
-          uint8_t carry = 0;
-          for (int i = LISP_LOCAL_OFFSET_BYTES - 1; i >= 0; i++)
-            {
-              unsigned shifted = ((unsigned) bytes[i] << 8) >> bit_shift_count;
-              bytes[i] = carry | ((shifted >> 8) & 0xFF);
-              carry = shifted & 0xFF;
-            }
-          eassert (carry == 0);
-        }
-    }
-  eassert (orig_pop_count == pop_count (bytes, LISP_LOCAL_OFFSET_BYTES));
-  if (bit_to_set >= 0)
-    {
-      bytes[bit_to_set / 8] |= 1 << (bit_to_set % 8);
-      eassert (orig_pop_count + 1 == pop_count (bytes, LISP_LOCAL_OFFSET_BYTES));
-    }
 }
 
 void
 record_lisp_locals (struct func_frame_info *fi,
-                    bool need_init,
+                    bool is_params,
                     void *base,
                     size_t n, ...)
 {
+  ptrdiff_t *offsets = malloc(n * sizeof (ptrdiff_t));
+
   va_list ap;
   va_start (ap, n);
   bool any_bits_set = false;
-  for (int i = 0; i < LISP_LOCAL_OFFSET_BYTES && !any_bits_set; i++)
-    if (fi->bit_mask[i])
-      any_bits_set = true;
   for (size_t i = 0; i < n; i++)
     {
       Lisp_Object *ptr = va_arg (ap, Lisp_Object *);
-      ptrdiff_t offset = (char *) ptr - (char *) base;
-      eassert (offset % sizeof (Lisp_Object) == 0);
-      offset /= (ptrdiff_t) sizeof (Lisp_Object);
-      eassert (offset < MAX_LISP_LOCAL_OFFSET);
-      eassert (offset > -MAX_LISP_LOCAL_OFFSET);
-      if (!any_bits_set)
-        {
-          fi->start_offset = offset;
-          shift_left_and_set(fi->bit_mask, 0, 0);
-          any_bits_set = true;
-        }
-      else
-        {
-          ptrdiff_t shift = offset - fi->start_offset;
-          if (shift > 0)
-            {
-              shift_left_and_set (fi->bit_mask, 0, shift - 1);
-              shift_left_and_set (fi->init_mask, 0, need_init ? shift - 1 : -1);
-            }
-          else if (shift < 0)
-            {
-              fi->start_offset = offset;
-              shift_left_and_set (fi->bit_mask, -shift, 0);
-              shift_left_and_set (fi->init_mask, -shift, need_init ? 0 : -1);
-            }
-          else
-            emacs_abort ();
-        }
+      offsets[i] = (char *) ptr - (char *) base;
     }
-  eassert (fi->start_offset < MAX_LISP_LOCAL_OFFSET);
-  eassert (fi->start_offset > -MAX_LISP_LOCAL_OFFSET);
+  if (is_params)
+    {
+      fi->num_params = n;
+      fi->params = offsets;
+    }
+  else
+    {
+      fi->num_locals = n;
+      fi->locals = offsets;
+    }
 }
 
 void
@@ -1367,6 +1259,9 @@ push_lisp_local_array(bool already_initialized,
   lisp_stack[lisp_stack_size++] = ptr;
   lisp_stack[lisp_stack_size++] = (void *) n;
   lisp_stack[lisp_stack_size++] = (void *) (num_arrays + 1);
+  if (!already_initialized)
+    for (ptrdiff_t i = 0; i < n; i++)
+      ptr[i] = UNCHEZ(chez_false);
 }
 
 void
@@ -1384,21 +1279,13 @@ walk_lisp_stack (void (*f)(void *, Lisp_Object *), void *data)
             f (data, array_ptr + k);
         }
       struct func_frame_info *fi = lisp_stack[--i];
-      Lisp_Object *base = lisp_stack[--i];
-      ptrdiff_t offset = fi->start_offset;
-      for (int j = 0; i < LISP_LOCAL_OFFSET_BYTES; j++)
-        {
-          uint8_t bit_mask = fi->bit_mask[i];
-          while (bit_mask)
-            {
-              if (bit_mask & 1)
-                f (data, base + offset);
-              offset++;
-              bit_mask >>= 1;
-            }
-        }
-      eassert (i >= 0);
+      char *base = lisp_stack[--i];
+      for (int j = 0; j < fi->num_params; j++)
+        f (data, (Lisp_Object *) (base + fi->params[j]));
+      for (int j = 0; j < fi->num_locals; j++)
+        f (data, (Lisp_Object *) (base + fi->locals[j]));
     }
+  eassert (i == 0);
 }
 
 #ifdef ENABLE_CHECKING

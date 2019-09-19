@@ -278,17 +278,13 @@ bool may_be_valid (chez_ptr x);
     }                                                           \
   while (0)
 
-#define LISP_LOCAL_OFFSET_BYTES 16
-#define MAX_LISP_LOCAL_OFFSET LISP_LOCAL_OFFSET_BYTES * 8
-
 #ifdef HAVE_CHEZ_SCHEME
 struct func_frame_info {
 #ifdef ENABLE_CHECKING
   const char *func_name;
 #endif
-  ptrdiff_t start_offset;
-  uint8_t bit_mask[LISP_LOCAL_OFFSET_BYTES];
-  uint8_t init_mask[LISP_LOCAL_OFFSET_BYTES];
+  size_t num_locals, num_params;
+  ptrdiff_t *locals, *params;
 };
 
 #ifdef ENABLE_CHECKING
@@ -299,8 +295,8 @@ struct func_frame_info {
 
 extern ptrdiff_t lisp_stack_size;
 
-void enter_lisp_frame (struct func_frame_info *fi, Lisp_Object *base);
-void record_lisp_locals (struct func_frame_info *fi, bool need_init, void *base, size_t n, ...);
+void enter_lisp_frame (struct func_frame_info *fi, void *base);
+void record_lisp_locals (struct func_frame_info *fi, bool is_params, void *base, size_t n, ...);
 void push_lisp_local_array(bool already_initialized, Lisp_Object *ptr, ptrdiff_t n);
 void pop_lisp_locals(int n);
 void walk_lisp_stack (void (*f)(void *, Lisp_Object *), void *);
@@ -326,8 +322,9 @@ void walk_lisp_stack (void (*f)(void *, Lisp_Object *), void *);
   ENTER_LISP_FRAME_T (type __VA_OPT__(, __VA_ARGS__));                 \
   push_lisp_local_array (true, args, nargs)
 #define LISP_LOCALS(...)                                                \
-  Lisp_Object __VA_ARGS__;                                              \
-  SCHEME_ANALYZE_LISP_FRAME (true __VA_OPT__(, __VA_ARGS__))
+  Lisp_Object PP_MAP_COMMA(LISP_LOCAL_VAR, __VA_ARGS__);               \
+  SCHEME_ANALYZE_LISP_FRAME (true, __VA_ARGS__)
+#define LISP_LOCAL_VAR(name) name = Qnil
 #define SCHEME_ANALYZE_LISP_FRAME(need_init, ...)                       \
   if (!was_this_func_frame_info_init)                                   \
     {                                                                   \

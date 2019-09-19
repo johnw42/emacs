@@ -5934,7 +5934,7 @@ mark_stack (char *bottom, char *end)
 {
 #ifdef HAVE_CHEZ_SCHEME
   printf ("mark_stack (%p, %p)\n", bottom, end);
-#endif
+#else
 
   /* This assumes that the stack is a contiguous region in memory.  If
      that's not the case, something has to be done here to iterate
@@ -5945,6 +5945,7 @@ mark_stack (char *bottom, char *end)
      ia64.  */
 #ifdef GC_MARK_SECONDARY_STACK
   GC_MARK_SECONDARY_STACK ();
+#endif
 #endif
 }
 
@@ -8786,8 +8787,11 @@ resume_scheme_gc (void)
 static void
 walk_lisp_stack_callback (void *data, Lisp_Object *ptr)
 {
+  int *pnum_refs = data;
+  ++*pnum_refs;
   analyze_scheme_ref_ptr (ptr, "walking stack in before_scheme_gc");
   record_scheme_ref_ptr (ptr, rt_trace);
+  eassert (may_be_valid (ptr));
 }
 
 int
@@ -8812,7 +8816,9 @@ before_scheme_gc (void)
   /*       memgrep(magic_refs[i], 0, 8); */
   /*   } */
 
-  walk_lisp_stack (NULL, walk_lisp_stack_callback);
+  int num_refs = 0;
+  walk_lisp_stack (walk_lisp_stack_callback, &num_refs);
+  printf("num stack refs: %d\n", num_refs);
 
   // TODO(jrw): Should not be necessary because globals are always
   // referenced through symbols.
@@ -8998,6 +9004,8 @@ union
 static size_t magic_refs[MAX_MAGIC_REFS] =
   {
    //0x40b4cdff
+   //0x6e112e
+   0x36
   };
 static size_t magic_ref_ptrs[MAX_MAGIC_REFS] =
   {
