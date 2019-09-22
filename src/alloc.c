@@ -117,6 +117,7 @@ static bool valgrind_p;
 #define CHECK_NOT_ZERO(x) x
 #endif
 
+#ifdef HAVE_CHEZ_SCHEME
 #define MAX_MAGIC_REFS 8
 static size_t magic_refs[MAX_MAGIC_REFS];
 static size_t magic_ref_ptrs[MAX_MAGIC_REFS];
@@ -168,6 +169,7 @@ analyze_scheme_ref_ptr(Lisp_Object *ptr, const char *label)
   if (found) gdb_found_ref_ptr(ptr);
   return found;
 }
+#endif
 
 #ifndef HAVE_CHEZ_SCHEME
 #ifdef GNU_LINUX
@@ -863,8 +865,6 @@ static void *pure_alloc (size_t, int);
 #define ROUNDUP(x, y) (POWER_OF_2 (y)					\
 		       ? ((y) - 1 + (x)) & ~ ((y) - 1)			\
 		       : ((y) - 1 + (x)) - ((y) - 1 + (x)) % (y))
-
-#define XMALLOC_OVERRUN_CHECK_OVERHEAD 0
 
 /* Return PTR rounded up to the next multiple of ALIGNMENT.  */
 
@@ -2437,7 +2437,7 @@ scheme_allocate (ptrdiff_t nbytes, chez_ptr sym, Lisp_Object *vec_ptr)
   /* chez_ptr eph = SCHEME_FPTR_CALL(ephemeron_cons, vec, chez_false); */
 
   scheme_track (UNCHEZ (vec));
-  (void) SCHEME_FPTR_CALL(save_origin, vec);
+  SCHEME_FPTR_CALL(save_origin, vec);
   SCHEME_PV_ADDR_SET(vec, CHEZ (addr));
   //SCHEME_PV_EPHEMERON_SET(vec, eph);
   *vec_ptr = UNCHEZ (vec);
@@ -2455,7 +2455,8 @@ static struct Lisp_String *
 allocate_string (void)
 {
 #ifdef HAVE_CHEZ_SCHEME
-  ENTER_LISP_FRAME_T (struct Lisp_String *, (), vec);
+  ENTER_LISP_FRAME_T (struct Lisp_String *);
+  LISP_LOCALS (vec);
   struct Lisp_String *s = scheme_allocate (sizeof (struct Lisp_String), scheme_string_symbol, &vec);
   update_scheme_obj (&s->u.s.scheme_obj, vec);
   eassert(STRINGP(vec));
@@ -5932,7 +5933,7 @@ mark_stack (char *bottom, char *end)
 {
 #ifdef HAVE_CHEZ_SCHEME
   printf ("mark_stack (%p, %p)\n", bottom, end);
-#else
+#endif
 
   /* This assumes that the stack is a contiguous region in memory.  If
      that's not the case, something has to be done here to iterate
@@ -5943,7 +5944,6 @@ mark_stack (char *bottom, char *end)
      ia64.  */
 #ifdef GC_MARK_SECONDARY_STACK
   GC_MARK_SECONDARY_STACK ();
-#endif
 #endif
 }
 
@@ -8782,16 +8782,6 @@ resume_scheme_gc (void)
   /*   Fgarbage_collect(); */
 }
 
-static void
-walk_lisp_stack_callback (void *data, Lisp_Object *ptr)
-{
-  int *pnum_refs = data;
-  ++*pnum_refs;
-  analyze_scheme_ref_ptr (ptr, "walking stack in before_scheme_gc");
-  record_scheme_ref_ptr (ptr, rt_trace);
-  eassert (may_be_valid (ptr));
-}
-
 int
 before_scheme_gc (void)
 {
@@ -8814,9 +8804,24 @@ before_scheme_gc (void)
   /*       memgrep(magic_refs[i], 0, 8); */
   /*   } */
 
-  int num_refs = 0;
-  walk_lisp_stack (walk_lisp_stack_callback, &num_refs);
-  printf("num stack refs: %d\n", num_refs);
+  ptrdiff_t pos = 0, count, frames_found = 0, entries_found = 0;
+  union lisp_frame_record *records;
+  while (walk_lisp_frame_records (&pos, &records, &count))
+    {
+      eassert (count > 0);
+      frames_found++;
+      entries_found += count;
+      /* printf ("count: %ld\n", count); */
+      for (ptrdiff_t i = 0; i < count; i++)
+        {
+          analyze_scheme_ref_ptr (records[i].ptr, "walking stack in before_scheme_gc");
+          record_scheme_ref_ptr (records[i].ptr, rt_trace);
+          /* printf("found %p at %p\n", */
+          /*        CHEZ(*records[count].ptr), */
+          /*        records[count].ptr); */
+        }
+    }
+  printf ("found %ld entries in %ld frames\n", entries_found, frames_found);
 
   // TODO(jrw): Should not be necessary because globals are always
   // referenced through symbols.
@@ -8999,13 +9004,13 @@ union
 } const EXTERNALLY_VISIBLE gdb_make_enums_visible = {0};
 #endif	/* __GNUC__ */
 
+#ifdef HAVE_CHEZ_SCHEME
 static size_t magic_refs[MAX_MAGIC_REFS] =
   {
-   //0x40b4cdff
-   //0x6e112e
-   0x36
+   0x40b4cdff
   };
 static size_t magic_ref_ptrs[MAX_MAGIC_REFS] =
   {
    //0x7fffffffcc08,
   };
+#endif

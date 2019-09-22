@@ -1220,8 +1220,8 @@ Using an Emacs configured with --with-x-toolkit=lucid does not have this problem
     {
       init_alloc_once ();
       init_threads_once ();
-      init_bidi_once ();
 #ifdef HAVE_CHEZ_SCHEME
+      init_bidi_once ();
       /* Record (approximately) where the stack begins.  */
       stack_bottom = (char *) &stack_bottom_variable;
       scheme_init_buffer_once ();

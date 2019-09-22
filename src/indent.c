@@ -129,8 +129,8 @@ disptab_matches_widthtab (struct Lisp_Char_Table *disptab, Lisp_Object widthtab)
 void
 recompute_width_table (struct buffer *buf, struct Lisp_Char_Table *disptab)
 {
-  ENTER_LISP_FRAME ((), widthtab);
 #ifdef HAVE_CHEZ_SCHEME
+  ENTER_LISP_FRAME ((), widthtab);
   if (!VECTORP (BVAR (buf, width_table)))
     bset_width_table (buf, make_uninit_vector (256));
   widthtab = BVAR (buf, width_table);
@@ -139,6 +139,8 @@ recompute_width_table (struct buffer *buf, struct Lisp_Char_Table *disptab)
 
   for (chez_iptr i = 0; i < 256; i++)
     ASET (widthtab, i, make_number (character_width (i, disptab)));
+
+  EXIT_LISP_FRAME_VOID ();
 #else /* not HAVE_CHEZ_SCHEME */
   int i;
 
@@ -150,7 +152,6 @@ recompute_width_table (struct buffer *buf, struct Lisp_Char_Table *disptab)
   for (i = 0; i < 256; i++)
     XSETFASTINT (widthtab->contents[i], character_width (i, disptab));
 #endif /* not HAVE_CHEZ_SCHEME */
-  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Allocate or free the width run cache, as requested by the

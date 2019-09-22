@@ -1001,8 +1001,7 @@ INLINE struct Lisp_Symbol *
 INLINE Lisp_Object
 make_lisp_symbol (struct Lisp_Symbol *sym)
 {
-  LISP_LOCALS (a);
-  a = XIL (TAG_SYMOFFSET ((char *) sym - (char *) lispsym));
+  Lisp_Object a = XIL (TAG_SYMOFFSET ((char *) sym - (char *) lispsym));
 
   eassert (XSYMBOL (a) == sym);
   return a;
@@ -1363,8 +1362,7 @@ XINTPTR (Lisp_Object a)
 INLINE Lisp_Object
 make_pointer_integer (void *p)
 {
-  LISP_LOCALS (a);
-  a = XIL (TAG_PTR (Lisp_Int0, p));
+  Lisp_Object a = XIL (TAG_PTR (Lisp_Int0, p));
 
   eassert (INTEGERP (a) && XINTPTR (a) == p);
   return a;
@@ -4417,7 +4415,6 @@ extern Lisp_Object quit (void);
 INLINE _Noreturn void
 xsignal (Lisp_Object error_symbol, Lisp_Object data)
 {
-  printf ("xsignal\n");
   Fsignal (error_symbol, data);
 }
 extern _Noreturn void xsignal0 (Lisp_Object);

@@ -346,9 +346,12 @@ void walk_lisp_stack (void (*f)(void *, Lisp_Object *), void *);
 #define SAVE_LISP_FRAME_PTR() ptrdiff_t saved_lisp_stack_size = lisp_stack_size
 #define RESTORE_LISP_FRAME_PTR() (gdb_break(), lisp_stack_size = saved_lisp_stack_size)
 #else
-#define PUSH_LISP_LOCALS(...) ((void)0)
-#define ENTER_LISP_FRAME_T(type, ...) typedef type this_lisp_frame_type
-#define ENTER_LISP_FRAME_VA_T(...) ((void)0)
+#define ENTER_LISP_FRAME_T(type, params, ...)     \
+  __VA_OPT__(Lisp_Object __VA_ARGS__;)              \
+    typedef type this_lisp_frame_type;          \
+  (void) (this_lisp_frame_type *) 0
+#define ENTER_LISP_FRAME_VA_T(type, nargs, args, params, ...)   \
+  ENTER_LISP_FRAME_T(type, params __VA_OPT__(,  __VA_ARGS__))
 #define EXIT_LISP_FRAME_NO_RETURN() ((void)0)
 #define LISP_LOCAL_ARRAY(name, size) Lisp_Object name[size]
 #define LISP_LOCAL_ALLOCA(name, size) \

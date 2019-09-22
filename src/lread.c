@@ -1259,7 +1259,9 @@ Return t if the file exists and loads successfully.  */)
         {
           val = call5 (handler, Qload, found, noerror, nomessage, Qt);
           RESUME_GC();
+#ifdef HAVE_CHEZ_SCHEME
           do_scheme_gc();
+#endif
           EXIT_LISP_FRAME (val);
         }
 #ifdef DOS_NT
