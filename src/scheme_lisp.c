@@ -1129,22 +1129,22 @@ container_append (struct container *c, void *item)
 void
 container_delete_if (struct container *c, bool (*pred)(const void *))
 {
-  size_t j = 0;
-  FOR_CONTAINER (i, c)
+  size_t di = 0;
+  FOR_CONTAINER (si, c)
     {
-      eassert (j <= i);
-      if (pred (container_ref (c, i)))
+      eassert (di <= si);
+      if (!pred (container_ref (c, si)))
         {
-          if (i != j)
+          if (si != di)
             {
-              memcpy (container_ref (c, j),
-                      container_ref (c, i),
+              memcpy (container_ref (c, di),
+                      container_ref (c, si),
                       c->elem_size);
             }
-          j++;
+          di++;
         }
     }
-  c->size = j;
+  c->size = di;
 }
 
 void

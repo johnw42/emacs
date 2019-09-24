@@ -2224,6 +2224,7 @@ grow_specpdl (void)
 	    signal_error ("Variable binding depth exceeds max-specpdl-size",
 			  Qnil);
 	}
+      printf("growing pdlvec\n");
       pdlvec = xpalloc (pdlvec, &pdlvecsize, 1, max_size + 1, sizeof *specpdl);
       specpdl = pdlvec + 1;
       specpdl_size = pdlvecsize - 1;

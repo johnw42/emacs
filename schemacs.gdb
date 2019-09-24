@@ -58,7 +58,6 @@ break main
 commands
   silent
   set $n = 0
-  ignore 1 1
   continue
 end
 

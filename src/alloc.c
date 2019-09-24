@@ -5697,6 +5697,7 @@ mark_maybe_pointer (void *p)
 static void ATTRIBUTE_NO_SANITIZE_ADDRESS
 mark_memory (void *start, void *end)
 {
+#ifndef HAVE_CHEZ_SCHEME
   char *pp;
 
   /* Make START the pointer to the start of the memory region,
@@ -5740,6 +5741,7 @@ mark_memory (void *start, void *end)
       analyze_scheme_ref_ptr ((Lisp_Object *)pp, "in mark_memory");
 #endif
     }
+#endif
 }
 
 #ifndef HAVE___BUILTIN_UNWIND_INIT
@@ -8827,13 +8829,13 @@ before_scheme_gc (void)
   eassert (STRINGP(empty_unibyte_string));
 
   /* memgrep(0xdeadface0000000f, 0xffffffff0000000f, 8); */
-  for (int i = 0; i < MAX_MAGIC_REFS; i++)
-    {
-      if (magic_refs[i]) {
-        memgrep(magic_refs[i], 0, 8);
-        break;
-      }
-    }
+  /* for (int i = 0; i < MAX_MAGIC_REFS; i++) */
+  /*   { */
+  /*     if (magic_refs[i]) { */
+  /*       memgrep(magic_refs[i], 0, 8); */
+  /*       break; */
+  /*     } */
+  /*   } */
 
   walk_lisp_stack (walk_lisp_stack_fun, NULL);
 
@@ -8988,6 +8990,13 @@ after_scheme_gc (void)
     }
 
   container_delete_if (&scheme_refs, scheme_ref_dead_or_trace);
+  FOR_NAMED_CONTAINER (i, scheme_refs)
+    {
+      NAMED_CONTAINER_REF_VAR (info, scheme_refs, i);
+      eassert (info->type != rt_trace);
+      analyze_scheme_ref_info (info, "tracked after gc");
+    }
+  printf ("remaining tracked refs: %d\n", (int)scheme_refs.size);
 
   unsigned long guardian_count = 0;
   while (true)
@@ -9040,11 +9049,10 @@ union
 #ifdef HAVE_CHEZ_SCHEME
 static size_t magic_refs[MAX_MAGIC_REFS] =
   {
-   0x40b9f9ff
+   0x4
   };
 static size_t magic_ref_ptrs[MAX_MAGIC_REFS] =
   {
-   //0x7fffffffcc08,
-   0xf76af0
+   0xf929d8
   };
 #endif
