@@ -2260,6 +2260,8 @@ eval_sub (Lisp_Object form)
                     funcar, lex_binding, exp, arg, args_left, numargs);
   ptrdiff_t count;
 
+  trace("eval_sub", form);
+
   /* Declare here, as this array may be accessed by call_debugger near
      the end of this function.  See Bug#21245.  */
   LISP_LOCAL_ARRAY (argvals, 8);
@@ -2440,7 +2442,6 @@ eval_sub (Lisp_Object form)
       if (EQ (funcar, Qautoload))
 	{
 	  Fautoload_do_load (fun, original_fun, Qnil);
-          printf ("goto\n");
 	  goto retry;
 	}
       if (EQ (funcar, Qmacro))

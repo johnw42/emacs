@@ -3,30 +3,49 @@
 cd $(dirname "$0")
 top=$PWD
 
-./update-tags &> /dev/null &!
-
-make_args=("$@")
-
-HAVE_CHEZ_SCHEME=false
-if fgrep -q '#define HAVE_CHEZ_SCHEME' src/globals.h; then
-  HAVE_CHEZ_SCHEME=true
-fi
-
-export EMACSLOADPATH=
-
-RUN_DIR=$top/lisp
-MAKE_CMD=(do_make -j -C src temacs)
-EMACS_CMD=($top/src/temacs --batch --load loadup)
+do_make() {
+  make -j1 "${make_args[@]}" "$@"
+}
 
 # RUN_DIR=$top/lisp
 # MAKE_CMD=(do_make -j -C src temacs)
 # EMACS_CMD=($top/src/temacs --batch --no-site-file --no-site-lisp --eval '(setq load-prefer-newer t)' -f batch-byte-compile htmlfontify.el)
 
-do_make() {
-  make -j1 "${make_args[@]}" "$@"
-}
-
 main() {
+  MAKE_CMD=(do_make -j -C src temacs)
+  RUN_DIR=$top/src
+  MAKE_CMD=(do_make -j -C src temacs)
+
+  # Command taken from Makefile.  Works, but behaves strangely in gdb.
+  EMACS_CMD=(temacs --batch --load loadup bootstrap)
+  if [[ $1 == --just-make ]]; then
+    "${MAKE_CMD[@]}"
+    exit $?
+  fi
+
+  target_config=$1
+  shift
+
+  if [[ $target_config != with && $target_config != without ]]; then
+    echo invalid target config
+    exit 1
+  fi
+
+  ./update-tags &> /dev/null &!
+
+
+  current_config=
+  case $(./config.status --config) in
+    *--with-chez-scheme*) current_config=with ;;
+    *--without-chez-scheme*) current_config=without ;;
+  esac
+  if [[ $current_config != $target_config ]]; then
+    ./config-schemacs $target_config
+  fi
+
+  make_args=("$@")
+
+  
   export EMACSLOADPATH=$top/lisp
   do_make -j lib lib-src || exit $?
 
@@ -39,7 +58,8 @@ main() {
   # exec ddd $top/src/temacs
   
   #echo "${EMACS_CMD[*]}"
-  GDB_ARGS=(--nx -ex r -x "$top/schemacs.gdb" -x "$top/src/.gdbinit" -ex r --args "${EMACS_CMD[@]}")
+  GDB_ARGS=(--nx -ex "set \$top_dir = \"$top\"" -ex r -x "$top/schemacs.gdb" --args "${EMACS_CMD[@]}")
+  #GDB_ARGS=(--nx -ex r -x "$top/schemacs.gdb" -x "$top/src/.gdbinit" --args "${EMACS_CMD[@]}")
   #GDB_ARGS=${GDB_ARGS[@]@Q}
   if [[ $TERM != dumb ]]; then
     if false; then

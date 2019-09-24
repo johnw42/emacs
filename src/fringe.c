@@ -1750,6 +1750,12 @@ If nil, also continue lines which are exactly as wide as the window.  */);
 /* Garbage collection hook */
 
 void
+visit_fringe_lisp_refs (lisp_ref_visitor_fun fun, void *data)
+{
+  fun (data, fringe_faces, max_fringe_bitmaps);
+}
+
+void
 mark_fringe_data (void)
 {
   int i;

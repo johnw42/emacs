@@ -12112,6 +12112,57 @@ keys_of_keyboard (void)
 			    "handle-move-frame");
 }
 
+void
+visit_kboard_lisp_refs (lisp_ref_visitor_fun fun, void *data)
+{
+  KBOARD *kb;
+  for (kb = all_kboards; kb; kb = kb->next_kboard)
+    {
+      if (kb->kbd_macro_buffer)
+        fun (data, kb->kbd_macro_buffer, kb->kbd_macro_ptr - kb->kbd_macro_buffer);
+      fun (data, &KVAR (kb, Voverriding_terminal_local_map), 1);
+      fun (data, &KVAR (kb, Vlast_command), 1);
+      fun (data, &KVAR (kb, Vreal_last_command), 1);
+      fun (data, &KVAR (kb, Vkeyboard_translate_table), 1);
+      fun (data, &KVAR (kb, Vlast_repeatable_command), 1);
+      fun (data, &KVAR (kb, Vprefix_arg), 1);
+      fun (data, &KVAR (kb, Vlast_prefix_arg), 1);
+      fun (data, &KVAR (kb, kbd_queue), 1);
+      fun (data, &KVAR (kb, defining_kbd_macro), 1);
+      fun (data, &KVAR (kb, Vlast_kbd_macro), 1);
+      fun (data, &KVAR (kb, Vsystem_key_alist), 1);
+      fun (data, &KVAR (kb, system_key_syms), 1);
+      fun (data, &KVAR (kb, Vwindow_system), 1);
+      fun (data, &KVAR (kb, Vinput_decode_map), 1);
+      fun (data, &KVAR (kb, Vlocal_function_key_map), 1);
+      fun (data, &KVAR (kb, Vdefault_minibuffer_frame), 1);
+      fun (data, &KVAR (kb, echo_string), 1);
+      fun (data, &KVAR (kb, echo_prompt), 1);
+    }
+  {
+    union buffered_input_event *event;
+    for (event = kbd_fetch_ptr; event != kbd_store_ptr; event++)
+      {
+	if (event == kbd_buffer + KBD_BUFFER_SIZE)
+	  {
+	    event = kbd_buffer;
+	    if (event == kbd_store_ptr)
+	      break;
+	  }
+
+	/* These two special event types has no Lisp_Objects to mark.  */
+	if (event->kind != SELECTION_REQUEST_EVENT
+	    && event->kind != SELECTION_CLEAR_EVENT)
+	  {
+	    fun (data, &event->ie.x, 1);
+	    fun (data, &event->ie.y, 1);
+	    fun (data, &event->ie.frame_or_window, 1);
+	    fun (data, &event->ie.arg, 1);
+	  }
+      }
+  }
+}
+
 /* Mark the pointers in the kboard objects.
    Called by Fgarbage_collect.  */
 void

@@ -28,14 +28,12 @@ static Lisp_Object c_data_table;
 chez_ptr scheme_vectorlike_symbol = chez_false;
 chez_ptr scheme_misc_symbol = chez_false;
 chez_ptr scheme_string_symbol = chez_false;
+chez_ptr c_data_property_symbol = chez_false;
 chez_iptr scheme_greatest_fixnum;
 chez_iptr scheme_least_fixnum;
 chez_iptr scheme_fixnum_width;
-const char *last_scheme_function;
-const char *last_scheme_call_file;
-int last_scheme_call_line;
-size_t scheme_call_count;
 chez_ptr scheme_guardian;
+struct scheme_fptr_call_info scheme_fptr_call_info;
 
 uint64_t gdb_misc_val = 0;
 unsigned gdb_flags = 0;
@@ -157,6 +155,8 @@ void scheme_init(void) {
   chez_lock_object (scheme_misc_symbol);
   scheme_string_symbol = scheme_call1("gensym", chez_string("emacs-string"));
   chez_lock_object (scheme_string_symbol);
+  c_data_property_symbol = scheme_call1("gensym", chez_string("c-data-property"));
+  chez_lock_object (c_data_property_symbol);
 
   lisp_frame_record_init ();
 
@@ -235,7 +235,7 @@ ensure_symbol_c_data (Lisp_Object symbol, Lisp_Object name)
 {
   eassert (chez_symbolp (CHEZ (symbol)));
 
-  struct Lisp_Symbol *p = scheme_find_c_data (symbol);
+  struct Lisp_Symbol *p = SCHEME_FPTR_CALL (getprop_addr, CHEZ(symbol), c_data_property_symbol);
   if (p)
     {
       eassert (EQ (p->u.s.scheme_obj, symbol));
@@ -246,7 +246,6 @@ ensure_symbol_c_data (Lisp_Object symbol, Lisp_Object name)
     name = to_lisp_string (symbol);
   eassert (STRINGP (name));
 
-  KILROY_WAS_HERE;
   p = scheme_alloc_c_data(symbol, sizeof (struct Lisp_Symbol));
   // Can't use init_nil_refs here because of how builtin symbols are
   // initialized.
@@ -262,6 +261,7 @@ ensure_symbol_c_data (Lisp_Object symbol, Lisp_Object name)
   p->u.s.declared_special = false;
   p->u.s.pinned = false;
   CHECK_ALLOC(p);
+  eassert (EQ (p->u.s.scheme_obj, symbol));
   return p;
 }
 
@@ -292,15 +292,16 @@ scheme_make_symbol(Lisp_Object name, int /*enum symbol_interned*/ interned)
 struct Lisp_Symbol *
 XSYMBOL (Lisp_Object a)
 {
-  return ensure_symbol_c_data (a, UNCHEZ (chez_false));
+  struct Lisp_Symbol *p = ensure_symbol_c_data (a, UNCHEZ (chez_false));
+  eassert (EQ (p->u.s.scheme_obj, a));
+  return p;
 }
 
 void *
 scheme_alloc_c_data (Lisp_Object key, chez_iptr size)
 {
-  KILROY_WAS_HERE;
   void *bytes = xzalloc (size);
-  scheme_call3("hashtable-set!", CHEZ(c_data_table), CHEZ(key), chez_integer ((chez_iptr)bytes));
+  SCHEME_FPTR_CALL (putprop_addr, CHEZ(key), c_data_property_symbol, bytes);
   return bytes;
 }
 
@@ -712,14 +713,16 @@ static void
 visit_symbol_lisp_refs(Lisp_Object obj, lisp_ref_visitor_fun fun, void *data)
 {
   struct Lisp_Symbol *s = XSYMBOL (obj);
+  if (symbol_is (obj, "buffer-undo-list"))
+    printf("visiting buffer-undo-list\n");
+  if (s->u.s.redirect == SYMBOL_VARALIAS)
+    s = s->u.s.val.alias;
   fun (data, &s->u.s.scheme_obj, 1);
   fun (data, &s->u.s.name, 1);
   switch (s->u.s.redirect)
     {
     case SYMBOL_PLAINVAL:
       fun (data, &s->u.s.val.value, 1);
-      break;
-    case SYMBOL_VARALIAS:
       break;
     case SYMBOL_LOCALIZED:
       {
@@ -730,6 +733,25 @@ visit_symbol_lisp_refs(Lisp_Object obj, lisp_ref_visitor_fun fun, void *data)
       }
       break;
     case SYMBOL_FORWARDED:
+      {
+        union Lisp_Fwd *fwd = s->u.s.val.fwd;
+        switch (XFWDTYPE (fwd))
+          {
+          case Lisp_Fwd_Obj:
+            fun (data, fwd->u_objfwd.objvar, 1);
+            break;
+          case Lisp_Fwd_Buffer_Obj:
+            {
+              fun (data, &fwd->u_buffer_objfwd.predicate, 1);
+              /* int offset = XBUFFER_OBJFWD (innercontents)->offset; */
+              /* int idx = PER_BUFFER_IDX (offset); */
+            }
+            break;
+          /* case Lisp_Fwd_Kboard_obj: */
+          /*   // XXX */
+          /*   break; */
+          }
+      }
       break;
     default:
       emacs_abort ();
@@ -804,7 +826,29 @@ visit_lisp_refs(Lisp_Object obj, lisp_ref_visitor_fun fun, void *data)
         {
           EMACS_INT n = ASIZE(obj);
           if (n > 0)
-            fun(data, aref_addr(obj, 0), n);
+            {
+              // Handle regular vectors.
+              fun(data, aref_addr(obj, 0), n);
+
+              // Handle obarray vectors.
+              chez_ptr table = CHEZ (AREF (obj, 0));
+              if (SCHEME_FPTR_CALL (hashtablep, table))
+                {
+                  printf("obarray %p\n", CHEZ(obj));
+                  chez_ptr values_vec = SCHEME_FPTR_CALL (hashtable_values, table);
+                  // Copy vector so we don't have to lock it.
+                  chez_iptr n = chez_vector_length (values_vec);
+                  Lisp_Object *values = alloca (n * sizeof (Lisp_Object));
+                  for (chez_iptr i = 0; i < n; i++)
+                    values[i] = UNCHEZ (chez_vector_ref (values_vec, i));
+                  for (chez_iptr i = 0; i < n; i++)
+                    {
+                      Lisp_Object sym = values[i];
+                      eassert (SYMBOLP (sym));
+                      visit_lisp_refs (sym, fun, data);
+                    }
+                }
+            }
         }
       else
         {
@@ -1106,6 +1150,9 @@ container_delete_if (struct container *c, bool (*pred)(const void *))
 void
 container_uniq (struct container *c, compare_fun compare, merge_fun merge)
 {
+  if (c->size == 0)
+    return;
+
   container_sort (c, compare);
 
   size_t di = 0;
@@ -1127,9 +1174,13 @@ container_uniq (struct container *c, compare_fun compare, merge_fun merge)
         else
           {
             di++;
+            if (di != si)
+              memcpy (container_ref (c, di),
+                      container_ref (c, si),
+                      c->elem_size);
           }
       }
-  c->size = di;
+  c->size = di + 1;
 }
 
 bool

@@ -670,10 +670,41 @@ close_output_streams (void)
     _exit (EXIT_FAILURE);
 }
 
+FILE *trace_file;
+
+void
+trace(const char *label, Lisp_Object obj)
+{
+  static char *trace_buf = NULL;
+  static long trace_count = 0;
+
+  if (!trace_file) return;
+
+  Lisp_Object str = Fprin1_to_string (obj, Qnil);
+  ptrdiff_t n = SBYTES(str);
+  trace_buf = realloc(trace_buf, n + 1);
+  memcpy(trace_buf, SDATA(str), n);
+  trace_buf[n] = '\0';
+  for (ptrdiff_t i = 0; i < n; i++)
+    {
+      if (trace_buf[i] == '0')
+        trace_buf[i] = '\b';
+      else if (trace_buf[i] =='\n')
+        trace_buf[i] = '\a';
+    }
+  fprintf (trace_file, "%s %ld: %s\n", label, trace_count++, trace_buf);
+  fflush (trace_file);
+}
+
+
+
 /* ARGSUSED */
 int
 main (int argc, char **argv)
 {
+  if (getenv("EMACS_TRACE_FILE"))
+    trace_file = fopen(getenv("EMACS_TRACE_FILE"), "w");
+
 #ifdef HAVE_CHEZ_SCHEME
   alloc_preinit ();
 #endif

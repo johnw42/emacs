@@ -15,8 +15,8 @@ set print frame-arguments none
 #set print address off
 set trace-commands off
 
-#handle SIGSEGV nostop
-#handle SIGSEGV noprint
+handle SIGSEGV nostop
+handle SIGSEGV noprint
 
 #handle SIGINT nopass
 
@@ -54,9 +54,42 @@ end
 # up
 # end
 
+break main
+commands
+  silent
+  set $n = 0
+  ignore 1 1
+  continue
+end
+
 break gdb_break
-command
-up
+commands
+  up
+end
+
+# break die
+# commands
+#   up
+# end
+
+catch signal SIGSEGV
+commands
+  p scheme_fptr_call_info
+  echo fptr_run?\n
+end
+
+define fptr_run
+  tbreak scheme_fptr_call_fun
+  eval "ignore %d %d", $bpnum, scheme_fptr_call_info.count - 1
+  run
+end
+
+define hook-run
+  eval "shell %s/run-schemacs --just-make", $top_dir
+end
+
+define ref_break
+  break gdb_found_ref
 end
 
 # break gdb_found_ref
@@ -82,10 +115,6 @@ end
 # record stop
 # cont
 # end
-
-define hook-run
-  set $n = 0
-end
 
 #source .breakpoints.gdb
 

@@ -1381,8 +1381,8 @@ if test "$with_chez_scheme" != no; then
    CHEZ_SCHEME_CFLAGS=-fPIC
    CHEZ_SCHEME_OBJ=$CHEZ_SCHEME_DIR/kernel.o
    CHEZ_SCHEME_LIBS="-luuid -lm -ltinfo -lrt -lc -lpthread -ldl"
-   CANNOT_DUMP=yes
 fi
+CANNOT_DUMP=yes # XXX
 AC_SUBST(CHEZ_SCHEME_CFLAGS)
 AC_SUBST(CHEZ_SCHEME_OBJ)
 AC_SUBST(CHEZ_SCHEME_LIBS)

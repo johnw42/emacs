@@ -57,6 +57,18 @@ static struct regexp_cache searchbufs[REGEXP_CACHE_SIZE];
 static struct regexp_cache *searchbuf_head;
 
 
+void
+visit_regexp_cache_lisp_refs(lisp_ref_visitor_fun fun, void *data)
+{
+  for (struct regexp_cache *cp = searchbuf_head; cp; cp = cp->next)
+    {
+      fun (data, &cp->regexp, 1);
+      fun (data, &cp->f_whitespace_regexp, 1);
+      fun (data, &cp->syntax_table, 1);
+    }
+}
+
+
 /* Every call to re_match, etc., must pass &search_regs as the regs
    argument unless you can show it is unnecessary (i.e., if re_match
    is certainly going to be called again before region-around-match

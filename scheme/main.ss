@@ -25,6 +25,8 @@
          c-symbol_is
          c-trivial
          c-ephemeron_cons
+         c-getprop_addr
+         c-putprop_addr
          )
 
   (define elisp-do-scheme-gc
@@ -259,6 +261,17 @@
                  scheme-object ((scheme-object obj)))
     (let-values ([(keys values) (hashtable-entries obj)])
       values))
+
+  (define-for-c (c-getprop_addr
+                 void* ((scheme-object sym)
+                        (scheme-object prop)))
+    (or (getprop sym prop) 0))
+
+  (define-for-c (c-putprop_addr
+                 void ((scheme-object sym)
+                       (scheme-object prop)
+                       (void* addr)))
+    (putprop sym prop addr))
 
   (define elisp-funcall
     (case-lambda

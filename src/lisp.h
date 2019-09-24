@@ -4001,6 +4001,7 @@ extern void syms_of_fringe (void);
 extern void init_fringe (void);
 #ifdef HAVE_WINDOW_SYSTEM
 extern void mark_fringe_data (void);
+extern void visit_fringe_lisp_refs (lisp_ref_visitor_fun fun, void *data);
 extern void init_fringe_once (void);
 #endif /* HAVE_WINDOW_SYSTEM */
 
@@ -4610,6 +4611,7 @@ extern void init_fileio (void);
 extern void syms_of_fileio (void);
 
 /* Defined in search.c.  */
+void visit_regexp_cache_lisp_refs(lisp_ref_visitor_fun fun, void *data);
 extern void shrink_regexp_cache (void);
 extern void restore_search_regs (void);
 extern void update_search_regs (ptrdiff_t oldstart,
@@ -4701,6 +4703,7 @@ extern void force_auto_save_soon (void);
 extern void init_keyboard (void);
 extern void syms_of_keyboard (void);
 extern void keys_of_keyboard (void);
+extern void visit_kboard_lisp_refs (lisp_ref_visitor_fun fun, void *data);
 
 /* Defined in indent.c.  */
 extern ptrdiff_t current_column (void);
@@ -5337,6 +5340,9 @@ maybe_gc (void)
 }
 
 #define NIL_INIT LISPSYM_INITIALLY_(Qnil)
+
+extern FILE *trace_file;
+void trace(const char *label, Lisp_Object obj);
 
 INLINE_HEADER_END
 

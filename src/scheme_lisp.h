@@ -39,6 +39,8 @@ struct xmalloc_header {
 typedef struct { chez_ptr ptr; } Lisp_Object;
 #define CHEZ(x) ((x).ptr)
 #define UNCHEZ(x) ((Lisp_Object){x})
+#define CHEZ_PTR(x) (&CHEZ (x))
+#define UNCHEZ_PTR(x) ((Lisp_Object *)(x))
 
 #undef CHECK_LISP_OBJECT_TYPE
 enum CHECK_LISP_OBJECT_TYPE { CHECK_LISP_OBJECT_TYPE = true };
@@ -98,10 +100,11 @@ void do_chez_prolog (void);
 /*     CHEZ_EPILOG,                                                \ */
 /*     scheme_fptr_result_##name) */
 
-#define SCHEME_FPTR_CALL(name, ...)                             \
-  (last_scheme_function = #name,                                \
-   last_scheme_call_file = __FILE__,                            \
-   last_scheme_call_line = __LINE__,                            \
+#define SCHEME_FPTR_CALL(name, ...)                                   \
+  (scheme_fptr_call_info.fun = #name,                                 \
+   scheme_fptr_call_info.file = __FILE__,                             \
+   scheme_fptr_call_info.line = __LINE__,                             \
+   scheme_fptr_call_fun(),                                            \
    scheme_fptr_##name(__FILE__, __LINE__, __VA_ARGS__))
 
 extern chez_ptr scheme_vectorlike_symbol;
@@ -110,11 +113,19 @@ extern chez_ptr scheme_string_symbol;
 extern chez_iptr scheme_greatest_fixnum;
 extern chez_iptr scheme_least_fixnum;
 extern chez_iptr scheme_fixnum_width;
-extern const char *last_scheme_function;
-extern const char *last_scheme_call_file;
-extern int last_scheme_call_line;
-extern size_t scheme_call_count;
 extern chez_ptr scheme_guardian;
+
+struct scheme_fptr_call_info {
+  const char *fun;
+  const char *file;
+  int line;
+  size_t count;
+};
+extern struct scheme_fptr_call_info scheme_fptr_call_info;
+
+INLINE void scheme_fptr_call_fun(void) {
+  scheme_fptr_call_info.count++;
+}
 
 #define SCHEME_PV_TAG(pv) chez_vector_ref(pv, 0)
 #define SCHEME_PV_ADDR(pv) chez_vector_ref(pv, 1)
