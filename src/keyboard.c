@@ -1292,6 +1292,7 @@ Lisp_Object
 command_loop_1 (void)
 {
   ENTER_LISP_FRAME ((), cmd, txt);
+  LISP_LOCAL_ARRAY (keybuf, 30);
   EMACS_INT prev_modiff = 0;
   struct buffer *prev_buffer = NULL;
   bool already_adjusted = 0;
@@ -1335,7 +1336,6 @@ command_loop_1 (void)
 
   while (1)
     {
-      Lisp_Object keybuf[30];
       int i;
 
       if (! FRAME_LIVE_P (XFRAME (selected_frame)))
@@ -1636,7 +1636,8 @@ command_loop_1 (void)
 Lisp_Object
 read_menu_command (void)
 {
-  Lisp_Object keybuf[30];
+  ENTER_LISP_FRAME (());
+  LISP_LOCAL_ARRAY (keybuf, 30);
   ptrdiff_t count = SPECPDL_INDEX ();
   int i;
 
@@ -1652,9 +1653,9 @@ read_menu_command (void)
   if (! FRAME_LIVE_P (XFRAME (selected_frame)))
     Fkill_emacs (Qnil);
   if (i == 0 || i == -1)
-    return Qt;
+    EXIT_LISP_FRAME (Qt);
 
-  return read_key_sequence_cmd;
+  EXIT_LISP_FRAME (read_key_sequence_cmd);
 }
 
 /* Adjust point to a boundary of a region that has such a property
@@ -2259,7 +2260,7 @@ read_decoded_event_from_main_queue (struct timespec *end_time,
   ENTER_LISP_FRAME ((prev_event), nextevt);
 #ifndef WINDOWSNT
 #define MAX_ENCODED_BYTES 16
-  Lisp_Object events[MAX_ENCODED_BYTES];
+  LISP_LOCAL_ARRAY (events, MAX_ENCODED_BYTES);
   int n = 0;
 #endif
   while (true)
@@ -7482,19 +7483,17 @@ menu_bar_items (Lisp_Object old)
 {
   ENTER_LISP_FRAME ((old), def, tail, oquit, tem, tem0, tem1, tem2,
                     tem3);
+  LISP_LOCAL_ARRAY (mapsbuf, 3);
+
   /* The number of keymaps we're scanning right now, and the number of
      keymaps we have allocated space for.  */
   ptrdiff_t nmaps;
 
   /* maps[0..nmaps-1] are the prefix definitions of KEYBUF[0..t-1]
      in the current keymaps, or nil where it is not a prefix.  */
-  Lisp_Object *maps;
-
-  Lisp_Object mapsbuf[3];
+  LISP_DYNAMIC_ARRAY (maps);
 
   ptrdiff_t mapno;
-
-  USE_SAFE_ALLOCA;
 
   /* In order to build the menus, we need to call the keymap
      accessors.  They all call maybe_quit.  But this function is called
@@ -7539,7 +7538,7 @@ menu_bar_items (Lisp_Object old)
 	   recognized when the menu-bar (or mode-line) is updated,
 	   which does not normally happen after every command.  */
 	ptrdiff_t nminor = current_minor_maps (NULL, &tmaps);
-	SAFE_NALLOCA (maps, 1, nminor + 4);
+	SAFE_ALLOCA_LISP (maps, nminor + 4);
 	nmaps = 0;
 	tem = KVAR (current_kboard, Voverriding_terminal_local_map);
 
@@ -8054,11 +8053,10 @@ Lisp_Object
 tool_bar_items (Lisp_Object reuse, int *nitems)
 {
   ENTER_LISP_FRAME ((reuse), oquit, tem, keymap);
-  Lisp_Object *maps;
-  Lisp_Object mapsbuf[3];
+  LISP_LOCAL_ARRAY (mapsbuf, 3);
+  LISP_DYNAMIC_ARRAY (maps);
   ptrdiff_t nmaps, i;
   Lisp_Object *tmaps;
-  USE_SAFE_ALLOCA;
 
   *nitems = 0;
 
@@ -8097,7 +8095,7 @@ tool_bar_items (Lisp_Object reuse, int *nitems)
 	 recognized when the tool-bar (or mode-line) is updated,
 	 which does not normally happen after every command.  */
       ptrdiff_t nminor = current_minor_maps (NULL, &tmaps);
-      SAFE_NALLOCA (maps, 1, nminor + 4);
+      SAFE_ALLOCA_LISP (maps, nminor + 4);
       nmaps = 0;
       tem = KVAR (current_kboard, Voverriding_terminal_local_map);
 
@@ -9893,7 +9891,7 @@ read_key_sequence_vs (Lisp_Object prompt, Lisp_Object continue_echo,
 {
   ENTER_LISP_FRAME ((prompt, continue_echo, dont_downcase_last,
                      can_return_switch_frame, cmd_loop));
-  Lisp_Object keybuf[30];
+  LISP_LOCAL_ARRAY (keybuf, 30);
   int i;
   ptrdiff_t count = SPECPDL_INDEX ();
 

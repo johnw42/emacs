@@ -277,7 +277,7 @@ static int max_desc;
 static int external_sock_fd;
 
 /* Indexed by descriptor, gives the process (if any) for that descriptor.  */
-static Lisp_Object chan_process[FD_SETSIZE];
+static Lisp_Object chan_process[FD_SETSIZE]; // TODO
 static void wait_for_socket_fds (Lisp_Object, char const *);
 
 /* Alist of elements (NAME . PROCESS).  */
@@ -1572,6 +1572,8 @@ Return nil if format of ADDRESS is invalid.  */)
   (Lisp_Object address, Lisp_Object omit_port)
 {
   ENTER_LISP_FRAME ((address, omit_port));
+  LISP_LOCAL_ARRAY (args, 10);
+
   if (NILP (address))
     EXIT_LISP_FRAME (Qnil);
 
@@ -1582,7 +1584,6 @@ Return nil if format of ADDRESS is invalid.  */)
     {
       struct Lisp_Vector *p = XVECTOR (address);
       ptrdiff_t size = xv_size (p);
-      Lisp_Object args[10];
       int nargs, i;
       char const *format;
 
@@ -1798,7 +1799,7 @@ usage: (make-process &rest ARGS)  */)
 		     BUF_ZV (XBUFFER (buffer)),
 		     BUF_ZV_BYTE (XBUFFER (buffer)));
 
-  USE_SAFE_ALLOCA;
+  LISP_DYNAMIC_ARRAY (args2);
 
   {
     /* Decide coding systems for communicating with the process.  Here
@@ -1807,9 +1808,6 @@ usage: (make-process &rest ARGS)  */)
 
     /* Qt denotes we have not yet called Ffind_operation_coding_system.  */
     coding_systems = Qt;
-
-    Lisp_Object *args2;
-
 
     tem = Fplist_get (contact, QCcoding);
     if (!NILP (tem))
@@ -4773,6 +4771,7 @@ server_accept_connection (Lisp_Object server, int channel)
 {
   ENTER_LISP_FRAME ((server), buffer, contact, host, service, name,
                     proc, host_string);
+  LISP_LOCAL_ARRAY (args, 11);
   struct Lisp_Process *ps = XPROCESS (server);
   struct Lisp_Process *p;
   int s;
@@ -4813,7 +4812,6 @@ server_accept_connection (Lisp_Object server, int channel)
      information for this process.  */
   host = Qt;
   service = Qnil;
-  Lisp_Object args[11];
   int nargs = 0;
   #define HOST_FORMAT_IN "%d.%d.%d.%d"
   #define HOST_FORMAT_IN6 "%x:%x:%x:%x:%x:%x:%x:%x"

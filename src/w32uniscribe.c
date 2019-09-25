@@ -744,7 +744,7 @@ static bool uniscribe_new_apis;
 static bool
 uniscribe_check_features (Lisp_Object features[2], OPENTYPE_TAG *ftags, int n)
 {
-  ENTER_LISP_FRAME_T (bool, (features), rest, feature);
+  ENTER_LISP_FRAME_T (bool, (), rest, feature);
   int j;
 
   for (j = 0; j < 2; j++)
@@ -798,7 +798,7 @@ static int
 uniscribe_check_otf_1 (HDC context, Lisp_Object script, Lisp_Object lang,
 		       Lisp_Object features[2], int *retval)
 {
-  ENTER_LISP_FRAME_T (int, (script, lang, features));
+  ENTER_LISP_FRAME_T (int, (script, lang));
   SCRIPT_CACHE cache = NULL;
   OPENTYPE_TAG tags[32], script_tag, lang_tag;
   int max_tags = ARRAYELTS (tags);
@@ -892,7 +892,8 @@ int
 uniscribe_check_otf (LOGFONT *font, Lisp_Object otf_spec)
 {
   ENTER_LISP_FRAME_T (int, (otf_spec), script, lang, rest);
-  Lisp_Object features[2];
+  LISP_LOCAL_ARRAY (features, 2);
+  LISP_LOCAL_ARRAY (farray, 2);
   DWORD feature_tables[2];
   DWORD script_tag, default_script, lang_tag = 0;
   struct frame * f;
@@ -950,7 +951,6 @@ uniscribe_check_otf (LOGFONT *font, Lisp_Object otf_spec)
       unsigned short feature_index, n_features;
       DWORD tbl = feature_tables[i];
       DWORD feature_id, *ftags;
-      Lisp_Object farray[2];
 
       /* Skip if no features requested from this table.  */
       if (NILP (features[i]))

@@ -3106,20 +3106,18 @@ bool
 mouse_face_overlay_overlaps (Lisp_Object overlay)
 {
   ENTER_LISP_FRAME_T (bool, (overlay), tem);
+  LISP_LOCAL_ARRAY (vbuf, 10);
+  LISP_DYNAMIC_ARRAY (v);
   ptrdiff_t start = OVERLAY_POSITION (OVERLAY_START (overlay));
   ptrdiff_t end = OVERLAY_POSITION (OVERLAY_END (overlay));
   ptrdiff_t n, i, size;
-  Lisp_Object *v;
-
-  Lisp_Object vbuf[10];
-  USE_SAFE_ALLOCA;
 
   size = ARRAYELTS (vbuf);
   v = vbuf;
   n = overlays_in (start, end, 0, &v, &size, NULL, NULL);
   if (n > size)
     {
-      SAFE_NALLOCA (v, 1, n);
+      SAFE_ALLOCA_LISP (v, n);
       overlays_in (start, end, 0, &v, &n, NULL, NULL);
     }
 
@@ -3139,19 +3137,17 @@ Lisp_Object
 disable_line_numbers_overlay_at_eob (void)
 {
   ENTER_LISP_FRAME ((), tem);
+  LISP_LOCAL_ARRAY (vbuf, 10);
+  LISP_DYNAMIC_ARRAY (v);
   ptrdiff_t n, i, size;
-  Lisp_Object *v;
   tem = Qnil;
-
-  Lisp_Object vbuf[10];
-  USE_SAFE_ALLOCA;
 
   size = ARRAYELTS (vbuf);
   v = vbuf;
   n = overlays_in (ZV, ZV, 0, &v, &size, NULL, NULL);
   if (n > size)
     {
-      SAFE_NALLOCA (v, 1, n);
+      SAFE_ALLOCA_LISP (v, n);
       overlays_in (ZV, ZV, 0, &v, &n, NULL, NULL);
     }
 
@@ -4531,6 +4527,7 @@ report_overlay_modification (Lisp_Object start, Lisp_Object end, bool after,
 {
   ENTER_LISP_FRAME ((start, end, arg1, arg2, arg3), prop, overlay,
                     ostart, oend, prop_i, overlay_i);
+  LISP_DYNAMIC_ARRAY (copy);
   struct Lisp_Overlay *tail;
   /* True if this change is an insertion.  */
   bool insertion = (after ? XFASTINT (arg3) == 0 : EQ (start, end));
@@ -4629,10 +4626,8 @@ report_overlay_modification (Lisp_Object start, Lisp_Object end, bool after,
        First copy the vector contents, in case some of these hooks
        do subsequent modification of the buffer.  */
     ptrdiff_t size = last_overlay_modification_hooks_used;
-    Lisp_Object *copy;
     ptrdiff_t i;
 
-    USE_SAFE_ALLOCA;
     SAFE_ALLOCA_LISP (copy, size);
     vector_copy_out (copy, last_overlay_modification_hooks, size);
 

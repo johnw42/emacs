@@ -2780,7 +2780,7 @@ read1 (Lisp_Object readcharfun, int *pch, bool first_in_list)
 
 	      /* The size is 2 * number of allowed keywords to
 		 make-hash-table.  */
-	      Lisp_Object params[12];
+              LISP_LOCAL_ARRAY (params, 12);
 	      key = Qnil;
 
 	      int param_count = 0;

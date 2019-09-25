@@ -976,11 +976,10 @@ usage: (let VARLIST BODY...)  */)
   (Lisp_Object args)
 {
   ENTER_LISP_FRAME ((args), tem, lexenv, elt, varlist, var);
-  Lisp_Object *temps;
+  LISP_DYNAMIC_ARRAY (temps);
 
   ptrdiff_t count = SPECPDL_INDEX ();
   ptrdiff_t argnum;
-  USE_SAFE_ALLOCA;
 
   varlist = XCAR (args);
   CHECK_LIST (varlist);
@@ -1213,7 +1212,7 @@ unwind_to_catch (struct handler *catch, Lisp_Object value)
 #ifdef HAVE_CHEZ_SCHEME
   eassert (disable_scheme_gc >= catch->disable_scheme_gc);
   disable_scheme_gc = catch->disable_scheme_gc;
-  lisp_stack_size = catch->lisp_stack_size;
+  lisp_stack_ptr = catch->lisp_stack_ptr;
 #endif
 
   do
@@ -1567,7 +1566,7 @@ push_handler_nosignal (Lisp_Object tag_ch_val, enum handlertype handlertype)
   c->interrupt_input_blocked = interrupt_input_blocked;
 #ifdef HAVE_CHEZ_SCHEME
   c->disable_scheme_gc = disable_scheme_gc;
-  c->lisp_stack_size = lisp_stack_size;
+  c->lisp_stack_ptr = lisp_stack_ptr;
 #endif
   handlerlist = c;
   EXIT_LISP_FRAME (c);
@@ -2340,8 +2339,8 @@ eval_sub (Lisp_Object form)
 	{
 	  /* Pass a vector of evaluated arguments.  */
 	  ptrdiff_t argnum = 0;
-	  USE_SAFE_ALLOCA;
-	  LISP_LOCAL_ALLOCA (vals, XINT (numargs));
+	  LISP_DYNAMIC_ARRAY (vals);
+	  SAFE_ALLOCA_LISP (vals, XINT (numargs));
 
 	  while (CONSP (args_left) && argnum < XINT (numargs))
 	    {
@@ -2490,13 +2489,11 @@ usage: (apply FUNCTION &rest ARGUMENTS)  */)
   (ptrdiff_t nargs, Lisp_Object *args)
 {
   ENTER_LISP_FRAME_VA (nargs, args, (), spread_arg, fun, retval);
+  LISP_DYNAMIC_ARRAY (funcall_args);
   ptrdiff_t i, numargs, funcall_nargs;
-  register Lisp_Object *funcall_args = NULL;
   spread_arg = args[nargs - 1];
 
   fun = args[0];
-
-  USE_SAFE_ALLOCA;
 
   CHECK_LIST (spread_arg);
 
@@ -2997,6 +2994,7 @@ Lisp_Object
 funcall_subr (struct Lisp_Subr *subr, ptrdiff_t numargs, Lisp_Object *args)
 {
   ENTER_LISP_FRAME ((), result, fun);
+  LISP_LOCAL_ARRAY (internal_argbuf, 8);
   result = Qnil;
 
   //suspend_scheme_gc();
@@ -3018,7 +3016,6 @@ funcall_subr (struct Lisp_Subr *subr, ptrdiff_t numargs, Lisp_Object *args)
     result = (subr->function.aMANY) (numargs, args);
   else
     {
-      Lisp_Object internal_argbuf[8];
       Lisp_Object *internal_args;
       if (subr->max_args > numargs)
         {
@@ -3091,10 +3088,9 @@ static Lisp_Object
 apply_lambda (Lisp_Object fun, Lisp_Object args, ptrdiff_t count)
 {
   ENTER_LISP_FRAME ((fun, args), args_left, tem);
+  LISP_DYNAMIC_ARRAY (arg_vector);
   ptrdiff_t i;
   EMACS_INT numargs;
-  Lisp_Object *arg_vector;
-  USE_SAFE_ALLOCA;
 
   numargs = XFASTINT (Flength (args));
   SAFE_ALLOCA_LISP (arg_vector, numargs);

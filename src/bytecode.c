@@ -344,6 +344,8 @@ exec_byte_code (Lisp_Object bytestr, Lisp_Object vector, Lisp_Object maxdepth,
 {
   ENTER_LISP_FRAME_VA (nargs, args, (), v1, v2, sym, val, handler,
                        handlers, body, jmp_table, hash_code, result);
+  LISP_DYNAMIC_ARRAY (stack_base);
+
 #ifdef BYTE_CODE_METER
   int volatile this_op = 0;
 #endif
@@ -367,8 +369,6 @@ exec_byte_code (Lisp_Object bytestr, Lisp_Object vector, Lisp_Object maxdepth,
 
   unsigned char quitcounter = 1;
   EMACS_INT stack_items = XFASTINT (maxdepth) + 1;
-  USE_SAFE_ALLOCA;
-  Lisp_Object *stack_base;
   SAFE_ALLOCA_LISP_EXTRA (stack_base, stack_items, bytestr_length);
   Lisp_Object *stack_lim = stack_base + stack_items;
   Lisp_Object *top = stack_base;

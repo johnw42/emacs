@@ -3711,7 +3711,7 @@ struct handler
 
 #ifdef HAVE_CHEZ_SCHEME
   int disable_scheme_gc;
-  ptrdiff_t lisp_stack_size;
+  struct Lisp_Frame_Record *lisp_stack_ptr;
 #endif
 };
 
@@ -5161,6 +5161,7 @@ extern void *record_xmalloc (size_t) ATTRIBUTE_ALLOC_SIZE ((1));
 	sa_must_free = true;				       \
 	record_unwind_protect (free_save_value, arg_);	       \
       }							       \
+    UPDATE_LISP_DYNAMIC_ARRAY (buf, nelt);                     \
   } while (false)
 
 /* Set BUF to point to an allocated array of NELT Lisp_Objects.  */

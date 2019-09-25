@@ -1388,9 +1388,9 @@ current_minor_maps (Lisp_Object **modeptr, Lisp_Object **mapptr)
 {
   ENTER_LISP_FRAME_T (ptrdiff_t, (), alist, assoc, var, val,
                       emulation_alists, temp);
+  LISP_LOCAL_ARRAY (lists, 2);
   ptrdiff_t i = 0;
   int list_number = 0;
-  Lisp_Object lists[2];
 
   emulation_alists = Vemulation_mode_map_alists;
   lists[0] = Vminor_mode_overriding_map_alist;
@@ -2031,15 +2031,14 @@ For an approximate inverse of this, see `kbd'.  */)
   (Lisp_Object keys, Lisp_Object prefix)
 {
   ENTER_LISP_FRAME ((keys, prefix), list, sep, key, result);
+  LISP_DYNAMIC_ARRAY (args);
   ptrdiff_t len = 0;
   EMACS_INT i;
   ptrdiff_t i_byte;
-  Lisp_Object *args;
   EMACS_INT size = XINT (Flength (keys));
   sep = build_string (" ");
 
   bool add_meta = 0;
-  USE_SAFE_ALLOCA;
 
   if (!NILP (prefix))
     size += XINT (Flength (prefix));

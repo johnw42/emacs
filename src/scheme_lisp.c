@@ -20,8 +20,6 @@
 static void run_init_checks(void);
 #endif
 
-static void lisp_frame_record_init (void);
-
 static bool scheme_initialized = false;
 static Lisp_Object c_data_table;
 
@@ -157,8 +155,6 @@ void scheme_init(void) {
   chez_lock_object (scheme_string_symbol);
   c_data_property_symbol = scheme_call1("gensym", chez_string("c-data-property"));
   chez_lock_object (c_data_property_symbol);
-
-  lisp_frame_record_init ();
 
 #ifdef ENABLE_CHECKING
   run_init_checks();
@@ -1223,116 +1219,22 @@ may_be_valid (chez_ptr x)
   return false;
 }
 
-static void **lisp_stack = NULL;
-static ptrdiff_t lisp_stack_capacity = 0;
-ptrdiff_t lisp_stack_size = 0;
-
-#define LISP_STACK_FRAME_HEADER_WORDS 1
-#define DEBUG_MAX_FRAME_SIZE 100
-#define DEBUG_MAX_STACK_SIZE 5000
-
-static void
-lisp_frame_record_init (void)
-{
-}
-
-static void
-ensure_lisp_stack_capacity (ptrdiff_t n)
-{
-  ptrdiff_t cap_needed = lisp_stack_size + n;
-  if (lisp_stack_capacity < cap_needed)
-    {
-      ptrdiff_t new_cap = lisp_stack_capacity;
-      while (new_cap < cap_needed)
-        if (new_cap == 0)
-          new_cap = 256;
-        else
-          new_cap *= 2;
-      printf ("expanding to %ld\n", new_cap);
-      lisp_stack = reallocarray (lisp_stack, new_cap, sizeof (*lisp_stack));
-      eassert (lisp_stack);
-      lisp_stack_capacity = new_cap;
-    }
-}
-
-static void print_stack_entry (void *data, Lisp_Object *ptr)
-{
-  eassert ((uintptr_t)ptr > 0x7fffffff0000);
-  //printf("  %p\n", ptr);
-}
-
-void
-enter_lisp_frame (struct func_frame_info *fi, void *base)
-{
-  ensure_lisp_stack_capacity (lisp_stack_size + 3);
-  lisp_stack[lisp_stack_size++] = base;
-  lisp_stack[lisp_stack_size++] = fi;
-  lisp_stack[lisp_stack_size++] = (void *) 0;  // number of arrays
-}
-
-void
-record_lisp_locals (struct func_frame_info *fi,
-                    void *base,
-                    size_t num_params,
-                    size_t num_locals,
-                    ...)
-{
-  ptrdiff_t *offsets = malloc((num_params + num_locals) *
-                              sizeof (ptrdiff_t));
-
-  va_list ap;
-  va_start (ap, num_locals);
-  for (size_t i = 0; i < num_params + num_locals; i++)
-    {
-      Lisp_Object *ptr = va_arg (ap, Lisp_Object *);
-      offsets[i] = (char *) ptr - (char *) base;
-    }
-  va_end (ap);
-  fi->num_params = num_params;
-  fi->params = offsets;
-  fi->num_locals = num_locals;
-  fi->locals = offsets + num_params;
-}
-
-void
-push_lisp_local_array(bool already_initialized,
-                      Lisp_Object *ptr, ptrdiff_t n)
-{
-  eassert (n >= 0);
-  if (n == 0) return;
-  ensure_lisp_stack_capacity (lisp_stack_size + 2);
-  eassert (lisp_stack_size >= 1);
-  intptr_t num_arrays = (intptr_t) lisp_stack[--lisp_stack_size];
-  lisp_stack[lisp_stack_size++] = ptr;
-  lisp_stack[lisp_stack_size++] = (void *) n;
-  lisp_stack[lisp_stack_size++] = (void *) (num_arrays + 1);
-  if (!already_initialized)
-    for (ptrdiff_t i = 0; i < n; i++)
-      ptr[i] = UNCHEZ(chez_false);
-}
+struct Lisp_Frame_Record *lisp_stack_ptr = NULL;
 
 void
 walk_lisp_stack (void (*f)(void *, Lisp_Object *), void *data)
 {
-  ptrdiff_t i = lisp_stack_size;
-  while (i > 0)
+  for (struct Lisp_Frame_Record *fr = lisp_stack_ptr; fr; fr = fr->prev)
     {
-      intptr_t num_arrays = (intptr_t) lisp_stack[--i];
-      for (int j = 0; j < num_arrays; j++)
-        {
-          intptr_t array_size = (intptr_t) lisp_stack[--i];
-          Lisp_Object *array_ptr = lisp_stack[--i];
-          for (intptr_t k = 0; k < array_size; k++)
-            f (data, array_ptr + k);
-        }
-      struct func_frame_info *fi = lisp_stack[--i];
-      char *base = lisp_stack[--i];
-      for (int j = 0; j < fi->num_params; j++)
-        f (data, (Lisp_Object *) (base + fi->params[j]));
-      for (int j = 0; j < fi->num_locals; j++)
-        f (data, (Lisp_Object *) (base + fi->locals[j]));
+      struct Lisp_Frame_Layout *fl = fr->layout;
+      char *base = (char *) fr;
+      ptrdiff_t *offsets = fl->offsets;
+      for (size_t i = 0, n = fl->num_locals; i < n; i++)
+        f (data, (Lisp_Object *) (base + offsets[i]));
+      for (struct Lisp_Array_Record *ar = fr->arrays; ar; ar = ar->prev)
+        for (size_t i = 0, n = ar->size; i < n; i++)
+          f (data, &ar->data[i]);
     }
-  eassert (i == 0);
 }
 
 #ifdef ENABLE_CHECKING

@@ -432,7 +432,7 @@ static bool overlay_arrow_seen;
 
 /* Vector containing glyphs for an ellipsis `...'.  */
 
-static Lisp_Object default_invis_vector[3];
+static Lisp_Object default_invis_vector[3]; // TODO
 
 /* This is the window where the echo area message was displayed.  It
    is always a mini-buffer window, but it may not be the same window
@@ -517,11 +517,11 @@ static Lisp_Object Vmessages_buffer_name = NIL_INIT;
 /* Current, index 0, and last displayed echo area message.  Either
    buffers from echo_buffers, or nil to indicate no message.  */
 
-Lisp_Object echo_area_buffer[2] = { NIL_INIT, NIL_INIT };
+Lisp_Object echo_area_buffer[2] = { NIL_INIT, NIL_INIT }; // TODO
 
 /* The buffers referenced from echo_area_buffer.  */
 
-static Lisp_Object echo_buffer[2] = { NIL_INIT, NIL_INIT };
+static Lisp_Object echo_buffer[2] = { NIL_INIT, NIL_INIT }; // TODO
 
 /* A vector saved used in with_area_buffer to reduce consing.  */
 
@@ -2645,8 +2645,7 @@ safe__call (bool inhibit_quit, ptrdiff_t nargs, Lisp_Object func, va_list ap)
     {
       ptrdiff_t i;
       ptrdiff_t count = SPECPDL_INDEX ();
-      Lisp_Object *args;
-      USE_SAFE_ALLOCA;
+      LISP_DYNAMIC_ARRAY (args);
       SAFE_ALLOCA_LISP (args, nargs);
 
       args[0] = func;
@@ -3569,6 +3568,7 @@ static void
 compute_stop_pos (struct it *it)
 {
   ENTER_LISP_FRAME ((), object, limit, position, new_value);
+  LISP_LOCAL_ARRAY (values_here, LAST_PROP_IDX);
   register INTERVAL iv, next_iv;
   ptrdiff_t charpos, bytepos;
 
@@ -3614,7 +3614,6 @@ compute_stop_pos (struct it *it)
   iv = validate_interval_range (object, &position, &position, false);
   if (iv)
     {
-      Lisp_Object values_here[LAST_PROP_IDX];
       struct props *p;
 
       /* Get properties here.  */
@@ -10334,9 +10333,9 @@ void
 vadd_to_log (char const *format, va_list ap)
 {
   ENTER_LISP_FRAME ((), msg);
+  LISP_LOCAL_ARRAY (args, 10);
   ptrdiff_t form_nargs = format_nargs (format);
   ptrdiff_t nargs = 1 + form_nargs;
-  Lisp_Object args[10];
   eassert (nargs <= ARRAYELTS (args));
   AUTO_STRING (args0, format);
   args[0] = args0;

@@ -849,7 +849,7 @@ font_expand_wildcards (Lisp_Object *field, int n)
 {
   ENTER_LISP_FRAME_T (int, (), val, name);
   /* Copy of FIELD.  */
-  Lisp_Object tmp[XLFD_LAST_INDEX];
+  LISP_LOCAL_ARRAY (tmp, XLFD_LAST_INDEX);
   /* Array of information about where this element can go.  Nth
      element is for Nth element of FIELD. */
   struct {
@@ -1051,6 +1051,7 @@ int
 font_parse_xlfd (char *name, ptrdiff_t len, Lisp_Object font)
 {
   ENTER_LISP_FRAME_T (int, (font), val);
+  LISP_LOCAL_ARRAY (prop, XLFD_LAST_INDEX);
   int i, j, n;
   char *f[XLFD_LAST_INDEX + 1];
   char *p;
@@ -1149,7 +1150,6 @@ font_parse_xlfd (char *name, ptrdiff_t len, Lisp_Object font)
   else
     {
       bool wild_card_found = 0;
-      Lisp_Object prop[XLFD_LAST_INDEX];
 
       if (FONT_ENTITY_P (font))
 	EXIT_LISP_FRAME (-1);
@@ -1635,11 +1635,11 @@ static int
 font_unparse_fcname (Lisp_Object font, int pixel_size, char *name, int nbytes)
 {
   ENTER_LISP_FRAME_T (int, (font), family, foundry, val);
+  LISP_LOCAL_ARRAY (styles, 3);
   int point_size;
   int i;
   char *p;
   char *lim;
-  Lisp_Object styles[3];
   const char *style_names[3] = { "weight", "slant", "width" };
 
   family = AREF (font, FONT_FAMILY_INDEX);
@@ -2224,9 +2224,8 @@ static Lisp_Object
 font_vconcat_entity_vectors (Lisp_Object list)
 {
   ENTER_LISP_FRAME ((list), result);
+  LISP_DYNAMIC_ARRAY (args);
   EMACS_INT nargs = XFASTINT (Flength (list));
-  Lisp_Object *args;
-  USE_SAFE_ALLOCA;
   SAFE_ALLOCA_LISP (args, nargs);
   ptrdiff_t i;
 
@@ -2284,7 +2283,7 @@ font_sort_entities (Lisp_Object list, Lisp_Object prefer,
 {
   ENTER_LISP_FRAME ((list, prefer), best_entity, tail,
                     current_font_driver);
-  Lisp_Object prefer_prop[FONT_SPEC_MAX];
+  LISP_LOCAL_ARRAY (prefer_prop, FONT_SPEC_MAX);
   int len, maxlen, i;
   struct font_sort_data *data;
   unsigned best_score;
@@ -2488,7 +2487,7 @@ font_match_p (Lisp_Object spec, Lisp_Object font)
 {
   ENTER_LISP_FRAME_T (bool, (spec, font), extra, font_extra, key, val,
                       val2);
-  Lisp_Object prop[FONT_SPEC_MAX];
+  LISP_LOCAL_ARRAY (prop, FONT_SPEC_MAX);
   Lisp_Object *props;
   int i;
 
@@ -3229,10 +3228,13 @@ Lisp_Object
 font_find_for_lface (struct frame *f, Lisp_Object *attrs, Lisp_Object spec, int c)
 {
   ENTER_LISP_FRAME ((spec), work, entities, val, face_font, alters);
-  Lisp_Object foundry[3], *family, registry[3], adstyle[3];
+  LISP_DYNAMIC_ARRAY (family);
+  LISP_LOCAL_ARRAY (foundry, 3);
+  LISP_LOCAL_ARRAY (registry, 3);
+  LISP_LOCAL_ARRAY (adstyle, 3);
+  LISP_LOCAL_ARRAY (familybuf, 3);
   int pixel_size;
   int i, j, k, l;
-  USE_SAFE_ALLOCA;
 
   registry[0] = AREF (spec, FONT_REGISTRY_INDEX);
   if (NILP (registry[0]))
@@ -3310,7 +3312,6 @@ font_find_for_lface (struct frame *f, Lisp_Object *attrs, Lisp_Object spec, int 
       val = attrs[LFACE_FAMILY_INDEX];
       val = font_intern_prop (SSDATA (val), SBYTES (val), 1);
     }
-  Lisp_Object familybuf[3];
   if (NILP (val))
     {
       family = familybuf;
@@ -3513,7 +3514,7 @@ Lisp_Object
 font_open_by_spec (struct frame *f, Lisp_Object spec)
 {
   ENTER_LISP_FRAME ((spec));
-  Lisp_Object attrs[LFACE_VECTOR_SIZE];
+  LISP_LOCAL_ARRAY (attrs, LFACE_VECTOR_SIZE);
 
   /* We set up the default font-related attributes of a face to prefer
      a moderate font.  */
@@ -4245,8 +4246,8 @@ are to be displayed on.  If omitted, the selected frame is used.  */)
   (Lisp_Object font, Lisp_Object frame)
 {
   ENTER_LISP_FRAME ((font, frame), val, name, font_dpi);
+  LISP_LOCAL_ARRAY (plist, 10);
   struct frame *f = decode_live_frame (frame);
-  Lisp_Object plist[10];
   int n = 0;
 
   if (STRINGP (font))
@@ -5003,11 +5004,9 @@ the corresponding element is nil.  */)
    Lisp_Object object)
 {
   ENTER_LISP_FRAME ((font_object, from, to, object), vec, elt, g);
+  LISP_DYNAMIC_ARRAY (chars);
   struct font *font = CHECK_FONT_GET_OBJECT (font_object);
   ptrdiff_t i, len;
-  Lisp_Object *chars;
-
-  USE_SAFE_ALLOCA;
 
   if (NILP (object))
     {

@@ -1960,8 +1960,7 @@ sort_vector (Lisp_Object vector, Lisp_Object predicate)
   if (len < 2)
     EXIT_LISP_FRAME_VOID ();
   ptrdiff_t halflen = len >> 1;
-  Lisp_Object *tmp;
-  USE_SAFE_ALLOCA;
+  LISP_DYNAMIC_ARRAY (tmp);
   SAFE_ALLOCA_LISP (tmp, halflen);
   for (ptrdiff_t i = 0; i < halflen; i++)
     tmp[i] = make_number (0);
@@ -2608,14 +2607,13 @@ SEQUENCE may be a list, a vector, a bool-vector, or a string.  */)
   (Lisp_Object function, Lisp_Object sequence, Lisp_Object separator)
 {
   ENTER_LISP_FRAME ((function, sequence, separator), ret);
-  USE_SAFE_ALLOCA;
   EMACS_INT leni = XFASTINT (Flength (sequence));
   if (CHAR_TABLE_P (sequence))
     wrong_type_argument (Qlistp, sequence);
   EMACS_INT args_alloc = 2 * leni - 1;
   if (args_alloc < 0)
     EXIT_LISP_FRAME (empty_unibyte_string);
-  Lisp_Object *args;
+  LISP_DYNAMIC_ARRAY (args);
   SAFE_ALLOCA_LISP (args, args_alloc);
   ptrdiff_t nmapped = mapcar1 (leni, args, function, sequence);
   ptrdiff_t nargs = 2 * nmapped - 1;
@@ -2639,11 +2637,10 @@ SEQUENCE may be a list, a vector, a bool-vector, or a string.  */)
   (Lisp_Object function, Lisp_Object sequence)
 {
   ENTER_LISP_FRAME ((function, sequence), ret);
-  USE_SAFE_ALLOCA;
+  LISP_DYNAMIC_ARRAY (args);
   EMACS_INT leni = XFASTINT (Flength (sequence));
   if (CHAR_TABLE_P (sequence))
     wrong_type_argument (Qlistp, sequence);
-  Lisp_Object *args;
   SAFE_ALLOCA_LISP (args, leni);
   ptrdiff_t nmapped = mapcar1 (leni, args, function, sequence);
   ret = Flist (nmapped, args);
@@ -2676,11 +2673,10 @@ SEQUENCE may be a list, a vector, a bool-vector, or a string. */)
      (Lisp_Object function, Lisp_Object sequence)
 {
   ENTER_LISP_FRAME ((function, sequence), ret);
-  USE_SAFE_ALLOCA;
+  LISP_DYNAMIC_ARRAY (args);
   EMACS_INT leni = XFASTINT (Flength (sequence));
   if (CHAR_TABLE_P (sequence))
     wrong_type_argument (Qlistp, sequence);
-  Lisp_Object *args;
   SAFE_ALLOCA_LISP (args, leni);
   ptrdiff_t nmapped = mapcar1 (leni, args, function, sequence);
   ret = Fnconc (nmapped, args);

@@ -541,11 +541,10 @@ parse_single_submenu (Lisp_Object item_key, Lisp_Object item_name,
 {
   ENTER_LISP_FRAME_T (bool, (item_key, item_name, maps), length,
                       prompt);
+  LISP_DYNAMIC_ARRAY (mapvec);
   EMACS_INT len;
-  Lisp_Object *mapvec;
   ptrdiff_t i;
   bool top_level_items = 0;
-  USE_SAFE_ALLOCA;
 
   length = Flength (maps);
   len = XINT (length);
@@ -989,10 +988,9 @@ Lisp_Object
 find_and_return_menu_selection (struct frame *f, bool keymaps, void *client_data)
 {
   ENTER_LISP_FRAME ((), prefix, entry);
+  LISP_DYNAMIC_ARRAY (subprefix_stack);
   int i;
-  Lisp_Object *subprefix_stack;
   int submenu_depth = 0;
-  USE_SAFE_ALLOCA;
 
   prefix = entry = Qnil;
   i = 0;
@@ -1365,10 +1363,9 @@ no quit occurs and `x-popup-menu' returns nil.  */)
     {
       /* We were given a list of keymaps.  */
       EMACS_INT nmaps = XFASTINT (Flength (menu));
-      Lisp_Object *maps;
       ptrdiff_t i;
-      USE_SAFE_ALLOCA;
 
+      LISP_DYNAMIC_ARRAY (maps);
       SAFE_ALLOCA_LISP (maps, nmaps);
       title = Qnil;
 

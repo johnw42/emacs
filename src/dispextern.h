@@ -1588,6 +1588,7 @@ struct face
 {
   /* The Lisp face attributes this face realizes.  All attributes
      in this vector are non-nil.  */
+  // TODO
   Lisp_Object lface[LFACE_VECTOR_SIZE];
 
   /* The id of this face.  The id equals the index of this face in the
@@ -2325,7 +2326,7 @@ struct it
      This vector is also used for incomplete multibyte character
      translation (e.g \222\244).  Such a character is at most 4 bytes,
      thus we need at most 16 bytes here.  */
-  Lisp_Object ctl_chars[16];
+  Lisp_Object ctl_chars[16]; // TODO
 
   /* Initial buffer or string position of the iterator, before skipping
      over display properties and invisible text.  */

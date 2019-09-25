@@ -53,7 +53,7 @@ static ptrdiff_t new_backquote_output;
 
 /* Detect most circularities to print finite output.  */
 #define PRINT_CIRCLE 200
-static Lisp_Object being_printed[PRINT_CIRCLE];
+static Lisp_Object being_printed[PRINT_CIRCLE]; // TODO
 
 /* Last char printed to stdout by printchar.  */
 static unsigned int printchar_stdout_last;
@@ -2343,7 +2343,7 @@ init_print_once (void)
 #ifndef NIL_IS_ZERO
   mem_nil (being_printed, sizeof (being_printed));
 #endif
-  
+
   /* The subroutine object for external-debugging-output is kept here
      for the convenience of the debugger.  */
   DEFSYM (Qexternal_debugging_output, "external-debugging-output");

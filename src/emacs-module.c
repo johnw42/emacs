@@ -473,12 +473,13 @@ static emacs_value
 module_funcall (emacs_env *env, emacs_value fun, ptrdiff_t nargs,
 		emacs_value args[])
 {
+  ENTER_LISP_FRAME_T (emacs_value, ());
+  LISP_DYNAMIC_ARRAY (newargs);
+
   MODULE_FUNCTION_BEGIN (module_nil);
 
   /* Make a new Lisp_Object array starting with the function as the
      first arg, because that's what Ffuncall takes.  */
-  Lisp_Object *newargs;
-  USE_SAFE_ALLOCA;
   ptrdiff_t nargs1;
   if (INT_ADD_WRAPV (nargs, 1, &nargs1))
     xsignal0 (Qoverflow_error);
@@ -488,7 +489,7 @@ module_funcall (emacs_env *env, emacs_value fun, ptrdiff_t nargs,
     newargs[1 + i] = value_to_lisp (args[i]);
   emacs_value result = lisp_to_value (env, Ffuncall (nargs1, newargs));
   SAFE_FREE ();
-  return result;
+  EXIT_LISP_FRAME (result);
 }
 
 static emacs_value

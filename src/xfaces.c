@@ -1438,12 +1438,11 @@ the face font sort order.  */)
 {
   ENTER_LISP_FRAME ((family, frame), font_spec, list, vec, result,
                     font, v, spacing);
-  Lisp_Object *drivers;
+  LISP_DYNAMIC_ARRAY (drivers);
 
   struct frame *f = decode_live_frame (frame);
   ptrdiff_t i, nfonts;
   EMACS_INT ndrivers;
-  USE_SAFE_ALLOCA;
 
   font_spec = Ffont_spec (0, NULL);
   if (!NILP (family))
@@ -1670,7 +1669,7 @@ the WIDTH times as wide as FACE on FRAME.  */)
 static void
 check_lface_attrs (Lisp_Object attrs[LFACE_VECTOR_SIZE])
 {
-  ENTER_LISP_FRAME ((attrs));
+  ENTER_LISP_FRAME (());
   eassert (UNSPECIFIEDP (attrs[LFACE_FAMILY_INDEX])
 	   || IGNORE_DEFFACE_P (attrs[LFACE_FAMILY_INDEX])
 	   || STRINGP (attrs[LFACE_FAMILY_INDEX]));
@@ -1924,7 +1923,7 @@ get_lface_attributes_no_remap (struct frame *f, Lisp_Object face_name,
 			       Lisp_Object attrs[LFACE_VECTOR_SIZE],
 			       bool signal_p)
 {
-  ENTER_LISP_FRAME_T (bool, (face_name, attrs), lface);
+  ENTER_LISP_FRAME_T (bool, (face_name), lface);
 
   lface = lface_from_face_name_no_resolve (f, face_name, signal_p);
 
@@ -1946,7 +1945,7 @@ get_lface_attributes (struct frame *f, Lisp_Object face_name,
 		      Lisp_Object attrs[LFACE_VECTOR_SIZE], bool signal_p,
 		      struct named_merge_point *named_merge_points)
 {
-  ENTER_LISP_FRAME_T (bool, (face_name, attrs), face_remapping);
+  ENTER_LISP_FRAME_T (bool, (face_name), face_remapping);
 
   face_name = resolve_face_name (face_name, signal_p);
 
@@ -1982,7 +1981,7 @@ get_lface_attributes (struct frame *f, Lisp_Object face_name,
 static bool
 lface_fully_specified_p (Lisp_Object attrs[LFACE_VECTOR_SIZE])
 {
-  ENTER_LISP_FRAME_T (bool, (attrs));
+  ENTER_LISP_FRAME_T (bool, ());
   int i;
 
   for (i = 1; i < LFACE_VECTOR_SIZE; ++i)
@@ -2196,13 +2195,13 @@ merge_named_face (struct frame *f, Lisp_Object face_name, Lisp_Object *to,
 		  struct named_merge_point *named_merge_points)
 {
   ENTER_LISP_FRAME_T (bool, (face_name));
+  LISP_LOCAL_ARRAY (from, LFACE_VECTOR_SIZE);
   struct named_merge_point named_merge_point;
 
   if (push_named_merge_point (&named_merge_point,
 			      face_name, NAMED_MERGE_POINT_NORMAL,
 			      &named_merge_points))
     {
-      Lisp_Object from[LFACE_VECTOR_SIZE];
       bool ok = get_lface_attributes (f, face_name, from, false,
 				      named_merge_points);
 
@@ -3724,6 +3723,7 @@ Default face attributes override any local face attributes.  */)
   (Lisp_Object face, Lisp_Object frame)
 {
   ENTER_LISP_FRAME ((face, frame), global_lface, local_lface, name);
+  LISP_LOCAL_ARRAY (attrs, LFACE_VECTOR_SIZE);
   int i;
   Lisp_Object *gvec, *lvec;
   struct frame *f = XFRAME (frame);
@@ -3753,7 +3753,6 @@ Default face attributes override any local face attributes.  */)
     {
       struct face_cache *c = FRAME_FACE_CACHE (f);
       struct face *newface, *oldface = FACE_FROM_ID_OR_NULL (f, DEFAULT_FACE_ID);
-      Lisp_Object attrs[LFACE_VECTOR_SIZE];
 
       /* This can be NULL (e.g., in batch mode).  */
       if (oldface)
@@ -4510,8 +4509,8 @@ int
 lookup_named_face (struct frame *f, Lisp_Object symbol, bool signal_p)
 {
   ENTER_LISP_FRAME_T (int, (symbol));
-  Lisp_Object attrs[LFACE_VECTOR_SIZE];
-  Lisp_Object symbol_attrs[LFACE_VECTOR_SIZE];
+  LISP_LOCAL_ARRAY (attrs, LFACE_VECTOR_SIZE);
+  LISP_LOCAL_ARRAY (symbol_attrs, LFACE_VECTOR_SIZE);
   struct face *default_face = FACE_FROM_ID_OR_NULL (f, DEFAULT_FACE_ID);
 
   if (default_face == NULL)
@@ -4593,8 +4592,9 @@ int
 smaller_face (struct frame *f, int face_id, int steps)
 {
 #ifdef HAVE_WINDOW_SYSTEM
+  ENTER_LISP_FRAME_T (int, ());
+  LISP_LOCAL_ARRAY (attrs, LFACE_VECTOR_SIZE);
   struct face *face;
-  Lisp_Object attrs[LFACE_VECTOR_SIZE];
   int pt, last_pt, last_height;
   int delta;
   int new_face_id;
@@ -4602,7 +4602,7 @@ smaller_face (struct frame *f, int face_id, int steps)
 
   /* If not called for an X frame, just return the original face.  */
   if (FRAME_TERMCAP_P (f))
-    return face_id;
+    EXIT_LISP_FRAME (face_id);
 
   /* Try in increments of 1/2 pt.  */
   delta = steps < 0 ? 5 : -5;
@@ -4635,7 +4635,7 @@ smaller_face (struct frame *f, int face_id, int steps)
 	}
     }
 
-  return new_face_id;
+  EXIT_LISP_FRAME (new_face_id);
 
 #else /* not HAVE_WINDOW_SYSTEM */
 
@@ -4652,21 +4652,23 @@ int
 face_with_height (struct frame *f, int face_id, int height)
 {
 #ifdef HAVE_WINDOW_SYSTEM
+  ENTER_LISP_FRAME_T (int, ());
+  LISP_LOCAL_ARRAY (attrs, LFACE_VECTOR_SIZE);
   struct face *face;
-  Lisp_Object attrs[LFACE_VECTOR_SIZE];
 
   if (FRAME_TERMCAP_P (f)
       || height <= 0)
-    return face_id;
+    EXIT_LISP_FRAME (face_id);
 
   face = FACE_FROM_ID (f, face_id);
   lface_copy (attrs, face->lface);
   attrs[LFACE_HEIGHT_INDEX] = make_number (height);
   font_clear_prop (attrs, FONT_SIZE_INDEX);
   face_id = lookup_face (f, attrs);
-#endif /* HAVE_WINDOW_SYSTEM */
-
+  EXIT_LISP_FRAME (face_id);
+#else
   return face_id;
+#endif /* HAVE_WINDOW_SYSTEM */
 }
 
 
@@ -4682,8 +4684,8 @@ lookup_derived_face (struct frame *f, Lisp_Object symbol, int face_id,
 		     bool signal_p)
 {
   ENTER_LISP_FRAME_T (int, (symbol));
-  Lisp_Object attrs[LFACE_VECTOR_SIZE];
-  Lisp_Object symbol_attrs[LFACE_VECTOR_SIZE];
+  LISP_LOCAL_ARRAY (attrs, LFACE_VECTOR_SIZE);
+  LISP_LOCAL_ARRAY (symbol_attrs, LFACE_VECTOR_SIZE);
   struct face *default_face;
 
   if (!get_lface_attributes (f, symbol, symbol_attrs, signal_p, 0))
@@ -4738,7 +4740,8 @@ x_supports_face_attributes_p (struct frame *f,
 			      Lisp_Object attrs[LFACE_VECTOR_SIZE],
 			      struct face *def_face)
 {
-  ENTER_LISP_FRAME_T (bool, (attrs), s1, s2);
+  ENTER_LISP_FRAME_T (bool, (), s1, s2);
+  LISP_LOCAL_ARRAY (merged_attrs, LFACE_VECTOR_SIZE);
   Lisp_Object *def_attrs = def_face->lface;
 
   /* Check that other specified attributes are different that the default
@@ -4783,7 +4786,6 @@ x_supports_face_attributes_p (struct frame *f,
     {
       int face_id;
       struct face *face;
-      Lisp_Object merged_attrs[LFACE_VECTOR_SIZE];
       int i;
 
       lface_copy (merged_attrs, def_attrs);
@@ -4844,7 +4846,7 @@ tty_supports_face_attributes_p (struct frame *f,
 				Lisp_Object attrs[LFACE_VECTOR_SIZE],
 				struct face *def_face)
 {
-  ENTER_LISP_FRAME_T (bool, (attrs), val, fg, bg, def_fg, def_bg);
+  ENTER_LISP_FRAME_T (bool, (), val, fg, bg, def_fg, def_bg);
   int weight, slant;
   XColor fg_tty_color, fg_std_color;
   XColor bg_tty_color, bg_std_color;
@@ -5026,11 +5028,11 @@ face for italic.  */)
   (Lisp_Object attributes, Lisp_Object display)
 {
   ENTER_LISP_FRAME ((attributes, display), frame, tail);
+  LISP_LOCAL_ARRAY (attrs, LFACE_VECTOR_SIZE);
   bool supports = false;
   int i;
   struct frame *f;
   struct face *def_face;
-  Lisp_Object attrs[LFACE_VECTOR_SIZE];
 
   if (noninteractive || !initialized)
     /* We may not be able to access low-level face information in batch
@@ -5213,7 +5215,7 @@ be found.  Value is ALIST.  */)
 static int
 face_fontset (Lisp_Object attrs[LFACE_VECTOR_SIZE])
 {
-  ENTER_LISP_FRAME_T (int, (attrs), name);
+  ENTER_LISP_FRAME_T (int, (), name);
 
   name = attrs[LFACE_FONTSET_INDEX];
   if (!STRINGP (name))
@@ -5288,8 +5290,8 @@ static bool
 realize_default_face (struct frame *f)
 {
   ENTER_LISP_FRAME_T (bool, (), lface, frame, font_object, color);
+  LISP_LOCAL_ARRAY (attrs, LFACE_VECTOR_SIZE);
   struct face_cache *c = FRAME_FACE_CACHE (f);
-  Lisp_Object attrs[LFACE_VECTOR_SIZE];
 
   /* If the `default' face is not yet known, create it.  */
   lface = lface_from_face_name (f, Qdefault, false);
@@ -5410,11 +5412,11 @@ static void
 realize_named_face (struct frame *f, Lisp_Object symbol, int id)
 {
   ENTER_LISP_FRAME ((symbol), lface, frame);
+  LISP_LOCAL_ARRAY (attrs, LFACE_VECTOR_SIZE);
+  LISP_LOCAL_ARRAY (symbol_attrs, LFACE_VECTOR_SIZE);
+
   struct face_cache *c = FRAME_FACE_CACHE (f);
   lface = lface_from_face_name (f, symbol, false);
-
-  Lisp_Object attrs[LFACE_VECTOR_SIZE];
-  Lisp_Object symbol_attrs[LFACE_VECTOR_SIZE];
 
   /* The default face must exist and be fully specified.  */
   get_lface_attributes_no_remap (f, Qdefault, attrs, true);
@@ -5447,7 +5449,7 @@ static struct face *
 realize_face (struct face_cache *cache, Lisp_Object attrs[LFACE_VECTOR_SIZE],
 	      int former_face_id)
 {
-  ENTER_LISP_FRAME_T (struct face *, (attrs));
+  ENTER_LISP_FRAME_T (struct face *, ());
   struct face *face;
 
   /* LFACE must be fully specified.  */
@@ -5525,7 +5527,7 @@ realize_non_ascii_face (struct frame *f, Lisp_Object font_object,
 static struct face *
 realize_x_face (struct face_cache *cache, Lisp_Object attrs[LFACE_VECTOR_SIZE])
 {
-  ENTER_LISP_FRAME_T (struct face *, (attrs), stipple, underline,
+  ENTER_LISP_FRAME_T (struct face *, (), stipple, underline,
                       overline, strike_through, box, keyword, value);
   struct face *face = NULL;
 #ifdef HAVE_WINDOW_SYSTEM
@@ -5855,7 +5857,7 @@ static struct face *
 realize_tty_face (struct face_cache *cache,
 		  Lisp_Object attrs[LFACE_VECTOR_SIZE])
 {
-  ENTER_LISP_FRAME_T (struct face *, (attrs));
+  ENTER_LISP_FRAME_T (struct face *, ());
   struct face *face;
   int weight, slant;
   bool face_colors_defaulted = false;
@@ -5936,6 +5938,7 @@ int
 compute_char_face (struct frame *f, int ch, Lisp_Object prop)
 {
   ENTER_LISP_FRAME_T (int, (prop));
+  LISP_LOCAL_ARRAY (attrs, LFACE_VECTOR_SIZE);
   int face_id;
 
   if (NILP (BVAR (current_buffer, enable_multibyte_characters)))
@@ -5948,7 +5951,6 @@ compute_char_face (struct frame *f, int ch, Lisp_Object prop)
     }
   else
     {
-      Lisp_Object attrs[LFACE_VECTOR_SIZE];
       struct face *default_face = FACE_FROM_ID (f, DEFAULT_FACE_ID);
       lface_copy (attrs, default_face->lface);
       merge_face_ref (f, prop, attrs, true, 0);
@@ -5986,8 +5988,8 @@ face_at_buffer_position (struct window *w, ptrdiff_t pos,
 {
   ENTER_LISP_FRAME_T (int, (), prop, position, propname, limit1, end,
                       oend);
+  LISP_LOCAL_ARRAY (attrs, LFACE_VECTOR_SIZE);
   struct frame *f = XFRAME (w->frame);
-  Lisp_Object attrs[LFACE_VECTOR_SIZE];
   ptrdiff_t i, noverlays;
   Lisp_Object *overlay_vec;
   ptrdiff_t endpos;
@@ -6123,8 +6125,8 @@ face_for_overlay_string (struct window *w, ptrdiff_t pos,
 {
   ENTER_LISP_FRAME_T (int, (overlay), prop, position, propname,
                       limit1, end);
+  LISP_LOCAL_ARRAY (attrs, LFACE_VECTOR_SIZE);
   struct frame *f = XFRAME (w->frame);
-  Lisp_Object attrs[LFACE_VECTOR_SIZE];
   ptrdiff_t endpos;
   propname = mouse ? Qmouse_face : Qface;
 
@@ -6198,8 +6200,8 @@ face_at_string_position (struct window *w, Lisp_Object string,
 {
   ENTER_LISP_FRAME_T (int, (string), prop, position, end, limit,
                       prop_name);
+  LISP_LOCAL_ARRAY (attrs, LFACE_VECTOR_SIZE);
   struct frame *f = XFRAME (WINDOW_FRAME (w));
-  Lisp_Object attrs[LFACE_VECTOR_SIZE];
   struct face *base_face;
   bool multibyte_p = STRING_MULTIBYTE (string);
   prop_name = mouse_p ? Qmouse_face : Qface;
@@ -6268,7 +6270,7 @@ merge_faces (struct frame *f, Lisp_Object face_name, int face_id,
 	     int base_face_id)
 {
   ENTER_LISP_FRAME_T (int, (face_name));
-  Lisp_Object attrs[LFACE_VECTOR_SIZE];
+  LISP_LOCAL_ARRAY (attrs, LFACE_VECTOR_SIZE);
   struct face *base_face;
 
   base_face = FACE_FROM_ID_OR_NULL (f, base_face_id);

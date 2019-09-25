@@ -3242,11 +3242,9 @@ list, but are otherwise ignored.  */)
     {
       EMACS_INT length = XFASTINT (Flength (alist));
       ptrdiff_t i;
-      Lisp_Object *parms;
-      Lisp_Object *values;
-      USE_SAFE_ALLOCA;
+      LISP_DYNAMIC_ARRAY (parms);
       SAFE_ALLOCA_LISP (parms, 2 * length);
-      values = parms + length;
+      Lisp_Object *values = parms + length;
 
       /* Extract parm names and values into those vectors.  */
 
@@ -3873,9 +3871,6 @@ x_set_frame_parameters (struct frame *f, Lisp_Object alist)
   /* And with this.  */
   bool fullscreen_change = false;
 
-  /* Record in these vectors all the parms specified.  */
-  Lisp_Object *parms;
-  Lisp_Object *values;
   ptrdiff_t i, j, size;
   bool left_no_change = 0, top_no_change = 0;
 #ifdef HAVE_X_WINDOWS
@@ -3888,9 +3883,10 @@ x_set_frame_parameters (struct frame *f, Lisp_Object alist)
     size++;
   CHECK_LIST_END (tail, alist);
 
-  USE_SAFE_ALLOCA;
+  /* Record in these vectors all the parms specified.  */
+  LISP_DYNAMIC_ARRAY (parms);
   SAFE_ALLOCA_LISP (parms, 2 * size);
-  values = parms + size;
+  Lisp_Object *values = parms + size;
 
   /* Extract parm names and values into those vectors.  */
 

@@ -520,6 +520,8 @@ at POSITION.  */)
   (Lisp_Object position, Lisp_Object prop, Lisp_Object object)
 {
   ENTER_LISP_FRAME ((position, prop, object), tem, ol, start, finish);
+  LISP_LOCAL_ARRAY (overlay_vecbuf, 40);
+  LISP_DYNAMIC_ARRAY (overlay_vec);
   CHECK_NUMBER_COERCE_MARKER (position);
 
   if (NILP (object))
@@ -536,15 +538,12 @@ at POSITION.  */)
     {
       EMACS_INT posn = XINT (position);
       ptrdiff_t noverlays;
-      Lisp_Object *overlay_vec;
 
       struct buffer *obuf = current_buffer;
-      USE_SAFE_ALLOCA;
 
       set_buffer_temp (XBUFFER (object));
 
       /* First try with room for 40 overlays.  */
-      Lisp_Object overlay_vecbuf[40];
       noverlays = ARRAYELTS (overlay_vecbuf);
       overlay_vec = overlay_vecbuf;
       noverlays = overlays_around (posn, overlay_vec, noverlays);

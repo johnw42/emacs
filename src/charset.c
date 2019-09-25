@@ -1254,8 +1254,8 @@ define_charset_internal (Lisp_Object name,
 			 int code_offset)
 {
   ENTER_LISP_FRAME_T (int, (name), val);
+  LISP_LOCAL_ARRAY (args, charset_arg_max);
   const unsigned char *code_space = (const unsigned char *) code_space_chars;
-  Lisp_Object args[charset_arg_max];
   int i;
 
   args[charset_arg_name] = name;

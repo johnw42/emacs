@@ -354,7 +354,7 @@ static void
 fontset_add (Lisp_Object fontset, Lisp_Object range, Lisp_Object elt, Lisp_Object add)
 {
   ENTER_LISP_FRAME ((fontset, range, elt, add));
-  Lisp_Object args[2];
+  LISP_LOCAL_ARRAY (args, 2);
   int idx = (EQ (add, Qappend) ? 0 : 1);
 
   args[1 - idx] = Fmake_vector (make_number (1), elt);
@@ -1871,7 +1871,10 @@ format is the same as above.  */)
 {
   ENTER_LISP_FRAME ((fontset, frame), val, elt, alist, font_object,
                     slot, name);
-  Lisp_Object *realized[2], fontsets[2], tables[2];
+  LISP_LOCAL_ARRAY (fontsets, 2);
+  LISP_LOCAL_ARRAY (tables, 2);
+  LISP_DYNAMIC_ARRAY (realized0);
+  Lisp_Object *realized[2];
   int c, i, j, k;
 
   check_window_system (NULL);
@@ -1879,8 +1882,8 @@ format is the same as above.  */)
 
   /* Recode fontsets realized on FRAME from the base fontset FONTSET
      in the table `realized'.  */
-  USE_SAFE_ALLOCA;
-  SAFE_ALLOCA_LISP (realized[0], 2 * ASIZE (Vfontset_table));
+  SAFE_ALLOCA_LISP (realized0, 2 * ASIZE (Vfontset_table));
+  realized[0] = realized0;
   realized[1] = realized[0] + ASIZE (Vfontset_table);
   for (i = j = 0; i < ASIZE (Vfontset_table); i++)
     {

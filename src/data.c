@@ -1104,15 +1104,14 @@ void
 wrong_choice (Lisp_Object choice, Lisp_Object wrong)
 {
   ENTER_LISP_FRAME ((choice, wrong), obj);
+  LISP_DYNAMIC_ARRAY (args);
   ptrdiff_t i = 0, len = XINT (Flength (choice));
-  Lisp_Object *args;
 
   AUTO_STRING (one_of, "One of ");
   AUTO_STRING (comma, ", ");
   AUTO_STRING (or, " or ");
   AUTO_STRING (should_be_specified, " should be specified");
 
-  USE_SAFE_ALLOCA;
   SAFE_ALLOCA_LISP (args, len * 2 + 1);
 
   args[i++] = one_of;
@@ -1630,6 +1629,7 @@ notify_variable_watchers (Lisp_Object symbol,
 {
   ENTER_LISP_FRAME ((symbol, newval, operation, where), watchers,
                     watcher);
+  LISP_LOCAL_ARRAY (args, 4);
   symbol = Findirect_variable (symbol);
 
   ptrdiff_t count = SPECPDL_INDEX ();
@@ -1648,7 +1648,6 @@ notify_variable_watchers (Lisp_Object symbol,
     operation = Qset;
 
   for (watchers = Fget (symbol, Qwatchers);
-
        CONSP (watchers);
        watchers = XCDR (watchers))
     {
@@ -1657,7 +1656,10 @@ notify_variable_watchers (Lisp_Object symbol,
       /* Call subr directly to avoid gc.  */
       if (SUBRP (watcher))
         {
-          Lisp_Object args[] = { symbol, newval, operation, where };
+          args[0] = symbol;
+          args[1] = newval;
+          args[2] = operation;
+          args[4] = where;
           funcall_subr (XSUBR (watcher), ARRAYELTS (args), args);
         }
       else

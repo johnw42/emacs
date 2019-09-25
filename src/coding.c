@@ -7225,7 +7225,7 @@ produce_composition (struct coding_system *coding, int *charbuf, ptrdiff_t pos)
     components = Qnil;
   else
     {
-      Lisp_Object args[MAX_COMPOSITION_COMPONENTS * 2 - 1];
+      LISP_LOCAL_ARRAY (args, MAX_COMPOSITION_COMPONENTS * 2 - 1);
       int i, j;
 
       if (method == COMPOSITION_WITH_RULE)
@@ -11314,31 +11314,29 @@ internal character representation.  */);
   Vtranslation_table_for_input = Qnil;
 
   Lisp_Object args[coding_arg_undecided_max];
-  mem_nil (args, sizeof args);
-
   Lisp_Object plist[] =
     {
-      QCname,
-      args[coding_arg_name] = Qno_conversion,
-      QCmnemonic,
-      args[coding_arg_mnemonic] = make_number ('='),
-      intern_c_string (":coding-type"),
-      args[coding_arg_coding_type] = Qraw_text,
-      QCascii_compatible_p,
-      args[coding_arg_ascii_compatible_p] = Qt,
-      QCdefault_char,
-      args[coding_arg_default_char] = make_number (0),
-      intern_c_string (":for-unibyte"),
-      args[coding_arg_for_unibyte] = Qt,
-      intern_c_string (":docstring"),
-      (build_pure_c_string
-       ("Do no conversion.\n"
-	"\n"
-	"When you visit a file with this coding, the file is read into a\n"
-	"unibyte buffer as is, thus each byte of a file is treated as a\n"
-	"character.")),
-      intern_c_string (":eol-type"),
-      args[coding_arg_eol_type] = Qunix,
+     QCname,
+     args[coding_arg_name] = Qno_conversion,
+     QCmnemonic,
+     args[coding_arg_mnemonic] = make_number ('='),
+     intern_c_string (":coding-type"),
+     args[coding_arg_coding_type] = Qraw_text,
+     QCascii_compatible_p,
+     args[coding_arg_ascii_compatible_p] = Qt,
+     QCdefault_char,
+     args[coding_arg_default_char] = make_number (0),
+     intern_c_string (":for-unibyte"),
+     args[coding_arg_for_unibyte] = Qt,
+     intern_c_string (":docstring"),
+     (build_pure_c_string
+      ("Do no conversion.\n"
+       "\n"
+       "When you visit a file with this coding, the file is read into a\n"
+       "unibyte buffer as is, thus each byte of a file is treated as a\n"
+       "character.")),
+     intern_c_string (":eol-type"),
+     args[coding_arg_eol_type] = Qunix,
     };
   args[coding_arg_plist] = CALLMANY (Flist, plist);
   Fdefine_coding_system_internal (coding_arg_max, args);

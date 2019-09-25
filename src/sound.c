@@ -1352,7 +1352,7 @@ Internal use only, use `play-sound' instead.  */)
   (Lisp_Object sound)
 {
   ENTER_LISP_FRAME ((sound), file);
-  Lisp_Object attrs[SOUND_ATTR_SENTINEL];
+  LISP_LOCAL_ARRAY (attrs, SOUND_ATTR_SENTINEL);
   ptrdiff_t count = SPECPDL_INDEX ();
 
 #ifdef WINDOWSNT

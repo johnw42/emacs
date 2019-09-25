@@ -37,10 +37,12 @@ struct casing_context
 {
   /* A char-table with title-case character mappings or nil.  Non-nil implies
      flag is CASE_CAPITALIZE or CASE_CAPITALIZE_UP.  */
+  // TODO
   Lisp_Object titlecase_char_table;
 
   /* The unconditional special-casing Unicode property char tables for upper
      casing, lower casing and title casing respectively.  */
+  // TODO
   Lisp_Object specialcase_char_tables[3];
 
   /* User-requested action.  */
