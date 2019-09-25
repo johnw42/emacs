@@ -1670,6 +1670,7 @@ static void
 check_lface_attrs (Lisp_Object attrs[LFACE_VECTOR_SIZE])
 {
   ENTER_LISP_FRAME (());
+  LISP_ARRAY_PARAM (attrs, LFACE_VECTOR_SIZE);
   eassert (UNSPECIFIEDP (attrs[LFACE_FAMILY_INDEX])
 	   || IGNORE_DEFFACE_P (attrs[LFACE_FAMILY_INDEX])
 	   || STRINGP (attrs[LFACE_FAMILY_INDEX]));
@@ -1924,6 +1925,7 @@ get_lface_attributes_no_remap (struct frame *f, Lisp_Object face_name,
 			       bool signal_p)
 {
   ENTER_LISP_FRAME_T (bool, (face_name), lface);
+  LISP_ARRAY_PARAM (attrs, LFACE_VECTOR_SIZE);
 
   lface = lface_from_face_name_no_resolve (f, face_name, signal_p);
 
@@ -1946,6 +1948,7 @@ get_lface_attributes (struct frame *f, Lisp_Object face_name,
 		      struct named_merge_point *named_merge_points)
 {
   ENTER_LISP_FRAME_T (bool, (face_name), face_remapping);
+  LISP_ARRAY_PARAM (attrs, LFACE_VECTOR_SIZE);
 
   face_name = resolve_face_name (face_name, signal_p);
 
@@ -1982,6 +1985,7 @@ static bool
 lface_fully_specified_p (Lisp_Object attrs[LFACE_VECTOR_SIZE])
 {
   ENTER_LISP_FRAME_T (bool, ());
+  LISP_ARRAY_PARAM (attrs, LFACE_VECTOR_SIZE);
   int i;
 
   for (i = 1; i < LFACE_VECTOR_SIZE; ++i)
@@ -4741,6 +4745,7 @@ x_supports_face_attributes_p (struct frame *f,
 			      struct face *def_face)
 {
   ENTER_LISP_FRAME_T (bool, (), s1, s2);
+  LISP_ARRAY_PARAM (attrs, LFACE_VECTOR_SIZE);
   LISP_LOCAL_ARRAY (merged_attrs, LFACE_VECTOR_SIZE);
   Lisp_Object *def_attrs = def_face->lface;
 
@@ -4847,6 +4852,7 @@ tty_supports_face_attributes_p (struct frame *f,
 				struct face *def_face)
 {
   ENTER_LISP_FRAME_T (bool, (), val, fg, bg, def_fg, def_bg);
+  LISP_ARRAY_PARAM (attrs, LFACE_VECTOR_SIZE);
   int weight, slant;
   XColor fg_tty_color, fg_std_color;
   XColor bg_tty_color, bg_std_color;
@@ -5216,6 +5222,7 @@ static int
 face_fontset (Lisp_Object attrs[LFACE_VECTOR_SIZE])
 {
   ENTER_LISP_FRAME_T (int, (), name);
+  LISP_ARRAY_PARAM (attrs, LFACE_VECTOR_SIZE);
 
   name = attrs[LFACE_FONTSET_INDEX];
   if (!STRINGP (name))
@@ -5450,6 +5457,7 @@ realize_face (struct face_cache *cache, Lisp_Object attrs[LFACE_VECTOR_SIZE],
 	      int former_face_id)
 {
   ENTER_LISP_FRAME_T (struct face *, ());
+  LISP_ARRAY_PARAM (attrs, LFACE_VECTOR_SIZE);
   struct face *face;
 
   /* LFACE must be fully specified.  */
@@ -5529,6 +5537,7 @@ realize_x_face (struct face_cache *cache, Lisp_Object attrs[LFACE_VECTOR_SIZE])
 {
   ENTER_LISP_FRAME_T (struct face *, (), stipple, underline,
                       overline, strike_through, box, keyword, value);
+  LISP_ARRAY_PARAM (attrs, LFACE_VECTOR_SIZE);
   struct face *face = NULL;
 #ifdef HAVE_WINDOW_SYSTEM
   struct face *default_face;
@@ -5858,6 +5867,7 @@ realize_tty_face (struct face_cache *cache,
 		  Lisp_Object attrs[LFACE_VECTOR_SIZE])
 {
   ENTER_LISP_FRAME_T (struct face *, ());
+  LISP_ARRAY_PARAM (attrs, LFACE_VECTOR_SIZE);
   struct face *face;
   int weight, slant;
   bool face_colors_defaulted = false;

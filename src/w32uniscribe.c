@@ -745,6 +745,7 @@ static bool
 uniscribe_check_features (Lisp_Object features[2], OPENTYPE_TAG *ftags, int n)
 {
   ENTER_LISP_FRAME_T (bool, (), rest, feature);
+  LISP_ARRAY_PARAM (features, 2);
   int j;
 
   for (j = 0; j < 2; j++)
@@ -799,6 +800,7 @@ uniscribe_check_otf_1 (HDC context, Lisp_Object script, Lisp_Object lang,
 		       Lisp_Object features[2], int *retval)
 {
   ENTER_LISP_FRAME_T (int, (script, lang));
+  LISP_ARRAY_PARAM (features, 2);
   SCRIPT_CACHE cache = NULL;
   OPENTYPE_TAG tags[32], script_tag, lang_tag;
   int max_tags = ARRAYELTS (tags);

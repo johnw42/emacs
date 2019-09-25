@@ -1749,11 +1749,13 @@ If nil, also continue lines which are exactly as wide as the window.  */);
 
 /* Garbage collection hook */
 
+#ifdef HAVE_CHEZ_SCHEME
 void
 visit_fringe_lisp_refs (lisp_ref_visitor_fun fun, void *data)
 {
   fun (data, fringe_faces, max_fringe_bitmaps);
 }
+#endif
 
 void
 mark_fringe_data (void)

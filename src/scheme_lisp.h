@@ -209,6 +209,9 @@ struct buffer;
 
 void visit_pseudovector_lisp_refs (struct Lisp_Vector *v, lisp_ref_visitor_fun fun, void *data);
 void visit_buffer_lisp_refs (struct buffer *b, lisp_ref_visitor_fun fun, void *data);
+void visit_fringe_lisp_refs (lisp_ref_visitor_fun fun, void *data);
+void visit_regexp_cache_lisp_refs(lisp_ref_visitor_fun fun, void *data);
+void visit_kboard_lisp_refs (lisp_ref_visitor_fun fun, void *data);
 
 void alloc_preinit (void);
 
@@ -349,13 +352,18 @@ void walk_lisp_stack (void (*f)(void *, Lisp_Object *), void *);
   struct Lisp_Array_Record name##_array_record =                        \
     {.prev = this_lisp_frame_record.arrays,                             \
      .data = name, .size = size_};                                      \
-  this_lisp_frame_record.arrays = &name##_array_record
+  this_lisp_frame_record.arrays = &name##_array_record;
 #define LISP_DYNAMIC_ARRAY(name)                                        \
   Lisp_Object *name = NULL;                                             \
   struct Lisp_Array_Record name##_array_record =                        \
     {.prev = this_lisp_frame_record.arrays, .size = 0};                 \
   this_lisp_frame_record.arrays = &name##_array_record;                 \
   USE_SAFE_ALLOCA
+#define LISP_ARRAY_PARAM(name, size_)                                   \
+  struct Lisp_Array_Record args_array_record =                          \
+    {.prev = this_lisp_frame_record.arrays,                             \
+     .data = name, .size = size_};                                      \
+  this_lisp_frame_record.arrays = &args_array_record
 #define UPDATE_LISP_DYNAMIC_ARRAY(name, size_)                          \
   do                                                                    \
     {                                                                   \
@@ -366,10 +374,7 @@ void walk_lisp_stack (void (*f)(void *, Lisp_Object *), void *);
   while (0)
 #define ENTER_LISP_FRAME_VA_T(type, nargs, args, ...)                   \
   ENTER_LISP_FRAME_T (type __VA_OPT__(, __VA_ARGS__));                  \
-  struct Lisp_Array_Record args_array_record =                          \
-    {.prev = this_lisp_frame_record.arrays,                             \
-     .data = args, .size = nargs};                                      \
-  this_lisp_frame_record.arrays = &args_array_record;
+  LISP_ARRAY_PARAM (args, nargs)
 #define LISP_LOCAL_VAR(name) Lisp_Object name = Qnil;
 #define LISP_LOCAL_ADDR(var)                             \
   this_lisp_offset_array[offset_index++] =               \
@@ -381,7 +386,9 @@ void walk_lisp_stack (void (*f)(void *, Lisp_Object *), void *);
 #define SAVE_LISP_FRAME_PTR() \
   struct Lisp_Frame_Record *saved_lisp_stack_ptr = lisp_stack_ptr
 #define RESTORE_LISP_FRAME_PTR() (lisp_stack_ptr = saved_lisp_stack_ptr)
-#else
+
+#else /* not HAVE_CHEZ_SCHEME */
+
 #define ENTER_LISP_FRAME_T(type, params, ...)       \
   __VA_OPT__(Lisp_Object __VA_ARGS__;)              \
     typedef type this_lisp_frame_type;              \
@@ -391,6 +398,15 @@ void walk_lisp_stack (void (*f)(void *, Lisp_Object *), void *);
 #define EXIT_LISP_FRAME_NO_RETURN() ((void)0)
 #define SAVE_LISP_FRAME_PTR() ((void)0)
 #define RESTORE_LISP_FRAME_PTR() ((void)0)
+#define LISP_LOCAL_ARRAY(name, size_)                                   \
+  Lisp_Object name[size_];                                              \
+  set_nil (name, size_)
+#define LISP_DYNAMIC_ARRAY(name)                                        \
+  Lisp_Object *name = NULL;                                             \
+  USE_SAFE_ALLOCA
+#define LISP_ARRAY_PARAM(name, size_) ((void)0)
+#define UPDATE_LISP_DYNAMIC_ARRAY(name, size_) ((void)0)
+
 #endif
 
 #ifdef HAVE_CHEZ_SCHEME

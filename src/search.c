@@ -56,7 +56,7 @@ static struct regexp_cache searchbufs[REGEXP_CACHE_SIZE];
 /* The head of the linked list; points to the most recently used buffer.  */
 static struct regexp_cache *searchbuf_head;
 
-
+#ifdef HAVE_CHEZ_SCHEME
 void
 visit_regexp_cache_lisp_refs(lisp_ref_visitor_fun fun, void *data)
 {
@@ -67,6 +67,7 @@ visit_regexp_cache_lisp_refs(lisp_ref_visitor_fun fun, void *data)
       fun (data, &cp->syntax_table, 1);
     }
 }
+#endif
 
 
 /* Every call to re_match, etc., must pass &search_regs as the regs

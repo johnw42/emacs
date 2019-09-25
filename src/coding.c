@@ -5902,7 +5902,6 @@ setup_coding_system (Lisp_Object coding_system, struct coding_system *coding)
     }
 
   EXIT_LISP_FRAME_VOID ();
-  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Return a list of charsets supported by CODING.  */
@@ -10832,6 +10831,8 @@ init_coding_once (void)
 void
 syms_of_coding (void)
 {
+  ENTER_LISP_FRAME (());
+
   staticpro (&Vcoding_system_hash_table);
   Vcoding_system_hash_table = CALLN (Fmake_hash_table, QCtest, Qeq);
 
@@ -11313,33 +11314,31 @@ obsolete in Emacs 23.1 and later, since Unicode is now the basis of
 internal character representation.  */);
   Vtranslation_table_for_input = Qnil;
 
-  Lisp_Object args[coding_arg_undecided_max];
-  Lisp_Object plist[] =
-    {
-     QCname,
-     args[coding_arg_name] = Qno_conversion,
-     QCmnemonic,
-     args[coding_arg_mnemonic] = make_number ('='),
-     intern_c_string (":coding-type"),
-     args[coding_arg_coding_type] = Qraw_text,
-     QCascii_compatible_p,
-     args[coding_arg_ascii_compatible_p] = Qt,
-     QCdefault_char,
-     args[coding_arg_default_char] = make_number (0),
-     intern_c_string (":for-unibyte"),
-     args[coding_arg_for_unibyte] = Qt,
-     intern_c_string (":docstring"),
-     (build_pure_c_string
+  LISP_LOCAL_ARRAY (args, coding_arg_undecided_max);
+  LISP_LOCAL_ARRAY (plist, 18);
+  plist[0] = QCname;
+  plist[1] = args[coding_arg_name] = Qno_conversion;
+  plist[2] = QCmnemonic;
+  plist[3] = args[coding_arg_mnemonic] = make_number ('=');
+  plist[4] = intern_c_string (":coding-type");
+  plist[5] = args[coding_arg_coding_type] = Qraw_text;
+  plist[6] = QCascii_compatible_p;
+  plist[7] = args[coding_arg_ascii_compatible_p] = Qt;
+  plist[8] = QCdefault_char;
+  plist[9] = args[coding_arg_default_char] = make_number (0);
+  plist[10] = intern_c_string (":for-unibyte");
+  plist[11] = args[coding_arg_for_unibyte] = Qt;
+  plist[12] = intern_c_string (":docstring");
+  plist[13] = (build_pure_c_string
       ("Do no conversion.\n"
        "\n"
        "When you visit a file with this coding, the file is read into a\n"
        "unibyte buffer as is, thus each byte of a file is treated as a\n"
-       "character.")),
-     intern_c_string (":eol-type"),
-     args[coding_arg_eol_type] = Qunix,
-    };
-  args[coding_arg_plist] = CALLMANY (Flist, plist);
-  Fdefine_coding_system_internal (coding_arg_max, args);
+       "character."));
+  plist[14] = intern_c_string (":eol-type");
+  plist[15] = args[coding_arg_eol_type] = Qunix;
+  plist[16] = args[coding_arg_plist] = CALLMANY (Flist, plist);
+  plist[17] = Fdefine_coding_system_internal (coding_arg_max, args);
 
   plist[1] = args[coding_arg_name] = Qundecided;
   plist[3] = args[coding_arg_mnemonic] = make_number ('-');
@@ -11368,5 +11367,7 @@ internal character representation.  */);
   system_eol_type = Qunix;
 #endif
   staticpro (&system_eol_type);
+
+  EXIT_LISP_FRAME_VOID ();
 }
 #endif /* emacs */

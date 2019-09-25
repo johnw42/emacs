@@ -1232,8 +1232,9 @@ walk_lisp_stack (void (*f)(void *, Lisp_Object *), void *data)
       for (size_t i = 0, n = fl->num_locals; i < n; i++)
         f (data, (Lisp_Object *) (base + offsets[i]));
       for (struct Lisp_Array_Record *ar = fr->arrays; ar; ar = ar->prev)
-        for (size_t i = 0, n = ar->size; i < n; i++)
-          f (data, &ar->data[i]);
+        if (ar->data)
+          for (size_t i = 0, n = ar->size; i < n; i++)
+            f (data, &ar->data[i]);
     }
 }
 

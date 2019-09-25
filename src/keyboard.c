@@ -12110,6 +12110,7 @@ keys_of_keyboard (void)
 			    "handle-move-frame");
 }
 
+#ifdef HAVE_CHEZ_SCHEME
 void
 visit_kboard_lisp_refs (lisp_ref_visitor_fun fun, void *data)
 {
@@ -12160,6 +12161,7 @@ visit_kboard_lisp_refs (lisp_ref_visitor_fun fun, void *data)
       }
   }
 }
+#endif
 
 /* Mark the pointers in the kboard objects.
    Called by Fgarbage_collect.  */

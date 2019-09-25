@@ -4197,11 +4197,6 @@ hash_put (struct Lisp_Hash_Table *h, Lisp_Object key, Lisp_Object value,
 
   eassert ((hash & ~INTMASK) == 0);
 
-  /* if (symbol_is (value, ":cl--generic--under-construction")) */
-  /*   { */
-  /*     gdb_set_flag(1); */
-  /*   } */
-
   /* Increment count after resizing because resizing may fail.  */
   maybe_resize_hash_table (h);
   h->count++;
