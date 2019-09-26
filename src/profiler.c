@@ -624,4 +624,9 @@ to make room for new entries.  */);
   defsubr (&Sprofiler_memory_stop);
   defsubr (&Sprofiler_memory_running_p);
   defsubr (&Sprofiler_memory_log);
+
+  REGISTER_LISP_GLOBALS
+    (hashtest_profiler.name,
+     hashtest_profiler.user_hash_function,
+     hashtest_profiler.user_cmp_function);
 }

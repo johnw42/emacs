@@ -8490,5 +8490,8 @@ returns non-`nil'.  */);
   defsubr (&Sprocess_inherit_coding_system_flag);
   defsubr (&Slist_system_processes);
   defsubr (&Sprocess_attributes);
+
+  REGISTER_LISP_GLOBAL_ARRAY (chan_process);
+
   EXIT_LISP_FRAME_VOID ();
 }

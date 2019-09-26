@@ -1588,7 +1588,7 @@ syms_of_menu (void)
 {
   staticpro (&menu_items);
   menu_items = Qnil;
-  menu_items_inuse = Qnil;
+  REGISTER_LISP_GLOBAL (menu_items_inuse);
 
   defsubr (&Sx_popup_menu);
   defsubr (&Sx_popup_dialog);

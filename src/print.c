@@ -53,7 +53,7 @@ static ptrdiff_t new_backquote_output;
 
 /* Detect most circularities to print finite output.  */
 #define PRINT_CIRCLE 200
-static Lisp_Object being_printed[PRINT_CIRCLE]; // TODO
+static Lisp_Object being_printed[PRINT_CIRCLE];
 
 /* Last char printed to stdout by printchar.  */
 static unsigned int printchar_stdout_last;
@@ -2340,9 +2340,7 @@ print_interval (INTERVAL interval, Lisp_Object printcharfun)
 void
 init_print_once (void)
 {
-#ifndef NIL_IS_ZERO
-  mem_nil (being_printed, sizeof (being_printed));
-#endif
+  REGISTER_LISP_GLOBAL_ARRAY (being_printed);
 
   /* The subroutine object for external-debugging-output is kept here
      for the convenience of the debugger.  */

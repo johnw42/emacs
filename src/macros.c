@@ -344,8 +344,7 @@ each iteration of the macro.  Iteration stops if LOOPFUNC returns nil.  */)
 void
 init_macros (void)
 {
-  Vexecuting_kbd_macro = Qnil;
-  executing_kbd_macro = Qnil;
+  REGISTER_LISP_GLOBALS (Vexecuting_kbd_macro, executing_kbd_macro);
 }
 
 void

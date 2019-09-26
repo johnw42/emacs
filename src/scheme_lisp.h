@@ -387,6 +387,15 @@ void walk_lisp_stack (void (*f)(void *, Lisp_Object *), void *);
   struct Lisp_Frame_Record *saved_lisp_stack_ptr = lisp_stack_ptr
 #define RESTORE_LISP_FRAME_PTR() (lisp_stack_ptr = saved_lisp_stack_ptr)
 
+#define REGISTER_LISP_GLOBALS(...) \
+  do { __VA_OPT__ (PP_MAP (REGISTER_LISP_GLOBAL, __VA_ARGS__)) } while (0)
+
+#define REGISTER_LISP_GLOBAL_ARRAY(name) \
+  scheme_register_globals (name, ARRAYELTS(name))
+
+#define REGISTER_LISP_GLOBAL(name)            \
+  scheme_register_globals (&name, 1);
+
 #else /* not HAVE_CHEZ_SCHEME */
 
 #define ENTER_LISP_FRAME_T(type, params, ...)       \
@@ -406,6 +415,8 @@ void walk_lisp_stack (void (*f)(void *, Lisp_Object *), void *);
   USE_SAFE_ALLOCA
 #define LISP_ARRAY_PARAM(name, size_) ((void)0)
 #define UPDATE_LISP_DYNAMIC_ARRAY(name, size_) ((void)0)
+#define REGISTER_LISP_GLOBALS(...) ((void)0)
+#define REGISTER_LISP_GLOBAL_ARRAY(...) ((void)0)
 
 #endif
 

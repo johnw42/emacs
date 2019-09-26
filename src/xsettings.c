@@ -1031,6 +1031,8 @@ known style.  Otherwise return image.  */)
 void
 syms_of_xsettings (void)
 {
+  REGISTER_LISP_GLOBAL (current_tool_bar_style);
+
   current_mono_font = NULL;
   current_font = NULL;
   first_dpyinfo = NULL;

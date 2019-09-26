@@ -126,3 +126,12 @@ define pl
   p $arg0
   printf "%s\n", gdb_write(gdb_print_lisp, (void *)$arg0)
 end
+
+define pp
+  info symbol $arg0
+end
+
+define mg
+  set $mg_tmp = memgrep1($arg1, $arg0)
+  pp $mg_tmp
+end

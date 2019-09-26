@@ -6528,6 +6528,25 @@ staticpro (Lisp_Object *varaddress)
   staticvec[staticidx++] = varaddress;
 }
 
+struct Scheme_Global {
+  Lisp_Object *addr;
+  size_t count;
+};
+
+#ifdef HAVE_CHEZ_SCHEME
+#define MAX_SCHEME_GLOBALS 1024
+static struct Scheme_Global scheme_globals[MAX_SCHEME_GLOBALS];
+static size_t num_scheme_globals = 0;
+
+void scheme_register_globals (Lisp_Object *addr, size_t n)
+{
+  set_nil (addr, n);
+  scheme_globals[num_scheme_globals].addr = addr;
+  scheme_globals[num_scheme_globals].count = n;
+  num_scheme_globals++;
+}
+#endif
+
 
 /***********************************************************************
 			  Protection from GC
@@ -8679,6 +8698,38 @@ scheme_string_data (chez_ptr str)
 static jmp_buf segv_buf;
 static char * volatile segv_addr;
 static char *memgrep_ignore_min, *memgrep_ignore_max;
+static size_t memgrep_max_hits;
+static void *memgrep_last_found;
+
+static int
+uint64_cmp (const void *p, const void *q)
+{
+  uint64_t a = *(uint64_t *) p, b = *(uint64_t *) q;
+  if (a > b) return 1;
+  if (a < b) return -1;
+  return 0;
+}
+
+static bool
+uint64_member(const uint64_t *words, size_t num_words, uint64_t to_find)
+{
+  if (to_find < words[0] || to_find > words[num_words - 1])
+    return false;
+
+  size_t lower = 0, upper = num_words;
+  while (lower < upper)
+    {
+      size_t i = (lower + upper) / 2;
+      if (words[i] < to_find) {
+        upper = i;
+      } else if (words[i] > to_find) {
+        lower = i + 1;
+      } else {
+        return true;
+      }
+    }
+  return false;
+}
 
 #include <ucontext.h>
 
@@ -8696,13 +8747,14 @@ memgrep_sigaction (int sig, siginfo_t *info, void *ucontext)
 }
 
 static void
-try_memgrep1 (size_t start, uint64_t word, uint64_t mask, size_t size, int step)
+try_memgrep1 (size_t start, uint64_t *words, size_t num_words, uint64_t mask, int step)
 {
   // Find the top of the stack.
   asm ("movq %%rsp, %0" : "=m" (memgrep_ignore_min));
   //memgrep_ignore_min = alloca(1);
   eassert (memgrep_ignore_min < memgrep_ignore_max);
 
+  int size = step > 0 ? step : -step;
   start -= start % size;
 
   struct sigaction act, old_act;
@@ -8710,7 +8762,7 @@ try_memgrep1 (size_t start, uint64_t word, uint64_t mask, size_t size, int step)
   act.sa_flags = SA_SIGINFO | SA_RESETHAND | SA_NODEFER;
   sigemptyset(&act.sa_mask);
   sigaction(SIGSEGV, &act, &old_act);
-  for (char *p = (char *)start;; p += step)
+  for (char *p = (char *)start; memgrep_max_hits; p += step)
     {
       uint64_t segv_flag, data;
       asm ("movq %[zero], %%rax\n"
@@ -8727,9 +8779,12 @@ try_memgrep1 (size_t start, uint64_t word, uint64_t mask, size_t size, int step)
           //printf ("caught segv at %p with step %d\n", segv_addr, step);
           break;
         }
-      if ((data & mask) == word &&
-          (p < memgrep_ignore_min || p > memgrep_ignore_max))
+      if (uint64_member(words, num_words, data & mask) &&
+          (p < memgrep_ignore_min || p > memgrep_ignore_max) &&
+          (p < (char *) words || p > (char *) (words + num_words)))
         {
+          --memgrep_max_hits;
+          memgrep_last_found = p;
           printf ("found 0x%lx at %p\n", (unsigned long) data, p);
         }
     }
@@ -8737,38 +8792,54 @@ try_memgrep1 (size_t start, uint64_t word, uint64_t mask, size_t size, int step)
 }
 
 static void
-try_memgrep (size_t start, uint64_t word, uint64_t mask, size_t size)
+try_memgrep (size_t start, uint64_t *words, size_t num_words, uint64_t mask)
 {
-  try_memgrep1(start, word, mask, size, -(int)size);
-  try_memgrep1(start, word, mask, size, (int)size);
+  try_memgrep1(start, words, num_words, mask, -(int) sizeof (uint64_t));
+  try_memgrep1(start, words, num_words, mask, sizeof (uint64_t));
 }
 
-#include <sys/types.h>
-#include <sys/wait.h>
-
 static void
-memgrep (uint64_t word, uint64_t mask, size_t size)
+memgrep (uint64_t *words, size_t num_words, uint64_t mask)
 {
+  if (num_words == 0)
+    return;
+
   // Find the start of the caller's stack frame.
   asm ("movq (%%rbp), %0" : "=r" (memgrep_ignore_max));
   //memgrep_ignore_max = __builtin_frame_address(1);
 
+  memgrep_max_hits = 256;
+
   if (mask == 0)
     mask = ~mask;
-  eassert ((word & mask) == word);
+  for (size_t i = 0; i < num_words; i++)
+    words[i] &= mask;
+
+  qsort (words, num_words, sizeof (*words), uint64_cmp);
+
+  // Check in global data.
+  try_memgrep (0xe61e60, words, num_words, mask);
+
+  // Heap?
+  try_memgrep (0x40000000, words, num_words, mask);
 
   // Check in the stack.  This would always turn up some results
   // because the arguments of this function are in the stack, so we
   // use memgrep_ignore_{min,max} to avoid printing anything from the
   // relevant stack frames.
-  try_memgrep ((size_t) &word, word, mask, size);
-
-  // Check in global data.
-  try_memgrep (0xe61e60, word, mask, size);
-
-  // ???
-  try_memgrep (0x40000000, word, mask, size);
+  uint64_t dummy;
+  try_memgrep ((uint64_t) &dummy, words, num_words, mask);
 }
+
+static uint64_t *
+memgrep1 (uint64_t word, uint64_t inv_mask)
+{
+  memgrep_last_found = NULL;
+  memgrep_max_hits = 1;
+  try_memgrep (0xe61e60, &word, 1, ~inv_mask);
+  return memgrep_last_found;
+}
+
 
 static int gc_count = 0;
 int disable_scheme_gc = 0;
@@ -8806,6 +8877,8 @@ do_scheme_gc (void)
       after_scheme_gc ();
     }
 }
+
+static void gc_done(void) {}
 
 int
 before_scheme_gc (void)
@@ -8872,6 +8945,9 @@ before_scheme_gc (void)
   printf ("did garbage_collect_1\n");
 
   printf ("mq start size: %lu\n", mark_queue.size);
+  for (size_t i = 0; i < num_scheme_globals; i++)
+    for (size_t j = 0; j < scheme_globals[i].count; j++)
+      mark_object_ptr (&scheme_globals[i].addr[j]);
   visit_regexp_cache_lisp_refs (mark_lisp_refs_fun, NULL);
   visit_kboard_lisp_refs (mark_lisp_refs_fun, NULL);
   visit_fringe_lisp_refs (mark_lisp_refs_fun, NULL);
@@ -8937,6 +9013,10 @@ after_scheme_gc (void)
 {
   size_t num_moved = 0;
 
+
+  uint64_t *dead_refs = alloca (sizeof (uint64_t) * scheme_refs.size);
+  size_t num_dead_refs = 0;
+
   FOR_NAMED_CONTAINER (i, scheme_refs)
     {
       chez_ptr new_ref = chez_vector_ref (gc_vector, i);
@@ -8986,8 +9066,12 @@ after_scheme_gc (void)
           num_moved++;
           ref_info->ref = new_ref;
           *old_ref_ptr = new_ref;
+          dead_refs[num_dead_refs++] = (uint64_t) old_ref;
         }
     }
+
+  printf ("found %lu dead refs\n", (unsigned long) num_dead_refs);
+  memgrep (dead_refs, num_dead_refs, 0);
 
   container_delete_if (&scheme_refs, scheme_ref_dead_or_trace);
   FOR_NAMED_CONTAINER (i, scheme_refs)
@@ -9020,6 +9104,8 @@ after_scheme_gc (void)
 
   printf ("*\n* GC %d complete!\n*\n", gc_count++);
   --disable_scheme_gc;
+
+  gc_done();
 }
 #endif
 
@@ -9049,10 +9135,9 @@ union
 #ifdef HAVE_CHEZ_SCHEME
 static size_t magic_refs[MAX_MAGIC_REFS] =
   {
-   0x4
+   0x40901e5b
   };
 static size_t magic_ref_ptrs[MAX_MAGIC_REFS] =
   {
-   0xf929d8
   };
 #endif

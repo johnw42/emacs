@@ -4320,7 +4320,7 @@ alist of active lexical bindings.  */);
   staticpro (&Vsignaling_function);
   Vsignaling_function = Qnil;
 
-  inhibit_lisp_code = Qnil;
+  REGISTER_LISP_GLOBALS (inhibit_lisp_code);
 
   defsubr (&Sor);
   defsubr (&Sand);

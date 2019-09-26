@@ -4138,6 +4138,10 @@ extern Lisp_Object list5 (Lisp_Object, Lisp_Object, Lisp_Object, Lisp_Object,
 enum constype {CONSTYPE_HEAP, CONSTYPE_PURE};
 extern Lisp_Object listn (enum constype, ptrdiff_t, Lisp_Object, ...);
 
+#ifdef HAVE_CHEZ_SCHEME
+extern void scheme_register_globals (Lisp_Object *addr, size_t n);
+#endif
+
 /* Build a frequently used 2/3/4-integer lists.  */
 
 INLINE Lisp_Object
