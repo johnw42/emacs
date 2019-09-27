@@ -773,4 +773,10 @@ chez_scheme.h: $(CHEZ_SCHEME_DIR)/scheme.h make_scheme_h.py
 
 lisp.h: chez_scheme.h
 
+TEST_OBJS = $(ALLOBJS:emacs.o=unit_tests.o)
+
+unit_tests$(EXEEXT): $(LIBXMENU) $(TEST_OBJS) $(LIBEGNU_ARCHIVE) $(EMACSRES) ${charsets} ${charscript} \
+	$(AM_V_CCLD)$(CC) $(ALL_CFLAGS) $(TEMACS_LDFLAGS) $(LDFLAGS) \
+	  $(TEST_OBJS) $(LIBEGNU_ARCHIVE) $(W32_RES_LINK) $(LIBES)
+
 # sed 's/^#define S/#define chez_/;/^#define /s/S\([a-z0-9_]\+\)/chez_\1/g;s/^EXPORT .* S\([a-z0-9_]\+\)/#define chez_\1 S\1@\0/' < $< | tr '@' '\n' > $@
