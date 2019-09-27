@@ -3656,6 +3656,8 @@ Return list of symbols found.  */)
   EXIT_LISP_FRAME (tem);
 }
 
+Lisp_Object sym;
+
 void
 syms_of_keymap (void)
 {
@@ -3687,7 +3689,8 @@ syms_of_keymap (void)
   Ffset (intern_c_string ("ESC-prefix"), meta_map);
 
   control_x_map = Fmake_keymap (Qnil);
-  Fset (intern_c_string ("ctl-x-map"), control_x_map);
+  sym = intern_c_string ("ctl-x-map");
+  Fset (sym, control_x_map);
   Ffset (intern_c_string ("Control-X-prefix"), control_x_map);
 
   exclude_keys = listn (CONSTYPE_PURE, 5,

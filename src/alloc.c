@@ -9070,9 +9070,6 @@ after_scheme_gc (void)
         }
     }
 
-  printf ("found %lu dead refs\n", (unsigned long) num_dead_refs);
-  memgrep (dead_refs, num_dead_refs, 0);
-
   container_delete_if (&scheme_refs, scheme_ref_dead_or_trace);
   FOR_NAMED_CONTAINER (i, scheme_refs)
     {
@@ -9081,6 +9078,11 @@ after_scheme_gc (void)
       analyze_scheme_ref_info (info, "tracked after gc");
     }
   printf ("remaining tracked refs: %d\n", (int)scheme_refs.size);
+
+#if ENABLE_CHECKING
+  printf ("found %lu dead refs\n", (unsigned long) num_dead_refs);
+  memgrep (dead_refs, num_dead_refs, 0);
+#endif
 
   unsigned long guardian_count = 0;
   while (true)
@@ -9135,7 +9137,8 @@ union
 #ifdef HAVE_CHEZ_SCHEME
 static size_t magic_refs[MAX_MAGIC_REFS] =
   {
-   0x40901e5b
+   //0x40901e5b
+   //0x4055f27b
   };
 static size_t magic_ref_ptrs[MAX_MAGIC_REFS] =
   {

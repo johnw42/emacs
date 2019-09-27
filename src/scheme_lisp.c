@@ -745,7 +745,8 @@ visit_symbol_lisp_refs(Lisp_Object obj, lisp_ref_visitor_fun fun, void *data)
             break;
           /* case Lisp_Fwd_Kboard_obj: */
           /*   // XXX */
-          /*   break; */
+          default:
+            break;
           }
       }
       break;
@@ -1016,11 +1017,21 @@ container_free (struct container *c)
   c->capacity = 0;
 }
 
+static void
+container_clean (struct container *c)
+{
+#ifdef ENABLE_CHECKING
+  memset ((char *)c->cata + c->size * c->elem_size, 0
+          (c->capacity - c->size) * c->elem_size);
+#endif
+}
+
 void
 container_reset (struct container *c)
 {
   c->size = 0;
   c->sorted_by = NULL;
+  container_clean (c);
 }
 
 void
@@ -1141,6 +1152,7 @@ container_delete_if (struct container *c, bool (*pred)(const void *))
         }
     }
   c->size = di;
+  container_clean (c);
 }
 
 void
@@ -1177,6 +1189,7 @@ container_uniq (struct container *c, compare_fun compare, merge_fun merge)
           }
       }
   c->size = di + 1;
+  container_clean (c);
 }
 
 bool

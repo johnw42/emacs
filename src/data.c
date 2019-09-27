@@ -1659,7 +1659,7 @@ notify_variable_watchers (Lisp_Object symbol,
           args[0] = symbol;
           args[1] = newval;
           args[2] = operation;
-          args[4] = where;
+          args[3] = where;
           funcall_subr (XSUBR (watcher), ARRAYELTS (args), args);
         }
       else
