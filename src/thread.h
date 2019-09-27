@@ -40,25 +40,25 @@ struct thread_state
   /* The buffer in which the last search was performed, or
      Qt if the last search was done in a string;
      Qnil if no searching has been done yet.  */
-  PV_LISP_FIELD(m_last_thing_searched);
+  Lisp_Object m_last_thing_searched;
 #define last_thing_searched (current_thread->m_last_thing_searched)
 
-  PV_LISP_FIELD(m_saved_last_thing_searched);
+  Lisp_Object m_saved_last_thing_searched;
 #define saved_last_thing_searched (current_thread->m_saved_last_thing_searched)
 
   /* The thread's name.  */
-  PV_LISP_FIELD(name);
+  Lisp_Object name;
 
   /* The thread's function.  */
-  PV_LISP_FIELD(function);
+  Lisp_Object function;
 
   /* If non-nil, this thread has been signaled.  */
-  PV_LISP_FIELD(error_symbol);
-  PV_LISP_FIELD(error_data);
+  Lisp_Object error_symbol;
+  Lisp_Object error_data;
 
   /* If we are waiting for some event, this holds the object we are
      waiting on.  */
-  PV_LISP_FIELD(event_object);
+  Lisp_Object event_object;
 
   /* m_stack_bottom must be the first non-Lisp field.  */
   /* An address near the bottom of the stack.
@@ -239,7 +239,7 @@ struct Lisp_Mutex
   union vectorlike_header header;
 
   /* The name of the mutex, or nil.  */
-  PV_LISP_FIELD(name);
+  Lisp_Object name;
 
   /* The lower-level mutex object.  */
   lisp_mutex_t mutex;
@@ -270,10 +270,10 @@ struct Lisp_CondVar
   union vectorlike_header header;
 
   /* The associated mutex.  */
-  PV_LISP_FIELD(mutex);
+  Lisp_Object mutex;
 
   /* The name of the condition variable, or nil.  */
-  PV_LISP_FIELD(name);
+  Lisp_Object name;
 
   /* The lower-level condition variable object.  */
   sys_cond_t cond;

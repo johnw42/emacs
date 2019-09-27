@@ -86,23 +86,19 @@ struct frame
 
   /* Name of this frame: a Lisp string.  It is used for looking up resources,
      as well as for the title in some cases.  */
-  PV_LISP_FIELD(name);
-
+  Lisp_Object name;
 
   /* The name to use for the icon, the last time
      it was refreshed.  nil means not explicitly specified.  */
-  PV_LISP_FIELD(icon_name);
-
+  Lisp_Object icon_name;
 
   /* This is the frame title specified explicitly, if any.
      Usually it is nil.  */
-  PV_LISP_FIELD(title);
-
+  Lisp_Object title;
 
 #if defined (HAVE_WINDOW_SYSTEM)
   /* This frame's parent frame, if it has one.  */
-  PV_LISP_FIELD(parent_frame);
-
+  Lisp_Object parent_frame;
 #endif /* HAVE_WINDOW_SYSTEM */
 
   /* The frame which should receive keystrokes that occur in this
@@ -116,34 +112,29 @@ struct frame
      to shift from one frame to the other, any redirections to the
      original frame are shifted to the newly selected frame; if
      focus_frame is nil, Fselect_frame will leave it alone.  */
-  PV_LISP_FIELD(focus_frame);
-
+  Lisp_Object focus_frame;
 
   /* This frame's root window.  Every frame has one.
      If the frame has only a minibuffer window, this is it.
      Otherwise, if the frame has a minibuffer window, this is its sibling.  */
-  PV_LISP_FIELD(root_window);
-
+  Lisp_Object root_window;
 
   /* This frame's selected window.
      Each frame has its own window hierarchy
      and one of the windows in it is selected within the frame.
      The selected window of the selected frame is Emacs's selected window.  */
-  PV_LISP_FIELD(selected_window);
-
+  Lisp_Object selected_window;
 
   /* This frame's minibuffer window.
      Most frames have their own minibuffer windows,
      but only the selected frame's minibuffer window
      can actually appear to exist.  */
-  PV_LISP_FIELD(minibuffer_window);
-
+  Lisp_Object minibuffer_window;
 
   /* Parameter alist of this frame.
      These are the parameters specified when creating the frame
      or modified with modify-frame-parameters.  */
-  PV_LISP_FIELD(param_alist);
-
+  Lisp_Object param_alist;
 
   /* List of scroll bars on this frame.
      Actually, we don't specify exactly what is stored here at all; the
@@ -152,76 +143,61 @@ struct frame
      instead of in the `device' structure so that the garbage
      collector doesn't need to look inside the window-system-dependent
      structure.  */
-  PV_LISP_FIELD(scroll_bars);
-
-  PV_LISP_FIELD(condemned_scroll_bars);
-
+  Lisp_Object scroll_bars;
+  Lisp_Object condemned_scroll_bars;
 
   /* Vector describing the items to display in the menu bar.
      Each item has four elements in this vector.
      They are KEY, STRING, SUBMAP, and HPOS.
      (HPOS is not used in when the X toolkit is in use.)
      There are four additional elements of nil at the end, to terminate.  */
-  PV_LISP_FIELD(menu_bar_items);
-
+  Lisp_Object menu_bar_items;
 
   /* Alist of elements (FACE-NAME . FACE-VECTOR-DATA).  */
-  PV_LISP_FIELD(face_alist);
-
+  Lisp_Object face_alist;
 
   /* A vector that records the entire structure of this frame's menu bar.
      For the format of the data, see extensive comments in xmenu.c.
      Only the X toolkit version uses this.  */
-  PV_LISP_FIELD(menu_bar_vector);
-
+  Lisp_Object menu_bar_vector;
 
   /* Predicate for selecting buffers for other-buffer.  */
-  PV_LISP_FIELD(buffer_predicate);
-
+  Lisp_Object buffer_predicate;
 
   /* List of buffers viewed in this frame, for other-buffer.  */
-  PV_LISP_FIELD(buffer_list);
-
+  Lisp_Object buffer_list;
 
   /* List of buffers that were viewed, then buried in this frame.  The
      most recently buried buffer is first.  For last-buffer.  */
-  PV_LISP_FIELD(buried_buffer_list);
-
+  Lisp_Object buried_buffer_list;
 
 #if defined (HAVE_X_WINDOWS) && ! defined (USE_X_TOOLKIT) && ! defined (USE_GTK)
   /* A dummy window used to display menu bars under X when no X
      toolkit support is available.  */
-  PV_LISP_FIELD(menu_bar_window);
-
+  Lisp_Object menu_bar_window;
 #endif
 
 #if defined (HAVE_WINDOW_SYSTEM) && ! defined (USE_GTK) && ! defined (HAVE_NS)
   /* A window used to display the tool-bar of a frame.  */
-  PV_LISP_FIELD(tool_bar_window);
-
+  Lisp_Object tool_bar_window;
 
   /* Desired and current contents displayed in that window.  */
-  PV_LISP_FIELD(desired_tool_bar_string);
-
-  PV_LISP_FIELD(current_tool_bar_string);
-
+  Lisp_Object desired_tool_bar_string;
+  Lisp_Object current_tool_bar_string;
 #endif
 
   /* Desired and current tool-bar items.  */
-  PV_LISP_FIELD(tool_bar_items);
-
+  Lisp_Object tool_bar_items;
 
 #ifdef USE_GTK
   /* Where tool bar is, can be left, right, top or bottom.
      Except with GTK, the only supported position is `top'.  */
-  PV_LISP_FIELD(tool_bar_position);
-
+  Lisp_Object tool_bar_position;
 #endif
 
 #if defined (HAVE_XFT) || defined (HAVE_FREETYPE)
   /* List of data specific to font-driver and frame, but common to faces.  */
-  PV_LISP_FIELD(font_data);
-
+  Lisp_Object font_data;
 #endif
 
   /* Beyond here, there should be no more Lisp_Object components.  */
@@ -608,114 +584,114 @@ struct frame
 INLINE void
 fset_buffer_list (struct frame *f, Lisp_Object val)
 {
-  PV_LISP_FIELD_SET(f, buffer_list, val);
+  f->buffer_list = val;
 }
 INLINE void
 fset_buried_buffer_list (struct frame *f, Lisp_Object val)
 {
-  PV_LISP_FIELD_SET(f, buried_buffer_list, val);
+  f->buried_buffer_list = val;
 }
 INLINE void
 fset_condemned_scroll_bars (struct frame *f, Lisp_Object val)
 {
-  PV_LISP_FIELD_SET(f, condemned_scroll_bars, val);
+  f->condemned_scroll_bars = val;
 }
 INLINE void
 fset_face_alist (struct frame *f, Lisp_Object val)
 {
-  PV_LISP_FIELD_SET(f, face_alist, val);
+  f->face_alist = val;
 }
 #if defined (HAVE_WINDOW_SYSTEM)
 INLINE void
 fset_parent_frame (struct frame *f, Lisp_Object val)
 {
-  PV_LISP_FIELD_SET(f, parent_frame, val);
+  f->parent_frame = val;
 }
 #endif
 INLINE void
 fset_focus_frame (struct frame *f, Lisp_Object val)
 {
-  PV_LISP_FIELD_SET(f, focus_frame, val);
+  f->focus_frame = val;
 }
 INLINE void
 fset_icon_name (struct frame *f, Lisp_Object val)
 {
-  PV_LISP_FIELD_SET(f, icon_name, val);
+  f->icon_name = val;
 }
 INLINE void
 fset_menu_bar_items (struct frame *f, Lisp_Object val)
 {
-  PV_LISP_FIELD_SET(f, menu_bar_items, val);
+  f->menu_bar_items = val;
 }
 INLINE void
 fset_menu_bar_vector (struct frame *f, Lisp_Object val)
 {
-  PV_LISP_FIELD_SET(f, menu_bar_vector, val);
+  f->menu_bar_vector = val;
 }
 #if defined (HAVE_X_WINDOWS) && ! defined (USE_X_TOOLKIT) && ! defined (USE_GTK)
 INLINE void
 fset_menu_bar_window (struct frame *f, Lisp_Object val)
 {
-  PV_LISP_FIELD_SET(f, menu_bar_window, val);
+  f->menu_bar_window = val;
 }
 #endif
 INLINE void
 fset_name (struct frame *f, Lisp_Object val)
 {
-  PV_LISP_FIELD_SET(f, name, val);
+  f->name = val;
 }
 INLINE void
 fset_param_alist (struct frame *f, Lisp_Object val)
 {
-  PV_LISP_FIELD_SET(f, param_alist, val);
+  f->param_alist = val;
 }
 INLINE void
 fset_root_window (struct frame *f, Lisp_Object val)
 {
-  PV_LISP_FIELD_SET(f, root_window, val);
+  f->root_window = val;
 }
 INLINE void
 fset_scroll_bars (struct frame *f, Lisp_Object val)
 {
-  PV_LISP_FIELD_SET(f, scroll_bars, val);
+  f->scroll_bars = val;
 }
 INLINE void
 fset_selected_window (struct frame *f, Lisp_Object val)
 {
-  PV_LISP_FIELD_SET(f, selected_window, val);
+  f->selected_window = val;
 }
 INLINE void
 fset_title (struct frame *f, Lisp_Object val)
 {
-  PV_LISP_FIELD_SET(f, title, val);
+  f->title = val;
 }
 INLINE void
 fset_tool_bar_items (struct frame *f, Lisp_Object val)
 {
-  PV_LISP_FIELD_SET(f, tool_bar_items, val);
+  f->tool_bar_items = val;
 }
 #ifdef USE_GTK
 INLINE void
 fset_tool_bar_position (struct frame *f, Lisp_Object val)
 {
-  PV_LISP_FIELD_SET(f, tool_bar_position, val);
+  f->tool_bar_position = val;
 }
 #endif /* USE_GTK */
 #if defined (HAVE_WINDOW_SYSTEM) && ! defined (USE_GTK) && ! defined (HAVE_NS)
 INLINE void
 fset_tool_bar_window (struct frame *f, Lisp_Object val)
 {
-  PV_LISP_FIELD_SET(f, tool_bar_window, val);
+  f->tool_bar_window = val;
 }
 INLINE void
 fset_current_tool_bar_string (struct frame *f, Lisp_Object val)
 {
-  PV_LISP_FIELD_SET(f, current_tool_bar_string, val);
+  f->current_tool_bar_string = val;
 }
 INLINE void
 fset_desired_tool_bar_string (struct frame *f, Lisp_Object val)
 {
-  PV_LISP_FIELD_SET(f, desired_tool_bar_string, val);
+  f->desired_tool_bar_string = val;
 }
 #endif /* HAVE_WINDOW_SYSTEM && !USE_GTK && !HAVE_NS */
 
@@ -755,7 +731,7 @@ default_pixels_per_inch_y (void)
 #define XSETFRAME(a, b) (XSETPSEUDOVECTOR (a, b, PVEC_FRAME))
 
 /* Given a window, return its frame as a Lisp_Object.  */
-#define WINDOW_FRAME(w) PV_LISP_FIELD_REF(w, frame)
+#define WINDOW_FRAME(w) ((w)->frame)
 
 /* Test a frame for particular kinds of display methods.  */
 #define FRAME_INITIAL_P(f) ((f)->output_method == output_initial)
@@ -942,7 +918,7 @@ default_pixels_per_inch_y (void)
 #define FRAME_MINIBUF_WINDOW(f) f->minibuffer_window
 
 /* The root window of the window tree of frame F.  */
-#define FRAME_ROOT_WINDOW(f) PV_LISP_FIELD_REF(f, root_window)
+#define FRAME_ROOT_WINDOW(f) f->root_window
 
 /* The currently selected window of the window tree of frame F.  */
 #define FRAME_SELECTED_WINDOW(f) f->selected_window
@@ -1608,7 +1584,7 @@ extern bool x_bitmap_icon (struct frame *, Lisp_Object);
 INLINE void
 x_set_bitmap_icon (struct frame *f)
 {
-  Lisp_Object obj = assq_no_quit (Qicon_type, PV_LISP_FIELD_REF(f, param_alist));
+  Lisp_Object obj = assq_no_quit (Qicon_type, f->param_alist);
 
 
   if (CONSP (obj) && !NILP (XCDR (obj)))

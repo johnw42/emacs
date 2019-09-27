@@ -890,11 +890,10 @@ struct scroll_bar
   union vectorlike_header header;
 
   /* The window we're a scroll bar for.  */
-  PV_LISP_FIELD(window);
+  Lisp_Object window;
 
   /* The next and previous in the chain of scroll bars in this frame.  */
-  PV_LISP_FIELD(next);
-  PV_LISP_FIELD(prev);
+  Lisp_Object next, prev;
 
   /* Fields from `x_window' down will not be traced by the GC.  */
 

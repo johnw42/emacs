@@ -1454,7 +1454,7 @@ struct glyph_string
       = (MATRIX_MODE_LINE_HEIGHT (W->current_matrix)			\
 	 ? MATRIX_MODE_LINE_HEIGHT (W->current_matrix)			\
 	 : estimate_mode_line_height					\
-         (XFRAME (PV_LISP_FIELD_REF(W, frame)), CURRENT_MODE_LINE_FACE_ID (W)))))
+	     (XFRAME (W->frame), CURRENT_MODE_LINE_FACE_ID (W)))))
 
 /* Return the current height of the header line of window W.  If not known
    from W->header_line_height, look at W's current glyph matrix, or return
@@ -1467,7 +1467,7 @@ struct glyph_string
       = (MATRIX_HEADER_LINE_HEIGHT (W->current_matrix)		\
 	 ? MATRIX_HEADER_LINE_HEIGHT (W->current_matrix)	\
 	 : estimate_mode_line_height				\
-         (XFRAME (PV_LISP_FIELD_REF(W, frame)), HEADER_LINE_FACE_ID))))
+	     (XFRAME (W->frame), HEADER_LINE_FACE_ID))))
 
 /* Return the height of the desired mode line of window W.  */
 

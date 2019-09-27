@@ -434,17 +434,17 @@ struct scroll_bar {
   union vectorlike_header header;
 
   /* The window we're a scroll bar for.  */
-  PV_LISP_FIELD(window);
+  Lisp_Object window;
 
   /* The next and previous in the chain of scroll bars in this frame.  */
-  PV_LISP_FIELD(next, prev);
+  Lisp_Object next, prev;
 
   /* The window representing this scroll bar.  Since this is a full
      32-bit quantity, we store it split into two 32-bit values.  */
-  PV_LISP_FIELD(w32_window_low, w32_window_high);
+  Lisp_Object w32_window_low, w32_window_high;
 
   /* Same as above for the widget.  */
-  PV_LISP_FIELD(w32_widget_low, w32_widget_high);
+  Lisp_Object w32_widget_low, w32_widget_high;
 
   /* The position and size of the scroll bar in pixels, relative to the
      frame.  */

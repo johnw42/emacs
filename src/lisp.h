@@ -43,19 +43,6 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 #include <intprops.h>
 #include <verify.h>
 
-#define PV_LISP_FIELD(name) Lisp_Object name
-//#define PV_LISP_FIELD(name) Lisp_Object name##_
-#define PV_LISP_ARRAY(name, n) Lisp_Object name[n]
-#define PV_LISP_PROPS(n) Lisp_Object props[n]
-#define PV_LISP_FIELD_REF(ptr, field) ((ptr)->field)
-#define PV_LISP_FIELD_SET(ptr, field, value) ((ptr)->field = (value))
-//#define PV_LISP_FIELD_REF(ptr, field) ((ptr)->field##_)
-//#define PV_LISP_FIELD_SET(ptr, field, value) ((ptr)->field##_ = (value))
-#define PV_LISP_FIELD_AREF(ptr, field, n) ((ptr)->field[n])
-#define PV_LISP_FIELD_ASET(ptr, field, n, value) ((ptr)->field[n] = (value))
-#define PV_LISP_PROP_REF(ptr, n) ((ptr)->props[n])
-#define PV_LISP_PROP_SET(ptr, n, value) ((ptr)->props[n] = (value))
-
 INLINE_HEADER_BEGIN
 
 /* Define a TYPE constant ID as an externally visible name.  Use like this:
@@ -2218,25 +2205,25 @@ struct Lisp_Char_Table
 
     /* This holds a default value,
        which is used whenever the value for a specific character is nil.  */
-    PV_LISP_FIELD(defalt);
+    Lisp_Object defalt;
 
     /* This points to another char table, which we inherit from when the
        value for a specific character is nil.  The `defalt' slot takes
        precedence over this.  */
-    PV_LISP_FIELD(parent);
+    Lisp_Object parent;
 
     /* This is a symbol which says what kind of use this char-table is
        meant for.  */
-    PV_LISP_FIELD(purpose);
+    Lisp_Object purpose;
 
     /* The bottom sub char-table for characters of the range 0..127.  It
        is nil if none of ASCII character has a specific value.  */
-    PV_LISP_FIELD(ascii);
+    Lisp_Object ascii;
 
-    PV_LISP_ARRAY(contents, 1 << CHARTAB_SIZE_BITS_0);
+    Lisp_Object contents[(1 << CHARTAB_SIZE_BITS_0)];
 
     /* These hold additional data.  It is a vector.  */
-    PV_LISP_ARRAY(extras, FLEXIBLE_ARRAY_MEMBER);
+    Lisp_Object extras[FLEXIBLE_ARRAY_MEMBER];
   };
 
 INLINE bool
@@ -2299,13 +2286,13 @@ CHAR_TABLE_REF_ASCII (Lisp_Object ct, ptrdiff_t idx)
   struct Lisp_Char_Table *tbl = NULL;
   do
     {
-      tbl = tbl ? XCHAR_TABLE (PV_LISP_FIELD_REF (tbl, parent)) : XCHAR_TABLE (ct);
-      val = (! SUB_CHAR_TABLE_P (PV_LISP_FIELD_REF (tbl, ascii)) ? PV_LISP_FIELD_REF (tbl, ascii)
-	     : XSUB_CHAR_TABLE (PV_LISP_FIELD_REF (tbl, ascii))->contents[idx]);
+      tbl = tbl ? XCHAR_TABLE (tbl->parent) : XCHAR_TABLE (ct);
+      val = (! SUB_CHAR_TABLE_P (tbl->ascii) ? tbl->ascii
+	     : XSUB_CHAR_TABLE (tbl->ascii)->contents[idx]);
       if (NILP (val))
-	val = PV_LISP_FIELD_REF (tbl, defalt);
+	val = tbl->defalt;
     }
-  while (NILP (val) && ! NILP (PV_LISP_FIELD_REF (tbl, parent)));
+  while (NILP (val) && ! NILP (tbl->parent));
 
   return val;
 }
@@ -2325,8 +2312,8 @@ CHAR_TABLE_REF (Lisp_Object ct, int idx)
 INLINE void
 CHAR_TABLE_SET (Lisp_Object ct, int idx, Lisp_Object val)
 {
-  if (ASCII_CHAR_P (idx) && SUB_CHAR_TABLE_P (PV_LISP_FIELD_REF (XCHAR_TABLE (ct), ascii)))
-    set_sub_char_table_contents (PV_LISP_FIELD_REF (XCHAR_TABLE (ct), ascii), idx, val);
+  if (ASCII_CHAR_P (idx) && SUB_CHAR_TABLE_P (XCHAR_TABLE (ct)->ascii))
+    set_sub_char_table_contents (XCHAR_TABLE (ct)->ascii, idx, val);
   else
     char_table_set (ct, idx, val);
 }
@@ -2558,23 +2545,23 @@ struct Lisp_Hash_Table
 
   /* Nil if table is non-weak.  Otherwise a symbol describing the
      weakness of the table.  */
-  PV_LISP_FIELD(weak);
+  Lisp_Object weak;
 
   /* Vector of hash codes.  If hash[I] is nil, this means that the
      I-th entry is unused.  */
-  PV_LISP_FIELD(hash);
+  Lisp_Object hash;
 
   /* Vector used to chain entries.  If entry I is free, next[I] is the
      entry number of the next free item.  If entry I is non-free,
      next[I] is the index of the next entry in the collision chain,
      or -1 if there is such entry.  */
-  PV_LISP_FIELD(next);
+  Lisp_Object next;
 
   /* Bucket vector.  An entry of -1 indicates no item is present,
      and a nonnegative entry is the index of the first item in
      a collision chain.  This vector's size can be larger than the
      hash table size to reduce collisions.  */
-  PV_LISP_FIELD(index);
+  Lisp_Object index;
 
   /* Only the fields above are traced normally by the GC.  The ones below
      `count' are special and are either ignored by the GC or traced in
@@ -2649,14 +2636,14 @@ HASH_VALUE (struct Lisp_Hash_Table *h, ptrdiff_t idx)
 INLINE Lisp_Object
 HASH_HASH (struct Lisp_Hash_Table *h, ptrdiff_t idx)
 {
-  return AREF (PV_LISP_FIELD_REF (h, hash), idx);
+  return AREF (h->hash, idx);
 }
 
 /* Value is the size of hash table H.  */
 INLINE ptrdiff_t
 HASH_TABLE_SIZE (struct Lisp_Hash_Table *h)
 {
-  return ASIZE (PV_LISP_FIELD_REF (h, next));
+  return ASIZE (h->next);
 }
 
 /* Default size for hash tables if not specified.  */
@@ -3838,13 +3825,13 @@ INLINE void
 set_char_table_defalt (Lisp_Object table, Lisp_Object val)
 {
   (void) XLI(val);
-  PV_LISP_FIELD_SET (XCHAR_TABLE (table), defalt, val);
+  XCHAR_TABLE (table)->defalt = val;
 }
 INLINE void
 set_char_table_purpose (Lisp_Object table, Lisp_Object val)
 {
   (void) XLI(val);
-  PV_LISP_FIELD_SET (XCHAR_TABLE (table), purpose, val);
+  XCHAR_TABLE (table)->purpose = val;
 }
 
 /* Set different slots in (sub)character tables.  */
@@ -4508,7 +4495,7 @@ struct Lisp_Module_Function
   union vectorlike_header header;
 
   /* Fields traced by GC; these must come first.  */
-  PV_LISP_FIELD(documentation);
+  Lisp_Object documentation;
 
   /* Fields ignored by GC.  */
   ptrdiff_t min_arity, max_arity;

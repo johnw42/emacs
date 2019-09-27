@@ -396,7 +396,7 @@ adjust_glyph_matrix (struct window *w, struct glyph_matrix *matrix, int x, int y
 				  || right != matrix->right_margin_glyphs);
 
       if (!marginal_areas_changed_p
-	  && !XFRAME (PV_LISP_FIELD_REF(w, frame))->fonts_changed
+	  && !XFRAME (w->frame)->fonts_changed
 	  && !header_line_changed_p
 	  && matrix->window_pixel_left == WINDOW_LEFT_PIXEL_EDGE (w)
 	  && matrix->window_pixel_top == WINDOW_TOP_PIXEL_EDGE (w)
@@ -811,8 +811,8 @@ clear_window_matrices (struct window *w, bool desired_p)
 {
   while (w)
     {
-      if (WINDOWP (PV_LISP_FIELD_REF(w, contents)))
-	clear_window_matrices (XWINDOW (PV_LISP_FIELD_REF(w, contents)), desired_p);
+      if (WINDOWP (w->contents))
+	clear_window_matrices (XWINDOW (w->contents), desired_p);
       else
 	{
 	  if (desired_p)
@@ -824,7 +824,7 @@ clear_window_matrices (struct window *w, bool desired_p)
 	    }
 	}
 
-      w = NILP (PV_LISP_FIELD_REF(w, next)) ? 0 : XWINDOW (PV_LISP_FIELD_REF(w, next));
+      w = NILP (w->next) ? 0 : XWINDOW (w->next);
     }
 }
 
@@ -863,7 +863,7 @@ blank_row (struct window *w, struct glyph_row *row, int y)
   clear_glyph_row (row);
   row->y = y;
   row->ascent = row->phys_ascent = 0;
-  row->height = row->phys_height = FRAME_LINE_HEIGHT (XFRAME (PV_LISP_FIELD_REF(w, frame)));
+  row->height = row->phys_height = FRAME_LINE_HEIGHT (XFRAME (w->frame));
   row->visible_height = row->height;
 
   if (row->y < min_y)
@@ -1599,8 +1599,8 @@ allocate_matrices_for_frame_redisplay (Lisp_Object window, int x, int y,
      points to the mini-buffer window, if any, which is arranged
      vertically below other windows.  */
   in_horz_combination_p
-    = (!NILP (PV_LISP_FIELD_REF(XWINDOW (window), parent))
-       && WINDOW_HORIZONTAL_COMBINATION_P (XWINDOW (PV_LISP_FIELD_REF(XWINDOW (window), parent))));
+    = (!NILP (XWINDOW (window)->parent)
+       && WINDOW_HORIZONTAL_COMBINATION_P (XWINDOW (XWINDOW (window)->parent)));
 
   /* For WINDOW and all windows on the same level.  */
   do
@@ -1609,8 +1609,8 @@ allocate_matrices_for_frame_redisplay (Lisp_Object window, int x, int y,
 
       /* Get the dimension of the window sub-matrix for W, depending
 	 on whether this is a combination or a leaf window.  */
-      if (WINDOWP (PV_LISP_FIELD_REF(w, contents)))
-	dim = allocate_matrices_for_frame_redisplay (PV_LISP_FIELD_REF(w, contents), x, y,
+      if (WINDOWP (w->contents))
+	dim = allocate_matrices_for_frame_redisplay (w->contents, x, y,
 						     dim_only_p,
 						     window_change_flags);
       else
@@ -1666,7 +1666,7 @@ allocate_matrices_for_frame_redisplay (Lisp_Object window, int x, int y,
       hmax = max (hmax, dim.height);
 
       /* Next window on same level.  */
-      window = PV_LISP_FIELD_REF(w, next);
+      window = w->next;
     }
   while (!NILP (window));
 
@@ -1697,7 +1697,7 @@ static int
 required_matrix_height (struct window *w)
 {
 #ifdef HAVE_WINDOW_SYSTEM
-  struct frame *f = XFRAME (PV_LISP_FIELD_REF(w, frame));
+  struct frame *f = XFRAME (w->frame);
 
   if (FRAME_WINDOW_P (f))
     {
@@ -1725,7 +1725,7 @@ static int
 required_matrix_width (struct window *w)
 {
 #ifdef HAVE_WINDOW_SYSTEM
-  struct frame *f = XFRAME (PV_LISP_FIELD_REF(w, frame));
+  struct frame *f = XFRAME (w->frame);
   if (FRAME_WINDOW_P (f))
     {
       /* https://lists.gnu.org/r/emacs-devel/2015-11/msg00194.html  */
@@ -1754,8 +1754,8 @@ allocate_matrices_for_window_redisplay (struct window *w)
 {
   while (w)
     {
-      if (WINDOWP (PV_LISP_FIELD_REF(w, contents)))
-	allocate_matrices_for_window_redisplay (XWINDOW (PV_LISP_FIELD_REF(w, contents)));
+      if (WINDOWP (w->contents))
+	allocate_matrices_for_window_redisplay (XWINDOW (w->contents));
       else
 	{
 	  /* W is a leaf window.  */
@@ -1774,7 +1774,7 @@ allocate_matrices_for_window_redisplay (struct window *w)
 	  adjust_glyph_matrix (w, w->current_matrix, 0, 0, dim);
 	}
 
-      w = NILP (PV_LISP_FIELD_REF(w, next)) ? NULL : XWINDOW (PV_LISP_FIELD_REF(w, next));
+      w = NILP (w->next) ? NULL : XWINDOW (w->next);
     }
 }
 
@@ -1809,15 +1809,15 @@ showing_window_margins_p (struct window *w)
 {
   while (w)
     {
-      if (WINDOWP (PV_LISP_FIELD_REF(w, contents)))
+      if (WINDOWP (w->contents))
 	{
-	  if (showing_window_margins_p (XWINDOW (PV_LISP_FIELD_REF(w, contents))))
+	  if (showing_window_margins_p (XWINDOW (w->contents)))
 	    return 1;
 	}
       else if (w->left_margin_cols > 0 || w->right_margin_cols > 0)
 	return 1;
 
-      w = NILP (PV_LISP_FIELD_REF(w, next)) ? 0 : XWINDOW (PV_LISP_FIELD_REF(w, next));
+      w = NILP (w->next) ? 0 : XWINDOW (w->next);
     }
   return 0;
 }
@@ -1832,16 +1832,16 @@ fake_current_matrices (Lisp_Object window)
   ENTER_LISP_FRAME ((window));
   struct window *w;
 
-  for (; !NILP (window); window = PV_LISP_FIELD_REF(w, next))
+  for (; !NILP (window); window = w->next)
     {
       w = XWINDOW (window);
 
-      if (WINDOWP (PV_LISP_FIELD_REF(w, contents)))
-	fake_current_matrices (PV_LISP_FIELD_REF(w, contents));
+      if (WINDOWP (w->contents))
+	fake_current_matrices (w->contents);
       else
 	{
 	  int i;
-	  struct frame *f = XFRAME (PV_LISP_FIELD_REF(w, frame));
+	  struct frame *f = XFRAME (w->frame);
 	  struct glyph_matrix *m = w->current_matrix;
 	  struct glyph_matrix *fm = f->current_matrix;
 
@@ -2176,7 +2176,7 @@ free_glyphs (struct frame *f)
       f->glyphs_initialized_p = 0;
 
       /* Release window sub-matrices.  */
-      if (!NILP (PV_LISP_FIELD_REF(f, root_window)))
+      if (!NILP (f->root_window))
         free_window_matrices (XWINDOW (f->root_window));
 
 #if defined (HAVE_X_WINDOWS) && ! defined (USE_X_TOOLKIT) && ! defined (USE_GTK)

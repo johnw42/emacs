@@ -36,16 +36,16 @@ struct xwidget
   union vectorlike_header header;
 
   /* Auxiliary data.  */
-  PV_LISP_FIELD(plist);
+  Lisp_Object plist;
 
   /* The widget type.  */
-  PV_LISP_FIELD(type);
+  Lisp_Object type;
 
   /* The buffer where the xwidget lives.  */
-  PV_LISP_FIELD(buffer);
+  Lisp_Object buffer;
 
   /* A title used for button labels, for instance.  */
-  PV_LISP_FIELD(title);
+  Lisp_Object title;
 
   /* Here ends the Lisp part.  "height" is the marker field.  */
 
@@ -63,8 +63,8 @@ struct xwidget
 struct xwidget_view
 {
   union vectorlike_header header;
-  PV_LISP_FIELD(model);
-  PV_LISP_FIELD(w);
+  Lisp_Object model;
+  Lisp_Object w;
 
   /* Here ends the lisp part.  "redisplayed" is the marker field.  */
 

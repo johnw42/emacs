@@ -44,43 +44,43 @@ struct Lisp_Process
     union vectorlike_header header;
 
     /* Name of subprocess terminal.  */
-    PV_LISP_FIELD(tty_name);
+    Lisp_Object tty_name;
 
     /* Name of this process.  */
-    PV_LISP_FIELD(name);
+    Lisp_Object name;
 
     /* List of command arguments that this process was run with.
        Is set to t for a stopped network process; nil otherwise.  */
-    PV_LISP_FIELD(command);
+    Lisp_Object command;
 
     /* (funcall FILTER PROC STRING)  (if FILTER is non-nil)
        to dispose of a bunch of chars from the process all at once.  */
-    PV_LISP_FIELD(filter);
+    Lisp_Object filter;
 
     /* (funcall SENTINEL PROCESS) when process state changes.  */
-    PV_LISP_FIELD(sentinel);
+    Lisp_Object sentinel;
 
     /* (funcall LOG SERVER CLIENT MESSAGE) when a server process
        accepts a connection from a client.  */
-    PV_LISP_FIELD(log);
+    Lisp_Object log;
 
     /* Buffer that output is going to.  */
-    PV_LISP_FIELD(buffer);
+    Lisp_Object buffer;
 
     /* t if this is a real child process.  For a network or serial
        connection, it is a plist based on the arguments to
        make-network-process or make-serial-process.  */
 
-    PV_LISP_FIELD(childp);
+    Lisp_Object childp;
 
     /* Plist for programs to keep per-process state information, parameters, etc.  */
-    PV_LISP_FIELD(plist);
+    Lisp_Object plist;
 
     /* Symbol indicating the type of process: real, network, serial.  */
-    PV_LISP_FIELD(type);
+    Lisp_Object type;
 
     /* Marker set to end of last buffer-inserted output from this process.  */
-    PV_LISP_FIELD(mark);
+    Lisp_Object mark;
 
     /* Symbol indicating status of process.
        This may be a symbol: run, open, closed, listen, or failed.
@@ -90,33 +90,33 @@ struct Lisp_Process
        Or it may be a list, whose car is stop, exit or signal
        and whose cdr is a pair (EXIT_CODE . COREDUMP_FLAG)
        or (SIGNAL_NUMBER . COREDUMP_FLAG).  */
-    PV_LISP_FIELD(status);
+    Lisp_Object status;
 
     /* Coding-system for decoding the input from this process.  */
-    PV_LISP_FIELD(decode_coding_system);
+    Lisp_Object decode_coding_system;
 
     /* Working buffer for decoding.  */
-    PV_LISP_FIELD(decoding_buf);
+    Lisp_Object decoding_buf;
 
     /* Coding-system for encoding the output to this process.  */
-    PV_LISP_FIELD(encode_coding_system);
+    Lisp_Object encode_coding_system;
 
     /* Working buffer for encoding.  */
-    PV_LISP_FIELD(encoding_buf);
+    Lisp_Object encoding_buf;
 
     /* Queue for storing waiting writes.  */
-    PV_LISP_FIELD(write_queue);
+    Lisp_Object write_queue;
 
 #ifdef HAVE_GNUTLS
-    PV_LISP_FIELD(gnutls_cred_type);
-    PV_LISP_FIELD(gnutls_boot_parameters);
+    Lisp_Object gnutls_cred_type;
+    Lisp_Object gnutls_boot_parameters;
 #endif
 
     /* Pipe process attached to the standard error of this process.  */
-    PV_LISP_FIELD(stderrproc);
+    Lisp_Object stderrproc;
 
     /* The thread a process is linked to, or nil for any thread.  */
-    PV_LISP_FIELD(thread);
+    Lisp_Object thread;
 
     /* After this point, there are no Lisp_Objects any more.  */
     /* alloc.c assumes that `pid' is the first such non-Lisp slot.  */

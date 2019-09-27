@@ -376,12 +376,12 @@ struct terminal
   union vectorlike_header header;
 
   /* Parameter alist of this terminal.  */
-  PV_LISP_FIELD(param_alist);
+  Lisp_Object param_alist;
 
   /* List of charsets supported by the terminal.  It is set by
      Fset_terminal_coding_system_internal along with
      the member terminal_coding.  */
-  PV_LISP_FIELD(charset_list);
+  Lisp_Object charset_list;
 
   /* This is an association list containing the X selections that
      Emacs might own on this terminal.  Each element has the form
@@ -397,12 +397,12 @@ struct terminal
       that selection.
      The only (eq) parts of this list that are visible from Lisp are
     the selection-values.  */
-  PV_LISP_FIELD(Vselection_alist);
+  Lisp_Object Vselection_alist;
 
   /* If a char-table, this maps characters to terminal glyph codes.
      If t, the mapping is not available.  If nil, it is not known
      whether the mapping is available.  */
-  PV_LISP_FIELD(glyph_code_table);
+  Lisp_Object glyph_code_table;
 
   /* All fields before `next_terminal' should be Lisp_Object and are traced
      by the GC.  All fields afterwards are ignored by the GC.  */
@@ -677,12 +677,12 @@ XTERMINAL (Lisp_Object a)
 INLINE void
 tset_charset_list (struct terminal *t, Lisp_Object val)
 {
-  PV_LISP_FIELD_SET(t, charset_list, val);
+  t->charset_list = val;
 }
 INLINE void
 tset_selection_alist (struct terminal *t, Lisp_Object val)
 {
-  PV_LISP_FIELD_SET(t, Vselection_alist, val);
+  t->Vselection_alist = val;
 }
 
 /* Chain of all terminal devices currently in use.  */

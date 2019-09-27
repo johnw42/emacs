@@ -32,8 +32,8 @@ main() {
       shift
       current_config=
       case $(./config.status --config) in
-        *--with-chez-scheme*) current_config=with ;;
-        *--without-chez-scheme*) current_config=without ;;
+        *--with-chez-scheme*) current_config=--with ;;
+        *--without-chez-scheme*) current_config=--without ;;
       esac
       if [[ $current_config != $target_config ]]; then
         ./config-schemacs $target_config

@@ -127,8 +127,9 @@ in case you use it as a menu with `x-popup-menu'.  */)
     tail = list1 (string);
   else
     tail = Qnil;
-  EXIT_LISP_FRAME (Fcons (Qkeymap,
-		Fcons (Fmake_char_table (Qkeymap, Qnil), tail)));
+  EXIT_LISP_FRAME
+    (Fcons (Qkeymap,
+            Fcons (Fmake_char_table (Qkeymap, Qnil), tail)));
 }
 
 DEFUN ("make-sparse-keymap", Fmake_sparse_keymap, Smake_sparse_keymap, 0, 1, 0,
