@@ -8842,7 +8842,7 @@ memgrep1 (uint64_t word, uint64_t inv_mask)
 
 
 static int gc_count = 0;
-int disable_scheme_gc = 0;
+int disable_scheme_gc = 1;
 static bool gc_was_deferred = false;
 
 void

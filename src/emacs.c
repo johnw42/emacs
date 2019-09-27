@@ -1767,6 +1767,10 @@ Using an Emacs configured with --with-x-toolkit=lucid does not have this problem
 
   initialized = 1;
 
+#ifdef HAVE_CHEZ_SCHEME
+  resume_scheme_gc();
+#endif
+
   /* Enter editor command loop.  This never returns.  */
   Frecursive_edit ();
 
