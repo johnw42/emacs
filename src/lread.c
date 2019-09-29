@@ -1452,6 +1452,9 @@ Return t if the file exists and loads successfully.  */)
 	message_with_string ("Loading %s...", file, 1);
     }
 
+  analyze_scheme_ref (found, "loading file");
+  printf("file is %p\n", CHEZ(found));
+
   specbind (Qload_file_name, found);
   specbind (Qinhibit_file_name_operation, Qnil);
   specbind (Qload_in_progress, Qt);
@@ -1852,8 +1855,16 @@ build_load_history (Lisp_Object filename, bool entire)
      front of load-history, the most-recently-loaded position.  Also
      do this if we didn't find an existing member for the file.  */
   if (entire || !foundit)
-    Vload_history = Fcons (Fnreverse (Vcurrent_load_list),
-			   Vload_history);
+    {
+      Vload_history = Fcons (Fnreverse (Vcurrent_load_list),
+                             Vload_history);
+      if (analyze_scheme_ref (XCAR(XCAR(Vload_history)), "added file to load-history"))
+        {
+          printf("cell = %p\n", CHEZ(XCAR(Vload_history)));
+        }
+
+      analyze_scheme_ref (XCAR(Vload_history), "added list to load-history");
+    }
   EXIT_LISP_FRAME_VOID ();
 }
 

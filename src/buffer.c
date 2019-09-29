@@ -5153,6 +5153,8 @@ scheme_init_buffer_once (void)
   fixup_lispsym_init (&QSFundamental);
   fixup_lispsym_init (&last_overlay_modification_hooks);
 
+  REGISTER_LISP_GLOBALS (last_overlay_modification_hooks);
+
   buffer_defaults_ptr = allocate_buffer();
   buffer_local_symbols_ptr = allocate_buffer();
   buffer_local_flags_ptr = allocate_buffer();

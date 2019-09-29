@@ -1095,6 +1095,8 @@ void
 syms_of_threads (void)
 {
   fixup_lispsym_init (&last_thread_error);
+  REGISTER_LISP_GLOBALS (last_thread_error);
+
 #ifndef THREADS_ENABLED
   if (0)
 #endif

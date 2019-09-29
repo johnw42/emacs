@@ -266,7 +266,9 @@ void container_uniq (struct container *c, compare_fun compare, merge_fun merge);
 #define FOR_NAMED_CONTAINER(i, name) FOR_CONTAINER (i, &name)
 
 void mark_lisp_refs (void);
-bool mark_and_enqueue (Lisp_Object obj);
+bool mark_and_enqueue (Lisp_Object obj, const char *label);
+extern int gc_count;
+extern bool gc_running;
 
 bool may_be_valid (chez_ptr x);
 #endif

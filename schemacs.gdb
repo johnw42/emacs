@@ -168,8 +168,13 @@ break main
 commands
   silent
   set $n = 0
+  continue
+end
+
+tbreak main
+commands
   #watch_for 0x1380a38 0x40e6818f
-  watch_for 0x12dd3b0 0x405b437f
+  #watch_for 0x12e2528 0x40e7721f
   continue
 end
 

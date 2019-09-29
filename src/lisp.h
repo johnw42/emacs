@@ -766,6 +766,9 @@ struct Lisp_Symbol
     {
 #ifdef HAVE_CHEZ_SCHEME
       Lisp_Object scheme_obj;
+#ifdef ENABLE_CHECKING
+      int last_gc;
+#endif
 #endif /* HAVE_CHEZ_SCHEME */
 
       bool_bf gcmarkbit : 1;
@@ -950,6 +953,9 @@ union vectorlike_header
       ptrdiff_t size;
       Lisp_Object scheme_obj;
       bool marked;
+#ifdef ENABLE_CHECKING
+      int last_gc;
+#endif
     } s;
 #else /* not HAVE_CHEZ_SCHEME */
     char alignas (GCALIGNMENT) gcaligned;
@@ -1271,7 +1277,14 @@ INLINE Lisp_Object vectorlike_lisp_obj(void *vptr)
 /* #define XSETPSEUDOVECTOR(a, b, code) ((a) = (b)->header.s.scheme_obj) */
 /* #define XSETTYPED_PSEUDOVECTOR(a, b, size, code) XSETPSEUDOVECTOR(a, b, code) */
 
-#define XUNTAG_VECTORLIKE(a) (eassert (chez_vectorp (CHEZ (a))), scheme_malloc_ptr (UNCHEZ (chez_vector_ref (CHEZ (a), 1))))
+INLINE void *
+XUNTAG_VECTORLIKE (Lisp_Object a)
+{
+  eassert (chez_vectorp (CHEZ (a)));
+  void *ptr = scheme_malloc_ptr (UNCHEZ (chez_vector_ref (CHEZ (a), 1)));
+  eassert (((union vectorlike_header *)ptr)->s.last_gc == gc_count || gc_running);
+  return ptr;
+}
 #define XUNTAG_MISC(a) XUNTAG_VECTORLIKE (a)
 
 #else /* not HAVE_CHEZ_SCHEME */
@@ -1510,6 +1523,9 @@ struct Lisp_String
 #ifdef HAVE_CHEZ_SCHEME
       Lisp_Object scheme_obj;
       bool marked;
+#ifdef ENABLE_CHECKING
+      int last_gc;
+#endif
 #endif /* HAVE_CHEZ_SCHEME */
       ptrdiff_t size;
       ptrdiff_t size_byte;
@@ -1547,7 +1563,10 @@ XSTRING (Lisp_Object a)
 {
   eassert (STRINGP (a));
 #ifdef HAVE_CHEZ_SCHEME
-  return scheme_malloc_ptr (UNCHEZ (chez_vector_ref (CHEZ (a), 1)));
+  struct Lisp_String *p = scheme_malloc_ptr (UNCHEZ (chez_vector_ref (CHEZ (a), 1)));
+  eassert (p->u.s.last_gc == gc_count || gc_running);
+  eassert (EQ (p->u.s.scheme_obj, a) || gc_running);
+  return p;
 #else /* not HAVE_CHEZ_SCHEME */
   return XUNTAG (a, Lisp_String);
 #endif /* not HAVE_CHEZ_SCHEME */
@@ -2088,6 +2107,7 @@ ASET (Lisp_Object array, ptrdiff_t idx, Lisp_Object val)
 {
   eassert (0 <= idx && idx < ASIZE (array));
   XVECTOR (array)->contents[idx] = val;
+  analyze_scheme_ref_ptr (&XVECTOR (array)->contents[idx], "ASET");
 }
 
 INLINE void
@@ -3840,7 +3860,6 @@ INLINE void
 set_char_table_extras (Lisp_Object table, ptrdiff_t idx, Lisp_Object val)
 {
   eassert (0 <= idx && idx < CHAR_TABLE_EXTRA_SLOTS (XCHAR_TABLE (table)));
-  (void) XLI(val);
   XCHAR_TABLE (table)->extras[idx] = val;
 }
 
@@ -3848,14 +3867,14 @@ INLINE void
 set_char_table_contents (Lisp_Object table, ptrdiff_t idx, Lisp_Object val)
 {
   eassert (0 <= idx && idx < (1 << CHARTAB_SIZE_BITS_0));
-  (void) XLI(val);
   XCHAR_TABLE (table)->contents[idx] = val;
+  analyze_scheme_ref_ptr (&XCHAR_TABLE (table)->contents[idx],
+                          "set_char_table_contents");
 }
 
 INLINE void
 set_sub_char_table_contents (Lisp_Object table, ptrdiff_t idx, Lisp_Object val)
 {
-  (void) XLI(val);
   XSUB_CHAR_TABLE (table)->contents[idx] = val;
 }
 

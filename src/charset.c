@@ -2366,6 +2366,8 @@ syms_of_charset (void)
   fixup_lispsym_init (&Vemacs_mule_charset_list);
   fixup_lispsym_init (&charset_work);
 
+  REGISTER_LISP_GLOBALS (charset_work);
+
   DEFSYM (Qcharsetp, "charsetp");
 
   /* Special charset symbols.  */

@@ -228,11 +228,11 @@ alloc_unexec_post (void)
    to a struct Lisp_String.  */
 
 #ifdef HAVE_CHEZ_SCHEME
-#define MARK_STRING(S)		((S)->u.s.marked = true)
+#define MARK_STRING(S)		((S)->u.s.marked = true, (S)->u.s.last_gc = gc_count)
 #define UNMARK_STRING(S)	((S)->u.s.marked = false)
 #define STRING_MARKED_P(S)	((S)->u.s.marked)
 
-#define VECTOR_MARK(V)		((V)->header.s.marked = true)
+#define VECTOR_MARK(V)		((V)->header.s.marked = true, (V)->header.s.last_gc = gc_count)
 #define VECTOR_UNMARK(V)	((V)->header.s.marked = false)
 #define VECTOR_MARKED_P(V)	((V)->header.s.marked)
 #else
@@ -428,8 +428,8 @@ gdb_found_ref_ptr(Lisp_Object *ptr)
 {
 }
 
-bool
-analyze_scheme_ref(Lisp_Object ref, const char *label)
+static bool
+analyze_scheme_ref_maybe_invalid (Lisp_Object ref, const char *label)
 {
   for (int i = 0; i < MAX_MAGIC_REFS; i++)
     {
@@ -437,8 +437,10 @@ analyze_scheme_ref(Lisp_Object ref, const char *label)
       if (CHEZ (ref) == (chez_ptr) magic_refs[i])
         {
           if (label)
-            printf ("*** %s: ref %p\n", label, CHEZ (ref));
-          gdb_found_ref(ref);
+            {
+              printf ("*** %s: ref %p\n", label, CHEZ (ref));
+              gdb_found_ref(ref);
+            }
           return true;
         }
     }
@@ -446,7 +448,15 @@ analyze_scheme_ref(Lisp_Object ref, const char *label)
 }
 
 bool
-analyze_scheme_ref_ptr(Lisp_Object *ptr, const char *label)
+analyze_scheme_ref (Lisp_Object ref, const char *label)
+{
+  bool found = analyze_scheme_ref_maybe_invalid (ref, label);
+  eassert (may_be_valid (CHEZ (ref)));
+  return found;
+}
+
+bool
+analyze_scheme_ref_ptr (Lisp_Object *ptr, const char *label)
 {
   for (int i = 0; i < MAX_MAGIC_REFS; i++)
     {
@@ -456,23 +466,30 @@ analyze_scheme_ref_ptr(Lisp_Object *ptr, const char *label)
           ptr == (Lisp_Object *) magic_ref_ptrs[i])
         {
           if (label)
-            printf ("*** %s: ref %p at %p\n", label, CHEZ(ref), ptr);
-          gdb_found_ref_ptr(ptr);
+            {
+              printf ("*** %s: ref %p at %p\n", label, CHEZ(ref), ptr);
+              gdb_found_ref_ptr(ptr);
+            }
+          eassert (may_be_valid (CHEZ (*ptr)));
           return true;
         }
       if (magic_refs[i] && CHEZ (ref) == (chez_ptr) magic_refs[i])
         {
           if (label)
-            printf ("*** %s: ref %p at %p\n", label, CHEZ(ref), ptr);
-          gdb_found_ref_ptr(ptr);
+            {
+              printf ("*** %s: ref %p at %p\n", label, CHEZ(ref), ptr);
+              gdb_found_ref(ref);
+            }
+          eassert (may_be_valid (CHEZ (*ptr)));
           return true;
         }
     }
+  eassert (may_be_valid (CHEZ (*ptr)));
   return false;
 }
 
 static bool
-analyze_scheme_ref_info(struct scheme_ref_info *info, const char *label)
+analyze_scheme_ref_info (struct scheme_ref_info *info, const char *label)
 {
   if (info->ref_ptr)
     return analyze_scheme_ref_ptr (UNCHEZ_PTR (info->ref_ptr), label);
@@ -577,8 +594,10 @@ record_scheme_ref (Lisp_Object ref, enum scheme_ref_type type)
 static Lisp_Object
 scheme_make_pure (Lisp_Object ref)
 {
-  chez_lock_object (CHEZ (ref));
-  return record_scheme_ref (ref, rt_pure);
+  /* chez_lock_object (CHEZ (ref)); */
+  /* return record_scheme_ref (ref, rt_pure); */
+  analyze_scheme_ref (ref, "scheme_make_pure");
+  return ref;
 }
 
 static bool
@@ -618,9 +637,11 @@ set_mark_bit (Lisp_Object obj, bool bit)
       break;
     case Lisp_Symbol:
       XSYMBOL (obj)->u.s.gcmarkbit = bit;
+      XSYMBOL (obj)->u.s.last_gc = gc_count;
       break;
     case Lisp_Misc:
       XMISCANY (obj)->gcmarkbit = bit;
+      XMISCANY (obj)->header.s.last_gc = gc_count;
       break;
     default:
       ;
@@ -628,9 +649,18 @@ set_mark_bit (Lisp_Object obj, bool bit)
 }
 
 bool
-mark_and_enqueue (Lisp_Object obj)
+mark_and_enqueue (Lisp_Object obj, const char *label)
 {
-  if (!has_mark_bit (obj, true))
+  analyze_scheme_ref (obj, label);
+  /* if (CONSP (obj)) */
+  /*   { */
+  /*     Lisp_Object obj1 = XCAR (obj); */
+  /*     container_append (&mark_queue, &obj1); */
+  /*     obj1 = XCDR (obj); */
+  /*     container_append (&mark_queue, &obj1); */
+  /*     return true; */
+  /*   } */
+  if (!has_mark_bit (obj, false))
     {
       set_mark_bit (obj, true);
       container_append (&mark_queue, &obj);
@@ -2337,6 +2367,7 @@ static ptrdiff_t const STRING_BYTES_MAX =
 static void
 init_strings (void)
 {
+  REGISTER_LISP_GLOBALS (empty_unibyte_string, empty_multibyte_string);
   empty_unibyte_string = make_pure_string ("", 0, 0, 0);
   empty_multibyte_string = make_pure_string ("", 0, 0, 1);
 }
@@ -2451,6 +2482,7 @@ scheme_allocate (ptrdiff_t nbytes, chez_ptr sym, Lisp_Object *vec_ptr)
   eassert (data == scheme_malloc_ptr (addr));
 
   chez_ptr vec = chez_make_vector(SCHEME_PV_LENGTH, sym);
+  analyze_scheme_ref (UNCHEZ (vec), "scheme_allocate");
   /* chez_call2 (scheme_guardian, */
   /*             vec, */
   /*             chez_cons (sym, */
@@ -2477,10 +2509,11 @@ static struct Lisp_String *
 allocate_string (void)
 {
 #ifdef HAVE_CHEZ_SCHEME
-  ENTER_LISP_FRAME_T (struct Lisp_String *, (), vec);
-  struct Lisp_String *s = scheme_allocate (sizeof (struct Lisp_String), scheme_string_symbol, &vec);
-  update_scheme_obj (&s->u.s.scheme_obj, vec);
-  eassert(STRINGP(vec));
+  ENTER_LISP_FRAME_T (struct Lisp_String *, (), obj);
+  struct Lisp_String *s = scheme_allocate (sizeof (struct Lisp_String), scheme_string_symbol, &obj);
+  update_scheme_obj (&s->u.s.scheme_obj, obj);
+  s->u.s.last_gc = gc_count;
+  eassert(STRINGP(obj));
   EXIT_LISP_FRAME (s);
 #else /* not HAVE_CHEZ_SCHEME */
   struct Lisp_String *s;
@@ -3140,8 +3173,6 @@ make_uninit_string (EMACS_INT length)
 Lisp_Object
 make_uninit_multibyte_string (EMACS_INT nchars, EMACS_INT nbytes)
 {
-  Lisp_Object string;
-
   if (nchars < 0)
     emacs_abort ();
   if (!nbytes)
@@ -3151,9 +3182,10 @@ make_uninit_multibyte_string (EMACS_INT nchars, EMACS_INT nbytes)
     }
 
   struct Lisp_String *s = allocate_string ();
+  Lisp_Object string;
+  XSETSTRING (string, s);
   s->u.s.intervals = NULL;
   allocate_string_data (s, nchars, nbytes);
-  XSETSTRING (string, s);
   string_chars_consed += nbytes;
   return string;
 }
@@ -3352,6 +3384,7 @@ DEFUN ("cons", Fcons, Scons, 2, 2, 0,
   ENTER_LISP_FRAME ((car, cdr), val);
 #ifdef HAVE_CHEZ_SCHEME
   val = UNCHEZ (chez_cons (CHEZ (car), CHEZ (cdr)));
+  analyze_scheme_ref (val, "Fcons");
   scheme_dont_track (val, "cons");
   eassert (CONSP(val));
   EXIT_LISP_FRAME (val);
@@ -3704,6 +3737,7 @@ allocate_vector_block (void)
 static void
 init_vectors (void)
 {
+  REGISTER_LISP_GLOBALS (zero_vector);
 #ifdef HAVE_CHEZ_SCHEME
   zero_vector = UNCHEZ (chez_false);
   zero_vector = scheme_make_pure (Fmake_vector (make_number(0), Qnil));
@@ -3956,6 +3990,7 @@ allocate_vectorlike (ptrdiff_t len)
   struct Lisp_Vector *data = scheme_allocate
     (header_size + len * word_size, scheme_vectorlike_symbol, &vec);
   data->header.s.size = len;
+  data->header.s.last_gc = gc_count;
   set_vectorlike_lisp_obj(data, vec);
   set_nil (data->contents, len); // XXX
   return data;
@@ -4372,6 +4407,7 @@ allocate_misc (enum Lisp_Misc_Type type)
     (sizeof (union Lisp_Misc), scheme_misc_symbol, &val);
   data->type = type;
   data->gcmarkbit = 0;
+  data->header.s.last_gc = gc_count;
   init_nil_refs (val);
   set_vectorlike_lisp_obj (data, val);
   return val;
@@ -6541,6 +6577,9 @@ static size_t num_scheme_globals = 0;
 
 void scheme_register_globals (Lisp_Object *addr, size_t n)
 {
+  eassert ((!LISPSYM_INITIAL_P (*addr) ||
+            LISPSYM_INITIAL_NUM (*addr) == iQnil) ||
+           EQ (*addr, Qnil));
   set_nil (addr, n);
   scheme_globals[num_scheme_globals].addr = addr;
   scheme_globals[num_scheme_globals].count = n;
@@ -7341,8 +7380,11 @@ mark_object (Lisp_Object arg)
   obj = arg;
 
 #ifdef HAVE_CHEZ_SCHEME
-  if (!mark_and_enqueue (obj))
-    return;
+  if (!mark_and_enqueue (obj, "mark_object 0"))
+    {
+      eassert (!CONSP (obj));
+      return;
+    }
 #else
  loop:
 
@@ -7656,18 +7698,24 @@ mark_object (Lisp_Object arg)
     case Lisp_Cons:
       {
 #ifdef HAVE_CHEZ_SCHEME
-        Lisp_Object fast = XCDR (obj);
-        Lisp_Object slow = obj;
-        while (!NILP (slow) && !EQ (slow, fast))
+        Lisp_Object fast = obj, slow = obj;
+        if (analyze_scheme_ref (obj, "marking list"))
+          printf ("length = %ld\n", XINT(Flength(obj)));
+        do
           {
-            mark_and_enqueue (XCAR (obj));
+            mark_object (XCAR (slow));
             slow = XCDR (slow);
-            if (!NILP (fast))
+            if (CONSP (fast))
               {
                 fast = XCDR (fast);
-                if (!NILP (fast))
+                if (CONSP (fast))
                   fast = XCDR (fast);
               }
+          }
+        while (CONSP (slow) && !EQ (slow, fast));
+        if (!NILP (slow))
+          {
+            mark_object (slow);
           }
 #else
 	register struct Lisp_Cons *ptr = XCONS (obj);
@@ -8456,9 +8504,9 @@ init_alloc_once (void)
 #endif /* not HAVE_CHEZ_SCHEME */
 
   mem_init ();
-#ifndef HAVE_CHEZ_SCHEME
+
+  REGISTER_LISP_GLOBALS (Vdead);
   Vdead = make_pure_string ("DEAD", 4, 4, 0);
-#endif /* not HAVE_CHEZ_SCHEME */
 
 #ifdef DOUG_LEA_MALLOC
   mallopt (M_TRIM_THRESHOLD, 128 * 1024); /* Trim threshold.  */
@@ -8488,8 +8536,6 @@ init_alloc (void)
 void
 syms_of_alloc (void)
 {
-  fixup_lispsym_init (&Vdead);
-
   DEFVAR_INT ("gc-cons-threshold", gc_cons_threshold,
 	      doc: /* Number of bytes of consing between garbage collections.
 Garbage collection can happen automatically once this many bytes have been
@@ -8844,7 +8890,8 @@ memgrep1 (uint64_t word, uint64_t inv_mask)
 }
 
 
-static int gc_count = 0;
+int gc_count = 0;
+bool gc_running = false;
 int disable_scheme_gc = 1;
 static bool gc_was_deferred = false;
 
@@ -8886,14 +8933,16 @@ static void gc_done(void) {}
 int
 before_scheme_gc (void)
 {
-  if (disable_scheme_gc > 0)
+  if (disable_scheme_gc > 0 || gc_running)
     {
       printf ("skipping gc\n");
       gc_was_deferred = true;
       return false;
     }
 
-  printf ("starting gc\n");
+  gc_count++;
+  printf ("starting gc %d\n", gc_count);
+  gc_running = true;
   disable_scheme_gc++;
   gc_was_deferred = false;
 
@@ -8955,14 +9004,15 @@ before_scheme_gc (void)
   visit_kboard_lisp_refs (mark_lisp_refs_fun, NULL);
   visit_fringe_lisp_refs (mark_lisp_refs_fun, NULL);
   FOR_NAMED_CONTAINER (i, mark_queue)
-    visit_lisp_refs (*NAMED_CONTAINER_REF (mark_queue, i),
-                     mark_lisp_refs_fun, NULL);
+    {
+      Lisp_Object obj = *NAMED_CONTAINER_REF (mark_queue, i);
+      analyze_scheme_ref (obj, "found in mq");
+      visit_lisp_refs (obj, mark_lisp_refs_fun, NULL);
+    }
   printf ("mq end size: %lu\n", mark_queue.size);
 
   FOR_NAMED_CONTAINER (i, mark_queue)
-    {
-      set_mark_bit (*NAMED_CONTAINER_REF (mark_queue, i), false);
-    }
+    set_mark_bit (*NAMED_CONTAINER_REF (mark_queue, i), false);
 
   printf("tracked refs after mark: %lu\n", scheme_refs.size);
   FOR_NAMED_CONTAINER (i, scheme_refs)
@@ -9043,9 +9093,9 @@ after_scheme_gc (void)
       if (old_ref != new_ref)
         {
           chez_ptr *old_ref_ptr = ref_info->ref_ptr;
-          if (analyze_scheme_ref(UNCHEZ(old_ref), NULL) ||
-              analyze_scheme_ref(UNCHEZ(new_ref), NULL) ||
-              analyze_scheme_ref(UNCHEZ(*old_ref_ptr), NULL))
+          if (analyze_scheme_ref_maybe_invalid(UNCHEZ(old_ref), NULL) ||
+              analyze_scheme_ref_maybe_invalid(UNCHEZ(new_ref), NULL) ||
+              analyze_scheme_ref_maybe_invalid(UNCHEZ(*old_ref_ptr), NULL))
             {
               printf("*** moved %p => %p at %p\n",
                      old_ref, new_ref, old_ref_ptr);
@@ -9109,7 +9159,8 @@ after_scheme_gc (void)
   chez_unlock_object (gc_vector);
   gc_vector = chez_false;
 
-  printf ("*\n* GC %d complete!\n*\n", gc_count++);
+  printf ("*\n* GC %d complete!\n*\n", gc_count);
+  gc_running = false;
   --disable_scheme_gc;
 
   gc_done();
@@ -9149,12 +9200,26 @@ static size_t magic_refs[MAX_MAGIC_REFS] =
    /* 0x41164b6b, */
    /* 0x40904bcb, */
    /* 0x40ab86db */
-   0x405b437f
+   /* 0x405b437f, */
+   /* 0x40e7721f, */
+   /* 0x40739999, // Vload_suffixes initial alloc. */
+   /* // 0x41146dc9, // Vload_suffixes */
+   /* /\* 0x41146dd9, // cdr(Vload_suffixes) *\/ */
+   /* /\* 0x4118a69f, // ".elc" *\/ */
+   /* 0x407398ff, // ".elc" initial alloc */
+   /* 0x4073986f, // ".el" initial alloc */
+
+
+   //0x40844ce9, 0x41384579, // load-history
+   0x409a83ff, // "/home/jrw/git/emacs/lisp/emacs-lisp/byte-run.el" ?
+   0x413969ef, // "/home/jrw/git/emacs/lisp/emacs-lisp/byte-run.el"
+   0x409a8ce9, // cell holding byte-run.el path
   };
 static size_t magic_ref_ptrs[MAX_MAGIC_REFS] =
   {
    /* 0x12dae30, */
    /* 0x140deb0, */
-   0x12dd3b0
+   //0x12dd3b0,
+   /* 0x14b00e0 */
   };
 #endif

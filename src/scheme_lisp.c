@@ -254,6 +254,7 @@ ensure_symbol_c_data (Lisp_Object symbol, Lisp_Object name)
   // Can't use init_nil_refs here because of how builtin symbols are
   // initialized.
   p->u.s.scheme_obj = symbol;
+  p->u.s.last_gc = gc_count;
   p->u.s.name = name;
   p->u.s.plist = Qnil;
   p->u.s.redirect = SYMBOL_PLAINVAL;
@@ -299,6 +300,7 @@ XSYMBOL (Lisp_Object a)
 {
   struct Lisp_Symbol *p = ensure_symbol_c_data (a, UNCHEZ (chez_false));
   eassert (EQ (p->u.s.scheme_obj, a));
+  eassert (p->u.s.last_gc == gc_count || gc_running);
   return p;
 }
 
@@ -353,7 +355,7 @@ XTYPE (Lisp_Object a)
 }
 
 void
-fixup_lispsym_inits(Lisp_Object *p, size_t n)
+fixup_lispsym_inits (Lisp_Object *p, size_t n)
 {
   // Reverse the transformation applied by LISPSYM_INITIALLY.
   for (size_t i = 0; i < n; i++) {
@@ -362,7 +364,6 @@ fixup_lispsym_inits(Lisp_Object *p, size_t n)
     Lisp_Object sym = lispsym[index];
     eassert (SYMBOLP (sym));
     p[i] = sym;
-    staticpro (p);
   }
 }
 
@@ -538,6 +539,7 @@ gdb_print_scheme(char *buf, Lisp_Object obj)
 static void
 gdb_print_lisp(char *buf, Lisp_Object obj)
 {
+  gc_running = true;
   if (XTYPE (obj) == Lisp_Chez_Internal)
     {
       gdb_print_scheme (buf, obj);
@@ -574,7 +576,7 @@ visit_pseudovector_lisp_refs (struct Lisp_Vector *v, lisp_ref_visitor_fun fun, v
   fun (data, &v->header.s.scheme_obj, 1);
   EMACS_INT n = pvsize_from_header (&v->header);
   if (n > 0)
-    fun(data, v->contents, n);
+    fun (data, v->contents, n);
 }
 
 
@@ -583,7 +585,7 @@ visit_sub_char_table_lisp_refs (struct Lisp_Sub_Char_Table *v, lisp_ref_visitor_
 {
   fun (data, &v->header.s.scheme_obj, 1);
   EMACS_INT n = pvsize_from_header (&v->header);
-  if (n > 0)
+  if (n > SUB_CHAR_TABLE_OFFSET)
     fun (data,
          v->contents + SUB_CHAR_TABLE_OFFSET,
          n - SUB_CHAR_TABLE_OFFSET);

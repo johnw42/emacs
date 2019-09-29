@@ -5403,12 +5403,15 @@ syms_of_fns (void)
   fixup_lispsym_init(&hashtest_equal.user_hash_function);
   fixup_lispsym_init(&hashtest_equal.user_cmp_function);
 
-#ifdef HAVE_CHEZ_SCHEME
-  // TODO(jrw): Ensure staticpro is always called when needed.
-  staticpro(&hashtest_eq.name);
-  staticpro(&hashtest_eql.name);
-  staticpro(&hashtest_equal.name);
-#endif
+  REGISTER_LISP_GLOBALS (hashtest_eq.name);
+  REGISTER_LISP_GLOBALS (hashtest_eq.user_hash_function);
+  REGISTER_LISP_GLOBALS (hashtest_eq.user_cmp_function);
+  REGISTER_LISP_GLOBALS (hashtest_eql.name);
+  REGISTER_LISP_GLOBALS (hashtest_eql.user_hash_function);
+  REGISTER_LISP_GLOBALS (hashtest_eql.user_cmp_function);
+  REGISTER_LISP_GLOBALS (hashtest_equal.name);
+  REGISTER_LISP_GLOBALS (hashtest_equal.user_hash_function);
+  REGISTER_LISP_GLOBALS (hashtest_equal.user_cmp_function);
 
   defsubr (&Ssxhash_eq);
   defsubr (&Ssxhash_eql);
