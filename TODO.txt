@@ -1,0 +1,15 @@
+Use guardian to free malloc'd memory
+
+Reduce re-allocation of gc_vector
+
+Compare traces
+
+Update dependencies
+
+Find equivalent of unexec
+
+Represent Lisp functions as Scheme functions
+
+Represent lisp vectors as scheme vectors
+
+Implement finalizers--trivial using guardian

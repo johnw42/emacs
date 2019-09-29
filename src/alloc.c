@@ -485,8 +485,8 @@ scheme_ref_merge_unlock (void *p, const void *q)
 {
   struct scheme_ref_info *pp = p;
   const struct scheme_ref_info *qq = q;
-  chez_unlock_object (pp->ref);
-  analyze_scheme_ref_info (pp, "unlocked during merge");
+  //chez_unlock_object (pp->ref);
+  analyze_scheme_ref_info (pp, "(not) unlocked during merge");
   *pp = *qq;
 }
 
@@ -519,6 +519,8 @@ malloc_block_empty (const void *p)
   return ((struct malloc_block *)p)->size == -1;
 }
 
+static struct scheme_ref_info scheme_ref_array[128 * 1024];
+
 STATIC_NAMED_CONTAINER (scheme_refs, struct scheme_ref_info);
 STATIC_NAMED_CONTAINER (mark_queue, Lisp_Object);
 /* STATIC_NAMED_CONTAINER (malloc_blocks, struct malloc_block); */
@@ -528,6 +530,8 @@ void
 alloc_preinit (void)
 {
   NAMED_CONTAINER_CONFIG (scheme_refs);
+  scheme_refs.capacity = ARRAYELTS(scheme_ref_array);
+  scheme_refs.data = scheme_ref_array;
   /* NAMED_CONTAINER_CONFIG (malloc_blocks); */
   NAMED_CONTAINER_CONFIG (mark_queue);
 }
@@ -573,6 +577,7 @@ record_scheme_ref (Lisp_Object ref, enum scheme_ref_type type)
 static Lisp_Object
 scheme_make_pure (Lisp_Object ref)
 {
+  chez_lock_object (CHEZ (ref));
   return record_scheme_ref (ref, rt_pure);
 }
 
@@ -5949,10 +5954,6 @@ typedef union
 void
 mark_stack (char *bottom, char *end)
 {
-#ifdef HAVE_CHEZ_SCHEME
-  printf ("mark_stack (%p, %p)\n", bottom, end);
-#endif
-
   /* This assumes that the stack is a contiguous region in memory.  If
      that's not the case, something has to be done here to iterate
      over the stack segments.  */
@@ -8781,7 +8782,8 @@ try_memgrep1 (size_t start, uint64_t *words, size_t num_words, uint64_t mask, in
         }
       if (uint64_member(words, num_words, data & mask) &&
           (p < memgrep_ignore_min || p > memgrep_ignore_max) &&
-          (p < (char *) words || p > (char *) (words + num_words)))
+          (p < (char *) words || p > (char *) (words + num_words)) &&
+          !CONTAINER_OWNS_ADDR(&scheme_refs, p))
         {
           --memgrep_max_hits;
           memgrep_last_found = p;
@@ -8798,7 +8800,7 @@ try_memgrep (size_t start, uint64_t *words, size_t num_words, uint64_t mask)
   try_memgrep1(start, words, num_words, mask, sizeof (uint64_t));
 }
 
-static void
+void
 memgrep (uint64_t *words, size_t num_words, uint64_t mask)
 {
   if (num_words == 0)
@@ -8813,9 +8815,10 @@ memgrep (uint64_t *words, size_t num_words, uint64_t mask)
   if (mask == 0)
     mask = ~mask;
   for (size_t i = 0; i < num_words; i++)
-    words[i] &= mask;
-
+    words[i] = (words[i] & mask) + 1;
   qsort (words, num_words, sizeof (*words), uint64_cmp);
+  for (size_t i = 0; i < num_words; i++)
+    words[i]--;
 
   // Check in global data.
   try_memgrep (0xe61e60, words, num_words, mask);
@@ -8901,7 +8904,8 @@ before_scheme_gc (void)
 
   eassert (STRINGP(empty_unibyte_string));
 
-  /* memgrep(0xdeadface0000000f, 0xffffffff0000000f, 8); */
+  uint64_t deadface = 0xdeadface0000000f;
+  memgrep(&deadface, 1, 0xffffffff0000000f);
   /* for (int i = 0; i < MAX_MAGIC_REFS; i++) */
   /*   { */
   /*     if (magic_refs[i]) { */
@@ -8922,8 +8926,7 @@ before_scheme_gc (void)
     }
 
   printf("tracked refs before mark: %lu\n", scheme_refs.size);
-
-  container_reset (&mark_queue);
+  eassert (mark_queue.size == 0);
 
   /* printf ("malloc_blocks 1: %lu\n", malloc_blocks.size); */
   /* container_delete_if (&malloc_blocks, malloc_block_empty); */
@@ -9079,9 +9082,11 @@ after_scheme_gc (void)
     }
   printf ("remaining tracked refs: %d\n", (int)scheme_refs.size);
 
+  container_reset (&mark_queue);
+
 #if ENABLE_CHECKING
   printf ("found %lu dead refs\n", (unsigned long) num_dead_refs);
-  memgrep (dead_refs, num_dead_refs, 0);
+  //memgrep (dead_refs, num_dead_refs, 0);
 #endif
 
   unsigned long guardian_count = 0;
@@ -9137,10 +9142,19 @@ union
 #ifdef HAVE_CHEZ_SCHEME
 static size_t magic_refs[MAX_MAGIC_REFS] =
   {
-   //0x40901e5b
-   //0x4055f27b
+   /* 0x7478650a676e6964 */
+   /* 0x40ac89ab, */
+   /* 0x42df678b, */
+   /* 0x410ddf4b, */
+   /* 0x41164b6b, */
+   /* 0x40904bcb, */
+   /* 0x40ab86db */
+   0x405b437f
   };
 static size_t magic_ref_ptrs[MAX_MAGIC_REFS] =
   {
+   /* 0x12dae30, */
+   /* 0x140deb0, */
+   0x12dd3b0
   };
 #endif

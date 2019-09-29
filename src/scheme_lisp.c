@@ -242,7 +242,15 @@ ensure_symbol_c_data (Lisp_Object symbol, Lisp_Object name)
     name = to_lisp_string (symbol);
   eassert (STRINGP (name));
 
-  p = scheme_alloc_c_data(symbol, sizeof (struct Lisp_Symbol));
+  p = xzalloc (sizeof (struct Lisp_Symbol));
+  SCHEME_FPTR_CALL (putprop_addr, CHEZ(symbol), c_data_property_symbol, p);
+  eassert (p == SCHEME_FPTR_CALL (getprop_addr, CHEZ(symbol), c_data_property_symbol));
+
+  if (symbol_is (symbol, "x-sent-selection-hooks"))
+    printf("x-sent-selection-hooks = %p / %p\n", CHEZ(symbol), p);
+  if (symbol_is (symbol, "x-sent-selection-functions"))
+    printf("x-sent-selection-functions = %p / %p\n", CHEZ(symbol), p);
+
   // Can't use init_nil_refs here because of how builtin symbols are
   // initialized.
   p->u.s.scheme_obj = symbol;
@@ -274,7 +282,8 @@ scheme_make_symbol(Lisp_Object name, int /*enum symbol_interned*/ interned)
         (interned == SYMBOL_INTERNED_IN_INITIAL_OBARRAY ?
          "string->symbol" : "gensym",
          CHEZ(scheme_str)));
-      scheme_track (scheme_symbol);
+      //scheme_track (scheme_symbol);
+      analyze_scheme_ref (scheme_symbol, "scheme_make_symbol");
     }
 
   eassert (chez_symbolp (CHEZ (scheme_symbol)));
@@ -293,22 +302,22 @@ XSYMBOL (Lisp_Object a)
   return p;
 }
 
-void *
-scheme_alloc_c_data (Lisp_Object key, chez_iptr size)
-{
-  void *bytes = xzalloc (size);
-  SCHEME_FPTR_CALL (putprop_addr, CHEZ(key), c_data_property_symbol, bytes);
-  return bytes;
-}
+/* void * */
+/* scheme_alloc_c_data (Lisp_Object key, chez_iptr size) */
+/* { */
+/*   void *bytes = xzalloc (size); */
+/*   SCHEME_FPTR_CALL (putprop_addr, CHEZ(key), c_data_property_symbol, bytes); */
+/*   return bytes; */
+/* } */
 
-void *
-scheme_find_c_data (Lisp_Object key)
-{
-  chez_ptr found = SCHEME_FPTR_CALL(hashtable_ref, CHEZ (c_data_table), CHEZ (key), chez_false);
-  if (found == chez_false)
-    return NULL;
-  return scheme_malloc_ptr (UNCHEZ (found));
-}
+/* void * */
+/* scheme_find_c_data (Lisp_Object key) */
+/* { */
+/*   chez_ptr found = SCHEME_FPTR_CALL(hashtable_ref, CHEZ (c_data_table), CHEZ (key), chez_false); */
+/*   if (found == chez_false) */
+/*     return NULL; */
+/*   return scheme_malloc_ptr (UNCHEZ (found)); */
+/* } */
 
 static void
 scheme_ptr_fill (Lisp_Object *p, Lisp_Object init, chez_iptr num_words)
@@ -575,7 +584,9 @@ visit_sub_char_table_lisp_refs (struct Lisp_Sub_Char_Table *v, lisp_ref_visitor_
   fun (data, &v->header.s.scheme_obj, 1);
   EMACS_INT n = pvsize_from_header (&v->header);
   if (n > 0)
-    fun(data, v->contents, n);
+    fun (data,
+         v->contents + SUB_CHAR_TABLE_OFFSET,
+         n - SUB_CHAR_TABLE_OFFSET);
 }
 
 struct visit_iterval_data {
@@ -709,53 +720,58 @@ static void
 visit_symbol_lisp_refs(Lisp_Object obj, lisp_ref_visitor_fun fun, void *data)
 {
   struct Lisp_Symbol *s = XSYMBOL (obj);
-  if (symbol_is (obj, "buffer-undo-list"))
-    printf("visiting buffer-undo-list\n");
-  if (s->u.s.redirect == SYMBOL_VARALIAS)
-    s = s->u.s.val.alias;
-  fun (data, &s->u.s.scheme_obj, 1);
-  fun (data, &s->u.s.name, 1);
-  switch (s->u.s.redirect)
-    {
-    case SYMBOL_PLAINVAL:
-      fun (data, &s->u.s.val.value, 1);
-      break;
-    case SYMBOL_LOCALIZED:
+  while (s) {
+    analyze_scheme_ref_ptr (&s->u.s.scheme_obj, "symbol backref");
+    fun (data, &s->u.s.scheme_obj, 1);
+    fun (data, &s->u.s.name, 1);
+    struct Lisp_Symbol *next_s = NULL;
+    switch (s->u.s.redirect)
       {
-        struct Lisp_Buffer_Local_Value *blv = SYMBOL_BLV (s);
-        fun (data, &blv->where, 1);
-        fun (data, &blv->valcell, 1);
-        fun (data, &blv->defcell, 1);
-      }
-      break;
-    case SYMBOL_FORWARDED:
-      {
-        union Lisp_Fwd *fwd = s->u.s.val.fwd;
-        switch (XFWDTYPE (fwd))
-          {
-          case Lisp_Fwd_Obj:
-            fun (data, fwd->u_objfwd.objvar, 1);
-            break;
-          case Lisp_Fwd_Buffer_Obj:
+      case SYMBOL_PLAINVAL:
+        fun (data, &s->u.s.val.value, 1);
+        break;
+      case SYMBOL_LOCALIZED:
+        {
+          struct Lisp_Buffer_Local_Value *blv = SYMBOL_BLV (s);
+          fun (data, &blv->where, 1);
+          fun (data, &blv->valcell, 1);
+          fun (data, &blv->defcell, 1);
+        }
+        break;
+      case SYMBOL_FORWARDED:
+        {
+          union Lisp_Fwd *fwd = s->u.s.val.fwd;
+          switch (XFWDTYPE (fwd))
             {
-              fun (data, &fwd->u_buffer_objfwd.predicate, 1);
-              /* int offset = XBUFFER_OBJFWD (innercontents)->offset; */
-              /* int idx = PER_BUFFER_IDX (offset); */
+            case Lisp_Fwd_Obj:
+              fun (data, fwd->u_objfwd.objvar, 1);
+              break;
+            case Lisp_Fwd_Buffer_Obj:
+              {
+                fun (data, &fwd->u_buffer_objfwd.predicate, 1);
+                /* int offset = XBUFFER_OBJFWD (innercontents)->offset; */
+                /* int idx = PER_BUFFER_IDX (offset); */
+              }
+              break;
+              /* case Lisp_Fwd_Kboard_obj: */
+              /*   // XXX */
+            default:
+              break;
             }
-            break;
-          /* case Lisp_Fwd_Kboard_obj: */
-          /*   // XXX */
-          default:
-            break;
-          }
+        }
+        break;
+      case SYMBOL_VARALIAS:
+        next_s = s->u.s.val.alias;
+        break;
+      default:
+        emacs_abort ();
       }
-      break;
-    default:
-      emacs_abort ();
-    }
-  fun(data, &s->u.s.function, 1);
-  fun(data, &s->u.s.plist, 1);
-  fun(data, &s->u.s.name, 1);
+    fun(data, &s->u.s.function, 1);
+    fun(data, &s->u.s.plist, 1);
+    fun(data, &s->u.s.name, 1);
+
+    s = next_s;
+  }
 }
 
 /* Finds all Lisp_Object references in OBJ not managed by the scheme
@@ -841,8 +857,9 @@ visit_lisp_refs(Lisp_Object obj, lisp_ref_visitor_fun fun, void *data)
                   for (chez_iptr i = 0; i < n; i++)
                     {
                       Lisp_Object sym = values[i];
+                      analyze_scheme_ref (sym, "visiting obarray");
                       eassert (SYMBOLP (sym));
-                      visit_lisp_refs (sym, fun, data);
+                      visit_symbol_lisp_refs (sym, fun, data);
                     }
                 }
             }
@@ -1021,7 +1038,7 @@ static void
 container_clean (struct container *c)
 {
 #ifdef ENABLE_CHECKING
-  memset ((char *)c->cata + c->size * c->elem_size, 0
+  memset ((char *) c->data + c->size * c->elem_size, 0,
           (c->capacity - c->size) * c->elem_size);
 #endif
 }

@@ -5333,6 +5333,8 @@ maybe_gc (void)
 extern FILE *trace_file;
 void trace(const char *label, Lisp_Object obj);
 
+void memgrep (uint64_t *words, size_t num_words, uint64_t mask);
+
 INLINE_HEADER_END
 
 #endif /* EMACS_LISP_H */

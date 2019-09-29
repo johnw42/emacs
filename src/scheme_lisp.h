@@ -249,6 +249,10 @@ void container_uniq (struct container *c, compare_fun compare, merge_fun merge);
   struct container name;                                                \
   typedef type name##_type
 
+#define CONTAINER_OWNS_ADDR(c, addr)                                    \
+  ((char *) (c)->data < (char *) (addr) &&                              \
+   ((char *) (c)->data + (c)->elem_size * (c)->capacity >= (char *) (addr)))
+
 #define ASSERT_TYPE(type, x) (true ? (type)(x) : (x))
 #define EXTERN_NAMED_CONTAINER(name, type) extern NAMED_CONTAINER_DECL (name, type)
 #define STATIC_NAMED_CONTAINER(name, type) static NAMED_CONTAINER_DECL (name, type)

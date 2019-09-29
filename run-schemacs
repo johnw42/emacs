@@ -15,31 +15,41 @@ do_make() {
 MAKE_CMD=(do_make -j -C src temacs)
 
 # Command taken from Makefile.  Works, but behaves strangely in gdb.
-EMACS_CMD=(temacs --batch --load loadup bootstrap)
+EMACS_CMD=(./temacs --batch --load loadup bootstrap)
+RUN_DIR=$top/src
 
 main() {
-  RUN_DIR=$top/src
-
   ./update-tags &> /dev/null &!
 
-  case $1 in
-    --just-make)
-      "${MAKE_CMD[@]}"
-      exit $?
-      ;;
-    --with|--without)
-      local target_config=$1
-      shift
-      current_config=
-      case $(./config.status --config) in
-        *--with-chez-scheme*) current_config=--with ;;
-        *--without-chez-scheme*) current_config=--without ;;
-      esac
-      if [[ $current_config != $target_config ]]; then
-        ./config-schemacs $target_config
-      fi
-      ;;
-  esac
+  while [[ $# != 0 ]]; do
+    case $1 in
+      --just-make)
+        "${MAKE_CMD[@]}"
+        exit $?
+        ;;
+      --trace=*)
+        export EMACS_TRACE_FILE=$PWD/${1#--trace=}
+        shift
+        ;;
+      --trace)
+        export EMACS_TRACE_FILE=$PWD/trace.txt
+        shift
+        ;;
+      --with|--without)
+        local target_config=$1
+        shift
+        current_config=
+        case $(./config.status --config) in
+          *--with-chez-scheme*) current_config=--with ;;
+          *--without-chez-scheme*) current_config=--without ;;
+        esac
+        if [[ $current_config != $target_config ]]; then
+          ./config-schemacs $target_config
+        fi
+        break
+        ;;
+    esac
+  done
 
   make_args=("$@")
 
@@ -55,15 +65,17 @@ main() {
   # exec ddd $top/src/temacs
   
   #echo "${EMACS_CMD[*]}"
-  GDB_ARGS=(--nx -ex "set \$top_dir = \"$top\"" -ex r -x "$top/schemacs.gdb" --args "${EMACS_CMD[@]}")
+  GDB_ARGS=(--nx -ex "set \$top_dir = \"$top\"" -x "$top/schemacs.gdb" --args "${EMACS_CMD[@]}")
   #GDB_ARGS=(--nx -ex r -x "$top/schemacs.gdb" -x "$top/src/.gdbinit" --args "${EMACS_CMD[@]}")
   #GDB_ARGS=${GDB_ARGS[@]@Q}
-  if [[ $TERM != dumb ]]; then
+  if [[ -n $EMACS_TRACE_FILE ]]; then
+    exec "${EMACS_CMD[@]}"
+  elif [[ $TERM != dumb ]]; then
     if false; then
       GDB_ARGS=${GDB_ARGS[*]}
-      emacs --eval '(gdb (concat "gdb -i=mi " (pop command-line-args-left)))' "$GDB_ARGS"
+      exec emacs --eval '(gdb (concat "gdb -i=mi " (pop command-line-args-left)))' "$GDB_ARGS"
     else
-      gdb "${GDB_ARGS[@]}"
+      exec gdb "${GDB_ARGS[@]}"
     fi
   fi
 

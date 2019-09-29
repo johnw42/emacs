@@ -653,6 +653,9 @@ The return value is BASE-VARIABLE.  */)
   ENTER_LISP_FRAME ((new_alias, base_variable, docstring));
   struct Lisp_Symbol *sym;
 
+  /* if (symbol_is (new_alias, "x-sent-selection-hooks")) */
+  /*   gdb_break(); */
+
   CHECK_SYMBOL (new_alias);
   CHECK_SYMBOL (base_variable);
 
@@ -702,6 +705,9 @@ The return value is BASE-VARIABLE.  */)
   LOADHIST_ATTACH (new_alias);
   /* Even if docstring is nil: remove old docstring.  */
   Fput (new_alias, Qvariable_documentation, docstring);
+
+  XSYMBOL (new_alias);
+  XSYMBOL (base_variable);
 
   EXIT_LISP_FRAME (base_variable);
 }

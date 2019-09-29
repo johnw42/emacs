@@ -3677,12 +3677,12 @@ syms_of_keymap (void)
      Each one is the value of a Lisp variable, and is also
      pointed to by a C variable */
 
+  REGISTER_LISP_GLOBALS (global_map, current_global_map, meta_map,
+                         control_x_map, exclude_keys);
+
   global_map = Fmake_keymap (Qnil);
   Fset (intern_c_string ("global-map"), global_map);
-
   current_global_map = global_map;
-  staticpro (&global_map);
-  staticpro (&current_global_map);
 
   meta_map = Fmake_keymap (Qnil);
   Fset (intern_c_string ("esc-map"), meta_map);
@@ -3699,7 +3699,6 @@ syms_of_keymap (void)
 			pure_cons (build_pure_c_string ("RET"), build_pure_c_string ("\\r")),
 			pure_cons (build_pure_c_string ("ESC"), build_pure_c_string ("\\e")),
 			pure_cons (build_pure_c_string ("SPC"), build_pure_c_string (" ")));
-  staticpro (&exclude_keys);
 
   DEFVAR_LISP ("define-key-rebound-commands", Vdefine_key_rebound_commands,
 	       doc: /* List of commands given new key bindings recently.
@@ -3773,13 +3772,13 @@ be preferred.  */);
   DEFSYM (Qremap, "remap");
   DEFSYM (QCadvertised_binding, ":advertised-binding");
 
-  command_remapping_vector = Fmake_vector (make_number (2), Qremap);
   staticpro (&command_remapping_vector);
+  command_remapping_vector = Fmake_vector (make_number (2), Qremap);
 
-  where_is_cache_keymaps = Qt;
-  where_is_cache = Qnil;
   staticpro (&where_is_cache);
   staticpro (&where_is_cache_keymaps);
+  where_is_cache_keymaps = Qt;
+  where_is_cache = Qnil;
 
   defsubr (&Skeymapp);
   defsubr (&Skeymap_parent);

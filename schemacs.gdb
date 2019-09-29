@@ -15,6 +15,7 @@ set print frame-arguments none
 #set print address off
 set trace-commands off
 
+# needed for memgrep
 handle SIGSEGV nostop
 handle SIGSEGV noprint
 
@@ -45,20 +46,13 @@ end
 #   bsave
 # end
 
-# break wrong_type_argument
-# break _exit
+break wrong_type_argument
+break _exit
 
-# break terminate_due_to_signal
-# command
-# up
-# up
-# end
-
-break main
-commands
-  silent
-  set $n = 0
-  continue
+break terminate_due_to_signal
+command
+up
+up
 end
 
 break gdb_break
@@ -66,15 +60,23 @@ commands
   up
 end
 
-# break die
-# commands
-#   up
-# end
+break die
+commands
+  up
+end
+
+break exit
+break abort
 
 catch signal SIGSEGV
 commands
-  p scheme_fptr_call_info
-  echo fptr_run?\n
+  silent
+  if $_any_caller_is("try_memgrep1")
+    cont
+  else
+    p scheme_fptr_call_info
+    echo segv; fptr_run?\n
+  end
 end
 
 define fptr_run
@@ -83,12 +85,38 @@ define fptr_run
   run
 end
 
-define hook-run
-  eval "shell %s/run-schemacs --just-make", $top_dir
-end
-
 define ref_break
   break gdb_found_ref
+end
+
+define watch_for
+  printf "watch_for %p\n", $arg0
+  # if !$_is_void($watch_num)
+  #   delete $watch_num
+  # end
+  set $watching_addr = $arg0
+  set $watching_for = $arg1  
+  watch *$arg0
+  set $watch_num = $bpnum
+  commands
+    #printf "set $tmp = *(uint64_t*)%lu == %lu\n", $watching_addr, $watching_for
+    if *(uint64_t*)$watching_addr != $watching_for
+      printf "wrong value: 0x%lx at %p\n", *(uint64_t)$watching_addr, $watching_addr
+      continue
+    else
+      printf "OK value: 0x%lx at %p\n", *(uint64_t)$watching_addr, $watching_addr
+      #on_watch
+    end
+  end
+end
+
+define on_watch
+  echo on_watch\n
+  if $_any_caller_matches(".*_scheme_gc$|container_|.*memgrep$", 20)
+    cont
+  else
+    bt 5
+  end
 end
 
 # break gdb_found_ref
@@ -135,3 +163,19 @@ define mg
   set $mg_tmp = memgrep1($arg1, $arg0)
   pp $mg_tmp
 end
+
+break main
+commands
+  silent
+  set $n = 0
+  #watch_for 0x1380a38 0x40e6818f
+  watch_for 0x12dd3b0 0x405b437f
+  continue
+end
+
+run
+
+
+# define hook-run
+#   eval "shell %s/run-schemacs --just-make", $top_dir
+# end
