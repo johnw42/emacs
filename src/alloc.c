@@ -9211,9 +9211,11 @@ static size_t magic_refs[MAX_MAGIC_REFS] =
 
 
    //0x40844ce9, 0x41384579, // load-history
-   0x409a83ff, // "/home/jrw/git/emacs/lisp/emacs-lisp/byte-run.el" ?
-   0x413969ef, // "/home/jrw/git/emacs/lisp/emacs-lisp/byte-run.el"
-   0x409a8ce9, // cell holding byte-run.el path
+   /* 0x409a83ff, // "/home/jrw/git/emacs/lisp/emacs-lisp/byte-run.el" ? */
+   /* 0x413969ef, // "/home/jrw/git/emacs/lisp/emacs-lisp/byte-run.el" */
+   /* 0x409a8ce9, // cell holding byte-run.el path */
+
+   0x7fff00000001
   };
 static size_t magic_ref_ptrs[MAX_MAGIC_REFS] =
   {

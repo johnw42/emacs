@@ -586,9 +586,11 @@ visit_sub_char_table_lisp_refs (struct Lisp_Sub_Char_Table *v, lisp_ref_visitor_
   fun (data, &v->header.s.scheme_obj, 1);
   EMACS_INT n = pvsize_from_header (&v->header);
   if (n > SUB_CHAR_TABLE_OFFSET)
-    fun (data,
-         v->contents + SUB_CHAR_TABLE_OFFSET,
-         n - SUB_CHAR_TABLE_OFFSET);
+    {
+      fun (data,
+           v->contents,
+           n - SUB_CHAR_TABLE_OFFSET);
+    }
 }
 
 struct visit_iterval_data {
@@ -1214,10 +1216,16 @@ container_uniq (struct container *c, compare_fun compare, merge_fun merge)
 bool
 may_be_valid (chez_ptr x)
 {
+  if (chez_fixnump (x))
+    return true;
+
+  ptrdiff_t n = (ptrdiff_t) x;
+  if (n < -(ptrdiff_t)0x80000000 || n > 0x80000000)
+    return false;
+
   if (x == chez_false ||
       chez_pairp(x) ||
       chez_symbolp(x) ||
-      chez_fixnump(x) ||
       chez_bignump(x) ||
       chez_flonump(x) ||
       chez_vectorp(x))

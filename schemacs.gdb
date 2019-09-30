@@ -112,7 +112,8 @@ end
 
 define on_watch
   echo on_watch\n
-  if $_any_caller_matches(".*_scheme_gc$|container_|.*memgrep$", 20)
+  if $_any_caller_matches(".*_scheme_gc$|container_|.*memgrep|msort_with_tmp$", 20)
+    echo on_watch match\n
     cont
   else
     bt 5
@@ -164,17 +165,16 @@ define mg
   pp $mg_tmp
 end
 
+set $first_run = 1
+
 break main
 commands
   silent
   set $n = 0
-  continue
-end
-
-tbreak main
-commands
-  #watch_for 0x1380a38 0x40e6818f
-  #watch_for 0x12e2528 0x40e7721f
+  if $first_run
+    #watch_for (size_t*)0x14e2b80 0x7fff00000001
+  end
+  set $first_run = 0
   continue
 end
 

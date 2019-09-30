@@ -447,6 +447,8 @@ char_table_set (Lisp_Object table, int c, Lisp_Object val)
   ENTER_LISP_FRAME ((table, val), sub);
   struct Lisp_Char_Table *tbl = XCHAR_TABLE (table);
 
+  analyze_scheme_ref (val, "char_table_set");
+
   if (ASCII_CHAR_P (c)
       && SUB_CHAR_TABLE_P (tbl->ascii))
     set_sub_char_table_contents (tbl->ascii, c, val);

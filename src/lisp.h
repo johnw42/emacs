@@ -3876,6 +3876,8 @@ INLINE void
 set_sub_char_table_contents (Lisp_Object table, ptrdiff_t idx, Lisp_Object val)
 {
   XSUB_CHAR_TABLE (table)->contents[idx] = val;
+  analyze_scheme_ref_ptr (&XSUB_CHAR_TABLE (table)->contents[idx],
+                          "set_sub_char_table_contents");
 }
 
 /* Defined in data.c.  */
