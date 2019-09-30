@@ -1219,9 +1219,9 @@ may_be_valid (chez_ptr x)
   if (chez_fixnump (x))
     return true;
 
-  ptrdiff_t n = (ptrdiff_t) x;
-  if (n < -(ptrdiff_t)0x80000000 || n > 0x80000000)
-    return false;
+  /* ptrdiff_t n = (ptrdiff_t) x; */
+  /* if (n < -(ptrdiff_t)0x80000000 || n > 0x80000000) */
+  /*   return false; */
 
   if (x == chez_false ||
       chez_pairp(x) ||

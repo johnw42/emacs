@@ -536,7 +536,7 @@ malloc_block_empty (const void *p)
   return ((struct malloc_block *)p)->size == -1;
 }
 
-static struct scheme_ref_info scheme_ref_array[128 * 1024];
+/* static struct scheme_ref_info scheme_ref_array[128 * 1024]; */
 
 STATIC_NAMED_CONTAINER (scheme_refs, struct scheme_ref_info);
 STATIC_NAMED_CONTAINER (mark_queue, Lisp_Object);
@@ -547,8 +547,8 @@ void
 alloc_preinit (void)
 {
   NAMED_CONTAINER_CONFIG (scheme_refs);
-  scheme_refs.capacity = ARRAYELTS(scheme_ref_array);
-  scheme_refs.data = scheme_ref_array;
+  /* scheme_refs.capacity = ARRAYELTS(scheme_ref_array); */
+  /* scheme_refs.data = scheme_ref_array; */
   /* NAMED_CONTAINER_CONFIG (malloc_blocks); */
   NAMED_CONTAINER_CONFIG (mark_queue);
 }
