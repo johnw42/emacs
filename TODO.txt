@@ -1,3 +1,6 @@
+Rework GC.  Copy scheme refs to vector before GC, copy out after
+GC.  Keep vector per object.
+
 Use guardian to free malloc'd memory
 
 Reduce re-allocation of gc_vector

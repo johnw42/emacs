@@ -129,13 +129,16 @@ INLINE void scheme_fptr_call_fun(void) {
 
 #define SCHEME_PV_TAG(pv) chez_vector_ref(pv, 0)
 #define SCHEME_PV_ADDR(pv) chez_vector_ref(pv, 1)
-#define SCHEME_PV_EPHEMERON(pv) chez_vector_ref(pv, 2)
+#define SCHEME_PV_GCVEC(pv) chez_vector_ref(pv, 2)
+#define SCHEME_PV_TAG_SET(pv, x) chez_vector_set(pv, 0, x)
 #define SCHEME_PV_ADDR_SET(pv, x) chez_vector_set(pv, 1, x)
-#define SCHEME_PV_EPHEMERON_SET(pv, x) chez_vector_set(pv, 2, chez_false)  // XXX
+#define SCHEME_PV_GCVEC_SET(pv, x) chez_vector_set(pv, 2, x)
 #define SCHEME_PV_LENGTH 3
 
-#define SCHEME_ALLOC_C_DATA(key, type) \
-  ((type *)scheme_alloc_c_data((key), sizeof(type)))
+// Gets GC vector.  Returns chez_false if the object could have a
+// vector but doesn't, and chez_true if it cannot have a vector.
+chez_ptr scheme_get_gcvec (Lisp_Object obj);
+void scheme_set_gcvec (Lisp_Object obj, chez_ptr);
 
 #undef LOCK
 #undef UNLOCK

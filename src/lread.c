@@ -4145,7 +4145,7 @@ scheme_oblookup(Lisp_Object obarray, Lisp_Object name, bool add_if_missing)
                         in_initial_obarray
                         ? SYMBOL_INTERNED_IN_INITIAL_OBARRAY
                         : SYMBOL_INTERNED);
-  scheme_symbol = data->u.s.scheme_obj;
+  scheme_symbol = data->u.s.soh.scheme_obj;
 
   eassert (SYMBOLP (scheme_symbol));
   scheme_call3 ("hashtable-set!", table, CHEZ (lisp_str), CHEZ (scheme_symbol));
@@ -4586,12 +4586,12 @@ defsubr (struct Lisp_Subr *sname)
   sym = intern_c_string (sname->init_symbol_name);
   struct Lisp_Subr *subr =
     ALLOCATE_PSEUDOVECTOR (struct Lisp_Subr, function, PVEC_SUBR);
-  tem = subr->header.s.scheme_obj;
+  tem = subr->header.s.soh.scheme_obj;
   subr->function = sname->function;
   subr->min_args = sname->min_args;
   subr->max_args = sname->max_args;
   subr->init_symbol_name = sname->init_symbol_name;
-  subr->header.s.scheme_obj = tem;
+  subr->header.s.soh.scheme_obj = tem;
   subr->symbol = sym;
   subr->intspec = sname->intspec;
   subr->doc = sname->doc;

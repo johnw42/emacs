@@ -12,4 +12,6 @@ SCHEME_FPTR_DEF(trivial, int, int);
 SCHEME_FPTR_DEF(ephemeron_cons, chez_ptr, chez_ptr, chez_ptr);
 SCHEME_FPTR_DEF(getprop_addr, void *, chez_ptr, chez_ptr);
 SCHEME_FPTR_DEF(putprop_addr, int /*void*/, chez_ptr, chez_ptr, void *);
+SCHEME_FPTR_DEF(getprop_obj, chez_ptr, chez_ptr, chez_ptr);
+SCHEME_FPTR_DEF(putprop_obj, int /*void*/, chez_ptr, chez_ptr, chez_ptr);
 #undef SCHEME_FPTR_DEF

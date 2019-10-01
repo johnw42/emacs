@@ -27,6 +27,8 @@
          c-ephemeron_cons
          c-getprop_addr
          c-putprop_addr
+         c-getprop_obj
+         c-putprop_obj
          )
 
   (define elisp-do-scheme-gc
@@ -272,6 +274,18 @@
                        (scheme-object prop)
                        (void* addr)))
     (putprop sym prop addr))
+
+
+  (define-for-c (c-getprop_obj
+                 scheme-object ((scheme-object sym)
+                                (scheme-object prop)))
+    (getprop sym prop) 0)
+
+  (define-for-c (c-putprop_obj
+                 void ((scheme-object sym)
+                       (scheme-object prop)
+                       (scheme-object obj)))
+    (putprop sym prop obj))
 
   (define elisp-funcall
     (case-lambda

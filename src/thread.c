@@ -642,7 +642,7 @@ mark_one_thread (struct thread_state *thread)
   mark_stack (thread->m_stack_bottom, stack_top);
 
 #ifdef HAVE_CHEZ_SCHEME
-  mark_object (thread->header.s.scheme_obj);
+  mark_object (thread->header.s.soh.scheme_obj);
 #else
   for (struct handler *handler = thread->m_handlerlist;
        handler; handler = handler->next)

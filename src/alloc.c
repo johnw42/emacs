@@ -228,11 +228,11 @@ alloc_unexec_post (void)
    to a struct Lisp_String.  */
 
 #ifdef HAVE_CHEZ_SCHEME
-#define MARK_STRING(S)		((S)->u.s.marked = true, (S)->u.s.last_gc = gc_count)
+#define MARK_STRING(S)		((S)->u.s.marked = true, (S)->u.s.soh.last_gc = gc_count)
 #define UNMARK_STRING(S)	((S)->u.s.marked = false)
 #define STRING_MARKED_P(S)	((S)->u.s.marked)
 
-#define VECTOR_MARK(V)		((V)->header.s.marked = true, (V)->header.s.last_gc = gc_count)
+#define VECTOR_MARK(V)		((V)->header.s.marked = true, (V)->header.s.soh.last_gc = gc_count)
 #define VECTOR_UNMARK(V)	((V)->header.s.marked = false)
 #define VECTOR_MARKED_P(V)	((V)->header.s.marked)
 #else
@@ -637,11 +637,11 @@ set_mark_bit (Lisp_Object obj, bool bit)
       break;
     case Lisp_Symbol:
       XSYMBOL (obj)->u.s.gcmarkbit = bit;
-      XSYMBOL (obj)->u.s.last_gc = gc_count;
+      XSYMBOL (obj)->u.s.soh.last_gc = gc_count;
       break;
     case Lisp_Misc:
       XMISCANY (obj)->gcmarkbit = bit;
-      XMISCANY (obj)->header.s.last_gc = gc_count;
+      XMISCANY (obj)->header.s.soh.last_gc = gc_count;
       break;
     default:
       ;
@@ -699,12 +699,6 @@ update_scheme_obj (Lisp_Object *loc, Lisp_Object val)
     min_scheme_obj_loc = loc;
   if (max_scheme_obj_loc == NULL || max_scheme_obj_loc < loc)
     max_scheme_obj_loc = loc;
-}
-
-static void
-set_vectorlike_lisp_obj (void *vptr, Lisp_Object obj)
-{
-  update_scheme_obj (&((union vectorlike_header *) vptr)->s.scheme_obj, obj);
 }
 
 #else
@@ -2472,16 +2466,108 @@ check_string_free_list (void)
 
 
 #ifdef HAVE_CHEZ_SCHEME
+static Lisp_Object first_scheme_obj = UNCHEZ (chez_false);
+
+static struct Scheme_Object_Header *
+get_scheme_object_header (Lisp_Object obj)
+{
+  switch (XTYPE (obj))
+    {
+    case Lisp_String:
+      return &XSTRING (obj)->u.s.soh;
+    case Lisp_Symbol:
+      return &XSYMBOL (obj)->u.s.soh;
+    case Lisp_Vectorlike:
+      return &XVECTOR (obj)->header.s.soh;
+    case Lisp_Misc:
+      return &XMISC (obj)->u_any.header.s.soh;
+    default:
+      return NULL;
+    }
+}
+
+struct object_gc_data {
+  chez_ptr gcvec;
+  ptrdiff_t num_refs;
+};
+
+static void
+object_pre_gc_callback (void *data0, Lisp_Object *refs, ptrdiff_t n)
+{
+  struct object_gc_data *data = data0;
+  if (data->gcvec != chez_false &&
+      chez_vector_length (data->gcvec) > n + data->num_refs)
+    for (ptrdiff_t i = 0; i < n; i++)
+      chez_vector_set (data->gcvec, data->num_refs + i,
+                       CHEZ (refs[i]));
+  else
+    data->gcvec = chez_false;
+  data->num_refs += n;
+}
+
+static void
+object_post_gc_callback (void *data0, Lisp_Object *refs, ptrdiff_t n)
+{
+  struct object_gc_data *data = data0;
+  eassert (chez_vectorp (data->gcvec));
+  eassert (chez_vector_length (data->gcvec) > n + data->num_refs);
+  for (ptrdiff_t i = 0; i < n; i++)
+    refs[i] = UNCHEZ (chez_vector_ref
+                      (data->gcvec, data->num_refs + i));
+  data->num_refs += n;
+}
+
+// Copy data Scheme references into the objects gcvec.
+static void
+object_pre_gc (Lisp_Object obj)
+{
+  chez_ptr gcvec = scheme_get_gcvec (obj);
+  if (gcvec == chez_true) return;
+  struct object_gc_data data = { .gcvec = gcvec, .num_refs = 0 };
+
+  // Try to fill the gcvec.  This may fail if the vector
+  // is too small, but it will at always determine how
+  // big the vector needs to be.
+  visit_lisp_refs (obj, object_pre_gc_callback, &data);
+
+  // If the vector was too small, create a larger one and try again.
+  if (data.gcvec == chez_false)
+    {
+      data.gcvec = chez_make_vector (data.num_refs, chez_false);
+      scheme_set_gcvec (obj, data.gcvec);
+      visit_lisp_refs (obj, object_pre_gc_callback, &data);
+    }
+
+  eassert (chez_vectorp (data.gcvec));
+
+  // Clear out any extra slots in the vector.
+  ptrdiff_t n = chez_vector_length (data.gcvec);
+  for (ptrdiff_t i = data.num_refs; i < n; i++)
+    chez_vector_set (data.gcvec, i, chez_false);
+}
+
+static void
+object_post_gc (Lisp_Object obj)
+{
+  chez_ptr gcvec = scheme_get_gcvec (obj);
+  if (gcvec == chez_true) return;
+  struct object_gc_data data = { .gcvec = gcvec, .num_refs = 0 };
+  visit_lisp_refs (obj, object_post_gc_callback, &data);
+}
+
 static void *
-scheme_allocate (ptrdiff_t nbytes, chez_ptr sym, Lisp_Object *vec_ptr)
+scheme_allocate (ptrdiff_t nbytes,
+                 chez_ptr sym,
+                 ptrdiff_t soh_offset)
 {
   suspend_scheme_gc ();
 
   void *data = xzalloc (nbytes);
   Lisp_Object addr = make_number ((chez_iptr) data);
   eassert (data == scheme_malloc_ptr (addr));
+  eassert (nbytes > soh_offset + sizeof (struct Scheme_Object_Header));
 
-  chez_ptr vec = chez_make_vector(SCHEME_PV_LENGTH, sym);
+  chez_ptr vec = chez_make_vector(SCHEME_PV_LENGTH, chez_false);
   analyze_scheme_ref (UNCHEZ (vec), "scheme_allocate");
   /* chez_call2 (scheme_guardian, */
   /*             vec, */
@@ -2491,10 +2577,15 @@ scheme_allocate (ptrdiff_t nbytes, chez_ptr sym, Lisp_Object *vec_ptr)
   /* chez_ptr eph = SCHEME_FPTR_CALL(ephemeron_cons, vec, chez_false); */
 
   scheme_track (UNCHEZ (vec));
-  SCHEME_FPTR_CALL(save_origin, vec);
-  SCHEME_PV_ADDR_SET(vec, CHEZ (addr));
-  //SCHEME_PV_EPHEMERON_SET(vec, eph);
-  *vec_ptr = UNCHEZ (vec);
+  SCHEME_PV_TAG_SET (vec, sym);
+  SCHEME_PV_ADDR_SET (vec, CHEZ (addr));
+
+  struct Scheme_Object_Header *soh =
+    (void *) ((char *) data + soh_offset);
+  update_scheme_obj (&soh->scheme_obj, UNCHEZ (vec));
+  soh->next = first_scheme_obj;
+  soh->last_gc = gc_count;
+  first_scheme_obj = UNCHEZ (vec);
 
   resume_scheme_gc ();
 
@@ -2509,12 +2600,8 @@ static struct Lisp_String *
 allocate_string (void)
 {
 #ifdef HAVE_CHEZ_SCHEME
-  ENTER_LISP_FRAME_T (struct Lisp_String *, (), obj);
-  struct Lisp_String *s = scheme_allocate (sizeof (struct Lisp_String), scheme_string_symbol, &obj);
-  update_scheme_obj (&s->u.s.scheme_obj, obj);
-  s->u.s.last_gc = gc_count;
-  eassert(STRINGP(obj));
-  EXIT_LISP_FRAME (s);
+  return scheme_allocate (sizeof (struct Lisp_String),
+                          scheme_string_symbol, 0);
 #else /* not HAVE_CHEZ_SCHEME */
   struct Lisp_String *s;
 
@@ -3013,7 +3100,7 @@ make_uninit_bool_vector (EMACS_INT nbits)
     (struct Lisp_Bool_Vector *) allocate_pseudovector
     (needed_elements, 0, needed_elements, PVEC_BOOL_VECTOR);
   p->size = nbits;
-  val = p->header.s.scheme_obj;
+  val = p->header.s.soh.scheme_obj;
 #else /* not HAVE_CHEZ_SCHEME */
   struct Lisp_Bool_Vector *p
     = (struct Lisp_Bool_Vector *) allocate_vector (needed_elements);
@@ -3986,12 +4073,10 @@ static struct Lisp_Vector *
 allocate_vectorlike (ptrdiff_t len)
 {
 #ifdef HAVE_CHEZ_SCHEME
-  Lisp_Object vec;
   struct Lisp_Vector *data = scheme_allocate
-    (header_size + len * word_size, scheme_vectorlike_symbol, &vec);
+    (header_size + len * word_size, scheme_vectorlike_symbol,
+     offsetof (struct vectorlike_subheader, soh));
   data->header.s.size = len;
-  data->header.s.last_gc = gc_count;
-  set_vectorlike_lisp_obj(data, vec);
   set_nil (data->contents, len); // XXX
   return data;
 #else /* not HAVE_CHEZ_SCHEME */
@@ -4402,14 +4487,13 @@ static Lisp_Object
 allocate_misc (enum Lisp_Misc_Type type)
 {
 #ifdef HAVE_CHEZ_SCHEME
-  Lisp_Object val;
   struct Lisp_Misc_Any *data = scheme_allocate
-    (sizeof (union Lisp_Misc), scheme_misc_symbol, &val);
+    (sizeof (union Lisp_Misc), scheme_misc_symbol,
+     offsetof (struct vectorlike_subheader, soh));
   data->type = type;
   data->gcmarkbit = 0;
-  data->header.s.last_gc = gc_count;
+  Lisp_Object val = data->header.s.soh.scheme_obj;
   init_nil_refs (val);
-  set_vectorlike_lisp_obj (data, val);
   return val;
 #else /* not HAVE_CHEZ_SCHEME */
   Lisp_Object val;
@@ -6291,7 +6375,7 @@ make_pure_string (const char *data,
       struct Lisp_String *s = allocate_string();
       s->u.s.intervals = NULL;
       allocate_string_data (s, 0, 0);
-      p = s->u.s.scheme_obj;
+      p = s->u.s.soh.scheme_obj;
       if (!multibyte)
         s->u.s.size_byte = -1;
     }

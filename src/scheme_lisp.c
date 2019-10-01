@@ -27,6 +27,7 @@ chez_ptr scheme_vectorlike_symbol = chez_false;
 chez_ptr scheme_misc_symbol = chez_false;
 chez_ptr scheme_string_symbol = chez_false;
 chez_ptr c_data_property_symbol = chez_false;
+chez_ptr gcvec_property_symbol = chez_false;
 chez_iptr scheme_greatest_fixnum;
 chez_iptr scheme_least_fixnum;
 chez_iptr scheme_fixnum_width;
@@ -107,6 +108,14 @@ scheme_sigaction (int sig, siginfo_t *info, void *ucontext)
     }
 }
 
+static chez_ptr
+make_gensym (const char *name)
+{
+  chez_ptr sym = scheme_call1("gensym", chez_string(name));
+  chez_lock_object (sym);
+  return sym;
+}
+
 void scheme_init(void) {
   const char *char_ptr = NULL;
   const char **argv = &char_ptr;
@@ -147,14 +156,11 @@ void scheme_init(void) {
   c_data_table = UNCHEZ(scheme_call0("make-eq-hashtable"));
   scheme_track (c_data_table);
 
-  scheme_vectorlike_symbol = scheme_call1("gensym", chez_string("emacs-vectorlike"));
-  chez_lock_object (scheme_vectorlike_symbol);
-  scheme_misc_symbol = scheme_call1("gensym", chez_string("emacs-misc"));
-  chez_lock_object (scheme_misc_symbol);
-  scheme_string_symbol = scheme_call1("gensym", chez_string("emacs-string"));
-  chez_lock_object (scheme_string_symbol);
-  c_data_property_symbol = scheme_call1("gensym", chez_string("c-data-property"));
-  chez_lock_object (c_data_property_symbol);
+  scheme_vectorlike_symbol = make_gensym("emacs-vectorlike");
+  scheme_misc_symbol = make_gensym("emacs-misc");
+  scheme_string_symbol = make_gensym("emacs-string");
+  c_data_property_symbol = make_gensym("c-data-property");
+  gcvec_property_symbol = make_gensym("gcvec-property");
 
 #ifdef ENABLE_CHECKING
   run_init_checks();
@@ -234,7 +240,7 @@ ensure_symbol_c_data (Lisp_Object symbol, Lisp_Object name)
   struct Lisp_Symbol *p = SCHEME_FPTR_CALL (getprop_addr, CHEZ(symbol), c_data_property_symbol);
   if (p)
     {
-      eassert (EQ (p->u.s.scheme_obj, symbol));
+      eassert (EQ (p->u.s.soh.scheme_obj, symbol));
       return p;
     }
 
@@ -253,8 +259,8 @@ ensure_symbol_c_data (Lisp_Object symbol, Lisp_Object name)
 
   // Can't use init_nil_refs here because of how builtin symbols are
   // initialized.
-  p->u.s.scheme_obj = symbol;
-  p->u.s.last_gc = gc_count;
+  p->u.s.soh.scheme_obj = symbol;
+  p->u.s.soh.last_gc = gc_count;
   p->u.s.name = name;
   p->u.s.plist = Qnil;
   p->u.s.redirect = SYMBOL_PLAINVAL;
@@ -266,7 +272,7 @@ ensure_symbol_c_data (Lisp_Object symbol, Lisp_Object name)
   p->u.s.declared_special = false;
   p->u.s.pinned = false;
   CHECK_ALLOC(p);
-  eassert (EQ (p->u.s.scheme_obj, symbol));
+  eassert (EQ (p->u.s.soh.scheme_obj, symbol));
   return p;
 }
 
@@ -299,8 +305,8 @@ struct Lisp_Symbol *
 XSYMBOL (Lisp_Object a)
 {
   struct Lisp_Symbol *p = ensure_symbol_c_data (a, UNCHEZ (chez_false));
-  eassert (EQ (p->u.s.scheme_obj, a));
-  eassert (p->u.s.last_gc == gc_count || gc_running);
+  eassert (EQ (p->u.s.soh.scheme_obj, a));
+  eassert (p->u.s.soh.last_gc == gc_count || gc_running);
   return p;
 }
 
@@ -556,6 +562,36 @@ gdb_print_lisp(char *buf, Lisp_Object obj)
   buf[n] = '\0';
 }
 
+chez_ptr
+scheme_get_gcvec (Lisp_Object obj)
+{
+  if (SYMBOLP (obj))
+    return SCHEME_FPTR_CALL (getprop_obj, CHEZ (obj),
+                             gcvec_property_symbol);
+  else if (chez_vectorp (CHEZ (obj)) &&
+           (STRINGP (obj) ||
+            MISCP (obj) ||
+            VECTORLIKEP (obj)))
+    return SCHEME_PV_GCVEC (CHEZ (obj));
+  else
+    return chez_true;
+}
+
+void
+scheme_set_gcvec (Lisp_Object obj, chez_ptr gcvec)
+{
+  if (SYMBOLP (obj))
+    SCHEME_FPTR_CALL (putprop_obj, CHEZ (obj),
+                      gcvec_property_symbol, gcvec);
+  else if (chez_vectorp (CHEZ (obj)) &&
+           (STRINGP (obj) ||
+            MISCP (obj) ||
+            VECTORLIKEP (obj)))
+    SCHEME_PV_GCVEC_SET (CHEZ (obj), gcvec);
+  else
+    emacs_abort();
+}
+
 static const char *last_func_name = NULL;
 
 extern chez_ptr
@@ -573,7 +609,7 @@ void
 visit_pseudovector_lisp_refs (struct Lisp_Vector *v, lisp_ref_visitor_fun fun, void *data)
 
 {
-  fun (data, &v->header.s.scheme_obj, 1);
+  fun (data, &v->header.s.soh.scheme_obj, 1);
   EMACS_INT n = pvsize_from_header (&v->header);
   if (n > 0)
     fun (data, v->contents, n);
@@ -583,7 +619,7 @@ visit_pseudovector_lisp_refs (struct Lisp_Vector *v, lisp_ref_visitor_fun fun, v
 static void
 visit_sub_char_table_lisp_refs (struct Lisp_Sub_Char_Table *v, lisp_ref_visitor_fun fun, void *data)
 {
-  fun (data, &v->header.s.scheme_obj, 1);
+  fun (data, &v->header.s.soh.scheme_obj, 1);
   EMACS_INT n = pvsize_from_header (&v->header);
   if (n > SUB_CHAR_TABLE_OFFSET)
     {
@@ -725,8 +761,8 @@ visit_symbol_lisp_refs(Lisp_Object obj, lisp_ref_visitor_fun fun, void *data)
 {
   struct Lisp_Symbol *s = XSYMBOL (obj);
   while (s) {
-    analyze_scheme_ref_ptr (&s->u.s.scheme_obj, "symbol backref");
-    fun (data, &s->u.s.scheme_obj, 1);
+    analyze_scheme_ref_ptr (&s->u.s.soh.scheme_obj, "symbol backref");
+    fun (data, &s->u.s.soh.scheme_obj, 1);
     fun (data, &s->u.s.name, 1);
     struct Lisp_Symbol *next_s = NULL;
     switch (s->u.s.redirect)
@@ -793,7 +829,7 @@ visit_lisp_refs(Lisp_Object obj, lisp_ref_visitor_fun fun, void *data)
     case Lisp_String:
       {
         struct Lisp_String *s = XSTRING (obj);
-        fun (data, &s->u.s.scheme_obj, 1);
+        fun (data, &s->u.s.soh.scheme_obj, 1);
         visit_interval_tree_lisp_refs (s->u.s.intervals, fun, data);
       }
       break;
@@ -947,7 +983,7 @@ visit_lisp_refs(Lisp_Object obj, lisp_ref_visitor_fun fun, void *data)
                     fun (data, &handler->val, 1);
                   }
                 if (t->m_current_buffer)
-                  fun (data, &t->m_current_buffer->header.s.scheme_obj, 1);
+                  fun (data, &t->m_current_buffer->header.s.soh.scheme_obj, 1);
                 fun (data, &t->m_re_match_object, 1);
                 fun (data, &t->m_last_thing_searched, 1);
                 fun (data, &t->m_saved_last_thing_searched, 1);

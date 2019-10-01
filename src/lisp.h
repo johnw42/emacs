@@ -758,6 +758,16 @@ enum symbol_trapped_write
   SYMBOL_TRAPPED_WRITE = 2
 };
 
+#ifdef HAVE_CHEZ_SCHEME
+struct Scheme_Object_Header {
+  Lisp_Object scheme_obj;
+  Lisp_Object next;
+#ifdef ENABLE_CHECKING
+  int last_gc;
+#endif
+};
+#endif
+
 struct Lisp_Symbol
 {
   union
@@ -765,10 +775,7 @@ struct Lisp_Symbol
     struct
     {
 #ifdef HAVE_CHEZ_SCHEME
-      Lisp_Object scheme_obj;
-#ifdef ENABLE_CHECKING
-      int last_gc;
-#endif
+      struct Scheme_Object_Header soh;
 #endif /* HAVE_CHEZ_SCHEME */
 
       bool_bf gcmarkbit : 1;
@@ -919,6 +926,16 @@ INLINE void fixup_lispsym_init(const Lisp_Object *p) {}
 
 #include "globals.h"
 
+#ifdef HAVE_CHEZ_SCHEME
+struct vectorlike_subheader {
+  // Must be first to match layout of union vectorlike_header.
+  ptrdiff_t size;
+
+  struct Scheme_Object_Header soh;
+  bool marked;
+};
+#endif
+
 /* Header of vector-like objects.  This documents the layout constraints on
    vectors and pseudovectors (objects of PVEC_xxx subtype).  It also prevents
    compilers from being fooled by Emacs's type punning: XSETPSEUDOVECTOR
@@ -949,14 +966,7 @@ union vectorlike_header
 	 4095 Lisp_Objects in GC-ed area and 4095 word-sized other slots.  */
     ptrdiff_t size;
 #ifdef HAVE_CHEZ_SCHEME
-    struct {
-      ptrdiff_t size;
-      Lisp_Object scheme_obj;
-      bool marked;
-#ifdef ENABLE_CHECKING
-      int last_gc;
-#endif
-    } s;
+    struct vectorlike_subheader s;
 #else /* not HAVE_CHEZ_SCHEME */
     char alignas (GCALIGNMENT) gcaligned;
 #endif /* not HAVE_CHEZ_SCHEME */
@@ -1249,7 +1259,7 @@ INLINE bool
 INLINE Lisp_Object
 vectorlike_lisp_obj (void *vptr)
 {
-  Lisp_Object obj = ((union vectorlike_header *) vptr)->s.scheme_obj;
+  Lisp_Object obj = ((union vectorlike_header *) vptr)->s.soh.scheme_obj;
   eassert (chez_vectorp (CHEZ (obj)));
   return obj;
 }
@@ -1268,12 +1278,12 @@ INLINE Lisp_Object vectorlike_lisp_obj(void *vptr)
 #define XSETINT(a, b) ((a) = make_number (b))
 #define XSETFASTINT(a, b) ((a) = make_natnum (b))
 /* #define XSETCONS(a, b) ((a) = make_lisp_ptr (b, Lisp_Cons)) */
-#define XSETVECTOR(a, b) ((a) = (b)->header.s.scheme_obj)
-#define XSETSTRING(a, b) ((a) = (b)->u.s.scheme_obj)
-#define XSETSYMBOL(a, b) ((a) = (b)->u.s.scheme_obj)
+#define XSETVECTOR(a, b) ((a) = (b)->header.s.soh.scheme_obj)
+#define XSETSTRING(a, b) ((a) = (b)->u.s.soh.scheme_obj)
+#define XSETSYMBOL(a, b) ((a) = (b)->u.s.soh.scheme_obj)
 /* #define XSETFLOAT(a, b) ((a) = make_lisp_ptr (b, Lisp_Float)) */
 /* #define XSETMISC(a, b) ((a) = make_lisp_ptr (b, Lisp_Misc)) */
-#define XSETMISC(a, b) ((a) = (b)->header.s.scheme_obj)
+#define XSETMISC(a, b) ((a) = (b)->header.s.soh.scheme_obj)
 /* #define XSETPSEUDOVECTOR(a, b, code) ((a) = (b)->header.s.scheme_obj) */
 /* #define XSETTYPED_PSEUDOVECTOR(a, b, size, code) XSETPSEUDOVECTOR(a, b, code) */
 
@@ -1282,7 +1292,7 @@ XUNTAG_VECTORLIKE (Lisp_Object a)
 {
   eassert (chez_vectorp (CHEZ (a)));
   void *ptr = scheme_malloc_ptr (UNCHEZ (chez_vector_ref (CHEZ (a), 1)));
-  eassert (((union vectorlike_header *)ptr)->s.last_gc == gc_count || gc_running);
+  eassert (((union vectorlike_header *)ptr)->s.soh.last_gc == gc_count || gc_running);
   return ptr;
 }
 #define XUNTAG_MISC(a) XUNTAG_VECTORLIKE (a)
@@ -1521,11 +1531,8 @@ struct Lisp_String
     struct
     {
 #ifdef HAVE_CHEZ_SCHEME
-      Lisp_Object scheme_obj;
+      struct Scheme_Object_Header soh;
       bool marked;
-#ifdef ENABLE_CHECKING
-      int last_gc;
-#endif
 #endif /* HAVE_CHEZ_SCHEME */
       ptrdiff_t size;
       ptrdiff_t size_byte;
@@ -1564,8 +1571,8 @@ XSTRING (Lisp_Object a)
   eassert (STRINGP (a));
 #ifdef HAVE_CHEZ_SCHEME
   struct Lisp_String *p = scheme_malloc_ptr (UNCHEZ (chez_vector_ref (CHEZ (a), 1)));
-  eassert (p->u.s.last_gc == gc_count || gc_running);
-  eassert (EQ (p->u.s.scheme_obj, a) || gc_running);
+  eassert (p->u.s.soh.last_gc == gc_count || gc_running);
+  eassert (EQ (p->u.s.soh.scheme_obj, a) || gc_running);
   return p;
 #else /* not HAVE_CHEZ_SCHEME */
   return XUNTAG (a, Lisp_String);
@@ -3490,7 +3497,8 @@ CHECK_NUMBER_CDR (Lisp_Object x)
 #define DEFUN(lname, fnname, sname, minargs, maxargs, intspec, doc)	\
    static struct Lisp_Subr sname =                                      \
      { { .s = { .size = PVEC_SUBR << PSEUDOVECTOR_AREA_BITS,            \
-                .scheme_obj = UNCHEZ(chez_false) } },                   \
+                .soh = { .scheme_obj = UNCHEZ(chez_false),              \
+                         .next = UNCHEZ(chez_false) } } },              \
        { .a ## maxargs = fnname },					\
        minargs, maxargs, lname, UNCHEZ(chez_false), intspec, 0};        \
    Lisp_Object fnname
