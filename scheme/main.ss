@@ -279,7 +279,7 @@
   (define-for-c (c-getprop_obj
                  scheme-object ((scheme-object sym)
                                 (scheme-object prop)))
-    (getprop sym prop) 0)
+    (getprop sym prop))
 
   (define-for-c (c-putprop_obj
                  void ((scheme-object sym)

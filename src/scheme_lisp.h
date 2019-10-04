@@ -3,9 +3,15 @@
 #include "pp_foldmap.h"
 
 #ifdef HAVE_CHEZ_SCHEME
+
+#define FALSEP(obj) (CHEZ (obj) == chez_false)
+#define LISP_FALSE UNCHEZ (chez_false)
+
 extern void *chez_saved_bp;
 
-#define CHEZ_PROLOG asm ("movq %%rbp, %0" : "=r" (chez_saved_bp))
+/* #define CHEZ_PROLOG */
+/* #define CHEZ_EPILOG */
+#define CHEZ_PROLOG asm ("movq %%rbp, %0" : "=m" (chez_saved_bp))
 #define CHEZ_EPILOG chez_saved_bp = 0
 #include "chez_scheme.h"
 #endif
@@ -72,6 +78,7 @@ int before_scheme_gc (void);
 void after_scheme_gc (void);
 Lisp_Object scheme_track (Lisp_Object);
 Lisp_Object scheme_untrack (Lisp_Object);
+const char *scheme_classify (Lisp_Object x);
 
 void gdb_break(void);
 
@@ -100,11 +107,12 @@ void do_chez_prolog (void);
 /*     CHEZ_EPILOG,                                                \ */
 /*     scheme_fptr_result_##name) */
 
-#define SCHEME_FPTR_CALL(name, ...)                                   \
-  (scheme_fptr_call_info.fun = #name,                                 \
-   scheme_fptr_call_info.file = __FILE__,                             \
-   scheme_fptr_call_info.line = __LINE__,                             \
-   scheme_fptr_call_fun(),                                            \
+#define SCHEME_FPTR_CALL(name, ...)                                     \
+  (eassert (scheme_fptr_##name),                                        \
+   scheme_fptr_call_info.fun = #name,                                   \
+   scheme_fptr_call_info.file = __FILE__,                               \
+   scheme_fptr_call_info.line = __LINE__,                               \
+   scheme_fptr_call_fun(),                                              \
    scheme_fptr_##name(__FILE__, __LINE__, __VA_ARGS__))
 
 extern chez_ptr scheme_vectorlike_symbol;
@@ -114,6 +122,11 @@ extern chez_iptr scheme_greatest_fixnum;
 extern chez_iptr scheme_least_fixnum;
 extern chez_iptr scheme_fixnum_width;
 extern chez_ptr scheme_guardian;
+extern chez_ptr analyze_guardian;
+extern struct Scheme_Object_Header *first_scheme_object_header;
+extern chez_ptr scheme_object_list;
+
+void link_scheme_obj (struct Scheme_Object_Header *soh, Lisp_Object val);
 
 struct scheme_fptr_call_info {
   const char *fun;
@@ -433,4 +446,10 @@ void walk_lisp_stack (void (*f)(void *, Lisp_Object *), void *);
 #define IS_SCHEME_REF(ref, num) (CHEZ (ref) == (void *)num)
 #else
 #define IS_SCHEME_REF(ref, num) false
+#endif
+
+#ifdef ENABLE_CHECKING
+#define TRACEF(fmt, ...) (printf (fmt "\n" __VA_OPT__(, __VA_ARGS__)))
+#else
+#define TRACEF(...) ((void)0)
 #endif

@@ -5184,7 +5184,7 @@ init_buffer_once (void)
   memset (buffer_permanent_local_flags, 0, sizeof buffer_permanent_local_flags);
 
   /* 0 means not a lisp var, -1 means always local, else mask.  */
-  memset (&buffer_local_flags, 0, sizeof buffer_local_flags);
+  //memset (&buffer_local_flags, 0, sizeof buffer_local_flags);
   nil_buffer (&buffer_local_flags);
   bset_filename (&buffer_local_flags, make_number (-1));
   bset_directory (&buffer_local_flags, make_number (-1));

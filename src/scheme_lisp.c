@@ -32,13 +32,15 @@ chez_iptr scheme_greatest_fixnum;
 chez_iptr scheme_least_fixnum;
 chez_iptr scheme_fixnum_width;
 chez_ptr scheme_guardian;
+chez_ptr analyze_guardian;
+struct Scheme_Object_Header *first_scheme_object_header = NULL;
+chez_ptr scheme_object_list = chez_nil;
 struct scheme_fptr_call_info scheme_fptr_call_info;
 
 uint64_t gdb_misc_val = 0;
 unsigned gdb_flags = 0;
 
-#define SCHEME_FPTR_DEF(name, rtype, ...)                                \
-  rtype scheme_fptr_result_##name;                                       \
+#define SCHEME_FPTR_DEF(name, rtype, ...)                               \
   rtype (*scheme_fptr_##name)(const char *, int, __VA_ARGS__) = 0
 #include "scheme_fptr.h"
 
@@ -81,8 +83,8 @@ void *chez_saved_bp = NULL;
 static void
 scheme_abort (void)
 {
-  printf ("scheme_abort\n");
-  //abort();
+  TRACEF ("scheme_abort");
+  abort();
 }
 
 static void
@@ -93,7 +95,7 @@ scheme_sigaction (int sig, siginfo_t *info, void *ucontext)
   sigaddset (&set, sig);
   sigprocmask (SIG_UNBLOCK, &set, (sigset_t *) 0);
 
-  printf("called scheme_sigaction\n");
+  TRACEF ("called scheme_sigaction");
 
   // Both versions seem to have the same effect.
   if (chez_saved_bp)
@@ -111,7 +113,7 @@ scheme_sigaction (int sig, siginfo_t *info, void *ucontext)
 static chez_ptr
 make_gensym (const char *name)
 {
-  chez_ptr sym = scheme_call1("gensym", chez_string(name));
+  chez_ptr sym = scheme_call1 ("gensym", chez_string(name));
   chez_lock_object (sym);
   return sym;
 }
@@ -123,7 +125,6 @@ void scheme_init(void) {
   eassert(!scheme_initialized);
 
   chez_scheme_init(NULL);
-  printf ("boot file: %s\n", CHEZ_SCHEME_DIR "/scheme.boot");
   chez_register_boot_file(CHEZ_SCHEME_DIR "/scheme.boot");
   chez_build_heap(NULL, NULL);
 
@@ -133,12 +134,15 @@ void scheme_init(void) {
   sigemptyset(&act.sa_mask);
   sigaction(SIGSEGV, &act, &old_act);
 
-  scheme_greatest_fixnum = chez_fixnum_value(scheme_call0("greatest-fixnum"));
-  scheme_least_fixnum = chez_fixnum_value(scheme_call0("least-fixnum"));
-  scheme_fixnum_width = chez_fixnum_value(scheme_call0("fixnum-width"));
+  scheme_greatest_fixnum = chez_fixnum_value(scheme_call0 ("greatest-fixnum"));
+  scheme_least_fixnum = chez_fixnum_value(scheme_call0 ("least-fixnum"));
+  scheme_fixnum_width = chez_fixnum_value(scheme_call0 ("fixnum-width"));
 
   scheme_guardian = scheme_call0 ("make-guardian");
   chez_lock_object (scheme_guardian);
+
+  analyze_guardian = scheme_call0 ("make-guardian");
+  chez_lock_object (analyze_guardian);
 
   chez_foreign_symbol("do_scheme_gc", do_scheme_gc);
   chez_foreign_symbol("before_scheme_gc", before_scheme_gc);
@@ -147,13 +151,13 @@ void scheme_init(void) {
   chez_foreign_symbol("Fequal", Fequal);
   chez_foreign_symbol("Fsxhash_equal", Fsxhash_equal);
   chez_scheme_script(BUILD_ROOT "/scheme/main.ss", 0, argv);
-  scheme_call0("emacs-init");
+  scheme_call0 ("emacs-init");
 
 #define SCHEME_FPTR_DEF(name, ...)                      \
   (scheme_fptr_##name = get_scheme_func ("c-" #name))
 #include "scheme_fptr.h"
 
-  c_data_table = UNCHEZ(scheme_call0("make-eq-hashtable"));
+  c_data_table = UNCHEZ(scheme_call0 ("make-eq-hashtable"));
   scheme_track (c_data_table);
 
   scheme_vectorlike_symbol = make_gensym("emacs-vectorlike");
@@ -162,12 +166,77 @@ void scheme_init(void) {
   c_data_property_symbol = make_gensym("c-data-property");
   gcvec_property_symbol = make_gensym("gcvec-property");
 
+  scheme_object_list = chez_cons (chez_false, chez_nil);
+  chez_lock_object (scheme_object_list);
+
 #ifdef ENABLE_CHECKING
   run_init_checks();
 #endif
 
   //atexit(scheme_deinit);
   scheme_initialized = true;
+}
+
+void
+link_scheme_obj (struct Scheme_Object_Header *soh, Lisp_Object obj)
+{
+#ifdef ENABLE_CHECKING
+  int cell_count = 0;
+  {
+    chez_ptr cell0 = chez_cdr (scheme_object_list);
+    for (struct Scheme_Object_Header *soh0 = first_scheme_object_header;
+         soh0; soh0 = soh0->next, cell0 = chez_cdr (cell0))
+      {
+        eassert (soh0 != soh);
+        eassert (cell0 != chez_nil);
+        eassert (chez_car (cell0) == CHEZ (soh0->scheme_obj));
+        eassert (chez_car (cell0) != CHEZ (obj));
+        eassert (CHEZ (soh0->scheme_obj));
+        ++cell_count;
+      }
+    eassert (cell0 == chez_nil);
+  }
+  struct Scheme_Object_Header *init_first_scheme_object_header =
+    first_scheme_object_header;
+#endif
+
+  analyze_scheme_ref (obj, "link_scheme_obj");
+  eassert (chez_pairp (scheme_object_list));
+  eassert (soh);
+  eassert (CHEZ (obj));
+  eassert (may_be_valid(CHEZ(obj)));
+
+  soh->scheme_obj = obj;
+  soh->next = first_scheme_object_header;
+  first_scheme_object_header = soh;
+  soh->last_gc = gc_count;
+  chez_set_cdr (scheme_object_list,
+                scheme_call2 ("weak-cons",
+                              CHEZ (obj),
+                              chez_cdr (scheme_object_list)));
+  eassert (chez_pairp (chez_cdr (scheme_object_list)));
+  eassert (EQ (obj, UNCHEZ (chez_car (chez_cdr (scheme_object_list)))));
+  eassert (init_first_scheme_object_header == first_scheme_object_header->next);
+
+#ifdef ENABLE_CHECKING
+  int new_cell_count = 0;
+  for (chez_ptr cell0 = chez_cdr (scheme_object_list);
+       cell0 != chez_nil; cell0 = chez_cdr (cell0))
+    {
+      eassert ((chez_car (cell0) == CHEZ (obj)) == (new_cell_count == 0));
+      new_cell_count++;
+    }
+  int new_soh_count = 0;
+  for (struct Scheme_Object_Header *soh0 = first_scheme_object_header;
+       soh0; soh0 = soh0->next)
+    {
+      eassert (EQ (soh0->scheme_obj, obj) == (new_soh_count == 0));
+      eassert (CHEZ (soh0->scheme_obj));
+      new_soh_count++;
+    }
+  eassert (new_soh_count == cell_count + 1);
+  eassert (new_cell_count == cell_count + 1);
+#endif
 }
 
 static void
@@ -244,7 +313,7 @@ ensure_symbol_c_data (Lisp_Object symbol, Lisp_Object name)
       return p;
     }
 
-  if (CHEZ(name) == chez_false)
+  if (FALSEP (name))
     name = to_lisp_string (symbol);
   eassert (STRINGP (name));
 
@@ -252,15 +321,8 @@ ensure_symbol_c_data (Lisp_Object symbol, Lisp_Object name)
   SCHEME_FPTR_CALL (putprop_addr, CHEZ(symbol), c_data_property_symbol, p);
   eassert (p == SCHEME_FPTR_CALL (getprop_addr, CHEZ(symbol), c_data_property_symbol));
 
-  if (symbol_is (symbol, "x-sent-selection-hooks"))
-    printf("x-sent-selection-hooks = %p / %p\n", CHEZ(symbol), p);
-  if (symbol_is (symbol, "x-sent-selection-functions"))
-    printf("x-sent-selection-functions = %p / %p\n", CHEZ(symbol), p);
-
   // Can't use init_nil_refs here because of how builtin symbols are
   // initialized.
-  p->u.s.soh.scheme_obj = symbol;
-  p->u.s.soh.last_gc = gc_count;
   p->u.s.name = name;
   p->u.s.plist = Qnil;
   p->u.s.redirect = SYMBOL_PLAINVAL;
@@ -272,14 +334,17 @@ ensure_symbol_c_data (Lisp_Object symbol, Lisp_Object name)
   p->u.s.declared_special = false;
   p->u.s.pinned = false;
   CHECK_ALLOC(p);
+
+  link_scheme_obj (&p->u.s.soh, symbol);
   eassert (EQ (p->u.s.soh.scheme_obj, symbol));
+
   return p;
 }
 
 struct Lisp_Symbol *
 scheme_make_symbol(Lisp_Object name, int /*enum symbol_interned*/ interned)
 {
-  Lisp_Object scheme_symbol = UNCHEZ (chez_false);
+  Lisp_Object scheme_symbol = LISP_FALSE;
   if (chez_symbolp (CHEZ (name)))
       scheme_symbol = name;
   else
@@ -298,15 +363,15 @@ scheme_make_symbol(Lisp_Object name, int /*enum symbol_interned*/ interned)
   Lisp_Object lisp_str = to_lisp_string (name);
   struct Lisp_Symbol *xs = ensure_symbol_c_data (scheme_symbol, lisp_str);
   xs->u.s.interned = interned;
+  XSYMBOL (scheme_symbol);
   return xs;
 }
 
 struct Lisp_Symbol *
 XSYMBOL (Lisp_Object a)
 {
-  struct Lisp_Symbol *p = ensure_symbol_c_data (a, UNCHEZ (chez_false));
+  struct Lisp_Symbol *p = ensure_symbol_c_data (a, LISP_FALSE);
   eassert (EQ (p->u.s.soh.scheme_obj, a));
-  eassert (p->u.s.soh.last_gc == gc_count || gc_running);
   return p;
 }
 
@@ -373,7 +438,8 @@ fixup_lispsym_inits (Lisp_Object *p, size_t n)
   }
 }
 
-static const char *scheme_classify(Lisp_Object x)
+const char *
+scheme_classify(Lisp_Object x)
 {
   switch (XTYPE(x)) {
   case Lisp_Symbol: return "Lisp_Symbol";
@@ -443,7 +509,7 @@ static const char *scheme_classify(Lisp_Object x)
     if (chez_inputportp(CHEZ(x))) return "inputport?";
     if (chez_outputportp(CHEZ(x))) return "outputport?";
     if (chez_recordp(CHEZ(x))) return "record?";
-    return NULL;
+    return "unknown type";
   }
 }
 
@@ -596,10 +662,17 @@ static const char *last_func_name = NULL;
 
 extern chez_ptr
 scheme_function_for_name(const char *name) {
+  for (int i = 0; name[i]; i++)
+    {
+      eassert (0x20 < name[i]);
+      eassert (name[i] < 0x7f);
+      eassert (i < 30);
+    }
   last_func_name = name;
   chez_ptr sym = chez_string_to_symbol(name);
   eassert(chez_symbolp(sym));
   chez_ptr fun = chez_top_level_value(sym);
+  eassert (chez_procedurep (fun));
   scheme_track (UNCHEZ (fun));
   //eassert(chez_procedurep(fun));
   return fun;
@@ -887,7 +960,6 @@ visit_lisp_refs(Lisp_Object obj, lisp_ref_visitor_fun fun, void *data)
               chez_ptr table = CHEZ (AREF (obj, 0));
               if (SCHEME_FPTR_CALL (hashtablep, table))
                 {
-                  printf("obarray %p\n", CHEZ(obj));
                   chez_ptr values_vec = SCHEME_FPTR_CALL (hashtable_values, table);
                   // Copy vector so we don't have to lock it.
                   chez_iptr n = chez_vector_length (values_vec);
@@ -1372,7 +1444,7 @@ run_init_checks(void)
 
   lisp_frame_record_init();
 
-  printf("tests pass!\n");
+  TRACEP ("tests pass!");
 #endif
 }
 #endif

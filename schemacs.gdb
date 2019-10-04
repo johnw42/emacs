@@ -49,20 +49,16 @@ end
 break wrong_type_argument
 break _exit
 
-break terminate_due_to_signal
-command
-up
-up
-end
-
 break gdb_break
 commands
   up
 end
 
-break die
+break terminate_due_to_signal
 commands
   up
+  up
+  bt
 end
 
 break exit

@@ -761,7 +761,7 @@ enum symbol_trapped_write
 #ifdef HAVE_CHEZ_SCHEME
 struct Scheme_Object_Header {
   Lisp_Object scheme_obj;
-  Lisp_Object next;
+  struct Scheme_Object_Header *next;
 #ifdef ENABLE_CHECKING
   int last_gc;
 #endif
@@ -1292,7 +1292,6 @@ XUNTAG_VECTORLIKE (Lisp_Object a)
 {
   eassert (chez_vectorp (CHEZ (a)));
   void *ptr = scheme_malloc_ptr (UNCHEZ (chez_vector_ref (CHEZ (a), 1)));
-  eassert (((union vectorlike_header *)ptr)->s.soh.last_gc == gc_count || gc_running);
   return ptr;
 }
 #define XUNTAG_MISC(a) XUNTAG_VECTORLIKE (a)
@@ -1571,7 +1570,6 @@ XSTRING (Lisp_Object a)
   eassert (STRINGP (a));
 #ifdef HAVE_CHEZ_SCHEME
   struct Lisp_String *p = scheme_malloc_ptr (UNCHEZ (chez_vector_ref (CHEZ (a), 1)));
-  eassert (p->u.s.soh.last_gc == gc_count || gc_running);
   eassert (EQ (p->u.s.soh.scheme_obj, a) || gc_running);
   return p;
 #else /* not HAVE_CHEZ_SCHEME */
@@ -3497,10 +3495,10 @@ CHECK_NUMBER_CDR (Lisp_Object x)
 #define DEFUN(lname, fnname, sname, minargs, maxargs, intspec, doc)	\
    static struct Lisp_Subr sname =                                      \
      { { .s = { .size = PVEC_SUBR << PSEUDOVECTOR_AREA_BITS,            \
-                .soh = { .scheme_obj = UNCHEZ(chez_false),              \
-                         .next = UNCHEZ(chez_false) } } },              \
+                .soh = { .scheme_obj = LISP_FALSE,              \
+                         .next = NULL } } },                            \
        { .a ## maxargs = fnname },					\
-       minargs, maxargs, lname, UNCHEZ(chez_false), intspec, 0};        \
+       minargs, maxargs, lname, LISP_FALSE, intspec, 0};        \
    Lisp_Object fnname
 #else /* not HAVE_CHEZ_SCHEME */
 /* This version of DEFUN declares a function prototype with the right

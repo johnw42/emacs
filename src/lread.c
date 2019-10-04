@@ -1453,7 +1453,6 @@ Return t if the file exists and loads successfully.  */)
     }
 
   analyze_scheme_ref (found, "loading file");
-  printf("file is %p\n", CHEZ(found));
 
   specbind (Qload_file_name, found);
   specbind (Qinhibit_file_name_operation, Qnil);
@@ -1860,7 +1859,7 @@ build_load_history (Lisp_Object filename, bool entire)
                              Vload_history);
       if (analyze_scheme_ref (XCAR(XCAR(Vload_history)), "added file to load-history"))
         {
-          printf("cell = %p\n", CHEZ(XCAR(Vload_history)));
+          TRACEF ("cell = %p", CHEZ(XCAR(Vload_history)));
         }
 
       analyze_scheme_ref (XCAR(Vload_history), "added list to load-history");
@@ -4591,7 +4590,6 @@ defsubr (struct Lisp_Subr *sname)
   subr->min_args = sname->min_args;
   subr->max_args = sname->max_args;
   subr->init_symbol_name = sname->init_symbol_name;
-  subr->header.s.soh.scheme_obj = tem;
   subr->symbol = sym;
   subr->intspec = sname->intspec;
   subr->doc = sname->doc;
