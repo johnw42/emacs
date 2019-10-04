@@ -1452,7 +1452,7 @@ Return t if the file exists and loads successfully.  */)
 	message_with_string ("Loading %s...", file, 1);
     }
 
-  analyze_scheme_ref (found, "loading file");
+  INSPECT_SCHEME_REF (found, "loading file");
 
   specbind (Qload_file_name, found);
   specbind (Qinhibit_file_name_operation, Qnil);
@@ -1857,12 +1857,12 @@ build_load_history (Lisp_Object filename, bool entire)
     {
       Vload_history = Fcons (Fnreverse (Vcurrent_load_list),
                              Vload_history);
-      if (analyze_scheme_ref (XCAR(XCAR(Vload_history)), "added file to load-history"))
+      if (INSPECT_SCHEME_REF (XCAR(XCAR(Vload_history)), "added file to load-history"))
         {
           TRACEF ("cell = %p", CHEZ(XCAR(Vload_history)));
         }
 
-      analyze_scheme_ref (XCAR(Vload_history), "added list to load-history");
+      INSPECT_SCHEME_REF (XCAR(Vload_history), "added list to load-history");
     }
   EXIT_LISP_FRAME_VOID ();
 }

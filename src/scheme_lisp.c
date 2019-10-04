@@ -200,7 +200,7 @@ link_scheme_obj (struct Scheme_Object_Header *soh, Lisp_Object obj)
     first_scheme_object_header;
 #endif
 
-  analyze_scheme_ref (obj, "link_scheme_obj");
+  INSPECT_SCHEME_REF (obj, "link_scheme_obj");
   eassert (chez_pairp (scheme_object_list));
   eassert (soh);
   eassert (CHEZ (obj));
@@ -355,7 +355,7 @@ scheme_make_symbol(Lisp_Object name, int /*enum symbol_interned*/ interned)
          "string->symbol" : "gensym",
          CHEZ(scheme_str)));
       //scheme_track (scheme_symbol);
-      analyze_scheme_ref (scheme_symbol, "scheme_make_symbol");
+      INSPECT_SCHEME_REF (scheme_symbol, "scheme_make_symbol");
     }
 
   eassert (chez_symbolp (CHEZ (scheme_symbol)));
@@ -834,7 +834,7 @@ visit_symbol_lisp_refs(Lisp_Object obj, lisp_ref_visitor_fun fun, void *data)
 {
   struct Lisp_Symbol *s = XSYMBOL (obj);
   while (s) {
-    analyze_scheme_ref_ptr (&s->u.s.soh.scheme_obj, "symbol backref");
+    INSPECT_SCHEME_REF_PTR (&s->u.s.soh.scheme_obj, "symbol backref");
     fun (data, &s->u.s.soh.scheme_obj, 1);
     fun (data, &s->u.s.name, 1);
     struct Lisp_Symbol *next_s = NULL;
@@ -969,7 +969,7 @@ visit_lisp_refs(Lisp_Object obj, lisp_ref_visitor_fun fun, void *data)
                   for (chez_iptr i = 0; i < n; i++)
                     {
                       Lisp_Object sym = values[i];
-                      analyze_scheme_ref (sym, "visiting obarray");
+                      INSPECT_SCHEME_REF (sym, "visiting obarray");
                       eassert (SYMBOLP (sym));
                       visit_symbol_lisp_refs (sym, fun, data);
                     }
@@ -1449,6 +1449,86 @@ run_init_checks(void)
 }
 #endif
 
+#define MAX_MAGIC_REFS 8
+static size_t magic_refs[MAX_MAGIC_REFS];
+static size_t magic_ref_ptrs[MAX_MAGIC_REFS];
+static bool magic_refs_seen[MAX_MAGIC_REFS];
 
+static void
+gdb_found_ref(Lisp_Object ref)
+{
+}
+
+static void
+gdb_found_ref_ptr(Lisp_Object *ptr)
+{
+}
+
+bool
+inspect_scheme_ref (Lisp_Object ref,
+                    Lisp_Object *ptr,
+                    bool is_valid,
+                    const char *label)
+{
+  while (true)
+    {
+      chez_ptr collected = chez_call0 (analyze_guardian);
+      if (collected == chez_false)
+        break;
+      chez_iptr i = chez_fixnum_value(collected);
+      eassert (0 <= i && i < MAX_MAGIC_REFS);
+      TRACEF ("*** collected: %p", (void *)magic_refs[i]);
+      magic_refs_seen[i] = false;
+    }
+
+  if (ptr && !FALSEP (ref))
+    ref = *ptr;
+  const char *desc = "may be invalid";
+  if (is_valid)
+    desc = scheme_classify (ref);
+  for (int i = 0; i < MAX_MAGIC_REFS; i++)
+    {
+      if (magic_ref_ptrs[i] == 0 && magic_refs[i] == 0) break;
+      if (ptr &&
+          magic_ref_ptrs[i] &&
+          ptr == (Lisp_Object *) magic_ref_ptrs[i])
+        goto found;
+      if (magic_refs[i] && CHEZ (ref) == (chez_ptr) magic_refs[i])
+        {
+          if (is_valid && !magic_refs_seen[i])
+            {
+              chez_call2 (analyze_guardian, CHEZ (ref), chez_fixnum(i));
+              magic_refs_seen[i] = true;
+            }
+          goto found;
+        }
+    }
+  return false;
+
+ found:
+  if (label)
+    {
+      if (ptr)
+        TRACEF ("*** %s: ref %p (%s) at %p",
+                label, CHEZ(ref), desc, ptr);
+      else
+        TRACEF ("*** %s: ref %p (%s)",
+                label, CHEZ(ref), desc);
+      if (ptr)
+        gdb_found_ref_ptr(ptr);
+      gdb_found_ref(ref);
+    }
+  if (is_valid)
+    eassert (may_be_valid (CHEZ (ref)));
+  return true;
+}
+
+static size_t magic_refs[MAX_MAGIC_REFS] =
+  {
+  };
+
+static size_t magic_ref_ptrs[MAX_MAGIC_REFS] =
+  {
+  };
 
 #endif /* HAVE_CHEZ_SCHEME */

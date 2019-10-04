@@ -93,7 +93,7 @@ set_char_table_ascii (Lisp_Object table, Lisp_Object val)
 {
   ENTER_LISP_FRAME ((table, val));
   XCHAR_TABLE (table)->ascii = val;
-  analyze_scheme_ref_ptr (&XCHAR_TABLE (table)->ascii,
+  INSPECT_SCHEME_REF_PTR (&XCHAR_TABLE (table)->ascii,
                           "set_char_table_ascii");
   EXIT_LISP_FRAME_VOID ();
 }
@@ -150,7 +150,7 @@ make_sub_char_table (int depth, int min_char, Lisp_Object defalt)
   for (i = 0; i < chartab_size[depth]; i++)
     {
       XSUB_CHAR_TABLE (table)->contents[i] = defalt;
-      analyze_scheme_ref_ptr (&XSUB_CHAR_TABLE (table)->contents[i],
+      INSPECT_SCHEME_REF_PTR (&XSUB_CHAR_TABLE (table)->contents[i],
                               "make_sub_char_table");
     }
   EXIT_LISP_FRAME (table);
@@ -164,19 +164,19 @@ char_table_ascii (Lisp_Object table)
   sub = XCHAR_TABLE (table)->contents[0];
   if (! SUB_CHAR_TABLE_P (sub))
     {
-      analyze_scheme_ref (sub, "char_table_ascii 0");
+      INSPECT_SCHEME_REF (sub, "char_table_ascii 0");
       EXIT_LISP_FRAME (sub);
     }
   sub = XSUB_CHAR_TABLE (sub)->contents[0];
   if (! SUB_CHAR_TABLE_P (sub))
     {
-      analyze_scheme_ref (sub, "char_table_ascii 1");
+      INSPECT_SCHEME_REF (sub, "char_table_ascii 1");
       EXIT_LISP_FRAME (sub);
     }
   val = XSUB_CHAR_TABLE (sub)->contents[0];
   if (UNIPROP_TABLE_P (table) && UNIPROP_COMPRESSED_FORM_P (val))
     val = uniprop_table_uncompress (sub, 0);
-  analyze_scheme_ref (val, "char_table_ascii 2");
+  INSPECT_SCHEME_REF (val, "char_table_ascii 2");
   EXIT_LISP_FRAME (val);
 }
 
@@ -217,14 +217,14 @@ copy_char_table (Lisp_Object table)
   set_char_table_purpose (copy, XCHAR_TABLE (table)->purpose);
   for (i = 0; i < chartab_size[0]; i++)
     {
-      analyze_scheme_ref_ptr (&XCHAR_TABLE (table)->contents[i],
+      INSPECT_SCHEME_REF_PTR (&XCHAR_TABLE (table)->contents[i],
                               "copy_char_table 0");
       set_char_table_contents
         (copy, i,
          (SUB_CHAR_TABLE_P (XCHAR_TABLE (table)->contents[i])
           ? copy_sub_char_table (XCHAR_TABLE (table)->contents[i])
           : XCHAR_TABLE (table)->contents[i]));
-      analyze_scheme_ref_ptr (&XCHAR_TABLE (copy)->contents[i],
+      INSPECT_SCHEME_REF_PTR (&XCHAR_TABLE (copy)->contents[i],
                               "copy_char_table 1");
     }
   set_char_table_ascii (copy, char_table_ascii (copy));
@@ -447,7 +447,7 @@ char_table_set (Lisp_Object table, int c, Lisp_Object val)
   ENTER_LISP_FRAME ((table, val), sub);
   struct Lisp_Char_Table *tbl = XCHAR_TABLE (table);
 
-  analyze_scheme_ref (val, "char_table_set");
+  INSPECT_SCHEME_REF (val, "char_table_set");
 
   if (ASCII_CHAR_P (c)
       && SUB_CHAR_TABLE_P (tbl->ascii))
@@ -457,7 +457,7 @@ char_table_set (Lisp_Object table, int c, Lisp_Object val)
       int i = CHARTAB_IDX (c, 0, 0);
 
       sub = tbl->contents[i];
-      analyze_scheme_ref_ptr (&tbl->contents[i], "char_table_set");
+      INSPECT_SCHEME_REF_PTR (&tbl->contents[i], "char_table_set");
       if (! SUB_CHAR_TABLE_P (sub))
 	{
 	  sub = make_sub_char_table (1, i * chartab_chars[0], sub);

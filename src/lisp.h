@@ -2112,7 +2112,7 @@ ASET (Lisp_Object array, ptrdiff_t idx, Lisp_Object val)
 {
   eassert (0 <= idx && idx < ASIZE (array));
   XVECTOR (array)->contents[idx] = val;
-  analyze_scheme_ref_ptr (&XVECTOR (array)->contents[idx], "ASET");
+  INSPECT_SCHEME_REF_PTR (&XVECTOR (array)->contents[idx], "ASET");
 }
 
 INLINE void
@@ -3874,7 +3874,7 @@ set_char_table_contents (Lisp_Object table, ptrdiff_t idx, Lisp_Object val)
 {
   eassert (0 <= idx && idx < (1 << CHARTAB_SIZE_BITS_0));
   XCHAR_TABLE (table)->contents[idx] = val;
-  analyze_scheme_ref_ptr (&XCHAR_TABLE (table)->contents[idx],
+  INSPECT_SCHEME_REF_PTR (&XCHAR_TABLE (table)->contents[idx],
                           "set_char_table_contents");
 }
 
@@ -3882,7 +3882,7 @@ INLINE void
 set_sub_char_table_contents (Lisp_Object table, ptrdiff_t idx, Lisp_Object val)
 {
   XSUB_CHAR_TABLE (table)->contents[idx] = val;
-  analyze_scheme_ref_ptr (&XSUB_CHAR_TABLE (table)->contents[idx],
+  INSPECT_SCHEME_REF_PTR (&XSUB_CHAR_TABLE (table)->contents[idx],
                           "set_sub_char_table_contents");
 }
 

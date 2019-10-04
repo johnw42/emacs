@@ -40,6 +40,20 @@ struct xmalloc_header {
 #define scheme_check_ptr(x,y) ((void)0)
 #endif /* not HAVE_CHEZ_SCHEME */
 
+
+#if defined(HAVE_CHEZ_SCHEME) && defined(ENABLE_CHECKING)
+#define INSPECT_SCHEME_REF(ref, label) inspect_scheme_ref(ref, NULL, true, label)
+#define INSPECT_SCHEME_REF_PTR(ptr, label) inspect_scheme_ref(LISP_FALSE, ptr, true, label)
+#define INSPECT_SCHEME_REF_MAYBE_INVALID(ref, label) inspect_scheme_ref(ref, NULL, false, label)
+#define INSPECT_SCHEME_REF_INFO(info, label) inspect_scheme_ref(UNCHEZ ((info)->ref), (Lisp_Object *) (info)->ref_ptr, true, label)
+#else
+#define INSPECT_SCHEME_REF(ref, label) false
+#define INSPECT_SCHEME_REF_PTR(ptr, label) false
+#define INSPECT_SCHEME_REF_MAYBE_INVALID(ref, label) false
+#define INSPECT_SCHEME_REF_INFO(info, label) false
+#endif
+
+
 #ifdef HAVE_CHEZ_SCHEME
 
 typedef struct { chez_ptr ptr; } Lisp_Object;
@@ -82,9 +96,6 @@ const char *scheme_classify (Lisp_Object x);
 
 void gdb_break(void);
 
-
-bool analyze_scheme_ref(Lisp_Object ref, const char *label);
-bool analyze_scheme_ref_ptr(Lisp_Object *ptr, const char *label);
 
 extern uint64_t gdb_misc_val;
 extern unsigned gdb_flags;
@@ -173,16 +184,6 @@ void scheme_set_gcvec (Lisp_Object obj, chez_ptr);
 #define scheme_save_ptr(ptr, type) ((void)0)
 #define scheme_check_ptr(ptr, type) ((void)0)
 
-INLINE void *
-scheme_malloc_ptr(Lisp_Object addr) {
-  gdb_misc_val = (uint64_t) CHEZ (addr);
-  analyze_scheme_ref (addr, "scheme_malloc_ptr");
-  eassert (chez_fixnump (CHEZ (addr)));
-  void *data = (void *) chez_fixnum_value (CHEZ (addr));
-  CHECK_ALLOC (data);
-  return data;
-}
-
 extern chez_ptr scheme_function_for_name(const char *name);
 
 #define scheme_call0(f) (chez_call0(scheme_function_for_name(f)))
@@ -196,6 +197,21 @@ scheme_ptr_copy (Lisp_Object *dest, Lisp_Object *src, chez_iptr num_words)
 }
 
 struct Lisp_Symbol *scheme_make_symbol(Lisp_Object name, int /*enum symbol_interned*/ interned);
+
+bool inspect_scheme_ref (Lisp_Object ref,
+                         Lisp_Object *ptr,
+                         bool is_valid,
+                         const char *label);
+
+INLINE void *
+scheme_malloc_ptr(Lisp_Object addr) {
+  gdb_misc_val = (uint64_t) CHEZ (addr);
+  INSPECT_SCHEME_REF (addr, "scheme_malloc_ptr");
+  eassert (chez_fixnump (CHEZ (addr)));
+  void *data = (void *) chez_fixnum_value (CHEZ (addr));
+  CHECK_ALLOC (data);
+  return data;
+}
 
 INLINE void
 gdb_set_flag (int i)

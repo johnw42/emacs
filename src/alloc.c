@@ -413,110 +413,8 @@ scheme_ref_memcmp (const void *p, const void *q)
   return 0;
 }
 
-
-#define MAX_MAGIC_REFS 8
-static size_t magic_refs[MAX_MAGIC_REFS];
-static size_t magic_ref_ptrs[MAX_MAGIC_REFS];
-static bool magic_refs_seen[MAX_MAGIC_REFS];
-
-static void
-gdb_found_ref(Lisp_Object ref)
-{
-}
-
-static void
-gdb_found_ref_ptr(Lisp_Object *ptr)
-{
-}
-
-static bool
-analyze_scheme_ref_impl (Lisp_Object ref,
-                         Lisp_Object *ptr,
-                         bool is_valid,
-                         const char *label)
-{
-  while (true)
-    {
-      chez_ptr collected = chez_call0 (analyze_guardian);
-      if (collected == chez_false)
-        break;
-      chez_iptr i = chez_fixnum_value(collected);
-      eassert (0 <= i && i < MAX_MAGIC_REFS);
-      TRACEF ("*** collected: %p", (void *)magic_refs[i]);
-      magic_refs_seen[i] = false;
-    }
-
-  if (ptr && !FALSEP (ref))
-    ref = *ptr;
-  const char *desc = "may be invalid";
-  if (is_valid)
-    desc = scheme_classify (ref);
-  for (int i = 0; i < MAX_MAGIC_REFS; i++)
-    {
-      if (magic_ref_ptrs[i] == 0 && magic_refs[i] == 0) break;
-      if (ptr &&
-          magic_ref_ptrs[i] &&
-          ptr == (Lisp_Object *) magic_ref_ptrs[i])
-        goto found;
-      if (magic_refs[i] && CHEZ (ref) == (chez_ptr) magic_refs[i])
-        {
-          if (is_valid && !magic_refs_seen[i])
-            {
-              chez_call2 (analyze_guardian, CHEZ (ref), chez_fixnum(i));
-              magic_refs_seen[i] = true;
-            }
-          goto found;
-        }
-    }
-  return false;
-
- found:
-  if (label)
-    {
-      if (ptr)
-        TRACEF ("*** %s: ref %p (%s) at %p",
-                label, CHEZ(ref), desc, ptr);
-      else
-        TRACEF ("*** %s: ref %p (%s)",
-                label, CHEZ(ref), desc);
-      if (ptr)
-        gdb_found_ref_ptr(ptr);
-      gdb_found_ref(ref);
-    }
-  if (is_valid)
-    eassert (may_be_valid (CHEZ (ref)));
-  return true;
-}
-
-static bool
-analyze_scheme_ref_maybe_invalid (Lisp_Object ref, const char *label)
-{
-  return analyze_scheme_ref_impl (ref, NULL, false, label);
-}
-
 static struct Scheme_Object_Header *
 get_scheme_object_header (Lisp_Object obj);
-
-bool
-analyze_scheme_ref (Lisp_Object ref, const char *label)
-{
-  return analyze_scheme_ref_impl (ref, NULL, true, label);
-}
-
-bool
-analyze_scheme_ref_ptr (Lisp_Object *ptr, const char *label)
-{
-  return analyze_scheme_ref_impl (LISP_FALSE, ptr, true, label);
-}
-
-static bool
-analyze_scheme_ref_info (struct scheme_ref_info *info, const char *label)
-{
-  if (info->ref_ptr)
-    return analyze_scheme_ref_ptr (UNCHEZ_PTR (info->ref_ptr), label);
-  else
-    return analyze_scheme_ref (UNCHEZ (info->ref), label);
-}
 
 static void
 scheme_ref_merge_unlock (void *p, const void *q)
@@ -524,7 +422,7 @@ scheme_ref_merge_unlock (void *p, const void *q)
   struct scheme_ref_info *pp = p;
   const struct scheme_ref_info *qq = q;
   //chez_unlock_object (pp->ref);
-  analyze_scheme_ref_info (pp, "(not) unlocked during merge");
+  INSPECT_SCHEME_REF_INFO (pp, "(not) unlocked during merge");
   *pp = *qq;
 }
 
@@ -578,7 +476,7 @@ static void
 record_scheme_ref_ptr (Lisp_Object *ref_ptr, enum scheme_ref_type type)
 {
   eassert (ref_ptr);
-  analyze_scheme_ref_ptr (ref_ptr, "at record_scheme_ref_ptr");
+  INSPECT_SCHEME_REF_PTR (ref_ptr, "at record_scheme_ref_ptr");
   struct scheme_ref_info info =
     { CHEZ(*ref_ptr), &CHEZ(*ref_ptr), type };
   switch (type)
@@ -597,7 +495,7 @@ record_scheme_ref_ptr (Lisp_Object *ref_ptr, enum scheme_ref_type type)
 static Lisp_Object
 record_scheme_ref (Lisp_Object ref, enum scheme_ref_type type)
 {
-  analyze_scheme_ref (ref, "at record_scheme_ref");
+  INSPECT_SCHEME_REF (ref, "at record_scheme_ref");
   struct scheme_ref_info info = { CHEZ(ref), NULL, type };
   switch (type)
     {
@@ -617,7 +515,7 @@ scheme_make_pure (Lisp_Object ref)
 {
   /* chez_lock_object (CHEZ (ref)); */
   /* return record_scheme_ref (ref, rt_pure); */
-  analyze_scheme_ref (ref, "scheme_make_pure");
+  INSPECT_SCHEME_REF (ref, "scheme_make_pure");
   return ref;
 }
 
@@ -672,7 +570,7 @@ set_mark_bit (Lisp_Object obj, bool bit)
 bool
 mark_and_enqueue (Lisp_Object obj, const char *label)
 {
-  analyze_scheme_ref (obj, label);
+  INSPECT_SCHEME_REF (obj, label);
   /* if (CONSP (obj)) */
   /*   { */
   /*     Lisp_Object obj1 = XCAR (obj); */
@@ -2527,7 +2425,7 @@ static void
 object_pre_gc (struct Scheme_Object_Header *soh)
 {
   Lisp_Object obj = soh->scheme_obj;
-  if (analyze_scheme_ref (obj, "object_pre_gc"))
+  if (INSPECT_SCHEME_REF (obj, "object_pre_gc"))
     TRACEF ("soh = %p", soh);
   chez_ptr gcvec = scheme_get_gcvec (obj);
   if (gcvec == chez_true) return;
@@ -2569,7 +2467,7 @@ object_was_collected (Lisp_Object obj)
 {
   struct Scheme_Object_Header *soh = get_scheme_object_header (obj);
   if (soh == NULL) return;
-  analyze_scheme_ref (obj, "collected");
+  INSPECT_SCHEME_REF (obj, "collected");
   soh->scheme_obj = LISP_FALSE;
 }
 
@@ -2586,7 +2484,7 @@ scheme_allocate_vector (ptrdiff_t nbytes,
   eassert (data == scheme_malloc_ptr (addr));
 
   chez_ptr vec = chez_make_vector(SCHEME_PV_LENGTH, chez_false);
-  analyze_scheme_ref (UNCHEZ (vec), "scheme_allocate_vector");
+  INSPECT_SCHEME_REF (UNCHEZ (vec), "scheme_allocate_vector");
 
   scheme_track (UNCHEZ (vec));
   SCHEME_PV_TAG_SET (vec, sym);
@@ -3480,7 +3378,7 @@ DEFUN ("cons", Fcons, Scons, 2, 2, 0,
   ENTER_LISP_FRAME ((car, cdr), val);
 #ifdef HAVE_CHEZ_SCHEME
   val = UNCHEZ (chez_cons (CHEZ (car), CHEZ (cdr)));
-  analyze_scheme_ref (val, "Fcons");
+  INSPECT_SCHEME_REF (val, "Fcons");
   scheme_dont_track (val, "cons");
   eassert (CONSP(val));
   EXIT_LISP_FRAME (val);
@@ -5866,7 +5764,7 @@ mark_memory (void *start, void *end)
 	  || (uintptr_t) pp % alignof (Lisp_Object) == 0)
 	mark_maybe_object (*(Lisp_Object *) pp);
 #ifdef HAVE_CHEZ_SCHEME
-      analyze_scheme_ref_ptr ((Lisp_Object *)pp, "in mark_memory");
+      INSPECT_SCHEME_REF_PTR ((Lisp_Object *)pp, "in mark_memory");
 #endif
     }
 #endif
@@ -7786,7 +7684,7 @@ mark_object (Lisp_Object arg)
       {
 #ifdef HAVE_CHEZ_SCHEME
         Lisp_Object fast = obj, slow = obj;
-        if (analyze_scheme_ref (obj, "marking list"))
+        if (INSPECT_SCHEME_REF (obj, "marking list"))
           TRACEF ("length = %ld", XINT(Flength(obj)));
         do
           {
@@ -9002,7 +8900,7 @@ resume_scheme_gc (void)
 static void
 walk_lisp_stack_fun (void *data, Lisp_Object *ref)
 {
-  analyze_scheme_ref_ptr (ref, "walking stack in before_scheme_gc");
+  INSPECT_SCHEME_REF_PTR (ref, "walking stack in before_scheme_gc");
   record_scheme_ref_ptr (ref, rt_trace);
 }
 
@@ -9099,7 +8997,7 @@ before_scheme_gc (void)
   FOR_NAMED_CONTAINER (i, mark_queue)
     {
       Lisp_Object obj = *NAMED_CONTAINER_REF (mark_queue, i);
-      analyze_scheme_ref (obj, "found in mq");
+      INSPECT_SCHEME_REF (obj, "found in mq");
       visit_lisp_refs (obj, mark_lisp_refs_fun, NULL);
     }
   TRACEF ("mq end size: %lu", mark_queue.size);
@@ -9111,13 +9009,13 @@ before_scheme_gc (void)
   FOR_NAMED_CONTAINER (i, scheme_refs)
     {
       NAMED_CONTAINER_REF_VAR (info, scheme_refs, i);
-      analyze_scheme_ref_info (info, "before uniq");
+      INSPECT_SCHEME_REF_INFO (info, "before uniq");
     }
   container_uniq (&scheme_refs, scheme_ref_memcmp, scheme_ref_merge_unlock);
   FOR_NAMED_CONTAINER (i, scheme_refs)
     {
       NAMED_CONTAINER_REF_VAR (info, scheme_refs, i);
-      analyze_scheme_ref_info (info, "after uniq");
+      INSPECT_SCHEME_REF_INFO (info, "after uniq");
     }
   TRACEF ("unique tracked refs after mark: %lu", scheme_refs.size);
 
@@ -9131,7 +9029,7 @@ before_scheme_gc (void)
         {
         case rt_dead:
         case rt_trace_uncertain:
-          analyze_scheme_ref_info (info, "wrong type");
+          INSPECT_SCHEME_REF_INFO (info, "wrong type");
           continue;
         default:
           break;
@@ -9139,12 +9037,12 @@ before_scheme_gc (void)
       eassert (may_be_valid (info->ref));
       if (info->ref_ptr)
         {
-          analyze_scheme_ref_info (info, "adding to gc_vector");
+          INSPECT_SCHEME_REF_INFO (info, "adding to gc_vector");
           info->ref = *info->ref_ptr;
         }
       else
         {
-          analyze_scheme_ref_info (info, "locking");
+          INSPECT_SCHEME_REF_INFO (info, "locking");
           chez_lock_object (info->ref);
         }
       chez_vector_set (gc_vector, i, info->ref);
@@ -9177,7 +9075,7 @@ after_scheme_gc (void)
           eassert (old_ref == new_ref);
 
           // Undo previous lock.
-          analyze_scheme_ref (UNCHEZ(new_ref), "unlocking");
+          INSPECT_SCHEME_REF (UNCHEZ(new_ref), "unlocking");
           eassert (chez_locked_objectp (new_ref));
           chez_unlock_object (new_ref);
           continue;
@@ -9186,9 +9084,9 @@ after_scheme_gc (void)
       if (old_ref != new_ref)
         {
           chez_ptr *old_ref_ptr = ref_info->ref_ptr;
-          if (analyze_scheme_ref_maybe_invalid(UNCHEZ(old_ref), NULL) ||
-              analyze_scheme_ref_maybe_invalid(UNCHEZ(new_ref), NULL) ||
-              analyze_scheme_ref_maybe_invalid(UNCHEZ(*old_ref_ptr), NULL))
+          if (INSPECT_SCHEME_REF_MAYBE_INVALID(UNCHEZ(old_ref), NULL) ||
+              INSPECT_SCHEME_REF_MAYBE_INVALID(UNCHEZ(new_ref), NULL) ||
+              INSPECT_SCHEME_REF_MAYBE_INVALID(UNCHEZ(*old_ref_ptr), NULL))
             {
               TRACEF ("*** moved %p => %p at %p",
                       old_ref, new_ref, old_ref_ptr);
@@ -9221,7 +9119,7 @@ after_scheme_gc (void)
     {
       NAMED_CONTAINER_REF_VAR (info, scheme_refs, i);
       eassert (info->type != rt_trace);
-      analyze_scheme_ref_info (info, "tracked after gc");
+      INSPECT_SCHEME_REF_INFO (info, "tracked after gc");
     }
   TRACEF ("remaining tracked refs: %d", (int)scheme_refs.size);
 
@@ -9231,16 +9129,6 @@ after_scheme_gc (void)
   TRACEF ("found %lu dead refs", (unsigned long) num_dead_refs);
   //memgrep (dead_refs, num_dead_refs, 0);
 #endif
-
-  unsigned long guardian_count = 0;
-  /* while (true) */
-  /*   { */
-  /*     chez_ptr ref = chez_call0 (scheme_guardian); */
-  /*     if (ref == chez_false) */
-  /*       break; */
-  /*     object_was_collected (UNCHEZ (ref)); */
-  /*     ++guardian_count; */
-  /*   } */
 
   struct Scheme_Object_Header *soh = first_scheme_object_header;
   struct Scheme_Object_Header **prev_soh_ptr =
@@ -9264,7 +9152,7 @@ after_scheme_gc (void)
               eassert (chez_car (cell0) != CHEZ (soh->scheme_obj));
             }
 #endif
-          if (analyze_scheme_ref_maybe_invalid (soh->scheme_obj, "unlinking"))
+          if (INSPECT_SCHEME_REF_MAYBE_INVALID (soh->scheme_obj, "unlinking"))
             TRACEF ("soh = %p", soh);
           ++unlinked_count;
         }
@@ -9272,7 +9160,7 @@ after_scheme_gc (void)
         {
           eassert (obj);
           soh->scheme_obj = UNCHEZ (obj);
-          analyze_scheme_ref (soh->scheme_obj, "still alive");
+          INSPECT_SCHEME_REF (soh->scheme_obj, "still alive");
           ++still_linked_count;
           prev_soh_ptr = &soh->next;
           prev_cell = cell;
@@ -9318,17 +9206,3 @@ union
   enum pvec_type pvec_type;
 } const EXTERNALLY_VISIBLE gdb_make_enums_visible = {0};
 #endif	/* __GNUC__ */
-
-#ifdef HAVE_CHEZ_SCHEME
-static size_t magic_refs[MAX_MAGIC_REFS] =
-  {
-   0x4362785f,
-  };
-static size_t magic_ref_ptrs[MAX_MAGIC_REFS] =
-  {
-   /* 0x12dae30, */
-   /* 0x140deb0, */
-   //0x12dd3b0,
-   /* 0x14b00e0 */
-  };
-#endif
