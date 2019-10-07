@@ -567,27 +567,6 @@ set_mark_bit (Lisp_Object obj, bool bit)
     }
 }
 
-bool
-mark_and_enqueue (Lisp_Object obj, const char *label)
-{
-  INSPECT_SCHEME_REF (obj, label);
-  /* if (CONSP (obj)) */
-  /*   { */
-  /*     Lisp_Object obj1 = XCAR (obj); */
-  /*     container_append (&mark_queue, &obj1); */
-  /*     obj1 = XCDR (obj); */
-  /*     container_append (&mark_queue, &obj1); */
-  /*     return true; */
-  /*   } */
-  if (!has_mark_bit (obj, false))
-    {
-      set_mark_bit (obj, true);
-      container_append (&mark_queue, &obj);
-      return true;
-    }
-  return false;
-}
-
 static void
 mark_object_ptr (Lisp_Object *ptr)
 {
@@ -7361,6 +7340,9 @@ mark_discard_killed_buffers (Lisp_Object list)
 void
 mark_object (Lisp_Object arg)
 {
+#ifdef HAVE_CHEZ_SCHEME
+  record_scheme_ref (arg, rt_trace);
+#else
   register Lisp_Object obj;
   void *po;
 #if GC_CHECK_MARKED_OBJECTS
@@ -7370,15 +7352,7 @@ mark_object (Lisp_Object arg)
 
   obj = arg;
 
-#ifdef HAVE_CHEZ_SCHEME
-  if (!mark_and_enqueue (obj, "mark_object 0"))
-    {
-      eassert (!CONSP (obj));
-      return;
-    }
-#else
  loop:
-
   po = XPNTR (obj);
   if (PURE_P (po))
     return;
@@ -7386,7 +7360,6 @@ mark_object (Lisp_Object arg)
   last_marked[last_marked_index++] = obj;
   if (last_marked_index == LAST_MARKED_SIZE)
     last_marked_index = 0;
-#endif
 
   /* Perform some sanity checks on the objects marked here.  Abort if
      we encounter an object we know is bogus.  This increases GC time
@@ -7438,7 +7411,6 @@ mark_object (Lisp_Object arg)
   switch (XTYPE (obj))
     {
     case Lisp_String:
-#ifndef HAVE_CHEZ_SCHEME
       {
 	register struct Lisp_String *ptr = XSTRING (obj);
 	if (STRING_MARKED_P (ptr))
@@ -7452,10 +7424,8 @@ mark_object (Lisp_Object arg)
 	string_bytes (ptr);
 #endif /* GC_CHECK_STRING_BYTES */
       }
-#endif
       break;
 
-#ifndef HAVE_CHEZ_SCHEME
     case Lisp_Vectorlike:
       {
 	register struct Lisp_Vector *ptr = XVECTOR (obj);
@@ -7585,9 +7555,7 @@ mark_object (Lisp_Object arg)
 	  }
       }
       break;
-#endif
 
-#ifndef HAVE_CHEZ_SCHEME
     case Lisp_Symbol:
       {
 	struct Lisp_Symbol *ptr = XSYMBOL (obj);
@@ -7630,9 +7598,7 @@ mark_object (Lisp_Object arg)
 	  goto nextsym;
       }
       break;
-#endif
 
-#ifndef HAVE_CHEZ_SCHEME
     case Lisp_Misc:
       CHECK_ALLOCATED_AND_LIVE (live_misc_p);
 
@@ -7672,9 +7638,7 @@ mark_object (Lisp_Object arg)
 	  emacs_abort ();
 	}
       break;
-#endif
 
-#ifndef HAVE_CHEZ_SCHEME
     case Lisp_Cons:
       {
 	register struct Lisp_Cons *ptr = XCONS (obj);
@@ -7696,9 +7660,7 @@ mark_object (Lisp_Object arg)
 	  emacs_abort ();
 	goto loop;
       }
-#endif
 
-#ifndef HAVE_CHEZ_SCHEME
     case Lisp_Float:
       CHECK_ALLOCATED_AND_LIVE (live_float_p);
       FLOAT_MARK (XFLOAT (obj));
@@ -7709,16 +7671,12 @@ mark_object (Lisp_Object arg)
 
     default:
       emacs_abort ();
-#endif
-#ifdef HAVE_CHEZ_SCHEME
-    default:
-      ;
-#endif
     }
 
 #undef CHECK_LIVE
 #undef CHECK_ALLOCATED
 #undef CHECK_ALLOCATED_AND_LIVE
+#endif
 }
 /* Mark the Lisp pointers in the terminal objects.
    Called by Fgarbage_collect.  */
@@ -9028,15 +8986,8 @@ before_scheme_gc (void)
         }
       eassert (may_be_valid (info->ref));
       if (info->ref_ptr)
-        {
-          INSPECT_SCHEME_REF_INFO (info, "adding to gc_vector");
-          info->ref = *info->ref_ptr;
-        }
-      else
-        {
-          INSPECT_SCHEME_REF_INFO (info, "locking");
-          chez_lock_object (info->ref);
-        }
+        info->ref = *info->ref_ptr;
+      INSPECT_SCHEME_REF_INFO (info, "adding to gc_vector");
       chez_vector_set (gc_vector, i, info->ref);
     }
 
@@ -9063,18 +9014,7 @@ after_scheme_gc (void)
       NAMED_CONTAINER_REF_VAR (ref_info, scheme_refs, i);
       chez_ptr old_ref = ref_info->ref;
 
-      if (!ref_info->ref_ptr)
-        {
-          eassert (old_ref == new_ref);
-
-          // Undo previous lock.
-          INSPECT_SCHEME_REF (UNCHEZ(new_ref), "unlocking");
-          eassert (chez_locked_objectp (new_ref));
-          chez_unlock_object (new_ref);
-          continue;
-        }
-
-      if (old_ref != new_ref)
+      if (ref_info->ref_ptr && old_ref != new_ref)
         {
           chez_ptr *old_ref_ptr = ref_info->ref_ptr;
           if (INSPECT_SCHEME_REF_MAYBE_INVALID(UNCHEZ(old_ref), NULL) ||
@@ -9184,7 +9124,6 @@ after_scheme_gc (void)
             if (INSPECT_SCHEME_REF_MAYBE_INVALID (old_ref, "weak obj old ref"))
               TRACEF ("  new is %p", CHEZ(new_ref));
           soh->scheme_obj = new_ref;
-          object_post_gc (new_ref);
           ++still_linked_count;
           prev_soh_ptr = &soh->next;
           prev_cell = cell;
@@ -9193,6 +9132,12 @@ after_scheme_gc (void)
       cell = chez_cdr (cell);
     }
   eassert (cell == chez_nil);
+
+  // Must come after soh->scheme_obj is updated for every live object
+  // so we don't encounter a stale reference in this step.
+  for (soh = first_scheme_object_header; soh; soh = soh->next)
+    object_post_gc (soh->scheme_obj);
+
   if (make_mem_dump)
     fclose(dump_file);
 
