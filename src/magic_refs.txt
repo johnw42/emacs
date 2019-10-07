@@ -1,0 +1,3 @@
+#0x4129476f 0x44b29adf = " *buffer-defaults*"
+#0x405dea0f 0x44b22b5f = #<buffer  *buffer-defaults*>
+0x405de5ef = thread

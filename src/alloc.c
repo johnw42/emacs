@@ -2401,8 +2401,11 @@ object_pre_gc_callback (void *data0, Lisp_Object *refs, ptrdiff_t n)
   if (data->gcvec != chez_false &&
       chez_vector_length (data->gcvec) >= n + data->num_refs)
     for (ptrdiff_t i = 0; i < n; i++)
-      chez_vector_set (data->gcvec, data->num_refs + i,
-                       CHEZ (refs[i]));
+      {
+        INSPECT_SCHEME_REF (refs[i], "copying to gcvec");
+        chez_vector_set (data->gcvec, data->num_refs + i,
+                         CHEZ (refs[i]));
+      }
   else
     data->gcvec = chez_false;
   data->num_refs += n;
@@ -2415,8 +2418,11 @@ object_post_gc_callback (void *data0, Lisp_Object *refs, ptrdiff_t n)
   eassert (chez_vectorp (data->gcvec));
   eassert (chez_vector_length (data->gcvec) >= n + data->num_refs);
   for (ptrdiff_t i = 0; i < n; i++)
-    refs[i] = UNCHEZ (chez_vector_ref
-                      (data->gcvec, data->num_refs + i));
+    {
+      refs[i] = UNCHEZ (chez_vector_ref
+                        (data->gcvec, data->num_refs + i));
+      INSPECT_SCHEME_REF (refs[i], "copied from gcvec");
+    }
   data->num_refs += n;
 }
 
@@ -6798,12 +6804,12 @@ garbage_collect_1 (void *end)
      if something is a pure object or not.  */
   if (pure_bytes_used_before_overflow)
     return Qnil;
-#endif
 
   /* Record this function, so it appears on the profiler's backtraces.  */
   record_in_backtrace (QAutomatic_GC, 0, 0);
 
   check_cons_list ();
+#endif
 
   /* Don't keep undo information around forever.
      Do this early on, so it is no problem if the user quits.  */
@@ -6886,8 +6892,8 @@ garbage_collect_1 (void *end)
     mark_object_ptr (staticvec[i]);
 #endif
 
-  mark_pinned_objects ();
-  mark_pinned_symbols ();
+  /* mark_pinned_objects (); */
+  /* mark_pinned_symbols (); */
   mark_terminals ();
   mark_kboards ();
   mark_threads ();
@@ -7449,6 +7455,7 @@ mark_object (Lisp_Object arg)
 #endif
       break;
 
+#ifndef HAVE_CHEZ_SCHEME
     case Lisp_Vectorlike:
       {
 	register struct Lisp_Vector *ptr = XVECTOR (obj);
@@ -7465,12 +7472,10 @@ mark_object (Lisp_Object arg)
         enum pvec_type pvectype
           = PSEUDOVECTOR_TYPE (ptr);
 
-#ifndef HAVE_CHEZ_SCHEME
 	if (pvectype != PVEC_SUBR
 	    && pvectype != PVEC_BUFFER
 	    && !main_thread_p (po))
 	  CHECK_LIVE (live_vector_p);
-#endif
 
 	switch (pvectype)
 	  {
@@ -7488,7 +7493,6 @@ mark_object (Lisp_Object arg)
 	    mark_buffer ((struct buffer *) ptr);
 	    break;
 
-#ifndef HAVE_CHEZ_SCHEME
 	  case PVEC_COMPILED:
 	    /* Although we could treat this just like a vector, mark_compiled
 	       returns the COMPILED_CONSTANTS element, which is marked at the
@@ -7498,9 +7502,7 @@ mark_object (Lisp_Object arg)
 	    if (!NILP (obj))
 	      goto loop;
 	    break;
-#endif
 
-#ifndef HAVE_CHEZ_SCHEME
 	  case PVEC_FRAME:
 	    {
 	      struct frame *f = (struct frame *) ptr;
@@ -7518,9 +7520,7 @@ mark_object (Lisp_Object arg)
 #endif
 	    }
 	    break;
-#endif
 
-#ifndef HAVE_CHEZ_SCHEME
 	  case PVEC_WINDOW:
 	    {
 	      struct window *w = (struct window *) ptr;
@@ -7546,9 +7546,7 @@ mark_object (Lisp_Object arg)
 		(w, mark_discard_killed_buffers (w->next_buffers));
 	    }
 	    break;
-#endif
 
-#ifndef HAVE_CHEZ_SCHEME
 	  case PVEC_HASH_TABLE:
 	    {
 	      struct Lisp_Hash_Table *h = (struct Lisp_Hash_Table *) ptr;
@@ -7578,20 +7576,16 @@ mark_object (Lisp_Object arg)
 
 	  case PVEC_SUBR:
 	    break;
-#endif
 
 	  case PVEC_FREE:
 	    emacs_abort ();
 
 	  default:
-#ifdef HAVE_CHEZ_SCHEME
-            ;
-#else
 	    mark_vectorlike (ptr);
-#endif
 	  }
       }
       break;
+#endif
 
 #ifndef HAVE_CHEZ_SCHEME
     case Lisp_Symbol:
@@ -7680,29 +7674,9 @@ mark_object (Lisp_Object arg)
       break;
 #endif
 
+#ifndef HAVE_CHEZ_SCHEME
     case Lisp_Cons:
       {
-#ifdef HAVE_CHEZ_SCHEME
-        Lisp_Object fast = obj, slow = obj;
-        if (INSPECT_SCHEME_REF (obj, "marking list"))
-          TRACEF ("length = %ld", XINT(Flength(obj)));
-        do
-          {
-            mark_object (XCAR (slow));
-            slow = XCDR (slow);
-            if (CONSP (fast))
-              {
-                fast = XCDR (fast);
-                if (CONSP (fast))
-                  fast = XCDR (fast);
-              }
-          }
-        while (CONSP (slow) && !EQ (slow, fast));
-        if (!NILP (slow))
-          {
-            mark_object (slow);
-          }
-#else
 	register struct Lisp_Cons *ptr = XCONS (obj);
 	if (CONS_MARKED_P (ptr))
 	  break;
@@ -7721,8 +7695,9 @@ mark_object (Lisp_Object arg)
 	if (cdr_count == mark_object_loop_halt)
 	  emacs_abort ();
 	goto loop;
-#endif
       }
+#endif
+
 #ifndef HAVE_CHEZ_SCHEME
     case Lisp_Float:
       CHECK_ALLOCATED_AND_LIVE (live_float_p);
@@ -8916,9 +8891,23 @@ do_scheme_gc (void)
 
 static void gc_done(void) {}
 
+
+struct Dump_Info {
+  int gc_num;
+  int kept_index;
+};
+
+static bool make_mem_dump = false;
+
+static struct Dump_Info dump_info[1000000] = {
+#include "dump.txt"
+};
+
 int
 before_scheme_gc (void)
 {
+  load_magic_refs();
+
   if (disable_scheme_gc > 0 || gc_running)
     {
       TRACEF ("skipping gc");
@@ -8943,6 +8932,9 @@ before_scheme_gc (void)
     {
       record_scheme_ref_ptr(&lispsym[i], rt_trace);
     }
+
+  /* container_reserve(&scheme_refs, 200000); */
+  /* container_reserve(&mark_queue, 200000); */
 
   eassert (STRINGP(empty_unibyte_string));
 
@@ -8998,7 +8990,7 @@ before_scheme_gc (void)
     {
       Lisp_Object obj = *NAMED_CONTAINER_REF (mark_queue, i);
       INSPECT_SCHEME_REF (obj, "found in mq");
-      visit_lisp_refs (obj, mark_lisp_refs_fun, NULL);
+      record_scheme_ref (obj, rt_trace);
     }
   TRACEF ("mq end size: %lu", mark_queue.size);
 
@@ -9055,6 +9047,7 @@ before_scheme_gc (void)
 void
 after_scheme_gc (void)
 {
+  load_magic_refs();
   size_t num_moved = 0;
 
 
@@ -9130,6 +9123,15 @@ after_scheme_gc (void)
   //memgrep (dead_refs, num_dead_refs, 0);
 #endif
 
+  FILE *dump_file;
+  struct Dump_Info *di = dump_info;
+  if (make_mem_dump)
+    dump_file = fopen("dump.txt", gc_count == 1 ? "wt" : "at");
+  else
+    while (di->gc_num != gc_count)
+      ++di;
+  int missing_count = 0;
+
   struct Scheme_Object_Header *soh = first_scheme_object_header;
   struct Scheme_Object_Header **prev_soh_ptr =
     &first_scheme_object_header;
@@ -9152,15 +9154,37 @@ after_scheme_gc (void)
               eassert (chez_car (cell0) != CHEZ (soh->scheme_obj));
             }
 #endif
-          if (INSPECT_SCHEME_REF_MAYBE_INVALID (soh->scheme_obj, "unlinking"))
+          if (INSPECT_SCHEME_REF_MAYBE_INVALID (soh->scheme_obj, "collected"))
             TRACEF ("soh = %p", soh);
           ++unlinked_count;
         }
       else
         {
+          if (make_mem_dump)
+            fprintf(dump_file, "{%d, %d},\n", gc_count, still_linked_count);
+          else
+            {
+              eassert (di->gc_num == gc_count);
+              if (di->kept_index == still_linked_count)
+                ++di;
+              else
+                {
+                  TRACEF ("missing: {%d, %d}", gc_count, still_linked_count);
+                  ++missing_count;
+                  if (missing_count > 20) abort();
+                }
+            }
+
           eassert (obj);
-          soh->scheme_obj = UNCHEZ (obj);
-          INSPECT_SCHEME_REF (soh->scheme_obj, "still alive");
+          Lisp_Object old_ref = soh->scheme_obj;
+          Lisp_Object new_ref = UNCHEZ (obj);
+          if (INSPECT_SCHEME_REF (new_ref, "weak obj new ref"))
+            TRACEF ("  old was %p", CHEZ(old_ref));
+          else if (!EQ (old_ref, new_ref))
+            if (INSPECT_SCHEME_REF_MAYBE_INVALID (old_ref, "weak obj old ref"))
+              TRACEF ("  new is %p", CHEZ(new_ref));
+          soh->scheme_obj = new_ref;
+          object_post_gc (new_ref);
           ++still_linked_count;
           prev_soh_ptr = &soh->next;
           prev_cell = cell;
@@ -9169,6 +9193,8 @@ after_scheme_gc (void)
       cell = chez_cdr (cell);
     }
   eassert (cell == chez_nil);
+  if (make_mem_dump)
+    fclose(dump_file);
 
   TRACEF ("refs moved in gc: %lu", num_moved);
   TRACEF ("unlinked objects found: %d", unlinked_count);
@@ -9181,6 +9207,7 @@ after_scheme_gc (void)
   --disable_scheme_gc;
 
   gc_done();
+  load_magic_refs();
 }
 #endif
 

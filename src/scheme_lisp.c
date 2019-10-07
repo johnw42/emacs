@@ -10,11 +10,24 @@
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/stat.h>
 #include <sys/types.h>
+#include <unistd.h>
 #include <signal.h>
 #include <ucontext.h>
+#include <ctype.h>
 
 #pragma GCC diagnostic ignored "-Wdiscarded-qualifiers"
+
+#define MAX_MAGIC_REFS 64
+struct Magic_Ref {
+  uintmax_t addr;
+  bool is_ptr;
+  bool seen;
+  char comment[128];
+};
+static struct Magic_Ref magic_refs[MAX_MAGIC_REFS];
+static int num_magic_refs;
 
 #ifdef ENABLE_CHECKING
 static void run_init_checks(void);
@@ -118,7 +131,86 @@ make_gensym (const char *name)
   return sym;
 }
 
-void scheme_init(void) {
+void
+load_magic_refs (void)
+{
+  int line_num = 0;
+  FILE *magic_refs_file = NULL;
+  const char *filename = "magic_refs.txt";
+  struct stat statbuf;
+  static struct timespec old_mtime;
+  if (stat (filename, &statbuf) != 0) goto error;
+  if (memcmp (&old_mtime, &statbuf.st_mtim, sizeof (old_mtime)) == 0)
+    return;
+  memcpy (&old_mtime, &statbuf.st_mtim, sizeof (old_mtime));
+
+  fprintf (stderr, "loading magic refs file %s\n", filename);
+  magic_refs_file = fopen(filename, "rb");
+  if (!magic_refs_file) goto error;
+
+  num_magic_refs = 0;
+  while (true)
+    {
+      char line[4096];
+      if (fgets (line, sizeof (line), magic_refs_file) == NULL)
+        goto end;
+      line_num++;
+
+      if (line[0] == '#')
+        continue;
+
+      int refs_in_line = 0;
+
+      int pos = 0;
+      while (true)
+        {
+          while (isspace(line[pos])) pos++;
+          if (line[pos] == '\0') break;
+
+          struct Magic_Ref *ref = &magic_refs[num_magic_refs + refs_in_line];
+          ref->seen = false;
+          ref->is_ptr = false;
+          int token_size;
+          switch (line[pos])
+            {
+            case '0':
+              if (sscanf (line + pos, "0x%jx%n", &ref->addr, &token_size) != 1)
+                goto end;
+              refs_in_line++;
+              pos += token_size;
+              break;
+            case '*':
+              if (sscanf (line + pos, "*0x%jx%n", &ref->addr, &token_size) != 1)
+                goto end;
+              ref->is_ptr = true;
+              refs_in_line++;
+              pos += token_size;
+              break;
+            case '=':
+              for (int i = 0; i < refs_in_line; i++)
+                sscanf (line + pos, "= %[^\n]", magic_refs[num_magic_refs + i].comment);
+              pos = strlen(line);
+              break;
+            default:
+              goto error;
+            }
+        }
+
+      num_magic_refs += refs_in_line;
+      eassert (num_magic_refs <= MAX_MAGIC_REFS);
+    }
+
+ error:
+  fprintf (stderr, "Error in magic refs file at line %d\n", line_num);
+
+ end:
+  fclose (magic_refs_file);
+}
+
+void
+scheme_init(void) {
+  load_magic_refs ();
+
   const char *char_ptr = NULL;
   const char **argv = &char_ptr;
 
@@ -1449,11 +1541,6 @@ run_init_checks(void)
 }
 #endif
 
-#define MAX_MAGIC_REFS 8
-static size_t magic_refs[MAX_MAGIC_REFS];
-static size_t magic_ref_ptrs[MAX_MAGIC_REFS];
-static bool magic_refs_seen[MAX_MAGIC_REFS];
-
 static void
 gdb_found_ref(Lisp_Object ref)
 {
@@ -1477,8 +1564,8 @@ inspect_scheme_ref (Lisp_Object ref,
         break;
       chez_iptr i = chez_fixnum_value(collected);
       eassert (0 <= i && i < MAX_MAGIC_REFS);
-      TRACEF ("*** collected: %p", (void *)magic_refs[i]);
-      magic_refs_seen[i] = false;
+      TRACEF ("*** collected: %p", (void *) magic_refs[i].addr);
+      magic_refs[i].seen = false;
     }
 
   if (ptr && !FALSEP (ref))
@@ -1486,19 +1573,20 @@ inspect_scheme_ref (Lisp_Object ref,
   const char *desc = "may be invalid";
   if (is_valid)
     desc = scheme_classify (ref);
-  for (int i = 0; i < MAX_MAGIC_REFS; i++)
+  int i;
+  for (i = 0; i < MAX_MAGIC_REFS; i++)
     {
-      if (magic_ref_ptrs[i] == 0 && magic_refs[i] == 0) break;
-      if (ptr &&
-          magic_ref_ptrs[i] &&
-          ptr == (Lisp_Object *) magic_ref_ptrs[i])
+      if (magic_refs[i].addr == 0) break;
+      if (magic_refs[i].is_ptr &&
+          ptr == (Lisp_Object *) magic_refs[i].addr)
         goto found;
-      if (magic_refs[i] && CHEZ (ref) == (chez_ptr) magic_refs[i])
+      else if (!magic_refs[i].is_ptr &&
+               CHEZ (ref) == (chez_ptr) magic_refs[i].addr)
         {
-          if (is_valid && !magic_refs_seen[i])
+          if (is_valid && !magic_refs[i].seen)
             {
               chez_call2 (analyze_guardian, CHEZ (ref), chez_fixnum(i));
-              magic_refs_seen[i] = true;
+              magic_refs[i].seen = true;
             }
           goto found;
         }
@@ -1509,11 +1597,11 @@ inspect_scheme_ref (Lisp_Object ref,
   if (label)
     {
       if (ptr)
-        TRACEF ("*** %s: ref %p (%s) at %p",
-                label, CHEZ(ref), desc, ptr);
+        TRACEF ("*** %s: ref %p (%s; %s) at %p",
+                label, CHEZ(ref), magic_refs[i].comment, desc, ptr);
       else
-        TRACEF ("*** %s: ref %p (%s)",
-                label, CHEZ(ref), desc);
+        TRACEF ("*** %s: ref %p (%s; %s)",
+                label, CHEZ(ref), magic_refs[i].comment, desc);
       if (ptr)
         gdb_found_ref_ptr(ptr);
       gdb_found_ref(ref);
@@ -1522,13 +1610,5 @@ inspect_scheme_ref (Lisp_Object ref,
     eassert (may_be_valid (CHEZ (ref)));
   return true;
 }
-
-static size_t magic_refs[MAX_MAGIC_REFS] =
-  {
-  };
-
-static size_t magic_ref_ptrs[MAX_MAGIC_REFS] =
-  {
-  };
 
 #endif /* HAVE_CHEZ_SCHEME */

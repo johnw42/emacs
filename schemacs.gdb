@@ -168,7 +168,7 @@ commands
   silent
   set $n = 0
   if $first_run
-    #watch_for (size_t*)0x14e2b80 0x7fff00000001
+    #watch_for (void**)0x7fffffffcc08 0xdeadface0000000f
   end
   set $first_run = 0
   continue

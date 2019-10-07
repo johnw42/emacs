@@ -65,6 +65,7 @@ typedef struct { chez_ptr ptr; } Lisp_Object;
 #undef CHECK_LISP_OBJECT_TYPE
 enum CHECK_LISP_OBJECT_TYPE { CHECK_LISP_OBJECT_TYPE = true };
 
+void load_magic_refs (void);
 void scheme_init(void);
 void scheme_deinit(void);
 void syms_of_scheme_lisp(void);

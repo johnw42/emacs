@@ -1171,9 +1171,10 @@ finalize_runtime_unwind (void* raw_ert)
 void
 mark_modules (void)
 {
+#ifndef HAVE_CHEZ_SCHEME
   ENTER_LISP_FRAME ((), tail);
   for (tail = Vmodule_environments;
- CONSP (tail);
+       CONSP (tail);
        tail = XCDR (tail))
     {
       emacs_env *env = XSAVE_POINTER (XCAR (tail), 0);
@@ -1183,6 +1184,7 @@ mark_modules (void)
       mark_object (priv->values);
     }
   EXIT_LISP_FRAME_VOID ();
+#endif
 }
 
 
