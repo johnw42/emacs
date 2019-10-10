@@ -437,7 +437,7 @@ record_scheme_ref_ptr (Lisp_Object *ref_ptr)
   INSPECT_SCHEME_REF_PTR (ref_ptr, "at record_scheme_ref_ptr");
   struct scheme_ref_info info =
     { CHEZ(*ref_ptr), &CHEZ(*ref_ptr) };
-  //eassert (may_be_valid (info.ref));
+  eassert (may_be_valid (info.ref));
   NAMED_CONTAINER_APPEND (scheme_refs, &info);
 }
 
@@ -445,9 +445,12 @@ static Lisp_Object
 record_scheme_ref (Lisp_Object ref)
 {
   INSPECT_SCHEME_REF (ref, "at record_scheme_ref");
-  struct scheme_ref_info info = { CHEZ(ref), NULL };
-  eassert (may_be_valid (info.ref));
-  NAMED_CONTAINER_APPEND (scheme_refs, &info);
+  if (scheme_refs.size == 0 ||
+      NAMED_CONTAINER_REF (scheme_refs, scheme_refs.size - 1)->ref != CHEZ(ref))
+    {      struct scheme_ref_info info = { CHEZ(ref), NULL };
+      eassert (may_be_valid (info.ref));
+      NAMED_CONTAINER_APPEND (scheme_refs, &info);
+    }
   return ref;
 }
 
@@ -8798,11 +8801,15 @@ struct Dump_Info {
   int kept_index;
 };
 
+#ifdef ENABLE_MEM_DUMP
+
 static bool make_mem_dump = false;
 
 static struct Dump_Info dump_info[1000000] = {
 #include "dump.txt"
 };
+
+#endif
 
 int
 before_scheme_gc (void)
@@ -8975,6 +8982,7 @@ after_scheme_gc (void)
   //memgrep (dead_refs, num_dead_refs, 0);
 #endif
 
+#ifdef ENABLE_MEM_DUMP
   FILE *dump_file;
   struct Dump_Info *di = dump_info;
   if (make_mem_dump)
@@ -8983,6 +8991,7 @@ after_scheme_gc (void)
     while (di->gc_num != gc_count)
       ++di;
   int missing_count = 0;
+#endif
 
   struct Scheme_Object_Header *soh = first_scheme_object_header;
   struct Scheme_Object_Header **prev_soh_ptr =
@@ -9012,6 +9021,7 @@ after_scheme_gc (void)
         }
       else
         {
+#ifdef ENABLE_MEM_DUMP
           if (make_mem_dump)
             fprintf(dump_file, "{%d, %d},\n", gc_count, still_linked_count);
           else
@@ -9026,6 +9036,7 @@ after_scheme_gc (void)
                   if (missing_count > 20) abort();
                 }
             }
+#endif
 
           eassert (obj);
           Lisp_Object old_ref = soh->scheme_obj;
@@ -9050,8 +9061,10 @@ after_scheme_gc (void)
   for (soh = first_scheme_object_header; soh; soh = soh->next)
     object_post_gc (soh->scheme_obj);
 
+#ifdef ENABLE_MEM_DUMP
   if (make_mem_dump)
     fclose(dump_file);
+#endif
 
   TRACEF ("refs moved in gc: %lu", num_moved);
   TRACEF ("unlinked objects found: %d", unlinked_count);
