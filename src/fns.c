@@ -3829,7 +3829,7 @@ hashfn_eq (struct hash_table_test *ht, Lisp_Object key)
 {
   ENTER_LISP_FRAME_T (EMACS_UINT, (key));
 #ifdef HAVE_CHEZ_SCHEME
-  EXIT_LISP_FRAME (SCHEME_FPTR_CALL(eq_hash, CHEZ (key)));
+  EXIT_LISP_FRAME (chez_fixnum_value (SCHEME_FPTR_CALL1(eq_hash, CHEZ (key))));
 #else /* not HAVE_CHEZ_SCHEME */
   EXIT_LISP_FRAME (XHASH (key) ^ XTYPE (key));
 #endif /* not HAVE_CHEZ_SCHEME */

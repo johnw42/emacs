@@ -1533,7 +1533,7 @@ with a space are ignored unless STRING itself starts with a space.  */)
       collection = check_obarray (collection);
 #ifdef HAVE_CHEZ_SCHEME
       chez_ptr table = scheme_obarray_table (collection);
-      chez_ptr values_vec = SCHEME_FPTR_CALL (hashtable_values, table);
+      chez_ptr values_vec = SCHEME_FPTR_CALL1 (hashtable_values, table);
       // Copy vector so we don't have to lock it.
       num_values = chez_vector_length (values_vec);
       values = alloca (num_values * sizeof (Lisp_Object));

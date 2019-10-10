@@ -102,30 +102,14 @@ extern uint64_t gdb_misc_val;
 extern unsigned gdb_flags;
 extern int gdb_hit_count;
 
-#define SCHEME_FPTR_DEF(name, rtype, ...)                                \
-  extern rtype scheme_fptr_result_##name;                                \
-  extern rtype (*scheme_fptr_##name)(const char *, int, __VA_ARGS__)
+#define SCHEME_FPTR_DEF(scheme_name, c_name)    \
+  extern chez_ptr scheme_##c_name
 #include "scheme_fptr.h"
 
-void do_chez_prolog (void);
-
-/* #define SCHEME_FPTR_CALL(name, ...)                             \ */
-/*   (last_scheme_function = #name,                                \ */
-/*     last_scheme_call_file = __FILE__,                           \ */
-/*     last_scheme_call_line = __LINE__,                           \ */
-/*     do_chez_prolog(),                                           \ */
-/*     scheme_fptr_result_##name =                                 \ */
-/*     scheme_fptr_##name(__FILE__, __LINE__, __VA_ARGS__),        \ */
-/*     CHEZ_EPILOG,                                                \ */
-/*     scheme_fptr_result_##name) */
-
-#define SCHEME_FPTR_CALL(name, ...)                                     \
-  (eassert (scheme_fptr_##name),                                        \
-   scheme_fptr_call_info.fun = #name,                                   \
-   scheme_fptr_call_info.file = __FILE__,                               \
-   scheme_fptr_call_info.line = __LINE__,                               \
-   scheme_fptr_call_fun(),                                              \
-   scheme_fptr_##name(__FILE__, __LINE__, __VA_ARGS__))
+#define SCHEME_FPTR_CALL0(c_name) chez_call0 (scheme_##c_name)
+#define SCHEME_FPTR_CALL1(c_name, a1) chez_call1 (scheme_##c_name, a1)
+#define SCHEME_FPTR_CALL2(c_name, a1, a2) chez_call2 (scheme_##c_name, a1, a2)
+#define SCHEME_FPTR_CALL3(c_name, a1, a2, a3) chez_call3 (scheme_##c_name, a1, a2, a3)
 
 extern chez_ptr scheme_vectorlike_symbol;
 extern chez_ptr scheme_misc_symbol;
@@ -139,18 +123,6 @@ extern struct Scheme_Object_Header *first_scheme_object_header;
 extern chez_ptr scheme_object_list;
 
 void link_scheme_obj (struct Scheme_Object_Header *soh, Lisp_Object val);
-
-struct scheme_fptr_call_info {
-  const char *fun;
-  const char *file;
-  int line;
-  size_t count;
-};
-extern struct scheme_fptr_call_info scheme_fptr_call_info;
-
-INLINE void scheme_fptr_call_fun(void) {
-  scheme_fptr_call_info.count++;
-}
 
 #define SCHEME_PV_TAG(pv) chez_vector_ref(pv, 0)
 #define SCHEME_PV_ADDR(pv) chez_vector_ref(pv, 1)

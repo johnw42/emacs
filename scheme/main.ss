@@ -12,23 +12,10 @@
          after-idle
          identity
          make-obarray-table
-
-         c-hashtablep
-         c-save_pointer
-         c-check_pointer
-         c-print_to_bytevector
-         c-save_origin
-         c-print_origin
-         c-eq_hash
-         c-hashtable_values
-         c-hashtable_ref
-         c-symbol_is
-         c-trivial
-         c-ephemeron_cons
-         c-getprop_addr
-         c-putprop_addr
-         c-getprop_obj
-         c-putprop_obj
+         eq-hash
+         hashtable-values
+         object-is-str?
+         print-to-bytevector
          )
 
   (define elisp-do-scheme-gc
@@ -119,47 +106,10 @@
          (lock-object x)
          x)]))
 
-  (define-syntax define-for-c
-    (lambda (x)
-      (syntax-case x ()
-        [(k (name result-type (arg ...)) form ...)
-         #'(k (name result-type (arg ...) #f)
-              form ...)]
-        [(k (name result-type
-                  ((arg-type arg) ...)
-                  min-count)
-            form ...)
-         (let ([c-file-arg (datum->syntax #'k 'c-file)]
-               [c-line-arg (datum->syntax #'k 'c-line)])
-           #`(define name
-               (locked-foreign-callable
-                (let ([counter 0])
-                  (lambda (#,c-file-arg #,c-line-arg arg ...)
-                    (when min-count
-                      (set! counter (fx+ 1 counter))
-                      (when (fx>= counter min-count)
-                        (printf "~a ~a ~a:~a\n" 'name counter (decode-char* #,c-file-arg) #,c-line-arg)))
-                    (let ([result (begin form ...)])
-                      (when (and min-count (fx>= counter min-count))
-                        (printf "returning from ~a\n" 'name))
-                      result)))
-                (void* int arg-type ...)
-                result-type)))])))
-
-  (define-for-c (c-ephemeron_cons
-                 scheme-object ((scheme-object the-car)
-                                (scheme-object the-cdr)))
-    (ephemeron-cons the-car the-cdr))
-
-  (define-for-c (c-trivial int ((int arg))) arg)
-
-  (define-for-c (c-symbol_is
-                 boolean
-                 ((scheme-object sym)
-                  (void* name-ptr)))
-    (let* ([name-str (if (string? sym)
+  (define (object-is-str? obj name-ptr)
+    (let* ([name-str (if (string? obj)
                          sym
-                         (symbol->string sym))]
+                         (symbol->string boj))]
            [n (string-length name-str)])
       (let loop ([i 0])
         (let ([c1 (foreign-ref 'unsigned-8 name-ptr i)])
@@ -172,85 +122,13 @@
 
   (define eq-hash-table (make-weak-eq-hashtable))
 
-  (define-for-c (c-eq_hash
-                 unsigned-32
-                 ((scheme-object x)))
+  (define (eq-hash x)
     (or (hashtable-ref eq-hash-table x #f)
         (let ([hash (random #x100000000)])
           (hashtable-set! eq-hash-table x hash)
           hash)))
 
-  (define-for-c (c-hashtablep boolean
-                              ((scheme-object x)))
-    (hashtable? x))
-
-  (define-for-c (c-hashtable_ref
-                 scheme-object
-                 ((scheme-object table)
-                  (scheme-object key)
-                  (scheme-object default)))
-    (hashtable-ref table key default))
-
-  (define-record-type def-info
-    (fields (immutable type-str)
-            (immutable c-file)
-            (immutable c-line)))
-
-  (define (print-def-info info)
-    (printf "original definition at ~a:~a\n"
-            (decode-char* (def-info-c-file info))
-            (def-info-c-line info)))
-
-  (define-for-c (c-save_pointer boolean
-                                ((void* ptr)
-                                 (void* type-str)))
-    (let ([def-info (hashtable-ref pointer-table ptr #f)])
-      (if def-info
-          (let ([old-type (def-info-type-str def-info)])
-            ;; Separate printfs in case the second one dies before
-            ;; completing.
-            (printf "duplicate registration of ~x\n" ptr)
-            (print-def-info def-info)
-            (printf "~a => ~a\n"
-                    (decode-char* old-type)
-                    (decode-char* type-str))
-            #f)
-          (begin
-            (hashtable-set! pointer-table ptr
-                            (make-def-info type-str c-file c-line))
-            #t))))
-
-  (define-for-c (c-check_pointer boolean
-                                 ((void* ptr)
-                                  (void* type-str)))
-    (let* ([def-info (hashtable-ref pointer-table ptr #f)]
-           [old-type (if def-info (def-info-type-str def-info) 0)])
-      (or (strcmp? old-type type-str)
-          (begin
-            ;; Separate printfs in case the second one dies before
-            ;; completing.
-            (printf "wrong registration of ~x\n" ptr)
-            (print-def-info def-info)
-            (printf "expected ~a, got ~a\n"
-                    (decode-char* type-str)
-                    (decode-char* old-type))
-            #f))))
-
-  (define origin-table (make-eq-hashtable))
-
-  (define-for-c (c-save_origin
-                 void ((scheme-object obj)))
-    (hashtable-set! origin-table obj (cons c-file c-line)))
-
-  (define-for-c (c-print_origin
-                 void ((scheme-object obj)))
-    (let ([origin (hashtable-ref origin-table obj #f)])
-      (if origin
-          (printf "~a:~a\n" (decode-char* (car origin)) (cdr origin))
-          (printf "unknown\n"))))
-
-  (define-for-c (c-print_to_bytevector
-                 scheme-object ((scheme-object obj)))
+  (define (print-to-bytevector obj)
     (critical-section
      (string->utf8
       (call-with-string-output-port
@@ -259,33 +137,9 @@
            (put-datum port obj)
            (put-char port #\x00)))))))
 
-  (define-for-c (c-hashtable_values
-                 scheme-object ((scheme-object obj)))
+  (define (hashtable-values obj)
     (let-values ([(keys values) (hashtable-entries obj)])
       values))
-
-  (define-for-c (c-getprop_addr
-                 void* ((scheme-object sym)
-                        (scheme-object prop)))
-    (or (getprop sym prop) 0))
-
-  (define-for-c (c-putprop_addr
-                 void ((scheme-object sym)
-                       (scheme-object prop)
-                       (void* addr)))
-    (putprop sym prop addr))
-
-
-  (define-for-c (c-getprop_obj
-                 scheme-object ((scheme-object sym)
-                                (scheme-object prop)))
-    (getprop sym prop))
-
-  (define-for-c (c-putprop_obj
-                 void ((scheme-object sym)
-                       (scheme-object prop)
-                       (scheme-object obj)))
-    (putprop sym prop obj))
 
   (define elisp-funcall
     (case-lambda

@@ -48,20 +48,13 @@ chez_ptr scheme_guardian;
 chez_ptr analyze_guardian;
 struct Scheme_Object_Header *first_scheme_object_header = NULL;
 chez_ptr scheme_object_list = chez_nil;
-struct scheme_fptr_call_info scheme_fptr_call_info;
 
 uint64_t gdb_misc_val = 0;
 unsigned gdb_flags = 0;
 
-#define SCHEME_FPTR_DEF(name, rtype, ...)                               \
-  rtype (*scheme_fptr_##name)(const char *, int, __VA_ARGS__) = 0
+#define SCHEME_FPTR_DEF(scheme_name, c_name)            \
+  chez_ptr scheme_##c_name = chez_false
 #include "scheme_fptr.h"
-
-void do_chez_prolog (void)
-{
-  CHEZ_PROLOG;
-}
-
 
 void syms_of_scheme_lisp(void) {
   /* DEFSYM(Qscheme_value_ref_id, "scheme-value-ref-id"); */
@@ -129,6 +122,23 @@ make_gensym (const char *name)
   chez_ptr sym = scheme_call1 ("gensym", chez_string(name));
   chez_lock_object (sym);
   return sym;
+}
+
+static chez_ptr
+scheme_toplevel_func (const char *name)
+{
+  for (int i = 0; name[i]; i++)
+    {
+      eassert (0x20 < name[i]);
+      eassert (name[i] < 0x7f);
+      eassert (i < 30);
+    }
+  chez_ptr sym = chez_string_to_symbol (name);
+  eassert (chez_symbolp (sym));
+  chez_ptr fun = chez_top_level_value (sym);
+  eassert (chez_procedurep (fun));
+  chez_lock_object (fun);
+  return fun;
 }
 
 void
@@ -245,8 +255,8 @@ scheme_init(void) {
   chez_scheme_script(BUILD_ROOT "/scheme/main.ss", 0, argv);
   scheme_call0 ("emacs-init");
 
-#define SCHEME_FPTR_DEF(name, ...)                      \
-  (scheme_fptr_##name = get_scheme_func ("c-" #name))
+#define SCHEME_FPTR_DEF(scheme_name, c_name)    \
+  scheme_##c_name = scheme_toplevel_func(scheme_name)
 #include "scheme_fptr.h"
 
   c_data_table = UNCHEZ(scheme_call0 ("make-eq-hashtable"));
@@ -331,12 +341,6 @@ link_scheme_obj (struct Scheme_Object_Header *soh, Lisp_Object obj)
 #endif
 }
 
-static void
-print_origin(Lisp_Object obj)
-{
-  (void) SCHEME_FPTR_CALL(print_origin, CHEZ (obj));
-}
-
 // Converts a symbol or Scheme string to a Lisp string.
 Lisp_Object
 to_lisp_string(Lisp_Object arg)
@@ -398,9 +402,10 @@ ensure_symbol_c_data (Lisp_Object symbol, Lisp_Object name)
 {
   eassert (chez_symbolp (CHEZ (symbol)));
 
-  struct Lisp_Symbol *p = SCHEME_FPTR_CALL (getprop_addr, CHEZ(symbol), c_data_property_symbol);
-  if (p)
+  chez_ptr found = SCHEME_FPTR_CALL2 (getprop, CHEZ(symbol), c_data_property_symbol);
+  if (found != chez_false)
     {
+      struct Lisp_Symbol *p = (void *) chez_fixnum_value (found);
       eassert (EQ (p->u.s.soh.scheme_obj, symbol));
       return p;
     }
@@ -409,9 +414,9 @@ ensure_symbol_c_data (Lisp_Object symbol, Lisp_Object name)
     name = to_lisp_string (symbol);
   eassert (STRINGP (name));
 
-  p = xzalloc (sizeof (struct Lisp_Symbol));
-  SCHEME_FPTR_CALL (putprop_addr, CHEZ(symbol), c_data_property_symbol, p);
-  eassert (p == SCHEME_FPTR_CALL (getprop_addr, CHEZ(symbol), c_data_property_symbol));
+  struct Lisp_Symbol *p = xzalloc (sizeof (struct Lisp_Symbol));
+  SCHEME_FPTR_CALL3 (putprop, CHEZ(symbol), c_data_property_symbol, chez_fixnum ((chez_uptr) p));
+  eassert (p == (void *) chez_fixnum_value (SCHEME_FPTR_CALL2 (getprop, CHEZ(symbol), c_data_property_symbol)));
 
   // Can't use init_nil_refs here because of how builtin symbols are
   // initialized.
@@ -466,23 +471,6 @@ XSYMBOL (Lisp_Object a)
   eassert (EQ (p->u.s.soh.scheme_obj, a));
   return p;
 }
-
-/* void * */
-/* scheme_alloc_c_data (Lisp_Object key, chez_iptr size) */
-/* { */
-/*   void *bytes = xzalloc (size); */
-/*   SCHEME_FPTR_CALL (putprop_addr, CHEZ(key), c_data_property_symbol, bytes); */
-/*   return bytes; */
-/* } */
-
-/* void * */
-/* scheme_find_c_data (Lisp_Object key) */
-/* { */
-/*   chez_ptr found = SCHEME_FPTR_CALL(hashtable_ref, CHEZ (c_data_table), CHEZ (key), chez_false); */
-/*   if (found == chez_false) */
-/*     return NULL; */
-/*   return scheme_malloc_ptr (UNCHEZ (found)); */
-/* } */
 
 static void
 scheme_ptr_fill (Lisp_Object *p, Lisp_Object init, chez_iptr num_words)
@@ -691,7 +679,7 @@ gdb_print_scheme(char *buf, Lisp_Object obj)
   suspend_scheme_gc();
   /* if (STRINGP (obj)) */
   /*   obj = to_scheme_string (obj); */
-  chez_ptr bvec = SCHEME_FPTR_CALL(print_to_bytevector, CHEZ (obj));
+  chez_ptr bvec = SCHEME_FPTR_CALL1 (print_to_bytevector, CHEZ (obj));
   chez_lock_object (bvec);
   eassert (chez_bytevectorp (bvec));
   chez_iptr n = chez_bytevector_length(bvec);
@@ -724,8 +712,8 @@ chez_ptr
 scheme_get_gcvec (Lisp_Object obj)
 {
   if (SYMBOLP (obj))
-    return SCHEME_FPTR_CALL (getprop_obj, CHEZ (obj),
-                             gcvec_property_symbol);
+    return SCHEME_FPTR_CALL2 (getprop, CHEZ (obj),
+                              gcvec_property_symbol);
   else if (chez_vectorp (CHEZ (obj)) &&
            (STRINGP (obj) ||
             MISCP (obj) ||
@@ -739,8 +727,8 @@ void
 scheme_set_gcvec (Lisp_Object obj, chez_ptr gcvec)
 {
   if (SYMBOLP (obj))
-    SCHEME_FPTR_CALL (putprop_obj, CHEZ (obj),
-                      gcvec_property_symbol, gcvec);
+    SCHEME_FPTR_CALL3 (putprop, CHEZ (obj),
+                       gcvec_property_symbol, gcvec);
   else if (chez_vectorp (CHEZ (obj)) &&
            (STRINGP (obj) ||
             MISCP (obj) ||
@@ -766,7 +754,6 @@ scheme_function_for_name(const char *name) {
   chez_ptr fun = chez_top_level_value(sym);
   eassert (chez_procedurep (fun));
   scheme_track (UNCHEZ (fun));
-  //eassert(chez_procedurep(fun));
   return fun;
 }
 
@@ -1050,9 +1037,9 @@ visit_lisp_refs(Lisp_Object obj, lisp_ref_visitor_fun fun, void *data)
 
               // Handle obarray vectors.
               chez_ptr table = CHEZ (AREF (obj, 0));
-              if (SCHEME_FPTR_CALL (hashtablep, table))
+              if (SCHEME_FPTR_CALL1 (hashtablep, table) != chez_false)
                 {
-                  chez_ptr values_vec = SCHEME_FPTR_CALL (hashtable_values, table);
+                  chez_ptr values_vec = SCHEME_FPTR_CALL1 (hashtable_values, table);
                   // Copy vector so we don't have to lock it.
                   chez_iptr n = chez_vector_length (values_vec);
                   Lisp_Object *values = alloca (n * sizeof (Lisp_Object));
@@ -1186,7 +1173,7 @@ symbol_is(Lisp_Object sym, const char *name)
 {
   if (chez_symbolp (CHEZ(sym)) ||
       chez_stringp (CHEZ(sym)))
-    return SCHEME_FPTR_CALL(symbol_is, CHEZ (sym), name);
+    return SCHEME_FPTR_CALL2 (object_is_str, CHEZ (sym), chez_fixnum ((chez_uptr) name)) != chez_false;
   if (STRINGP (sym))
     return strncmp(SSDATA(sym), name, SCHARS(sym)) == 0;
   return false;

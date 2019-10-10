@@ -371,7 +371,7 @@ error !;
 #define lisp_h_make_number(n) UNCHEZ (chez_fixnum (n))
 # define lisp_h_XFASTINT(a) XINT (a)
 # define lisp_h_XINT(a) chez_fixnum_value (CHEZ(a))
-#define lisp_h_XHASH(a) SCHEME_FPTR_CALL (eq_hash, CHEZ (a))
+#define lisp_h_XHASH(a) chez_fixnum_value (SCHEME_FPTR_CALL1 (eq_hash, CHEZ (a)))
 #define lisp_h_check_cons_list() ((void) 0)
 
 #else /* not HAVE_CHEZ_SCHEME */
