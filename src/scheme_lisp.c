@@ -790,7 +790,7 @@ static void
 visit_interval_lisp_refs_fun (INTERVAL i, void *data)
 {
   struct visit_iterval_data *vid = data;
-  vid->fun(data, &i->plist, 1);
+  vid->fun(vid->data, &i->plist, 1);
 }
 
 static void
