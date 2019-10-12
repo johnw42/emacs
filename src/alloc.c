@@ -319,17 +319,6 @@ static ptrdiff_t pure_bytes_used_non_lisp;
 const char *pending_malloc_warning;
 
 #ifdef HAVE_CHEZ_SCHEME
-static void
-scheme_dont_track (Lisp_Object p, const char *note)
-{
-  /* char buf[4096]; */
-  /* sprintf (buf, "%s (%p)", note, CHEZ (p)); */
-  /* if (IS_MAGIC_SCHEME_REF(p)) */
-  /*   printf ("*** not tracking %s\n", buf); */
-  /* chez_lock_object (CHEZ(p)); */
-  /* chez_call2 (scheme_guardian, CHEZ (p), chez_string (buf)); */
-}
-
 struct scheme_ref_info {
   // The reference itself.
   chez_ptr ref;
@@ -433,11 +422,11 @@ alloc_preinit (void)
 static void
 record_scheme_ref_ptr (Lisp_Object *ref_ptr)
 {
-  eassert (ref_ptr);
+  SCHEME_ASSERT (50, ref_ptr);
   INSPECT_SCHEME_REF_PTR (ref_ptr, "at record_scheme_ref_ptr");
   struct scheme_ref_info info =
     { CHEZ(*ref_ptr), &CHEZ(*ref_ptr) };
-  eassert (may_be_valid (info.ref));
+  SCHEME_ASSERT (50, may_be_valid (info.ref));
   NAMED_CONTAINER_APPEND (scheme_refs, &info);
 }
 
@@ -448,7 +437,7 @@ record_scheme_ref (Lisp_Object ref)
   if (scheme_refs.size == 0 ||
       NAMED_CONTAINER_REF (scheme_refs, scheme_refs.size - 1)->ref != CHEZ(ref))
     {      struct scheme_ref_info info = { CHEZ(ref), NULL };
-      eassert (may_be_valid (info.ref));
+      SCHEME_ASSERT (50, may_be_valid (info.ref));
       NAMED_CONTAINER_APPEND (scheme_refs, &info);
     }
   return ref;
@@ -2343,8 +2332,8 @@ static void
 object_post_gc_callback (void *data0, Lisp_Object *refs, ptrdiff_t n)
 {
   struct object_gc_data *data = data0;
-  eassert (chez_vectorp (data->gcvec));
-  eassert (chez_vector_length (data->gcvec) >= n + data->num_refs);
+  SCHEME_ASSERT (50, chez_vectorp (data->gcvec));
+  SCHEME_ASSERT (50, chez_vector_length (data->gcvec) >= n + data->num_refs);
   for (ptrdiff_t i = 0; i < n; i++)
     {
       refs[i] = UNCHEZ (chez_vector_ref
@@ -2379,7 +2368,7 @@ object_pre_gc (struct Scheme_Object_Header *soh)
       visit_lisp_refs (obj, object_pre_gc_callback, &data);
     }
 
-  eassert (chez_vectorp (data.gcvec));
+  SCHEME_ASSERT (50, chez_vectorp (data.gcvec));
 
   // Clear out any extra slots in the vector.
   ptrdiff_t n = chez_vector_length (data.gcvec);
@@ -2412,16 +2401,15 @@ scheme_allocate_vector (ptrdiff_t nbytes,
 {
   suspend_scheme_gc ();
 
-  eassert (nbytes > soh_offset + sizeof (struct Scheme_Object_Header));
+  SCHEME_ASSERT (10, nbytes > soh_offset + sizeof (struct Scheme_Object_Header));
   void *data = xzalloc (nbytes);
   Lisp_Object addr = make_number ((chez_iptr) data);
-  eassert (data == scheme_malloc_ptr (addr));
+  SCHEME_ASSERT (50, data == scheme_malloc_ptr (addr));
 
   chez_ptr vec = chez_make_vector(SCHEME_PV_LENGTH, chez_false);
   INSPECT_SCHEME_REF (UNCHEZ (vec), "scheme_allocate_vector");
   schedule_free (UNCHEZ (vec), data);
 
-  scheme_track (UNCHEZ (vec));
   SCHEME_PV_TAG_SET (vec, sym);
   SCHEME_PV_ADDR_SET (vec, CHEZ (addr));
 
@@ -3315,8 +3303,7 @@ DEFUN ("cons", Fcons, Scons, 2, 2, 0,
 #ifdef HAVE_CHEZ_SCHEME
   val = UNCHEZ (chez_cons (CHEZ (car), CHEZ (cdr)));
   INSPECT_SCHEME_REF (val, "Fcons");
-  scheme_dont_track (val, "cons");
-  eassert (CONSP(val));
+  SCHEME_ASSERT (50, CONSP(val));
   EXIT_LISP_FRAME (val);
 #else /* not HAVE_CHEZ_SCHEME */
   MALLOC_BLOCK_INPUT;
@@ -3987,8 +3974,8 @@ allocate_vector (EMACS_INT len)
     memory_full (SIZE_MAX);
   v = allocate_vectorlike (len);
 #ifdef HAVE_CHEZ_SCHEME
-  eassert (v->header.s.size == len);
-  eassert (v->header.size == len);
+  SCHEME_ASSERT (50, v->header.s.size == len);
+  SCHEME_ASSERT (50, v->header.size == len);
   init_nil_refs (vectorlike_lisp_obj (v));
 #else /* not HAVE_CHEZ_SCHEME */
   if (len)
@@ -4067,7 +4054,7 @@ allocate_record (EMACS_INT count)
 	   count, PSEUDOVECTOR_SIZE_MASK);
   struct Lisp_Vector *p = allocate_vectorlike (count);
 #ifdef HAVE_CHEZ_SCHEME
-  eassert (p->header.size == count);
+  SCHEME_ASSERT (50, p->header.size == count);
 #else /* not HAVE_CHEZ_SCHEME */
   p->header.size = count;
 #endif /* not HAVE_CHEZ_SCHEME */
@@ -4255,7 +4242,6 @@ Its value is void, and its function definition and property list are nil.  */)
   Lisp_Object sstr = to_scheme_string (name);
   Lisp_Object p = UNCHEZ (scheme_call1 ("gensym", CHEZ (sstr)));
   XSYMBOL (p);
-  scheme_dont_track (p, "gensym");
   return p;
 #else /* not HAVE_CHEZ_SCHEME */
   Lisp_Object val;
@@ -6501,9 +6487,9 @@ static size_t num_scheme_globals = 0;
 
 void scheme_register_globals (Lisp_Object *addr, size_t n)
 {
-  eassert ((!LISPSYM_INITIAL_P (*addr) ||
-            LISPSYM_INITIAL_NUM (*addr) == iQnil) ||
-           EQ (*addr, Qnil));
+  SCHEME_ASSERT (10, (!LISPSYM_INITIAL_P (*addr) ||
+                      LISPSYM_INITIAL_NUM (*addr) == iQnil) ||
+                 EQ (*addr, Qnil));
   set_nil (addr, n);
   scheme_globals[num_scheme_globals].addr = addr;
   scheme_globals[num_scheme_globals].count = n;
@@ -8360,7 +8346,6 @@ init_alloc_once (void)
     {
       lispsym[i] = UNCHEZ (chez_string_to_symbol (defsym_name[i]));
       XSYMBOL (lispsym[i]);
-      scheme_dont_track (lispsym[i], "lispsym");
     }
   eassert (chez_symbolp (CHEZ (Qnil)));
   eassert (CHEZ (Qnil) == chez_string_to_symbol ("nil"));
@@ -8564,21 +8549,6 @@ void memzero_with_nil (void *p, ptrdiff_t nbytes, ...)
 #endif
 
 #ifdef HAVE_CHEZ_SCHEME
-Lisp_Object
-scheme_track (Lisp_Object p)
-{
-  /* chez_lock_object (CHEZ (p)); */
-  /* return record_scheme_ref (p, rt_track); */
-  return p;
-}
-
-Lisp_Object
-scheme_untrack (Lisp_Object p)
-{
-  eassert (0);
-  return p;
-}
-
 static void
 search_in_range (chez_ptr old_val, uintptr_t start, uintptr_t end)
 {
@@ -8603,7 +8573,7 @@ search_in_range (chez_ptr old_val, uintptr_t start, uintptr_t end)
 static const char *
 scheme_string_data (chez_ptr str)
 {
-  eassert (chez_stringp (str));
+  SCHEME_ASSERT (10, chez_stringp (str));
   static char buf[4096];
   int n = chez_string_length (str);
   int di = 0;
@@ -8930,7 +8900,7 @@ before_scheme_gc (void)
   FOR_NAMED_CONTAINER (i, scheme_refs)
     {
       NAMED_CONTAINER_REF_VAR (info, scheme_refs, i);
-      eassert (may_be_valid (info->ref));
+      SCHEME_ASSERT (50, may_be_valid (info->ref));
       if (info->ref_ptr)
         info->ref = *info->ref_ptr;
       INSPECT_SCHEME_REF_INFO (info, "adding to gc_vector");
@@ -8979,13 +8949,14 @@ after_scheme_gc (void)
               /*       } */
               /*   } */
             }
-          eassert (*old_ref_ptr == old_ref ||
-                   *old_ref_ptr == new_ref ||
-                   (chez_flonump (new_ref) &&
-                    (chez_flonum_value (old_ref) ==
-                     chez_flonum_value (*old_ref_ptr)) &&
-                    (chez_flonum_value (new_ref) ==
-                     chez_flonum_value (*old_ref_ptr))));
+          SCHEME_ASSERT (50,
+                         *old_ref_ptr == old_ref ||
+                         *old_ref_ptr == new_ref ||
+                         (chez_flonump (new_ref) &&
+                          (chez_flonum_value (old_ref) ==
+                           chez_flonum_value (*old_ref_ptr)) &&
+                          (chez_flonum_value (new_ref) ==
+                           chez_flonum_value (*old_ref_ptr))));
           num_moved++;
           ref_info->ref = new_ref;
           *old_ref_ptr = new_ref;
@@ -9019,13 +8990,13 @@ after_scheme_gc (void)
   int unlinked_count = 0, still_linked_count = 0;
   while (soh)
     {
-      eassert (cell != chez_nil);
+      SCHEME_ASSERT (10, cell != chez_nil);
       chez_ptr obj = chez_car (cell);
       if (chez_bwp_objectp (obj))
         {
           *prev_soh_ptr = soh->next;
           chez_set_cdr (prev_cell, chez_cdr (cell));
-#ifdef ENABLE_CHECKING
+#if SCHEME_PARANOIA >= 50
           for (chez_ptr cell0 = scheme_object_list;
                cell0 != chez_nil; cell0 = chez_cdr (cell0))
             {
@@ -9113,8 +9084,8 @@ after_scheme_gc (void)
       if (addr == chez_false) break;
       eassert (chez_fixnump (addr));
       uint64_t *ptr = (void *) chez_fixnum_value (addr);
-      ptr[0] = 0xcdcdcdcdcdcdcdcd;
-      ptr[1] = 0xcdcdcdcdcdcdcdcd;
+      /* ptr[0] = 0xcdcdcdcdcdcdcdcd; */
+      /* ptr[1] = 0xcdcdcdcdcdcdcdcd; */
       xfree (ptr);
       ++num_freed;
     }

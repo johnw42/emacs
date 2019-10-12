@@ -39,7 +39,7 @@ static void run_init_checks(void);
 #endif
 
 static bool scheme_initialized = false;
-static Lisp_Object c_data_table;
+/* static Lisp_Object c_data_table; */
 
 chez_ptr scheme_vectorlike_symbol = chez_false;
 chez_ptr scheme_misc_symbol = chez_false;
@@ -84,9 +84,9 @@ static void *
 get_scheme_func(const char *name)
 {
   chez_ptr sym = chez_string_to_symbol (name);
-  eassert (chez_symbolp (sym));
+  SCHEME_ASSERT (50, chez_symbolp (sym));
   chez_ptr code = chez_top_level_value (sym);
-  eassert ((chez_uptr) code >= 0x1000);
+  SCHEME_ASSERT (50, (chez_uptr) code >= 0x1000);
   chez_lock_object (code);
   return chez_foreign_callable_entry_point (code);
 }
@@ -136,14 +136,14 @@ scheme_toplevel_func (const char *name)
 {
   for (int i = 0; name[i]; i++)
     {
-      eassert (0x20 < name[i]);
-      eassert (name[i] < 0x7f);
-      eassert (i < 30);
+      SCHEME_ASSERT (10, 0x20 < name[i]);
+      SCHEME_ASSERT (10, name[i] < 0x7f);
+      SCHEME_ASSERT (10, i < 30);
     }
   chez_ptr sym = chez_string_to_symbol (name);
-  eassert (chez_symbolp (sym));
+  SCHEME_ASSERT (50, chez_symbolp (sym));
   chez_ptr fun = chez_top_level_value (sym);
-  eassert (chez_procedurep (fun));
+  SCHEME_ASSERT (10, chez_procedurep (fun));
   chez_lock_object (fun);
   return fun;
 }
@@ -223,7 +223,7 @@ load_magic_refs (void)
         }
 
       num_magic_refs += refs_in_line;
-      eassert (num_magic_refs <= MAX_MAGIC_REFS);
+      SCHEME_ASSERT (0, num_magic_refs <= MAX_MAGIC_REFS);
     }
 
  error:
@@ -240,7 +240,7 @@ scheme_init(void) {
   const char *char_ptr = NULL;
   const char **argv = &char_ptr;
 
-  eassert(!scheme_initialized);
+  SCHEME_ASSERT(0, !scheme_initialized);
 
   chez_scheme_init(NULL);
   chez_register_boot_file(CHEZ_SCHEME_DIR "/scheme.boot");
@@ -281,8 +281,8 @@ scheme_init(void) {
   scheme_##c_name = scheme_toplevel_func(scheme_name)
 #include "scheme_fptr.h"
 
-  c_data_table = UNCHEZ(scheme_call0 ("make-eq-hashtable"));
-  scheme_track (c_data_table);
+  /* c_data_table = UNCHEZ(scheme_call0 ("make-eq-hashtable")); */
+  /* scheme_track (c_data_table); */
 
   scheme_vectorlike_symbol = make_gensym("emacs-vectorlike");
   scheme_misc_symbol = make_gensym("emacs-misc");
@@ -304,31 +304,29 @@ scheme_init(void) {
 void
 link_scheme_obj (struct Scheme_Object_Header *soh, Lisp_Object obj)
 {
-#ifdef ENABLE_CHECKING
+#if SCHEME_PARANOIA >= 50
   int cell_count = 0;
   {
     chez_ptr cell0 = chez_cdr (scheme_object_list);
     for (struct Scheme_Object_Header *soh0 = first_scheme_object_header;
          soh0; soh0 = soh0->next, cell0 = chez_cdr (cell0))
       {
-        eassert (soh0 != soh);
-        eassert (cell0 != chez_nil);
-        eassert (chez_car (cell0) == CHEZ (soh0->scheme_obj));
-        eassert (chez_car (cell0) != CHEZ (obj));
-        eassert (CHEZ (soh0->scheme_obj));
+        SCHEME_ASSERT (0, soh0 != soh);
+        SCHEME_ASSERT (0, cell0 != chez_nil);
+        SCHEME_ASSERT (0, chez_car (cell0) == CHEZ (soh0->scheme_obj));
+        SCHEME_ASSERT (0, chez_car (cell0) != CHEZ (obj));
+        SCHEME_ASSERT (0, CHEZ (soh0->scheme_obj));
         ++cell_count;
       }
-    eassert (cell0 == chez_nil);
+    SCHEME_ASSERT (0, cell0 == chez_nil);
   }
-  struct Scheme_Object_Header *init_first_scheme_object_header =
-    first_scheme_object_header;
 #endif
 
   INSPECT_SCHEME_REF (obj, "link_scheme_obj");
-  eassert (chez_pairp (scheme_object_list));
-  eassert (soh);
-  eassert (CHEZ (obj));
-  eassert (may_be_valid(CHEZ(obj)));
+  SCHEME_ASSERT (50, chez_pairp (scheme_object_list));
+  SCHEME_ASSERT (10, soh);
+  SCHEME_ASSERT (50, CHEZ (obj));
+  SCHEME_ASSERT (50, may_be_valid(CHEZ(obj)));
 
   soh->scheme_obj = obj;
   soh->next = first_scheme_object_header;
@@ -338,11 +336,10 @@ link_scheme_obj (struct Scheme_Object_Header *soh, Lisp_Object obj)
                 scheme_call2 ("weak-cons",
                               CHEZ (obj),
                               chez_cdr (scheme_object_list)));
-  eassert (chez_pairp (chez_cdr (scheme_object_list)));
-  eassert (EQ (obj, UNCHEZ (chez_car (chez_cdr (scheme_object_list)))));
-  eassert (init_first_scheme_object_header == first_scheme_object_header->next);
+  SCHEME_ASSERT (50, chez_pairp (chez_cdr (scheme_object_list)));
+  SCHEME_ASSERT (50, EQ (obj, UNCHEZ (chez_car (chez_cdr (scheme_object_list)))));
 
-#ifdef ENABLE_CHECKING
+#if SCHEME_PARANOIA >= 50
   int new_cell_count = 0;
   for (chez_ptr cell0 = chez_cdr (scheme_object_list);
        cell0 != chez_nil; cell0 = chez_cdr (cell0))
@@ -371,7 +368,7 @@ to_lisp_string(Lisp_Object arg)
     return arg;
   if (chez_symbolp (CHEZ(arg)))
     arg = UNCHEZ(scheme_call1 ("symbol->string", CHEZ(arg)));
-  eassert (chez_stringp (CHEZ(arg)));
+  SCHEME_ASSERT (10, chez_stringp (CHEZ(arg)));
   chez_iptr n = chez_string_length(CHEZ(arg));
   for (chez_iptr j = 0; j < n; j++)
     if (chez_string_ref (CHEZ(arg), j) >= 0x80)
@@ -400,10 +397,9 @@ to_scheme_string(Lisp_Object arg)
     return arg;
   if (chez_symbolp (CHEZ(arg)))
     return UNCHEZ(scheme_call1 ("symbol->string", CHEZ(arg)));
-  eassert (STRINGP (arg));
+  SCHEME_ASSERT (10, STRINGP (arg));
   chez_iptr n = XINT (Flength (arg));
   chez_ptr sstr = chez_make_uninitialized_string(n);
-  scheme_track (UNCHEZ (sstr));
   for (chez_iptr i = 0; i < n; i++)
     chez_string_set (sstr, i, XINT (Faref (arg, make_number(i))));
   return UNCHEZ(sstr);
@@ -419,26 +415,26 @@ make_scheme_string (const char *data, chez_iptr nchars, chez_iptr nbytes, bool m
       (make_specified_string (data, nchars, nbytes, multibyte));
 }
 
-static struct Lisp_Symbol *
+struct Lisp_Symbol *
 ensure_symbol_c_data (Lisp_Object symbol, Lisp_Object name)
 {
-  eassert (chez_symbolp (CHEZ (symbol)));
+  SCHEME_ASSERT (50, chez_symbolp (CHEZ (symbol)));
 
   chez_ptr found = SCHEME_FPTR_CALL2 (getprop, CHEZ(symbol), c_data_property_symbol);
   if (found != chez_false)
     {
       struct Lisp_Symbol *p = (void *) chez_fixnum_value (found);
-      eassert (EQ (p->u.s.soh.scheme_obj, symbol));
+      SCHEME_ASSERT (50, EQ (p->u.s.soh.scheme_obj, symbol));
       return p;
     }
 
   if (FALSEP (name))
     name = to_lisp_string (symbol);
-  eassert (STRINGP (name));
+  SCHEME_ASSERT (50, STRINGP (name));
 
   struct Lisp_Symbol *p = xzalloc (sizeof (struct Lisp_Symbol));
   SCHEME_FPTR_CALL3 (putprop, CHEZ(symbol), c_data_property_symbol, chez_fixnum ((chez_uptr) p));
-  eassert (p == (void *) chez_fixnum_value (SCHEME_FPTR_CALL2 (getprop, CHEZ(symbol), c_data_property_symbol)));
+  SCHEME_ASSERT (30, p == (void *) chez_fixnum_value (SCHEME_FPTR_CALL2 (getprop, CHEZ(symbol), c_data_property_symbol)));
   schedule_free (symbol, p);
 
   // Can't use init_nil_refs here because of how builtin symbols are
@@ -456,7 +452,7 @@ ensure_symbol_c_data (Lisp_Object symbol, Lisp_Object name)
   CHECK_ALLOC(p);
 
   link_scheme_obj (&p->u.s.soh, symbol);
-  eassert (EQ (p->u.s.soh.scheme_obj, symbol));
+  SCHEME_ASSERT (50, EQ (p->u.s.soh.scheme_obj, symbol));
 
   return p;
 }
@@ -478,7 +474,7 @@ scheme_make_symbol(Lisp_Object name, int /*enum symbol_interned*/ interned)
       INSPECT_SCHEME_REF (scheme_symbol, "scheme_make_symbol");
     }
 
-  eassert (chez_symbolp (CHEZ (scheme_symbol)));
+  SCHEME_ASSERT (50, chez_symbolp (CHEZ (scheme_symbol)));
 
   Lisp_Object lisp_str = to_lisp_string (name);
   struct Lisp_Symbol *xs = ensure_symbol_c_data (scheme_symbol, lisp_str);
@@ -487,19 +483,11 @@ scheme_make_symbol(Lisp_Object name, int /*enum symbol_interned*/ interned)
   return xs;
 }
 
-struct Lisp_Symbol *
-XSYMBOL (Lisp_Object a)
-{
-  struct Lisp_Symbol *p = ensure_symbol_c_data (a, LISP_FALSE);
-  eassert (EQ (p->u.s.soh.scheme_obj, a));
-  return p;
-}
-
 static void
 scheme_ptr_fill (Lisp_Object *p, Lisp_Object init, chez_iptr num_words)
 {
-  eassert (num_words >= 0);
-  eassert (chez_symbolp (CHEZ (Qnil)));
+  SCHEME_ASSERT (30, num_words >= 0);
+  SCHEME_ASSERT (50, chez_symbolp (CHEZ (Qnil)));
   for (chez_iptr i = 0; i < num_words; i++) {
     p[i] = init;
   }
@@ -534,9 +522,9 @@ fixup_lispsym_inits (Lisp_Object *p, size_t n)
   // Reverse the transformation applied by LISPSYM_INITIALLY.
   for (size_t i = 0; i < n; i++) {
     chez_uptr index = (XLI (p[i]) >> 8) & 0xffff;
-    eassert (0 <= index && index < ARRAYELTS(lispsym));
+    SCHEME_ASSERT (10, 0 <= index && index < ARRAYELTS(lispsym));
     Lisp_Object sym = lispsym[index];
-    eassert (SYMBOLP (sym));
+    SCHEME_ASSERT (10, SYMBOLP (sym));
     p[i] = sym;
   }
 }
@@ -713,7 +701,7 @@ gdb_print_scheme(char *buf, Lisp_Object obj)
   /*   obj = to_scheme_string (obj); */
   chez_ptr bvec = SCHEME_FPTR_CALL1 (print_to_bytevector, CHEZ (obj));
   chez_lock_object (bvec);
-  eassert (chez_bytevectorp (bvec));
+  SCHEME_ASSERT (0, chez_bytevectorp (bvec));
   chez_iptr n = chez_bytevector_length(bvec);
   n = min (n, DEBUG_BUF_SIZE - 1);
   memcpy (buf, chez_bytevector_data (bvec), n);
@@ -776,16 +764,15 @@ extern chez_ptr
 scheme_function_for_name(const char *name) {
   for (int i = 0; name[i]; i++)
     {
-      eassert (0x20 < name[i]);
-      eassert (name[i] < 0x7f);
-      eassert (i < 30);
+      SCHEME_ASSERT (30, 0x20 < name[i]);
+      SCHEME_ASSERT (30, name[i] < 0x7f);
+      SCHEME_ASSERT (30, i < 30);
     }
   last_func_name = name;
   chez_ptr sym = chez_string_to_symbol(name);
-  eassert(chez_symbolp(sym));
+  SCHEME_ASSERT (50, chez_symbolp(sym));
   chez_ptr fun = chez_top_level_value(sym);
-  eassert (chez_procedurep (fun));
-  scheme_track (UNCHEZ (fun));
+  SCHEME_ASSERT (10, chez_procedurep (fun));
   return fun;
 }
 
@@ -1081,7 +1068,7 @@ visit_lisp_refs(Lisp_Object obj, lisp_ref_visitor_fun fun, void *data)
                     {
                       Lisp_Object sym = values[i];
                       INSPECT_SCHEME_REF (sym, "visiting obarray");
-                      eassert (SYMBOLP (sym));
+                      SCHEME_ASSERT (50, SYMBOLP (sym));
                       visit_symbol_lisp_refs (sym, fun, data);
                     }
                 }
@@ -1186,7 +1173,7 @@ init_nil_ref_block (void *data, Lisp_Object *ptrs, ptrdiff_t n)
     {
       if (CHEZ (ptrs[i]) != data)
         {
-          eassert (EQ (ptrs[i], Qnil) || XLI (ptrs[i]) == 0);
+          SCHEME_ASSERT (10, EQ (ptrs[i], Qnil) || XLI (ptrs[i]) == 0);
           ptrs[i] = Qnil;
         }
     }
@@ -1195,7 +1182,7 @@ init_nil_ref_block (void *data, Lisp_Object *ptrs, ptrdiff_t n)
 void
 init_nil_refs (Lisp_Object obj)
 {
-  eassert (chez_symbolp (CHEZ (Qnil)));
+  SCHEME_ASSERT (50, chez_symbolp (CHEZ (Qnil)));
   visit_lisp_refs(obj, init_nil_ref_block, CHEZ (obj));
 }
 
@@ -1282,12 +1269,12 @@ container_reserve (struct container *c, size_t min_capacity)
       size_t new_capacity = 1;
       while (new_capacity < min_capacity)
         new_capacity *= 2;
-      eassert (new_capacity >= min_capacity);
+      SCHEME_ASSERT (50, new_capacity >= min_capacity);
       c->data = reallocarray (c->data, new_capacity, c->elem_size);
       c->capacity  = new_capacity;
-      eassert (c->data);
+      SCHEME_ASSERT (10, c->data);
     }
-  eassert (min_capacity == 0 || c->data);
+  SCHEME_ASSERT (50, min_capacity == 0 || c->data);
 }
 
 void
@@ -1303,7 +1290,7 @@ container_search (struct container *c,
                   compare_fun compare,
                   bool force_sort)
 {
-  eassert (compare);
+  SCHEME_ASSERT (10, compare);
 
   if (force_sort)
     container_sort (c, compare);
@@ -1330,9 +1317,9 @@ container_find_all (struct container *c,
                     size_t *begin,
                     size_t *end)
 {
-  eassert (compare);
-  eassert (begin);
-  eassert (end);
+  SCHEME_ASSERT (10, compare);
+  SCHEME_ASSERT (10, begin);
+  SCHEME_ASSERT (10, end);
 
   void *found = container_search (c, key, compare, true);
   if (!found)
@@ -1343,7 +1330,7 @@ container_find_all (struct container *c,
 
   size_t start =
     ((char *) found - (char *) c->data) / c->elem_size;
-  eassert (container_ref (c, start) == found);
+  SCHEME_ASSERT (50, container_ref (c, start) == found);
 
   // Find the first matching item.
   size_t i;
@@ -1357,7 +1344,7 @@ container_find_all (struct container *c,
     if (compare (container_ref (c, j), found) != 0)
       break;
 
-  eassert (i <= j);
+  SCHEME_ASSERT (10, i <= j);
   *begin = i;
   *end = j;
   return j - i;
@@ -1379,7 +1366,7 @@ container_delete_if (struct container *c, bool (*pred)(const void *))
   size_t di = 0;
   FOR_CONTAINER (si, c)
     {
-      eassert (di <= si);
+      SCHEME_ASSERT (50, di <= si);
       if (!pred (container_ref (c, si)))
         {
           if (si != di)
@@ -1407,7 +1394,7 @@ container_uniq (struct container *c, compare_fun compare, merge_fun merge)
   FOR_CONTAINER (si, c)
     if (si > 0)
       {
-        eassert (di < si);
+        SCHEME_ASSERT (10, di < si);
         if (compare (container_ref (c, di),
                      container_ref (c, si)) == 0)
           {

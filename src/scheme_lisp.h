@@ -2,6 +2,14 @@
 
 #include "pp_foldmap.h"
 
+#if defined(HAVE_CHEZ_SCHEME) && defined(ENABLE_CHECKING)
+#define SCHEME_PARANOIA 40
+#else
+#define SCHEME_PARANOIA 0
+#endif
+
+#define SCHEME_ASSERT(paranoia, cond) eassert (SCHEME_PARANOIA < paranoia || (cond))
+
 #ifdef HAVE_CHEZ_SCHEME
 
 #define FALSEP(obj) (CHEZ (obj) == chez_false)
@@ -39,7 +47,6 @@ struct xmalloc_header {
 #define IF_SCHEME(var)
 #define scheme_check_ptr(x,y) ((void)0)
 #endif /* not HAVE_CHEZ_SCHEME */
-
 
 #if defined(HAVE_CHEZ_SCHEME) && defined(ENABLE_CHECKING)
 #define INSPECT_SCHEME_REF(ref, label) inspect_scheme_ref(ref, NULL, true, label)
@@ -93,13 +100,11 @@ void resume_scheme_gc (void);
 extern int disable_scheme_gc;
 int before_scheme_gc (void);
 void after_scheme_gc (void);
-Lisp_Object scheme_track (Lisp_Object);
-Lisp_Object scheme_untrack (Lisp_Object);
 const char *scheme_classify (Lisp_Object x);
 void schedule_free (Lisp_Object x, void *data);
+struct Lisp_Symbol *ensure_symbol_c_data (Lisp_Object symbol, Lisp_Object name);
 
 void gdb_break(void);
-
 
 extern uint64_t gdb_misc_val;
 extern unsigned gdb_flags;
@@ -187,7 +192,8 @@ INLINE void *
 scheme_malloc_ptr(Lisp_Object addr) {
   gdb_misc_val = (uint64_t) CHEZ (addr);
   INSPECT_SCHEME_REF (addr, "scheme_malloc_ptr");
-  eassert (chez_fixnump (CHEZ (addr)));
+
+  SCHEME_ASSERT (50, chez_fixnump (CHEZ (addr)));
   void *data = (void *) chez_fixnum_value (CHEZ (addr));
   CHECK_ALLOC (data);
   return data;

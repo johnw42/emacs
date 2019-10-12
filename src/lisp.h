@@ -333,7 +333,7 @@ error !;
 #if defined(NIL_IS_ZERO) || defined(HAVE_CHEZ_SCHEME)
 #define CHECK_NOT_ZERO(x) x
 #else
-#define CHECK_NOT_ZERO(x) ((eassert ((x) != 0), x))
+#define CHECK_NOT_ZERO(x) ((SCHEME_ASSERT (50, (x) != 0), x))
 #endif
 
 #ifdef HAVE_CHEZ_SCHEME
@@ -366,8 +366,8 @@ error !;
    (eassert ((sym)->u.s.redirect == SYMBOL_PLAINVAL), (sym)->u.s.val.value)
 #define lisp_h_SYMBOLP(x) chez_symbolp (CHEZ (x))
 #define lisp_h_VECTORLIKEP(x) SCHEME_VECTORP(x, scheme_vectorlike_symbol)
-#define lisp_h_XCAR(c) (eassert (chez_pairp (CHEZ (c))), UNCHEZ (chez_car (CHEZ (c))))
-#define lisp_h_XCDR(c) (eassert (chez_pairp (CHEZ (c))), UNCHEZ (chez_cdr (CHEZ (c))))
+#define lisp_h_XCAR(c) (SCHEME_ASSERT (50, chez_pairp (CHEZ (c))), UNCHEZ (chez_car (CHEZ (c))))
+#define lisp_h_XCDR(c) (SCHEME_ASSERT (50, chez_pairp (CHEZ (c))), UNCHEZ (chez_cdr (CHEZ (c))))
 #define lisp_h_make_number(n) UNCHEZ (chez_fixnum (n))
 # define lisp_h_XFASTINT(a) XINT (a)
 # define lisp_h_XINT(a) chez_fixnum_value (CHEZ(a))
@@ -982,7 +982,13 @@ INLINE bool
 }
 
 #ifdef HAVE_CHEZ_SCHEME
-struct Lisp_Symbol * (XSYMBOL) (Lisp_Object a);
+INLINE struct Lisp_Symbol *
+(XSYMBOL) (Lisp_Object a)
+{
+  struct Lisp_Symbol *p = ensure_symbol_c_data (a, LISP_FALSE);
+  SCHEME_ASSERT (50, EQ (p->u.s.soh.scheme_obj, a));
+  return p;
+}
 #else /* not HAVE_CHEZ_SCHEME */
 INLINE struct Lisp_Symbol *
 (XSYMBOL) (Lisp_Object a)
@@ -4278,7 +4284,7 @@ extern struct Lisp_Vector *allocate_pseudovector (int, int, int,
 
 extern bool gc_in_progress;
 #ifdef HAVE_CHEZ_SCHEME
-#define make_float(x) scheme_track (UNCHEZ (chez_flonum (x)))
+#define make_float(x) UNCHEZ (chez_flonum (x))
 #else /* not HAVE_CHEZ_SCHEME */
 extern Lisp_Object make_float (double);
 #endif /* not HAVE_CHEZ_SCHEME */

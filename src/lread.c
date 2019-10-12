@@ -4110,7 +4110,6 @@ scheme_obarray_table (Lisp_Object obarray)
   if (SCHEME_FPTR_CALL1 (hashtablep, table) == chez_false)
     {
       table = scheme_call0 ("make-obarray-table");
-      scheme_track (UNCHEZ (table));
       ASET (obarray, 0, UNCHEZ (table));
     }
   eassert (SCHEME_FPTR_CALL1 (hashtablep, table));
