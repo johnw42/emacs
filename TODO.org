@@ -1,0 +1,19 @@
+* NOT DONE
+
+** Update dependencies
+
+** Find equivalent of unexec
+
+** Represent Lisp functions as Scheme functions
+
+** Represent lisp vectors as scheme vectors
+
+** Implement finalizers--trivial using guardian
+
+
+* DONE
+
+** Reduce re-allocation of gc_vector
+
+** Use guardian to free malloc'd memory
+** Rework GC.  Copy scheme refs to vector before GC, copy out after GC.  Keep vector per object.

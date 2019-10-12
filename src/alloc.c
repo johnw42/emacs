@@ -8894,9 +8894,34 @@ before_scheme_gc (void)
     }
   TRACEF ("unique tracked refs after mark: %lu", scheme_refs.size);
 
-  eassert (gc_vector == chez_false);
-  gc_vector = chez_make_vector (scheme_refs.size, chez_false);
-  chez_lock_object (gc_vector);
+  chez_iptr num_refs = scheme_refs.size;
+  static chez_iptr prev_num_refs = 0;
+  chez_iptr gc_vector_size = gc_vector == chez_false ?
+    -1 : chez_vector_length (gc_vector);
+  const chez_iptr growth_factor = 2;
+  chez_iptr new_gc_vector_size = gc_vector_size;
+  if (gc_vector_size < num_refs)
+    new_gc_vector_size =
+      max (gc_vector_size,
+           (chez_iptr) scheme_refs.size) * growth_factor;
+  else if (gc_vector_size > num_refs * growth_factor * growth_factor)
+    new_gc_vector_size = num_refs * growth_factor;
+  if (gc_vector_size != new_gc_vector_size)
+    {
+      TRACEF ("re-allocating gc_vector to size %jd", (intmax_t) new_gc_vector_size);
+      chez_unlock_object (gc_vector);
+      gc_vector = chez_make_vector (new_gc_vector_size, chez_false);
+      chez_lock_object (gc_vector);
+    }
+  else
+    {
+      // Clear old pointers from previous GC that won't be overwritten
+      // by pointers from the current GC.
+      for (chez_iptr i = num_refs; i < prev_num_refs; i++)
+        chez_vector_set (gc_vector, i, chez_false);
+    }
+  prev_num_refs = num_refs;
+  SCHEME_ASSERT (10, chez_vectorp (gc_vector));
   FOR_NAMED_CONTAINER (i, scheme_refs)
     {
       NAMED_CONTAINER_REF_VAR (info, scheme_refs, i);
@@ -8921,6 +8946,7 @@ after_scheme_gc (void)
   uint64_t *dead_refs = alloca (sizeof (uint64_t) * scheme_refs.size);
   size_t num_dead_refs = 0;
 
+  // Update references to Scheme objects in C data structures.
   FOR_NAMED_CONTAINER (i, scheme_refs)
     {
       chez_ptr new_ref = chez_vector_ref (gc_vector, i);
@@ -8982,6 +9008,7 @@ after_scheme_gc (void)
   int missing_count = 0;
 #endif
 
+  // Remove dead references from global list of Scheme+C objects.
   struct Scheme_Object_Header *soh = first_scheme_object_header;
   struct Scheme_Object_Header **prev_soh_ptr =
     &first_scheme_object_header;
@@ -9055,6 +9082,8 @@ after_scheme_gc (void)
     fclose(dump_file);
 #endif
 
+
+  // Update buffer list to remove GC'd buffers.
   while (true)
     {
       chez_ptr addr = chez_call0 (buffer_guardian);
@@ -9077,6 +9106,7 @@ after_scheme_gc (void)
         }
     }
 
+  // Free memory allocated for Scheme objects.
   int num_freed = 0;
   while (true)
     {
@@ -9094,8 +9124,6 @@ after_scheme_gc (void)
   TRACEF ("unlinked objects found: %d", unlinked_count);
   TRACEF ("linked objects found: %d", still_linked_count);
   TRACEF ("blocks freed: %d", num_freed);
-  chez_unlock_object (gc_vector);
-  gc_vector = chez_false;
 
   TRACEF ("*\n* GC %d complete!\n*", gc_count);
   gc_running = false;
