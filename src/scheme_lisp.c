@@ -19,10 +19,15 @@
 
 #pragma GCC diagnostic ignored "-Wdiscarded-qualifiers"
 
+enum Magic_Ref_Type
+  {
+   MRT_REF, MRT_REF_PTR, MRT_MALLOC_PTR
+  };
+
 #define MAX_MAGIC_REFS 64
 struct Magic_Ref {
   uintmax_t addr;
-  bool is_ptr;
+  enum Magic_Ref_Type type;
   bool seen;
   char comment[128];
 };
@@ -46,6 +51,8 @@ chez_iptr scheme_least_fixnum;
 chez_iptr scheme_fixnum_width;
 chez_ptr scheme_guardian;
 chez_ptr analyze_guardian;
+chez_ptr free_guardian;
+chez_ptr buffer_guardian;
 struct Scheme_Object_Header *first_scheme_object_header = NULL;
 chez_ptr scheme_object_list = chez_nil;
 
@@ -179,7 +186,7 @@ load_magic_refs (void)
 
           struct Magic_Ref *ref = &magic_refs[num_magic_refs + refs_in_line];
           ref->seen = false;
-          ref->is_ptr = false;
+          ref->type = MRT_REF;
           int token_size;
           switch (line[pos])
             {
@@ -190,9 +197,18 @@ load_magic_refs (void)
               pos += token_size;
               break;
             case '*':
-              if (sscanf (line + pos, "*0x%jx%n", &ref->addr, &token_size) != 1)
+            case '@':
+              if (sscanf (line + pos, "%*c0x%jx%n", &ref->addr, &token_size) != 1)
                 goto end;
-              ref->is_ptr = true;
+              switch (line[pos])
+                {
+                case '*':
+                  ref->type = MRT_REF_PTR;
+                  break;
+                case '@':
+                  ref->type = MRT_MALLOC_PTR;
+                  break;
+                }
               refs_in_line++;
               pos += token_size;
               break;
@@ -245,6 +261,12 @@ scheme_init(void) {
 
   analyze_guardian = scheme_call0 ("make-guardian");
   chez_lock_object (analyze_guardian);
+
+  free_guardian = scheme_call0 ("make-guardian");
+  chez_lock_object (free_guardian);
+
+  buffer_guardian = scheme_call0 ("make-guardian");
+  chez_lock_object (buffer_guardian);
 
   chez_foreign_symbol("do_scheme_gc", do_scheme_gc);
   chez_foreign_symbol("before_scheme_gc", before_scheme_gc);
@@ -417,6 +439,7 @@ ensure_symbol_c_data (Lisp_Object symbol, Lisp_Object name)
   struct Lisp_Symbol *p = xzalloc (sizeof (struct Lisp_Symbol));
   SCHEME_FPTR_CALL3 (putprop, CHEZ(symbol), c_data_property_symbol, chez_fixnum ((chez_uptr) p));
   eassert (p == (void *) chez_fixnum_value (SCHEME_FPTR_CALL2 (getprop, CHEZ(symbol), c_data_property_symbol)));
+  schedule_free (symbol, p);
 
   // Can't use init_nil_refs here because of how builtin symbols are
   // initialized.
@@ -592,6 +615,15 @@ scheme_classify(Lisp_Object x)
     return "unknown type";
   }
 }
+
+void
+schedule_free (Lisp_Object x, void *data)
+{
+  INSPECT_SCHEME_REF (x, "schedule_free");
+  chez_call2 (free_guardian, CHEZ (x),
+              chez_fixnum ((chez_iptr) data));
+}
+
 
 static chez_ptr
 gdb_vector_ref (chez_ptr v, chez_iptr i)
@@ -1538,6 +1570,11 @@ gdb_found_ref_ptr(Lisp_Object *ptr)
 {
 }
 
+static void
+gdb_found_malloc(void)
+{
+}
+
 bool
 inspect_scheme_ref (Lisp_Object ref,
                     Lisp_Object *ptr,
@@ -1561,13 +1598,12 @@ inspect_scheme_ref (Lisp_Object ref,
   if (is_valid)
     desc = scheme_classify (ref);
   int i;
-  for (i = 0; i < MAX_MAGIC_REFS; i++)
+  for (i = 0; i < num_magic_refs; i++)
     {
-      if (magic_refs[i].addr == 0) break;
-      if (magic_refs[i].is_ptr &&
+      if (magic_refs[i].type == MRT_REF_PTR &&
           ptr == (Lisp_Object *) magic_refs[i].addr)
         goto found;
-      else if (!magic_refs[i].is_ptr &&
+      else if (magic_refs[i].type == MRT_REF &&
                CHEZ (ref) == (chez_ptr) magic_refs[i].addr)
         {
           if (is_valid && !magic_refs[i].seen)
@@ -1596,6 +1632,23 @@ inspect_scheme_ref (Lisp_Object ref,
   if (is_valid)
     eassert (may_be_valid (CHEZ (ref)));
   return true;
+}
+
+bool
+inspect_malloc_ptr (void *ptr, const char *label)
+{
+  for (int i = 0; i < num_magic_refs; i++)
+    {
+      if (magic_refs[i].type == MRT_MALLOC_PTR &&
+          ptr == (void *) magic_refs[i].addr)
+        {
+          TRACEF ("*** %s: (void *) %p (%s)",
+                  label, ptr, magic_refs[i].comment);
+          gdb_found_malloc();
+          return true;
+        }
+    }
+  return false;
 }
 
 #endif /* HAVE_CHEZ_SCHEME */

@@ -1291,7 +1291,8 @@ INLINE void *
 XUNTAG_VECTORLIKE (Lisp_Object a)
 {
   eassert (chez_vectorp (CHEZ (a)));
-  void *ptr = scheme_malloc_ptr (UNCHEZ (chez_vector_ref (CHEZ (a), 1)));
+  void *ptr = scheme_malloc_ptr (UNCHEZ (SCHEME_PV_ADDR (CHEZ (a))));
+  eassert (*(uint64_t *)ptr != 0xcdcdcdcdcdcdcdcd);
   return ptr;
 }
 #define XUNTAG_MISC(a) XUNTAG_VECTORLIKE (a)
@@ -1569,7 +1570,8 @@ XSTRING (Lisp_Object a)
 {
   eassert (STRINGP (a));
 #ifdef HAVE_CHEZ_SCHEME
-  struct Lisp_String *p = scheme_malloc_ptr (UNCHEZ (chez_vector_ref (CHEZ (a), 1)));
+  struct Lisp_String *p = scheme_malloc_ptr (UNCHEZ (SCHEME_PV_ADDR (CHEZ (a))));
+  eassert (*(uint64_t *)p != 0xcdcdcdcdcdcdcdcd);
   eassert (EQ (p->u.s.soh.scheme_obj, a) || gc_running);
   return p;
 #else /* not HAVE_CHEZ_SCHEME */

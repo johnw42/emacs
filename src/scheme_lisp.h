@@ -46,11 +46,13 @@ struct xmalloc_header {
 #define INSPECT_SCHEME_REF_PTR(ptr, label) inspect_scheme_ref(LISP_FALSE, ptr, true, label)
 #define INSPECT_SCHEME_REF_MAYBE_INVALID(ref, label) inspect_scheme_ref(ref, NULL, false, label)
 #define INSPECT_SCHEME_REF_INFO(info, label) inspect_scheme_ref(UNCHEZ ((info)->ref), (Lisp_Object *) (info)->ref_ptr, true, label)
+#define INSPECT_MALLOC_PTR(ptr, label) inspect_malloc_ptr(ptr, label)
 #else
 #define INSPECT_SCHEME_REF(ref, label) false
 #define INSPECT_SCHEME_REF_PTR(ptr, label) false
 #define INSPECT_SCHEME_REF_MAYBE_INVALID(ref, label) false
 #define INSPECT_SCHEME_REF_INFO(info, label) false
+#define INSPECT_MALLOC_PTR(ptr, label) false
 #endif
 
 
@@ -94,6 +96,7 @@ void after_scheme_gc (void);
 Lisp_Object scheme_track (Lisp_Object);
 Lisp_Object scheme_untrack (Lisp_Object);
 const char *scheme_classify (Lisp_Object x);
+void schedule_free (Lisp_Object x, void *data);
 
 void gdb_break(void);
 
@@ -119,6 +122,8 @@ extern chez_iptr scheme_least_fixnum;
 extern chez_iptr scheme_fixnum_width;
 extern chez_ptr scheme_guardian;
 extern chez_ptr analyze_guardian;
+extern chez_ptr free_guardian;
+extern chez_ptr buffer_guardian;
 extern struct Scheme_Object_Header *first_scheme_object_header;
 extern chez_ptr scheme_object_list;
 
@@ -174,6 +179,8 @@ struct Lisp_Symbol *scheme_make_symbol(Lisp_Object name, int /*enum symbol_inter
 bool inspect_scheme_ref (Lisp_Object ref,
                          Lisp_Object *ptr,
                          bool is_valid,
+                         const char *label);
+bool inspect_malloc_ptr (void *ptr,
                          const char *label);
 
 INLINE void *

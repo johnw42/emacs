@@ -1169,6 +1169,7 @@ xmalloc (size_t size)
 
   MALLOC_BLOCK_INPUT;
   val = xmalloc_init (lmalloc (size + XMALLOC_EXTRA_SIZE), size);
+  INSPECT_MALLOC_PTR (val, "xmalloc");
   MALLOC_UNBLOCK_INPUT;
 
 #ifdef HAVE_CHEZ_SCHEME
@@ -1191,6 +1192,7 @@ xzalloc (size_t size)
 
   MALLOC_BLOCK_INPUT;
   val = xmalloc_init (lmalloc (size + XMALLOC_EXTRA_SIZE), size);
+  INSPECT_MALLOC_PTR (val, "xzalloc");
   MALLOC_UNBLOCK_INPUT;
 
   if (!val && size)
@@ -1206,6 +1208,7 @@ Lisp_Object *
 xnalloc (size_t size)
 {
   void *val = xmalloc (size);
+  INSPECT_MALLOC_PTR (val, "xnalloc");
   if (val)
     mem_nil (val, size);
   return val;
@@ -1226,6 +1229,7 @@ xrealloc (void *block, size_t size)
     val = lmalloc (size + XMALLOC_EXTRA_SIZE);
   else
     val = lrealloc (XMALLOC_HEADER (block), size + XMALLOC_EXTRA_SIZE);
+  INSPECT_MALLOC_PTR (val, "xrealloc");
   val = xmalloc_init (val, size);
   MALLOC_UNBLOCK_INPUT;
 
@@ -1264,6 +1268,7 @@ xfree (void *block)
 {
   if (!block)
     return;
+  INSPECT_MALLOC_PTR (block, "xfree");
   MALLOC_BLOCK_INPUT;
   CHECK_ALLOC(block);
 #ifdef PARANOID_XMALLOC
@@ -2414,6 +2419,7 @@ scheme_allocate_vector (ptrdiff_t nbytes,
 
   chez_ptr vec = chez_make_vector(SCHEME_PV_LENGTH, chez_false);
   INSPECT_SCHEME_REF (UNCHEZ (vec), "scheme_allocate_vector");
+  schedule_free (UNCHEZ (vec), data);
 
   scheme_track (UNCHEZ (vec));
   SCHEME_PV_TAG_SET (vec, sym);
@@ -2511,6 +2517,7 @@ allocate_string_data (struct Lisp_String *s,
      of string data.  */
   ptrdiff_t needed = SDATA_SIZE (nbytes);
   sdata *data = xmalloc(needed);
+  schedule_free (s->u.s.soh.scheme_obj, data);
   data->string = s;
 
 #else /* not HAVE_CHEZ_SCHEME */
@@ -4037,8 +4044,13 @@ allocate_buffer (void)
 #endif /* not HAVE_CHEZ_SCHEME */
 
   /* Put B on the chain of all buffers including killed ones.  */
+  check_buffers(b);
   b->next = all_buffers;
   all_buffers = b;
+  check_buffers(NULL);
+  chez_call2 (buffer_guardian,
+              CHEZ(b->header.s.soh.scheme_obj),
+              chez_fixnum ((chez_iptr) b));
   /* Note that the rest fields of B are not initialized.  */
   return b;
 }
@@ -7047,11 +7059,15 @@ ptrdiff_t mark_object_loop_halt EXTERNALLY_VISIBLE;
 static void
 mark_vectorlike (struct Lisp_Vector *ptr)
 {
+#ifdef HAVE_CHEZ_SCHEME
+  record_scheme_ref (ptr->header.s.soh.scheme_obj);
+#else
   ptrdiff_t size = ptr->header.size;
   ptrdiff_t i;
 
   eassert (!VECTOR_MARKED_P (ptr));
   VECTOR_MARK (ptr);		/* Else mark it.  */
+
   if (size & PSEUDOVECTOR_FLAG)
     size &= PSEUDOVECTOR_SIZE_MASK;
 
@@ -7061,6 +7077,7 @@ mark_vectorlike (struct Lisp_Vector *ptr)
      non-Lisp_Object fields at the end of the structure...  */
   for (i = 0; i < size; i++) /* ...and then mark its elements.  */
     mark_object_ptr (&ptr->contents[i]);
+#endif
 }
 
 /* Like mark_vectorlike but optimized for char-tables (and
@@ -7130,6 +7147,7 @@ static void
 mark_buffer (struct buffer *buffer)
 {
 #ifdef HAVE_CHEZ_SCHEME
+  record_scheme_ref (buffer->header.s.soh.scheme_obj);
   visit_buffer_lisp_refs (buffer, mark_lisp_refs_fun, NULL);
 #else
   /* This is handled much like other pseudovectors...  */
@@ -9066,9 +9084,45 @@ after_scheme_gc (void)
     fclose(dump_file);
 #endif
 
+  while (true)
+    {
+      chez_ptr addr = chez_call0 (buffer_guardian);
+      void *dead_buf = (void *) chez_fixnum_value (addr);
+      if (addr == chez_false) break;
+      eassert (chez_fixnump (addr));
+      struct buffer **bprev = &all_buffers;
+      for (struct buffer *b = all_buffers; b; b = b->next)
+        {
+          if (b == dead_buf)
+            {
+              *bprev = b->next;
+            }
+          else
+            {
+              /* Do not use buffer_(set|get)_intervals here.  */
+              b->text->intervals = balance_intervals (b->text->intervals);
+              bprev = &b->next;
+            }
+        }
+    }
+
+  int num_freed = 0;
+  while (true)
+    {
+      chez_ptr addr = chez_call0 (free_guardian);
+      if (addr == chez_false) break;
+      eassert (chez_fixnump (addr));
+      uint64_t *ptr = (void *) chez_fixnum_value (addr);
+      ptr[0] = 0xcdcdcdcdcdcdcdcd;
+      ptr[1] = 0xcdcdcdcdcdcdcdcd;
+      xfree (ptr);
+      ++num_freed;
+    }
+
   TRACEF ("refs moved in gc: %lu", num_moved);
   TRACEF ("unlinked objects found: %d", unlinked_count);
   TRACEF ("linked objects found: %d", still_linked_count);
+  TRACEF ("blocks freed: %d", num_freed);
   chez_unlock_object (gc_vector);
   gc_vector = chez_false;
 

@@ -1104,11 +1104,12 @@ bset_width_table (struct buffer *b, Lisp_Object val)
 /* Chain of all buffers, including killed ones.  */
 
 extern struct buffer *all_buffers;
+struct buffer *check_buffers(struct buffer *new_buf);
 
 /* Used to iterate over the chain above.  */
 
 #define FOR_EACH_BUFFER(b) \
-  for ((b) = all_buffers; (b); (b) = (b)->next)
+  for ((b) = check_buffers(NULL); (b); (b) = (b)->next)
 
 #ifdef HAVE_CHEZ_SCHEME
 extern struct buffer *buffer_defaults_ptr;

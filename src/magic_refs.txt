@@ -1,4 +1,12 @@
 #0x4129476f 0x44b29adf = " *buffer-defaults*"
 #0x405dea0f 0x44b22b5f = #<buffer  *buffer-defaults*>
 #0x405de5ef = thread
-0x5637831f = "%12b"
+#0x5637831f = "%12b"
+##0x4438499f 0x4438495f 0x4151f16f = #<buffer *scratch*>
+#0x4431179b 0x42e8ed9b = buffer-undo-list
+#0x40c2b7af = ???
+#0x4438499f = *scratch*
+#0x44055acf = *buffer-defaults*
+# *0xd5fe08 0x443110db = buffer_local_flags
+#0x566a989f = mystery buffer
+#@0x11e4c30 = buffer data

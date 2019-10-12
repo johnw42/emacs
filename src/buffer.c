@@ -58,6 +58,9 @@ struct buffer *all_buffers;
 struct buffer *buffer_defaults_ptr = NULL;
 struct buffer *buffer_local_flags_ptr = NULL;
 struct buffer *buffer_local_symbols_ptr = NULL;
+Lisp_Object buffer_defaults_ref;
+Lisp_Object buffer_local_flags_ref;
+Lisp_Object buffer_local_symbols_ref;
 #else /* not HAVE_CHEZ_SCHEME */
 /* This structure holds the default values of the buffer-local variables
    defined with DEFVAR_PER_BUFFER, that have special slots in each buffer.
@@ -5153,11 +5156,18 @@ scheme_init_buffer_once (void)
   fixup_lispsym_init (&QSFundamental);
   fixup_lispsym_init (&last_overlay_modification_hooks);
 
-  REGISTER_LISP_GLOBALS (last_overlay_modification_hooks);
+  REGISTER_LISP_GLOBALS (last_overlay_modification_hooks,
+                         buffer_defaults_ref,
+                         buffer_local_symbols_ref,
+                         buffer_local_flags_ref);
 
   buffer_defaults_ptr = allocate_buffer();
   buffer_local_symbols_ptr = allocate_buffer();
   buffer_local_flags_ptr = allocate_buffer();
+
+  buffer_defaults_ref = buffer_defaults_ptr->header.s.soh.scheme_obj;
+  buffer_local_symbols_ref = buffer_local_symbols_ptr->header.s.soh.scheme_obj;
+  buffer_local_flags_ref = buffer_local_flags_ptr->header.s.soh.scheme_obj;
 }
 #endif /* HAVE_CHEZ_SCHEME */
 
@@ -6422,4 +6432,16 @@ keys_of_buffer (void)
 {
   initial_define_key (control_x_map, 'b', "switch-to-buffer");
   initial_define_key (control_x_map, 'k', "kill-buffer");
+}
+
+struct buffer *check_buffers(struct buffer *new_buf)
+{
+  int count = 0;
+  for (struct buffer *b = all_buffers; b; b = b->next)
+    {
+      eassert (new_buf == NULL || b != new_buf);
+      ++count;
+      eassert (count < 1000);
+    }
+  return all_buffers;
 }
