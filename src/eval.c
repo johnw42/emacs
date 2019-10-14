@@ -1236,7 +1236,13 @@ unwind_to_catch (struct handler *catch, Lisp_Object value)
 
   lisp_eval_depth = catch->f_lisp_eval_depth;
 
+#ifdef HAVE_CHEZ_SCHEME
+  chez_ptr k = catch->continuation;
+  SCHEME_ASSERT (40, chez_procedurep (k));
+  chez_call1 (k, chez_cons (chez_false, catch->cont_arg));
+#else
   sys_longjmp (catch->jmp, 1);
+#endif
 }
 
 DEFUN ("throw", Fthrow, Sthrow, 2, 2, 0,
@@ -1315,6 +1321,44 @@ usage: (condition-case VAR BODYFORM &rest HANDLERS)  */)
   EXIT_LISP_FRAME (internal_lisp_condition_case (var, bodyform, handlers));
 }
 
+static chez_ptr
+scheme_internal_condition_case (Lisp_Object bodyform,
+                                Lisp_Object handlers,
+                                chez_ptr k)
+{
+  struct handler *oldhandlerlist = handlerlist;
+  ptrdiff_t CACHEABLE clausenb = 0;
+
+  Lisp_Object tail;
+  for (tail = handlers; CONSP (tail); tail = XCDR (tail))
+    clausenb++;
+
+  /* The first clause is the one that should be checked first, so it
+     should be added to handlerlist last.  So build in CLAUSES a table
+     that contains HANDLERS but in reverse order.  CLAUSES is pointer
+     to volatile to avoid issues with setjmp and local storage.
+     SAFE_ALLOCA won't work here due to the setjmp, so impose a
+     MAX_ALLOCA limit.  */
+  if (MAX_ALLOCA / word_size < clausenb)
+    memory_full (SIZE_MAX);
+  Lisp_Object volatile *clauses = alloca (clausenb * sizeof *clauses);
+  clauses += clausenb;
+  for (tail = handlers; CONSP (tail); tail = XCDR (tail))
+    *--clauses = XCAR (tail);
+  for (ptrdiff_t i = 0; i < clausenb; i++)
+    {
+      Lisp_Object clause = clauses[i];
+      Lisp_Object condition = CONSP (clause) ? XCAR (clause) : Qnil;
+      if (!CONSP (condition))
+	condition = list1 (condition);
+      struct handler *c = push_handler (condition, CONDITION_CASE);
+      c->cont_arg = chez_fixnum (i);
+      c->continuation = k;
+    }
+
+  return chez_cons (CHEZ (eval_sub (bodyform)), chez_false);
+}
+
 /* Like Fcondition_case, but the args are separate
    rather than passed in a list.  Used by Fbyte_code.  */
 
@@ -1322,6 +1366,74 @@ Lisp_Object
 internal_lisp_condition_case (Lisp_Object var, Lisp_Object bodyform,
 			      Lisp_Object handlers)
 {
+#ifdef HAVE_CHEZ_SCHEME
+  ENTER_LISP_FRAME ((var, bodyform, handlers), tail, tem, clause,
+                    condition, val, handler_body, handler_var, result);
+  ptrdiff_t CACHEABLE clausenb = 0;
+  for (tail = handlers; CONSP (tail); tail = XCDR (tail))
+    {
+      tem = XCAR (tail);
+      clausenb++;
+      if (! (NILP (tem)
+	     || (CONSP (tem)
+		 && (SYMBOLP (XCAR (tem))
+		     || CONSP (XCAR (tem))))))
+	error ("Invalid condition handler: %s",
+	       SDATA (Fprin1_to_string (tem, Qt)));
+    }
+  if (MAX_ALLOCA / word_size < clausenb)
+    memory_full (SIZE_MAX);
+  Lisp_Object volatile *clauses = alloca (clausenb * sizeof *clauses);
+  clauses += clausenb;
+  for (tail = handlers; CONSP (tail); tail = XCDR (tail))
+    *--clauses = XCAR (tail);
+
+  struct handler *oldhandlerlist = handlerlist;
+  SAVE_LISP_FRAME_PTR();
+  chez_ptr cont_result =
+    scheme_call3 ("condition-case-helper",
+                  chez_fixnum ((chez_iptr) scheme_internal_condition_case),
+                  CHEZ (bodyform),
+                  CHEZ (handlers));
+  RESTORE_LISP_FRAME_PTR();
+  SCHEME_ASSERT (40, chez_pairp (cont_result));
+  if (chez_cdr (cont_result) == chez_false)
+    {
+      handlerlist = oldhandlerlist;
+      EXIT_LISP_FRAME (UNCHEZ (chez_car (cont_result)));
+    }
+  SCHEME_ASSERT (40, chez_fixnump (chez_cdr (cont_result)));
+  chez_iptr i = chez_fixnum_value (chez_cdr (cont_result));
+
+  val = handlerlist->val;
+
+  Lisp_Object volatile *chosen_clause = clauses;
+  for (struct handler *h = handlerlist->next; h != oldhandlerlist;
+       h = h->next)
+    chosen_clause++;
+
+  handlerlist = oldhandlerlist;
+  handler_body = XCDR (*chosen_clause);
+
+  if (NILP (var))
+    EXIT_LISP_FRAME (Fprogn (handler_body));
+
+  handler_var = var;
+
+  if (!NILP (Vinternal_interpreter_environment))
+    {
+      val = Fcons (Fcons (var, val),
+                   Vinternal_interpreter_environment);
+      handler_var = Qinternal_interpreter_environment;
+    }
+
+  /* Bind HANDLER_VAR to VAL while evaluating HANDLER_BODY.
+     The unbind_to undoes just this binding; whoever longjumped
+     to us unwound the stack to C->pdlcount before throwing.  */
+  ptrdiff_t count = SPECPDL_INDEX ();
+  specbind (handler_var, val);
+  EXIT_LISP_FRAME (unbind_to (count, Fprogn (handler_body)));
+#else
   ENTER_LISP_FRAME ((var, bodyform, handlers), tail, tem, clause,
                     condition, val, handler_body, handler_var, result);
   struct handler *oldhandlerlist = handlerlist;
@@ -1329,8 +1441,7 @@ internal_lisp_condition_case (Lisp_Object var, Lisp_Object bodyform,
 
   CHECK_SYMBOL (var);
 
-  for (tail = handlers;
- CONSP (tail); tail = XCDR (tail))
+  for (tail = handlers; CONSP (tail); tail = XCDR (tail))
     {
       tem = XCAR (tail);
 
@@ -1353,8 +1464,7 @@ internal_lisp_condition_case (Lisp_Object var, Lisp_Object bodyform,
     memory_full (SIZE_MAX);
   Lisp_Object volatile *clauses = alloca (clausenb * sizeof *clauses);
   clauses += clausenb;
-  for (tail = handlers;
- CONSP (tail); tail = XCDR (tail))
+  for (tail = handlers; CONSP (tail); tail = XCDR (tail))
     *--clauses = XCAR (tail);
   for (ptrdiff_t i = 0; i < clausenb; i++)
     {
@@ -1404,6 +1514,7 @@ internal_lisp_condition_case (Lisp_Object var, Lisp_Object bodyform,
 
   handlerlist = oldhandlerlist;
   EXIT_LISP_FRAME (result);
+#endif
 }
 
 /* Call the function BFUN with no arguments, catching errors within it
@@ -1420,6 +1531,8 @@ Lisp_Object
 internal_condition_case (Lisp_Object (*bfun) (void), Lisp_Object handlers,
 			 Lisp_Object (*hfun) (Lisp_Object))
 {
+  abort();
+
   ENTER_LISP_FRAME ((handlers), val);
   struct handler *c = push_handler (handlers, CONDITION_CASE);
   SAVE_LISP_FRAME_PTR();
@@ -1449,6 +1562,8 @@ internal_condition_case_1 (Lisp_Object (*bfun) (Lisp_Object), Lisp_Object arg,
 			   Lisp_Object handlers,
 			   Lisp_Object (*hfun) (Lisp_Object))
 {
+  abort();  // XXX
+
   ENTER_LISP_FRAME ((arg, handlers), val);
   struct handler *c = push_handler (handlers, CONDITION_CASE);
   SAVE_LISP_FRAME_PTR();
@@ -1481,6 +1596,8 @@ internal_condition_case_2 (Lisp_Object (*bfun) (Lisp_Object, Lisp_Object),
 			   Lisp_Object handlers,
 			   Lisp_Object (*hfun) (Lisp_Object))
 {
+  abort();
+
   ENTER_LISP_FRAME ((arg1, arg2, handlers), val);
   struct handler *c = push_handler (handlers, CONDITION_CASE);
   SAVE_LISP_FRAME_PTR();
@@ -1515,6 +1632,8 @@ internal_condition_case_n (Lisp_Object (*bfun) (ptrdiff_t, Lisp_Object *),
 						ptrdiff_t nargs,
 						Lisp_Object *args))
 {
+  abort();
+
   ENTER_LISP_FRAME_VA (nargs, args, (), val);
   struct handler *c = push_handler (handlers, CONDITION_CASE);
   SAVE_LISP_FRAME_PTR();
@@ -1571,6 +1690,8 @@ push_handler_nosignal (Lisp_Object tag_ch_val, enum handlertype handlertype)
   c->poll_suppress_count = poll_suppress_count;
   c->interrupt_input_blocked = interrupt_input_blocked;
 #ifdef HAVE_CHEZ_SCHEME
+  c->continuation = chez_false;
+  c->cont_arg = chez_false;
   c->disable_scheme_gc = disable_scheme_gc;
   c->lisp_stack_ptr = lisp_stack_ptr;
 #endif
@@ -2340,7 +2461,14 @@ eval_sub (Lisp_Object form)
 	xsignal2 (Qwrong_number_of_arguments, original_fun, numargs);
 
       else if (XSUBR (fun)->max_args == UNEVALLED)
+        {
+#ifdef HAVE_CHEZ_SCHEME
+          if (check_special_case ())
+            val = UNCHEZ (chez_call1 (XSUBR (fun)->scheme_function, CHEZ (args_left)));
+          else
+#endif
 	val = (XSUBR (fun)->function.aUNEVALLED) (args_left);
+        }
       else if (XSUBR (fun)->max_args == MANY)
 	{
 	  /* Pass a vector of evaluated arguments.  */
@@ -2357,6 +2485,13 @@ eval_sub (Lisp_Object form)
 
 	  set_backtrace_args (specpdl + count, vals, argnum);
 
+#ifdef HAVE_CHEZ_SCHEME
+          if (check_special_case())
+            val = UNCHEZ (chez_call2 (XSUBR (fun)->scheme_function,
+                                      chez_fixnum (argnum),
+                                      chez_fixnum ((chez_iptr) vals)));
+          else
+#endif
 	  val = XSUBR (fun)->function.aMANY (argnum, vals);
 
 	  check_cons_list ();
@@ -2380,6 +2515,38 @@ eval_sub (Lisp_Object form)
 
 	  set_backtrace_args (specpdl + count, argvals, XINT (numargs));
 
+#ifdef HAVE_CHEZ_SCHEME
+          if (check_special_case()) {
+          chez_ptr proc = XSUBR (fun)->scheme_function;
+          chez_ptr result;
+          switch (maxargs)
+            {
+            case 0:
+              result = chez_call0 (proc);
+              break;
+            case 1:
+              result = chez_call1 (proc, CHEZ (argvals[0]));
+              break;
+            case 2:
+              result = chez_call2 (proc,
+                                   CHEZ (argvals[0]),
+                                   CHEZ (argvals[1]));
+              break;
+            case 3:
+              result = chez_call3 (proc,
+                                   CHEZ (argvals[0]),
+                                   CHEZ (argvals[1]),
+                                   CHEZ (argvals[2]));
+              break;
+            default:
+              chez_initframe (maxargs);
+              for (i = 0; i < maxargs; i++)
+                chez_put_arg (i + 1, CHEZ (argvals[i]));
+              result = chez_call (proc, maxargs);
+            }
+          val = UNCHEZ (result);
+          }else
+#endif
 	  switch (i)
 	    {
 	    case 0:
@@ -3019,7 +3186,16 @@ funcall_subr (struct Lisp_Subr *subr, ptrdiff_t numargs, Lisp_Object *args)
     }
 
   else if (subr->max_args == MANY)
+    {
+#ifdef HAVE_CHEZ_SCHEME
+    if (check_special_case())
+      result = UNCHEZ (chez_call2 (subr->scheme_function,
+                                   chez_fixnum (numargs),
+                                   chez_fixnum ((chez_iptr) args)));
+    else
+#endif
     result = (subr->function.aMANY) (numargs, args);
+    }
   else
     {
       Lisp_Object *internal_args;
@@ -3033,6 +3209,38 @@ funcall_subr (struct Lisp_Subr *subr, ptrdiff_t numargs, Lisp_Object *args)
         }
       else
         internal_args = args;
+#ifdef HAVE_CHEZ_SCHEME
+      if (check_special_case()) {
+      chez_ptr proc = subr->scheme_function;
+      chez_ptr sresult;
+      switch (subr->max_args)
+        {
+        case 0:
+          sresult = chez_call0 (proc);
+          break;
+        case 1:
+          sresult = chez_call1 (proc, CHEZ (internal_args[0]));
+          break;
+        case 2:
+          sresult = chez_call2 (proc,
+                               CHEZ (internal_args[0]),
+                               CHEZ (internal_args[1]));
+          break;
+        case 3:
+          sresult = chez_call3 (proc,
+                               CHEZ (internal_args[0]),
+                               CHEZ (internal_args[1]),
+                               CHEZ (internal_args[2]));
+          break;
+        default:
+          chez_initframe (subr->max_args);
+          for (int i = 0; i < subr->max_args; i++)
+            chez_put_arg (i + 1, CHEZ (internal_args[i]));
+          sresult = chez_call (proc, subr->max_args);
+        }
+      result = UNCHEZ (sresult);
+      } else
+#endif
       switch (subr->max_args)
         {
         case 0:

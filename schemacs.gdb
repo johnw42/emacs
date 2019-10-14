@@ -16,8 +16,8 @@ set print frame-arguments none
 set trace-commands off
 
 # needed for memgrep
-handle SIGSEGV nostop
-handle SIGSEGV noprint
+# handle SIGSEGV nostop
+# handle SIGSEGV noprint
 
 #handle SIGINT nopass
 
@@ -64,16 +64,16 @@ end
 break exit
 break abort
 
-catch signal SIGSEGV
-commands
-  silent
-  if $_any_caller_is("try_memgrep1")
-    cont
-  else
-    p scheme_fptr_call_info
-    echo segv; fptr_run?\n
-  end
-end
+# catch signal SIGSEGV
+# commands
+#   silent
+#   if $_any_caller_is("try_memgrep1")
+#     cont
+#   else
+#     p scheme_fptr_call_info
+#     echo segv; fptr_run?\n
+#   end
+# end
 
 define fptr_run
   tbreak scheme_fptr_call_fun

@@ -1,15 +1,12 @@
 * NOT DONE
 
-** Update dependencies
-
+ * Check Scheme build for errors at build time
+** Split Scheme code into files
 ** Find equivalent of unexec
-
 ** Represent Lisp functions as Scheme functions
-
 ** Represent lisp vectors as scheme vectors
-
 ** Implement finalizers--trivial using guardian
-
+** Update deps.mk
 
 * DONE
 

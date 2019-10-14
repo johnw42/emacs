@@ -1787,6 +1787,8 @@ handle_arith_signal (int sig)
   xsignal0 (Qarith_error);
 }
 
+#ifndef HAVE_CHEZ_SCHEME
+
 #if defined HAVE_STACK_OVERFLOW_HANDLING && !defined WINDOWSNT
 
 /* Alternate stack used by SIGSEGV handler below.  */
@@ -1895,6 +1897,8 @@ init_sigsegv (void)
 }
 
 #endif /* HAVE_STACK_OVERFLOW_HANDLING && !WINDOWSNT */
+
+#endif
 
 static void
 deliver_arith_signal (int sig)
@@ -2162,8 +2166,10 @@ init_signals (bool dumping)
 #ifdef SIGBUS
   sigaction (SIGBUS, &thread_fatal_action, 0);
 #endif
+#ifndef HAVE_CHEZ_SCHEME
   if (!init_sigsegv ())
     sigaction (SIGSEGV, &thread_fatal_action, 0);
+#endif
 #ifdef SIGSYS
   sigaction (SIGSYS, &thread_fatal_action, 0);
 #endif

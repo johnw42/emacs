@@ -2,6 +2,8 @@
 
 #include "pp_foldmap.h"
 
+void gdb_break(void);
+
 #if defined(HAVE_CHEZ_SCHEME) && defined(ENABLE_CHECKING)
 #define SCHEME_PARANOIA 40
 #else
@@ -15,12 +17,27 @@
 #define FALSEP(obj) (CHEZ (obj) == chez_false)
 #define LISP_FALSE UNCHEZ (chez_false)
 
-extern void *chez_saved_bp;
+#define CHEZ_BP_STACK_SIZE 1024
+extern void *chez_bp_stack[CHEZ_BP_STACK_SIZE];
+extern int chez_bp_stack_top;
+extern void *scheme_last_pc;
+extern int scheme_call_count;
 
-/* #define CHEZ_PROLOG */
-/* #define CHEZ_EPILOG */
-#define CHEZ_PROLOG asm ("movq %%rbp, %0" : "=m" (chez_saved_bp))
-#define CHEZ_EPILOG chez_saved_bp = 0
+bool check_special_case(void);
+
+#if 1
+#define CHEZ_PROLOG
+#define CHEZ_EPILOG
+#else
+#define CHEZ_PROLOG                                                 \
+  void *rbp;                                                        \
+  asm ("movq %%rbp, %0" : "=mr" (rbp));                             \
+  chez_bp_stack[chez_bp_stack_top] = rbp;                           \
+  scheme_last_pc = ((void **)rbp)[1];                               \
+  ++chez_bp_stack_top
+#define CHEZ_EPILOG chez_bp_stack[--chez_bp_stack_top] = 0
+#endif
+
 #include "chez_scheme.h"
 #endif
 
@@ -103,8 +120,6 @@ void after_scheme_gc (void);
 const char *scheme_classify (Lisp_Object x);
 void schedule_free (Lisp_Object x, void *data);
 struct Lisp_Symbol *ensure_symbol_c_data (Lisp_Object symbol, Lisp_Object name);
-
-void gdb_break(void);
 
 extern uint64_t gdb_misc_val;
 extern unsigned gdb_flags;

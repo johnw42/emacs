@@ -4578,21 +4578,28 @@ init_obarray (void)
 }
 
 void
-defsubr (struct Lisp_Subr *sname)
+defsubr (Lisp_Subr_Init *sname)
 {
   ENTER_LISP_FRAME ((), sym, tem);
 #ifdef HAVE_CHEZ_SCHEME
-  sym = intern_c_string (sname->init_symbol_name);
+  sym = intern_c_string (sname->symbol_name);
   struct Lisp_Subr *subr =
     ALLOCATE_PSEUDOVECTOR (struct Lisp_Subr, function, PVEC_SUBR);
   tem = subr->header.s.soh.scheme_obj;
-  subr->function = sname->function;
+  subr->function.a0 = sname->function.a0;
+  subr->scheme_function = scheme_call3
+    ("wrap-function",
+     chez_fixnum ((chez_iptr) sname->function.a0),
+     chez_fixnum (sname->min_args),
+     chez_fixnum (sname->max_args));
+  SCHEME_ASSERT (40, chez_procedurep (subr->scheme_function));
+  chez_lock_object (subr->scheme_function);
   subr->min_args = sname->min_args;
   subr->max_args = sname->max_args;
-  subr->init_symbol_name = sname->init_symbol_name;
+  subr->init_symbol_name = sname->symbol_name;
   subr->symbol = sym;
   subr->intspec = sname->intspec;
-  subr->doc = sname->doc;
+  subr->doc = 0;
 #else /* not HAVE_CHEZ_SCHEME */
   sym = intern_c_string (sname->symbol_name);
   XSETPVECTYPE (sname, PVEC_SUBR);

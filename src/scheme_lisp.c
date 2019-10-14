@@ -91,7 +91,27 @@ get_scheme_func(const char *name)
   return chez_foreign_callable_entry_point (code);
 }
 
-void *chez_saved_bp = NULL;
+void *chez_bp_stack[CHEZ_BP_STACK_SIZE];
+int chez_bp_stack_top = 0;
+void *scheme_last_pc = 0;
+int scheme_call_count = 0;
+
+int special_case_counter = 0;
+int special_case_lb = 0x10000 + 0x8000 + 0x1000 + 0x800 + 0x200 + 0x100 + 0x20 + 8 + 2 + 1;
+int special_case_ub = 0x20000 - 0x4000 - 0x2000 - 0x400 - 0x80 - 0x40 - 0x10 - 3;
+
+bool
+check_special_case(void)
+{
+  /* ++special_case_counter; */
+  /* if (special_case_lb <= special_case_counter && */
+  /*     special_case_counter < special_case_ub) */
+  /*   { */
+  /*     gdb_break(); */
+  /*     return true; */
+  /*   } */
+  return true;
+}
 
 static void
 scheme_abort (void)
@@ -111,16 +131,16 @@ scheme_sigaction (int sig, siginfo_t *info, void *ucontext)
   TRACEF ("called scheme_sigaction");
 
   // Both versions seem to have the same effect.
-  if (chez_saved_bp)
+  if (chez_bp_stack_top)
     {
 #if 1
-      asm ("movq %0, %%rbp" : : "rm" (chez_saved_bp));
+      asm ("movq %0, %%rbp" : : "rm" (chez_bp_stack[chez_bp_stack_top - 1]));
 #else
       ucontext_t *ctx = ucontext;
       ctx->uc_mcontext.gregs[REG_RBP] = (uint64_t) chez_saved_bp;
 #endif
       abort();
-    }
+}
 }
 
 static chez_ptr
@@ -415,10 +435,14 @@ make_scheme_string (const char *data, chez_iptr nchars, chez_iptr nbytes, bool m
       (make_specified_string (data, nchars, nbytes, multibyte));
 }
 
+static int xxx_count = 0;
+
 struct Lisp_Symbol *
 ensure_symbol_c_data (Lisp_Object symbol, Lisp_Object name)
 {
-  SCHEME_ASSERT (50, chez_symbolp (CHEZ (symbol)));
+  /* if (++xxx_count == 430847) */
+  /*   gdb_break(); */
+  /* SCHEME_ASSERT (40, chez_symbolp (CHEZ (symbol))); */
 
   chez_ptr found = SCHEME_FPTR_CALL2 (getprop, CHEZ(symbol), c_data_property_symbol);
   if (found != chez_false)

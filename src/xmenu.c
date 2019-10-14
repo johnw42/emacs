@@ -2420,12 +2420,7 @@ syms_of_xmenu (void)
 
 #if defined (USE_GTK) || defined (USE_X_TOOLKIT)
   defsubr (&Sx_menu_bar_open_internal);
-#ifdef HAVE_CHEZ_SCHEME
-  Ffset (intern_c_string ("accelerate-menu"),
-	 intern_c_string (Sx_menu_bar_open_internal.init_symbol_name));
-#else /* not HAVE_CHEZ_SCHEME */
   Ffset (intern_c_string ("accelerate-menu"),
 	 intern_c_string (Sx_menu_bar_open_internal.symbol_name));
-#endif /* not HAVE_CHEZ_SCHEME */
 #endif
 }

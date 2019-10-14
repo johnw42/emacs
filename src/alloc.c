@@ -8737,7 +8737,7 @@ static uint64_t *
 memgrep1 (uint64_t word, uint64_t inv_mask)
 {
   memgrep_last_found = NULL;
-  memgrep_max_hits = 1;
+memgrep_max_hits = 1;
   try_memgrep (0xe61e60, &word, 1, ~inv_mask);
   return memgrep_last_found;
 }
@@ -8832,7 +8832,7 @@ before_scheme_gc (void)
   eassert (STRINGP(empty_unibyte_string));
 
   uint64_t deadface = 0xdeadface0000000f;
-  memgrep(&deadface, 1, 0xffffffff0000000f);
+  /* memgrep(&deadface, 1, 0xffffffff0000000f); */
 #if 0
   for (int i = 0; i < MAX_MAGIC_REFS; i++)
     {

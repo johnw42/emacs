@@ -16,6 +16,8 @@
          hashtable-values
          object-is-str?
          print-to-bytevector
+         wrap-function
+         condition-case-helper
          )
 
   (define elisp-do-scheme-gc
@@ -137,6 +139,38 @@
            (put-datum port obj)
            (put-char port #\x00)))))))
 
+  (define (wrap-function func-ptr min-args max-args)
+    (let ([proc (case max-args
+                  (0 (foreign-procedure func-ptr () scheme-object))
+                  (1 (foreign-procedure func-ptr (scheme-object) scheme-object))
+                  (2 (foreign-procedure func-ptr (scheme-object scheme-object) scheme-object))
+                  (3 (foreign-procedure func-ptr (scheme-object scheme-object scheme-object) scheme-object))
+                  (4 (foreign-procedure func-ptr (scheme-object scheme-object scheme-object scheme-object) scheme-object))
+                  (5 (foreign-procedure func-ptr (scheme-object scheme-object scheme-object scheme-object scheme-object) scheme-object))
+                  (6 (foreign-procedure func-ptr (scheme-object scheme-object scheme-object scheme-object scheme-object scheme-object) scheme-object))
+                  (7 (foreign-procedure func-ptr (scheme-object scheme-object scheme-object scheme-object scheme-object scheme-object scheme-object) scheme-object))
+                  (8 (foreign-procedure func-ptr (scheme-object scheme-object scheme-object scheme-object scheme-object scheme-object scheme-object scheme-object) scheme-object))
+                  ;; MANY
+                  (-2 (foreign-procedure func-ptr (iptr void*) scheme-object))
+                  ;; UNEVALLED
+                  (-1 (foreign-procedure func-ptr (scheme-object) scheme-object)))])
+      proc
+      ;; (lambda args
+      ;;   (critical-section
+      ;;    (printf "calling 0x~x (~a..~a) with ~a args\n"
+      ;;            func-ptr min-args max-args (length args)))
+      ;;   (apply proc args))
+      ))
+
+  (define (condition-case-helper fun-ptr body-form handlers)
+    (call/cc
+     (lambda (k)
+       ((foreign-procedure fun-ptr (scheme-object
+                                    scheme-object
+                                    scheme-object)
+                           scheme-object)
+        body-form handlers k))))
+
   (define (hashtable-values obj)
     (let-values ([(keys values) (hashtable-entries obj)])
       values))
@@ -253,9 +287,9 @@
          )))
 
     #;(when #t
-    (printf "running alloc_test\n")     ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ;
-    (collect-notify #t)                 ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ;
-    ((foreign-procedure __collect_safe "alloc_test" () void)) ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ;
+    (printf "running alloc_test\n")     ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ;
+    (collect-notify #t)                 ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ;
+    ((foreign-procedure __collect_safe "alloc_test" () void)) ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ;
     (exit 1))
 
     ;; (elisp-funcall 'load "scheme-internal")
