@@ -257,9 +257,6 @@ void
 scheme_init(void) {
   load_magic_refs ();
 
-  const char *char_ptr = NULL;
-  const char **argv = &char_ptr;
-
   SCHEME_ASSERT(0, !scheme_initialized);
 
   chez_scheme_init(NULL);
@@ -294,7 +291,8 @@ scheme_init(void) {
   chez_foreign_symbol("abort", abort);
   chez_foreign_symbol("Fequal", Fequal);
   chez_foreign_symbol("Fsxhash_equal", Fsxhash_equal);
-  chez_scheme_script(BUILD_ROOT "/scheme/main.ss", 0, argv);
+  chez_scheme_script(BUILD_ROOT "/scheme/init.ss", 2,
+                     (const char*[]) {NULL, BUILD_ROOT "/scheme"});
   scheme_call0 ("emacs-init");
 
 #define SCHEME_FPTR_DEF(scheme_name, c_name)    \

@@ -7,6 +7,7 @@
 ** Represent lisp vectors as scheme vectors
 ** Implement finalizers--trivial using guardian
 ** Update deps.mk
+** Implement Lisp conditions as Scheme conditions
 
 * DONE
 

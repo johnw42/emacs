@@ -341,6 +341,9 @@ struct Lisp_Frame_Layout {
 };
 
 struct Lisp_Frame_Record {
+#ifdef ENABLE_CHECKING
+  const char *func_name;
+#endif
   struct Lisp_Frame_Record *prev;
   struct Lisp_Frame_Layout *layout;
   struct Lisp_Array_Record *arrays;
@@ -375,8 +378,8 @@ void walk_lisp_stack (void (*f)(void *, Lisp_Object *), void *);
   (void) (this_lisp_frame_type *) 0;                                    \
   PP_MAP(LISP_LOCAL_VAR, __VA_ARGS__)                                   \
   struct Lisp_Frame_Record this_lisp_frame_record =                     \
-    {.prev = lisp_stack_ptr, .layout = &this_lisp_frame_layout,         \
-     .arrays = NULL};                                                   \
+    {LISP_FRAME_INFO_FUNC .prev = lisp_stack_ptr,                       \
+     .layout = &this_lisp_frame_layout, .arrays = NULL};                \
   if (!is_this_lisp_frame_layout_init)                                  \
     {                                                                   \
       is_this_lisp_frame_layout_init = true;                            \
@@ -422,9 +425,21 @@ void walk_lisp_stack (void (*f)(void *, Lisp_Object *), void *);
   __VA_OPT__(PP_MAP(LISP_LOCAL_ADDR, __VA_ARGS__))
 #define EXIT_LISP_FRAME_NO_RETURN()                     \
   (lisp_stack_ptr = this_lisp_frame_record.prev)
-#define SAVE_LISP_FRAME_PTR() \
+#define SAVE_LISP_FRAME_PTR()                                           \
   struct Lisp_Frame_Record *saved_lisp_stack_ptr = lisp_stack_ptr
-#define RESTORE_LISP_FRAME_PTR() (lisp_stack_ptr = saved_lisp_stack_ptr)
+/*;                                                                     \
+  TRACEF ("saved frame ptr in %s: %p", __func__, lisp_stack_ptr)*/
+
+#define RESTORE_LISP_FRAME_PTR()                                \
+  do                                                            \
+    {                                                           \
+  /*TRACEF ("restoring frame ptr in %s: %p -> %p",              \
+              __func__,                                         \
+              lisp_stack_ptr,                                   \
+              saved_lisp_stack_ptr);*/                          \
+      lisp_stack_ptr = saved_lisp_stack_ptr;                    \
+    }                                                           \
+  while (0)
 
 #define REGISTER_LISP_GLOBALS(...) \
   do { __VA_OPT__ (PP_MAP (REGISTER_LISP_GLOBAL, __VA_ARGS__)) } while (0)

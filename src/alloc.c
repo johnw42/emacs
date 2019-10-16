@@ -8873,6 +8873,8 @@ before_scheme_gc (void)
   garbage_collect_1 (end);
   TRACEF ("did garbage_collect_1");
 
+  for (struct handler *h = handlerlist; h; h = h ->next)
+    mark_object_ptr ((Lisp_Object *) &h->continuation);
   for (size_t i = 0; i < num_scheme_globals; i++)
     for (size_t j = 0; j < scheme_globals[i].count; j++)
       mark_object_ptr (&scheme_globals[i].addr[j]);

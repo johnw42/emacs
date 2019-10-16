@@ -3762,10 +3762,6 @@ struct handler
 
   /* Most global vars are reset to their value via the specpdl mechanism,
      but a few others are handled by storing their value here.  */
-#ifdef HAVE_CHEZ_SCHEME
-  chez_ptr continuation;
-  chez_ptr cont_arg;
-#endif
   sys_jmp_buf jmp;
   EMACS_INT f_lisp_eval_depth;
   ptrdiff_t pdlcount;
@@ -3773,6 +3769,8 @@ struct handler
   int interrupt_input_blocked;
 
 #ifdef HAVE_CHEZ_SCHEME
+  chez_ptr continuation;
+  int handler_index;
   int disable_scheme_gc;
   struct Lisp_Frame_Record *lisp_stack_ptr;
 #endif
