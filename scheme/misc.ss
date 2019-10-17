@@ -150,19 +150,96 @@
 ;;       [(x f ...)
 ;;        (cond)])))
 
+(meta define subr-max-args 8)
+
+(define nil 'nil)
+
+(define-syntax wrap-function-impl
+  (lambda (x)
+    (syntax-case x ()
+      [(_ func-ptr-form min-args-form max-args-form)
+       (let* ([lambda-case
+               (lambda (num-args max-args)
+                 (let ([params (generate-temporaries
+                                (iota num-args))]
+                       [filler (make-list (- max-args num-args)
+                                          #'nil)])
+                   #`[#,params
+                      (proc #,@params #,@filler)]))]
+              [lambda-cases
+               (lambda (min-args max-args)
+                 (map (lambda (num-args)
+                        (lambda-case num-args max-args))
+                      (map (lambda (i) (+ i min-args))
+                           (iota (+ 1 (- max-args min-args))))))]
+              [min-clause
+               (lambda (min-args max-args)
+                 #`(#,min-args
+                    #,(if (= min-args max-args)
+                          #'proc
+                          #`(case-lambda
+                             #,@(lambda-cases min-args max-args)))))]
+              [min-clauses
+               (lambda (max-args)
+                 (map (lambda (min-args) (min-clause min-args max-args))
+                      (iota (+ 1 max-args))))]
+              [max-clause
+               (lambda (max-args)
+                 (let ([arg-types
+                        (map (lambda (_) #'scheme-object)
+                             (iota max-args))])
+                   #`(#,max-args
+                      (let ([proc (foreign-procedure func-ptr-form
+                                                     #,arg-types
+                                                     scheme-object)])
+                        (case min-args-form
+                          #,@(min-clauses max-args))))))]
+              [max-clauses
+               (map max-clause
+                    (iota (+ 1 subr-max-args)))])
+         #`(case max-args-form
+             #,@max-clauses))])))
+
+(define scheme-object-ptr
+  ;; Convert a Scheme object reference into a fixnum representing
+  ;; its address (until the next GC).
+  (foreign-procedure
+   (foreign-callable-entry-point
+    (foreign-callable (lambda (x) x) (void*) void*))
+   (scheme-object)
+   void*))
+
 (define (wrap-function func-ptr min-args max-args)
-  (let ([proc (case max-args
-                (0 (foreign-procedure func-ptr () scheme-object))
-                (1 (foreign-procedure func-ptr (scheme-object) scheme-object))
-                (2 (foreign-procedure func-ptr (scheme-object scheme-object) scheme-object))
-                (3 (foreign-procedure func-ptr (scheme-object scheme-object scheme-object) scheme-object))
-                (4 (foreign-procedure func-ptr (scheme-object scheme-object scheme-object scheme-object) scheme-object))
-                (5 (foreign-procedure func-ptr (scheme-object scheme-object scheme-object scheme-object scheme-object) scheme-object))
-                (6 (foreign-procedure func-ptr (scheme-object scheme-object scheme-object scheme-object scheme-object scheme-object) scheme-object))
-                (7 (foreign-procedure func-ptr (scheme-object scheme-object scheme-object scheme-object scheme-object scheme-object scheme-object) scheme-object))
-                (8 (foreign-procedure func-ptr (scheme-object scheme-object scheme-object scheme-object scheme-object scheme-object scheme-object scheme-object) scheme-object))
-                ;; MANY
-                (-2 (foreign-procedure func-ptr (iptr void*) scheme-object))
-                ;; UNEVALLED
-                (-1 (foreign-procedure func-ptr (scheme-object) scheme-object)))])
-    proc)))
+  (case max-args
+    ;; MANY
+    (-2 (let ([proc (foreign-procedure func-ptr
+                                       (iptr void*)
+                                       scheme-object)])
+          (lambda args
+            (let* ([num-args (length args)]
+                   [args-array (foreign-alloc
+                                (fx* (foreign-sizeof 'void*)
+                                     num-args))])
+              (dynamic-wind
+                  (lambda () #f)
+                  (lambda ()
+                    (critical-section
+                     (do ([index 0 (fx1+ index)]
+                          [args args (cdr args)])
+                         ((fx= index num-args))
+                       (foreign-set! 'void*
+                                     args-array
+                                     (fx* (foreign-sizeof 'void*)
+                                          index)
+                                     (scheme-object-ptr
+                                      (car args)))))
+                    (proc num-args args-array))
+                  (lambda ()
+                    (foreign-free args-array)))))))
+    ;; UNEVALLED
+    (-1 (foreign-procedure func-ptr (scheme-object) scheme-object))
+    (else
+     (wrap-function-impl func-ptr min-args max-args)))))
+
+(assert (= (foreign-sizeof 'scheme-object)
+           (foreign-sizeof 'void*)))
