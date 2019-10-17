@@ -291,8 +291,9 @@ scheme_init(void) {
   chez_foreign_symbol("abort", abort);
   chez_foreign_symbol("Fequal", Fequal);
   chez_foreign_symbol("Fsxhash_equal", Fsxhash_equal);
-  chez_scheme_script(BUILD_ROOT "/scheme/init.ss", 2,
-                     (const char*[]) {NULL, BUILD_ROOT "/scheme"});
+  int error = chez_scheme_script(BUILD_ROOT "/scheme/init.ss", 2,
+                                 (const char*[]) {NULL, BUILD_ROOT "/scheme"});
+  eassert (error == 0);
   scheme_call0 ("emacs-init");
 
 #define SCHEME_FPTR_DEF(scheme_name, c_name)    \
