@@ -1,17 +1,49 @@
-* NOT DONE
+* Critical path
 
- * Check Scheme build for errors at build time
-** Split Scheme code into files
+** Compile to machine code:
+*** Translate macro-expanded Lisp code to Scheme code
+*** Translate bytecode to Scheme code
+** Fix crashes
 ** Find equivalent of unexec
+** Translate low-level subrs to Scheme
+*** set
+*** symbol-value
+*** symbol-function
+*** funcall
+*** apply
+*** basic operators and data manipulation
+** Represent t and nil as #t and #f/()
+   Use '() in cdr, #f everywhere else
+** Represent strings as Scheme strings
 ** Represent Lisp functions as Scheme functions
 ** Represent lisp vectors as scheme vectors
+** Represent hashtables with Scheme hashtables
 ** Implement finalizers--trivial using guardian
-** Update deps.mk
+** Define semantics for loading user-defined Scheme code
+** Define Scheme API for Elisp features
+*** require/provide
+*** non-local variables
+*** advised functions
+
+* Nonesstential but possibly helpful
+
+** Check Scheme build for errors at build time
+** Implement interpreter with Scheme code
+** Define Emacs Scheme dialect (extension .es?)
+** Represent CL structs with Scheme structs
+
+* Nice to have
+
 ** Implement Lisp conditions as Scheme conditions
+
+* Optimizations
+
+** Replace chez_call* and scheme_call* with C function pointers
+** Update deps.mk
 
 * DONE
 
+** Split Scheme code into files
 ** Reduce re-allocation of gc_vector
-
 ** Use guardian to free malloc'd memory
 ** Rework GC.  Copy scheme refs to vector before GC, copy out after GC.  Keep vector per object.

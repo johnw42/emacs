@@ -253,6 +253,32 @@ load_magic_refs (void)
   fclose (magic_refs_file);
 }
 
+static Lisp_Object
+call_many_args_subr (Lisp_Object (*f)(ptrdiff_t nargs, Lisp_Object *args),
+                     Lisp_Object args_list)
+{
+  ENTER_LISP_FRAME ((args_list), result);
+
+  SCHEME_ASSERT (40,
+                 chez_pairp (CHEZ (args_list)) ||
+                 CHEZ (args_list) == chez_nil);
+  ptrdiff_t nargs = 0;
+  for (chez_ptr tail = CHEZ (args_list);
+       tail != chez_nil;
+       tail = chez_cdr (tail))
+    nargs++;
+  LISP_DYNAMIC_ARRAY (args);
+  SAFE_ALLOCA_LISP (args, nargs);
+  ptrdiff_t i = 0;
+  for (chez_ptr tail = CHEZ (args_list);
+       tail != chez_nil;
+       tail = chez_cdr (tail), i++)
+    args[i] = UNCHEZ (chez_car (tail));
+  result = f (nargs, args);
+  SAFE_FREE ();
+  EXIT_LISP_FRAME (result);
+}
+
 void
 scheme_init(void) {
   load_magic_refs ();
@@ -288,7 +314,7 @@ scheme_init(void) {
   chez_foreign_symbol("do_scheme_gc", do_scheme_gc);
   chez_foreign_symbol("before_scheme_gc", before_scheme_gc);
   chez_foreign_symbol("after_scheme_gc", after_scheme_gc);
-  chez_foreign_symbol("abort", abort);
+  chez_foreign_symbol("call_many_args_subr", call_many_args_subr);
   chez_foreign_symbol("Fequal", Fequal);
   chez_foreign_symbol("Fsxhash_equal", Fsxhash_equal);
   int error = chez_scheme_script(BUILD_ROOT "/scheme/init.ss", 2,

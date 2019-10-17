@@ -1418,7 +1418,6 @@ internal_lisp_condition_case (Lisp_Object var, Lisp_Object bodyform,
 
   SCHEME_ASSERT (40, chez_fixnump (chez_cdr (cont_result)));
   handler_index = chez_fixnum_value (chez_cdr (cont_result));
-  TRACEF ("caught exception with index %d/%d", handler_index, (int)clausenb);
   RESTORE_LISP_FRAME_PTR();
 
   while (chosen_handler->handler_index != handler_index)
@@ -1570,7 +1569,6 @@ internal_condition_case (Lisp_Object (*bfun) (void), Lisp_Object handlers,
   if (chez_car (cont_result) == chez_false)
     EXIT_LISP_FRAME (UNCHEZ (chez_cdr (cont_result)));
 
-  TRACEF ("caught exception %s", __func__);
   RESTORE_LISP_FRAME_PTR();
   val = handlerlist->val;
   eassert (handlerlist == c);
@@ -1633,7 +1631,6 @@ internal_condition_case_1 (Lisp_Object (*bfun) (Lisp_Object), Lisp_Object arg,
   if (chez_car (cont_result) == chez_false)
     EXIT_LISP_FRAME (UNCHEZ (chez_cdr (cont_result)));
 
-  TRACEF ("caught exception %s", __func__);
   RESTORE_LISP_FRAME_PTR();
   val = handlerlist->val;
   eassert (handlerlist == c);
@@ -1700,7 +1697,6 @@ internal_condition_case_2 (Lisp_Object (*bfun) (Lisp_Object, Lisp_Object),
   if (chez_car (cont_result) == chez_false)
     EXIT_LISP_FRAME (UNCHEZ (chez_cdr (cont_result)));
 
-  TRACEF ("caught exception %s", __func__);
   RESTORE_LISP_FRAME_PTR();
   val = handlerlist->val;
   eassert (handlerlist == c);
@@ -1769,7 +1765,6 @@ internal_condition_case_n (Lisp_Object (*bfun) (ptrdiff_t, Lisp_Object *),
   if (chez_car (cont_result) == chez_false)
     EXIT_LISP_FRAME (UNCHEZ (chez_cdr (cont_result)));
 
-  TRACEF ("caught exception %s", __func__);
   RESTORE_LISP_FRAME_PTR();
   val = handlerlist->val;
   eassert (handlerlist == c);
@@ -2605,12 +2600,36 @@ eval_sub (Lisp_Object form)
       else if (XSUBR (fun)->max_args == UNEVALLED)
         {
 #ifdef HAVE_CHEZ_SCHEME
-          if (check_special_case ())
-            val = UNCHEZ (chez_call1 (XSUBR (fun)->scheme_function, CHEZ (args_left)));
-          else
+          val = UNCHEZ (chez_call1 (XSUBR (fun)->scheme_function, CHEZ (args_left)));
+#else
+          val = (XSUBR (fun)->function.aUNEVALLED) (args_left);
 #endif
-	val = (XSUBR (fun)->function.aUNEVALLED) (args_left);
         }
+#ifdef HAVE_CHEZ_SCHEME
+      else
+        {
+	  /* Build array of evaluated arguments.  */
+	  ptrdiff_t argnum = 0;
+          chez_iptr num_args = XINT (numargs);
+	  LISP_DYNAMIC_ARRAY (vals);
+	  SAFE_ALLOCA_LISP (vals, num_args);
+	  while (CONSP (args_left) && argnum < num_args)
+	    {
+	      arg = XCAR (args_left);
+	      args_left = XCDR (args_left);
+	      vals[argnum++] = eval_sub (arg);
+	    }
+
+          chez_ptr proc = XSUBR (fun)->scheme_function;
+          chez_initframe (num_args);
+          for (chez_iptr i = 0; i < num_args; i++)
+            chez_put_arg(i + 1, CHEZ (vals[i]));
+          // TODO: Use chez_callN
+          val = UNCHEZ (chez_call (proc, num_args));
+
+          SAFE_FREE ();
+        }
+#else
       else if (XSUBR (fun)->max_args == MANY)
 	{
 	  /* Pass a vector of evaluated arguments.  */
@@ -2627,13 +2646,6 @@ eval_sub (Lisp_Object form)
 
 	  set_backtrace_args (specpdl + count, vals, argnum);
 
-#ifdef HAVE_CHEZ_SCHEME
-          if (check_special_case())
-            val = UNCHEZ (chez_call2 (XSUBR (fun)->scheme_function,
-                                      chez_fixnum (argnum),
-                                      chez_fixnum ((chez_iptr) vals)));
-          else
-#endif
 	  val = XSUBR (fun)->function.aMANY (argnum, vals);
 
 	  check_cons_list ();
@@ -2657,38 +2669,6 @@ eval_sub (Lisp_Object form)
 
 	  set_backtrace_args (specpdl + count, argvals, XINT (numargs));
 
-#ifdef HAVE_CHEZ_SCHEME
-          if (check_special_case()) {
-          chez_ptr proc = XSUBR (fun)->scheme_function;
-          chez_ptr result;
-          switch (maxargs)
-            {
-            case 0:
-              result = chez_call0 (proc);
-              break;
-            case 1:
-              result = chez_call1 (proc, CHEZ (argvals[0]));
-              break;
-            case 2:
-              result = chez_call2 (proc,
-                                   CHEZ (argvals[0]),
-                                   CHEZ (argvals[1]));
-              break;
-            case 3:
-              result = chez_call3 (proc,
-                                   CHEZ (argvals[0]),
-                                   CHEZ (argvals[1]),
-                                   CHEZ (argvals[2]));
-              break;
-            default:
-              chez_initframe (maxargs);
-              for (i = 0; i < maxargs; i++)
-                chez_put_arg (i + 1, CHEZ (argvals[i]));
-              result = chez_call (proc, maxargs);
-            }
-          val = UNCHEZ (result);
-          }else
-#endif
 	  switch (i)
 	    {
 	    case 0:
@@ -2738,6 +2718,7 @@ eval_sub (Lisp_Object form)
 	      emacs_abort ();
 	    }
 	}
+#endif
     }
   else if (COMPILEDP (fun) || MODULE_FUNCTIONP (fun))
     {
@@ -3308,8 +3289,10 @@ usage: (funcall FUNCTION &rest ARGUMENTS)  */)
 Lisp_Object
 funcall_subr (struct Lisp_Subr *subr, ptrdiff_t numargs, Lisp_Object *args)
 {
-  ENTER_LISP_FRAME ((), result, fun);
+  ENTER_LISP_FRAME_VA (numargs, args, (), result, fun);
+#ifndef HAVE_CHEZ_SCHEME
   LISP_LOCAL_ARRAY (internal_argbuf, 8);
+#endif
   result = Qnil;
 
   //suspend_scheme_gc();
@@ -3327,17 +3310,18 @@ funcall_subr (struct Lisp_Subr *subr, ptrdiff_t numargs, Lisp_Object *args)
       xsignal1 (Qinvalid_function, fun);
     }
 
-  else if (subr->max_args == MANY)
-    {
 #ifdef HAVE_CHEZ_SCHEME
-    if (check_special_case())
-      result = UNCHEZ (chez_call2 (subr->scheme_function,
-                                   chez_fixnum (numargs),
-                                   chez_fixnum ((chez_iptr) args)));
-    else
-#endif
-    result = (subr->function.aMANY) (numargs, args);
+  else
+    {
+      chez_ptr proc = subr->scheme_function;
+      chez_initframe (numargs);
+      for (int i = 0; i < numargs; i++)
+        chez_put_arg (i + 1, CHEZ (args[i]));
+      result = UNCHEZ (chez_call (proc, numargs));
     }
+#else
+  else if (subr->max_args == MANY)
+    result = (subr->function.aMANY) (numargs, args);
   else
     {
       Lisp_Object *internal_args;
@@ -3351,38 +3335,6 @@ funcall_subr (struct Lisp_Subr *subr, ptrdiff_t numargs, Lisp_Object *args)
         }
       else
         internal_args = args;
-#ifdef HAVE_CHEZ_SCHEME
-      if (check_special_case()) {
-      chez_ptr proc = subr->scheme_function;
-      chez_ptr sresult;
-      switch (subr->max_args)
-        {
-        case 0:
-          sresult = chez_call0 (proc);
-          break;
-        case 1:
-          sresult = chez_call1 (proc, CHEZ (internal_args[0]));
-          break;
-        case 2:
-          sresult = chez_call2 (proc,
-                               CHEZ (internal_args[0]),
-                               CHEZ (internal_args[1]));
-          break;
-        case 3:
-          sresult = chez_call3 (proc,
-                               CHEZ (internal_args[0]),
-                               CHEZ (internal_args[1]),
-                               CHEZ (internal_args[2]));
-          break;
-        default:
-          chez_initframe (subr->max_args);
-          for (int i = 0; i < subr->max_args; i++)
-            chez_put_arg (i + 1, CHEZ (internal_args[i]));
-          sresult = chez_call (proc, subr->max_args);
-        }
-      result = UNCHEZ (sresult);
-      } else
-#endif
       switch (subr->max_args)
         {
         case 0:
@@ -3435,6 +3387,7 @@ funcall_subr (struct Lisp_Subr *subr, ptrdiff_t numargs, Lisp_Object *args)
           emacs_abort ();
         }
     }
+#endif
 
   //resume_scheme_gc ();
   EXIT_LISP_FRAME (result);

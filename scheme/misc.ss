@@ -12,6 +12,7 @@
 (define (emacs-init)
   (collect-request-handler
    (lambda ()
+     (printf "collect request\n")
      (parameterize ([collect-request-handler
                      (lambda ()
                        (printf "skipping gc from scheme\n"))])
@@ -209,35 +210,22 @@
    (scheme-object)
    void*))
 
+(define call-many-args-subr
+  (foreign-procedure "call_many_args_subr"
+                     (void* scheme-object)
+                     scheme-object))
+
 (define (wrap-function func-ptr min-args max-args)
   (case max-args
     ;; MANY
-    (-2 (let ([proc (foreign-procedure func-ptr
-                                       (iptr void*)
-                                       scheme-object)])
-          (lambda args
-            (let* ([num-args (length args)]
-                   [args-array (foreign-alloc
-                                (fx* (foreign-sizeof 'void*)
-                                     num-args))])
-              (dynamic-wind
-                  (lambda () #f)
-                  (lambda ()
-                    (critical-section
-                     (do ([index 0 (fx1+ index)]
-                          [args args (cdr args)])
-                         ((fx= index num-args))
-                       (foreign-set! 'void*
-                                     args-array
-                                     (fx* (foreign-sizeof 'void*)
-                                          index)
-                                     (scheme-object-ptr
-                                      (car args)))))
-                    (proc num-args args-array))
-                  (lambda ()
-                    (foreign-free args-array)))))))
+    (-2
+     (lambda args
+       (call-many-args-subr func-ptr args)))
     ;; UNEVALLED
-    (-1 (foreign-procedure func-ptr (scheme-object) scheme-object))
+    (-1
+     (foreign-procedure func-ptr
+                        (scheme-object)
+                        scheme-object))
     (else
      (wrap-function-impl func-ptr min-args max-args)))))
 

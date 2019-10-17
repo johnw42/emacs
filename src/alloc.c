@@ -8774,6 +8774,7 @@ walk_lisp_stack_fun (void *data, Lisp_Object *ref)
 void
 do_scheme_gc (void)
 {
+  TRACEF ("do_scheme_gc");
   if (before_scheme_gc ())
     {
       scheme_call0 ("collect");
