@@ -318,8 +318,7 @@ the third, MAXDEPTH, the maximum stack depth used in this function.
 If the third argument is incorrect, Emacs may crash.  */)
   (Lisp_Object bytestr, Lisp_Object vector, Lisp_Object maxdepth)
 {
-  ENTER_LISP_FRAME ((bytestr, vector, maxdepth));
-  EXIT_LISP_FRAME (exec_byte_code (bytestr, vector, maxdepth, Qnil, 0, NULL));
+  return exec_byte_code (bytestr, vector, maxdepth, Qnil, 0, NULL);
 }
 
 static void

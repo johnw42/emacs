@@ -478,8 +478,7 @@ Each argument may be a string or a list or vector of characters (integers).
 usage: (concat &rest SEQUENCES)  */)
   (ptrdiff_t nargs, Lisp_Object *args)
 {
-  ENTER_LISP_FRAME_VA (nargs, args, ());
-  EXIT_LISP_FRAME (concat (nargs, args, Lisp_String, 0));
+  return concat (nargs, args, Lisp_String, 0);
 }
 
 DEFUN ("vconcat", Fvconcat, Svconcat, 0, MANY, 0,
@@ -489,8 +488,7 @@ Each argument may be a list, vector or string.
 usage: (vconcat &rest SEQUENCES)   */)
   (ptrdiff_t nargs, Lisp_Object *args)
 {
-  ENTER_LISP_FRAME_VA (nargs, args, ());
-  EXIT_LISP_FRAME (concat (nargs, args, Lisp_Vectorlike, 0));
+  return concat (nargs, args, Lisp_Vectorlike, 0);
 }
 
 

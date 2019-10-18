@@ -3301,7 +3301,7 @@ DEFUN ("cons", Fcons, Scons, 2, 2, 0,
 {
   ENTER_LISP_FRAME ((car, cdr), val);
 #ifdef HAVE_CHEZ_SCHEME
-  val = UNCHEZ (chez_cons (CHEZ (car), CHEZ (cdr)));
+  val = UNCHEZ (chez_cons (CHEZ (car), NILP (cdr) ? chez_nil : CHEZ (cdr)));
   INSPECT_SCHEME_REF (val, "Fcons");
   SCHEME_ASSERT (50, CONSP(val));
   EXIT_LISP_FRAME (val);

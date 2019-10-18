@@ -367,7 +367,7 @@ error !;
 #define lisp_h_SYMBOLP(x) chez_symbolp (CHEZ (x))
 #define lisp_h_VECTORLIKEP(x) SCHEME_VECTORP(x, scheme_vectorlike_symbol)
 #define lisp_h_XCAR(c) (SCHEME_ASSERT (50, chez_pairp (CHEZ (c))), UNCHEZ (chez_car (CHEZ (c))))
-#define lisp_h_XCDR(c) (SCHEME_ASSERT (50, chez_pairp (CHEZ (c))), UNCHEZ (chez_cdr (CHEZ (c))))
+#define lisp_h_XCDR(c) (SCHEME_ASSERT (50, chez_pairp (CHEZ (c))), chez_cdr (CHEZ (c)) == chez_nil ? Qnil : UNCHEZ (chez_cdr (CHEZ (c))))
 #define lisp_h_make_number(n) UNCHEZ (chez_fixnum (n))
 # define lisp_h_XFASTINT(a) XINT (a)
 # define lisp_h_XINT(a) chez_fixnum_value (CHEZ(a))
