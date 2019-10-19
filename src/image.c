@@ -6079,6 +6079,7 @@ png_load_body (struct frame *f, struct image *img, struct png_load_context *c)
     {
       RESTORE_LISP_FRAME_PTR();
     error:
+      CHECK_LISP_FRAME_PTR();
       if (c->png_ptr)
 	png_destroy_read_struct (&c->png_ptr, &c->info_ptr, &c->end_info);
       xfree (c->pixels);
@@ -6086,6 +6087,10 @@ png_load_body (struct frame *f, struct image *img, struct png_load_context *c)
       if (c->fp)
 	fclose (c->fp);
       EXIT_LISP_FRAME (0);
+    }
+  else
+    {
+      CHECK_LISP_FRAME_PTR ();
     }
 
   /* Read image info.  */

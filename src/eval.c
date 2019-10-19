@@ -1202,6 +1202,7 @@ internal_catch (Lisp_Object tag,
   SAVE_LISP_FRAME_PTR();
   if (! sys_setjmp (c->jmp))
     {
+      CHECK_LISP_FRAME_PTR ();
       val = func (arg);
       eassert (handlerlist == c);
       handlerlist = c->next;
@@ -1414,7 +1415,10 @@ internal_lisp_condition_case (Lisp_Object var, Lisp_Object bodyform,
   SCHEME_ASSERT (40, chez_pairp (cont_result));
   SCHEME_ASSERT (40, chez_booleanp (chez_car (cont_result)));
   if (chez_car (cont_result) == chez_false)
-    EXIT_LISP_FRAME (UNCHEZ (chez_cdr (cont_result)));
+    {
+      CHECK_LISP_FRAME_PTR ();
+      EXIT_LISP_FRAME (UNCHEZ (chez_cdr (cont_result)));
+    }
 
   SCHEME_ASSERT (40, chez_fixnump (chez_cdr (cont_result)));
   handler_index = chez_fixnum_value (chez_cdr (cont_result));
@@ -1523,6 +1527,10 @@ internal_lisp_condition_case (Lisp_Object var, Lisp_Object bodyform,
 	  specbind (handler_var, val);
 	  EXIT_LISP_FRAME (unbind_to (count, Fprogn (handler_body)));
 	}
+      else
+        {
+          CHECK_LISP_FRAME_PTR ();
+        }
     }
 
   result = eval_sub (bodyform);
@@ -1567,7 +1575,10 @@ internal_condition_case (Lisp_Object (*bfun) (void), Lisp_Object handlers,
   SCHEME_ASSERT (40, chez_pairp (cont_result));
   SCHEME_ASSERT (40, chez_booleanp (chez_car (cont_result)));
   if (chez_car (cont_result) == chez_false)
-    EXIT_LISP_FRAME (UNCHEZ (chez_cdr (cont_result)));
+    {
+      CHECK_LISP_FRAME_PTR ();
+      EXIT_LISP_FRAME (UNCHEZ (chez_cdr (cont_result)));
+    }
 
   RESTORE_LISP_FRAME_PTR();
   val = handlerlist->val;
@@ -1591,6 +1602,7 @@ internal_condition_case (Lisp_Object (*bfun) (void), Lisp_Object handlers,
     {
       val = bfun ();
 
+      CHECK_LISP_FRAME_PTR ();
       eassert (handlerlist == c);
       handlerlist = c->next;
       EXIT_LISP_FRAME (val);
@@ -1629,7 +1641,10 @@ internal_condition_case_1 (Lisp_Object (*bfun) (Lisp_Object), Lisp_Object arg,
   SCHEME_ASSERT (40, chez_pairp (cont_result));
   SCHEME_ASSERT (40, chez_booleanp (chez_car (cont_result)));
   if (chez_car (cont_result) == chez_false)
-    EXIT_LISP_FRAME (UNCHEZ (chez_cdr (cont_result)));
+    {
+      CHECK_LISP_FRAME_PTR ();
+      EXIT_LISP_FRAME (UNCHEZ (chez_cdr (cont_result)));
+    }
 
   RESTORE_LISP_FRAME_PTR();
   val = handlerlist->val;
@@ -1653,6 +1668,7 @@ internal_condition_case_1 (Lisp_Object (*bfun) (Lisp_Object), Lisp_Object arg,
     {
       val = bfun (arg);
 
+      CHECK_LISP_FRAME_PTR ();
       eassert (handlerlist == c);
       handlerlist = c->next;
       EXIT_LISP_FRAME (val);
@@ -1695,7 +1711,10 @@ internal_condition_case_2 (Lisp_Object (*bfun) (Lisp_Object, Lisp_Object),
   SCHEME_ASSERT (40, chez_pairp (cont_result));
   SCHEME_ASSERT (40, chez_booleanp (chez_car (cont_result)));
   if (chez_car (cont_result) == chez_false)
-    EXIT_LISP_FRAME (UNCHEZ (chez_cdr (cont_result)));
+    {
+      CHECK_LISP_FRAME_PTR ();
+      EXIT_LISP_FRAME (UNCHEZ (chez_cdr (cont_result)));
+    }
 
   RESTORE_LISP_FRAME_PTR();
   val = handlerlist->val;
@@ -1719,6 +1738,7 @@ internal_condition_case_2 (Lisp_Object (*bfun) (Lisp_Object, Lisp_Object),
     {
       val = bfun (arg1, arg2);
 
+      CHECK_LISP_FRAME_PTR ();
       eassert (handlerlist == c);
       handlerlist = c->next;
       EXIT_LISP_FRAME (val);
@@ -1763,7 +1783,10 @@ internal_condition_case_n (Lisp_Object (*bfun) (ptrdiff_t, Lisp_Object *),
   SCHEME_ASSERT (40, chez_pairp (cont_result));
   SCHEME_ASSERT (40, chez_booleanp (chez_car (cont_result)));
   if (chez_car (cont_result) == chez_false)
-    EXIT_LISP_FRAME (UNCHEZ (chez_cdr (cont_result)));
+    {
+      CHECK_LISP_FRAME_PTR ();
+      EXIT_LISP_FRAME (UNCHEZ (chez_cdr (cont_result)));
+    }
 
   RESTORE_LISP_FRAME_PTR();
   val = handlerlist->val;
@@ -1787,6 +1810,7 @@ internal_condition_case_n (Lisp_Object (*bfun) (ptrdiff_t, Lisp_Object *),
     {
       val = bfun (nargs, args);
 
+      CHECK_LISP_FRAME_PTR ();
       eassert (handlerlist == c);
       handlerlist = c->next;
       EXIT_LISP_FRAME (val);

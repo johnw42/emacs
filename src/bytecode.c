@@ -400,6 +400,17 @@ exec_byte_code (Lisp_Object bytestr, Lisp_Object vector, Lisp_Object maxdepth,
 	  PUSH (Qnil);
     }
 
+
+#ifdef HAVE_CHEZ_SCHEME
+#pragma GCC diagnostic ignored "-Wtrampolines"
+  void inner_loop(chez_ptr continuation) {
+    if (continuation != chez_false)
+      {
+        SCHEME_ASSERT (25, chez_procedurep (continuation));
+        handlerlist->continuation = continuation;
+      }
+#endif
+
   while (true)
     {
       int op;
@@ -469,7 +480,6 @@ exec_byte_code (Lisp_Object bytestr, Lisp_Object vector, Lisp_Object maxdepth,
 	};
 
 #endif
-
 
       FIRST
 	{
@@ -739,7 +749,11 @@ exec_byte_code (Lisp_Object bytestr, Lisp_Object vector, Lisp_Object maxdepth,
 	  NEXT;
 
 	CASE (Breturn):
+#ifdef HAVE_CHEZ_SCHEME
+          return;
+#else
 	  goto exit;
+#endif
 
 	CASE (Bdiscard):
 	  DISCARD (1);
@@ -793,8 +807,22 @@ exec_byte_code (Lisp_Object bytestr, Lisp_Object vector, Lisp_Object maxdepth,
 	    c->bytecode_dest = FETCH2;
 	    c->bytecode_top = top;
 
+            SCHEME_ASSERT (25, c == handlerlist);
             SAVE_LISP_FRAME_PTR();
+#ifdef HAVE_CHEZ_SCHEME
+            // This call doesn't return until an error is signalled
+            // (using unwind_to_catch) or the code in the
+            // condition-case exits normally by executing a POPHANDLER
+            // instruction (below).
+            chez_ptr is_error =
+              scheme_call1 ("bytecode-setjmp-helper",
+                            chez_fixnum ((chez_iptr) inner_loop));
+            if (is_error == chez_false)
+              CHECK_LISP_FRAME_PTR ();
+            else
+#else
 	    if (sys_setjmp (c->jmp))
+#endif
 	      {
                 RESTORE_LISP_FRAME_PTR();
 		struct handler *c = handlerlist;
@@ -804,13 +832,16 @@ exec_byte_code (Lisp_Object bytestr, Lisp_Object vector, Lisp_Object maxdepth,
 		PUSH (c->val);
 		goto op_branch;
 	      }
-
 	    NEXT;
 	  }
 
 	CASE (Bpophandler):	/* New in 24.4.  */
 	  handlerlist = handlerlist->next;
+#ifdef HAVE_CHEZ_SCHEME
+          return;
+#else
 	  NEXT;
+#endif
 
 	CASE (Bunwind_protect):	/* FIXME: avoid closure for lexbind.  */
 	  {
@@ -1511,7 +1542,12 @@ exec_byte_code (Lisp_Object bytestr, Lisp_Object vector, Lisp_Object maxdepth,
 	}
     }
 
+#ifdef HAVE_CHEZ_SCHEME
+  }  // inner_loop
+  inner_loop(chez_false);
+#else
  exit:
+#endif
 
   /* Binds and unbinds are supposed to be compiled balanced.  */
   if (SPECPDL_INDEX () != count)

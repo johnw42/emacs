@@ -427,6 +427,8 @@ void walk_lisp_stack (void (*f)(void *, Lisp_Object *), void *);
   (lisp_stack_ptr = this_lisp_frame_record.prev)
 #define SAVE_LISP_FRAME_PTR()                                           \
   struct Lisp_Frame_Record *saved_lisp_stack_ptr = lisp_stack_ptr
+#define CHECK_LISP_FRAME_PTR()                         \
+  SCHEME_ASSERT (0, lisp_stack_ptr == saved_lisp_stack_ptr)
 /*;                                                                     \
   TRACEF ("saved frame ptr in %s: %p", __func__, lisp_stack_ptr)*/
 

@@ -2358,6 +2358,7 @@ CHAR_TABLE_SET (Lisp_Object ct, int idx, Lisp_Object val)
 struct Lisp_Subr
   {
     union vectorlike_header header;
+    chez_ptr scheme_function;  // must be first
     union {
       Lisp_Object (*a0) (void);
       Lisp_Object (*a1) (Lisp_Object);
@@ -2371,7 +2372,6 @@ struct Lisp_Subr
       Lisp_Object (*aUNEVALLED) (Lisp_Object args);
       Lisp_Object (*aMANY) (ptrdiff_t, Lisp_Object *);
     } function;
-    chez_ptr scheme_function;
     short min_args, max_args;
     const char *init_symbol_name;
     Lisp_Object symbol;
@@ -3762,7 +3762,9 @@ struct handler
 
   /* Most global vars are reset to their value via the specpdl mechanism,
      but a few others are handled by storing their value here.  */
+#ifndef HAVE_CHEZ_SCHEME
   sys_jmp_buf jmp;
+#endif
   EMACS_INT f_lisp_eval_depth;
   ptrdiff_t pdlcount;
   int poll_suppress_count;

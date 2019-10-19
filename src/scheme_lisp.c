@@ -63,14 +63,23 @@ unsigned gdb_flags = 0;
   chez_ptr scheme_##c_name = chez_false
 #include "scheme_fptr.h"
 
+
+DEFUN ("scheme-top-level-value", Fscheme_top_level_value, Sscheme_top_level_value, 1, 1, 0,
+       doc: /* Get a Scheme top-level value by name. */)
+  (Lisp_Object name)
+{
+  abort();
+}
+
 void syms_of_scheme_lisp(void) {
+  DEFSYM(Qscheme_apply, "scheme-apply");
   /* DEFSYM(Qscheme_value_ref_id, "scheme-value-ref-id"); */
   /* DEFSYM(Qensure_scheme_value_ref, "ensure-scheme-value-ref"); */
   /* DEFSYM(Qensure_lisp_object_id, "ensure-lisp-object-id"); */
   /* DEFSYM(Qscheme_internal_reset, "scheme-internal-reset"); */
   /* defsubr(&Sscheme_funcall); */
-  /* defsubr(&Sscheme_top_level_value); */
   /* defsubr(&Sforget_scheme_object); */
+  defsubr(&Sscheme_top_level_value);
 }
 
 void scheme_deinit(void) {

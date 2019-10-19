@@ -1094,7 +1094,10 @@ command_loop (void)
       Vinternal__top_level_message = recover_top_level_message;
     }
   else
-    Vinternal__top_level_message = regular_top_level_message;
+    {
+      CHECK_LISP_FRAME_PTR ();
+      Vinternal__top_level_message = regular_top_level_message;
+    }
 #endif /* HAVE_STACK_OVERFLOW_HANDLING */
   if (command_loop_level > 0 || minibuf_level > 0)
     {
@@ -2658,6 +2661,10 @@ read_char (int commandflag, Lisp_Object map,
 	  }
       }
       goto non_reread;
+    }
+  else
+    {
+      CHECK_LISP_FRAME_PTR ();
     }
 
   /* Start idle timers if no time limit is supplied.  We don't do it

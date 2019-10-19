@@ -107,6 +107,9 @@
 (load "emacs-lisp/backquote")
 (load "subr")
 
+(if t ;;(fboundp 'scheme-top-level-value)
+    (load "emacs-lisp/scheme-internal"))
+
 ;; Do it after subr, since both after-load-functions and add-hook are
 ;; implemented in subr.el.
 (add-hook 'after-load-functions (lambda (f) (garbage-collect)))
@@ -256,9 +259,6 @@
 (load "replace")
 (load "emacs-lisp/tabulated-list")
 (load "buff-menu")
-
-(if (fboundp 'scheme-funcall)
-    (load "emacs-lisp/scheme-internal"))
 
 (if (fboundp 'x-create-frame)
     (progn

@@ -1,7 +1,8 @@
 (library (cc-helper)
   (export lisp-condition-case-helper
           condition-case-helper
-          catch-helper)
+          catch-helper
+          bytecode-setjmp-helper)
   (import (chezscheme))
 
   (define (lisp-condition-case-helper trampoline-ptr
@@ -78,4 +79,11 @@
                                scheme-object
                                scheme-object)
                               scheme-object)
-           func arg k)))))))
+           func arg k))))))
+
+  (define bytecode-setjmp-helper
+    (lambda (trampoline-ptr)
+      (call/cc
+       (lambda (k)
+         ((foreign-procedure trampoline-ptr (scheme-object) void) k)
+         #f)))))
