@@ -8742,6 +8742,11 @@ memgrep_max_hits = 1;
   return memgrep_last_found;
 }
 
+#ifdef NOISY_GC
+#define GC_TRACEF(...) TRACEF (__va_args__)
+#else
+#define GC_TRACEF(...) ((void)0)
+#endif
 
 int gc_count = 0;
 bool gc_running = false;
@@ -8774,7 +8779,7 @@ walk_lisp_stack_fun (void *data, Lisp_Object *ref)
 void
 do_scheme_gc (void)
 {
-  TRACEF ("do_scheme_gc");
+  GC_TRACEF ("do_scheme_gc");
   if (before_scheme_gc ())
     {
       scheme_call0 ("collect");
@@ -8807,13 +8812,13 @@ before_scheme_gc (void)
 
   if (disable_scheme_gc > 0 || gc_running)
     {
-      TRACEF ("skipping gc");
+      GC_TRACEF ("skipping gc");
       gc_was_deferred = true;
       return false;
     }
 
   gc_count++;
-  TRACEF ("starting gc %d", gc_count);
+  GC_TRACEF ("starting gc %d", gc_count);
   gc_running = true;
   disable_scheme_gc++;
   gc_was_deferred = false;
@@ -8855,7 +8860,7 @@ before_scheme_gc (void)
       record_scheme_ref_ptr (global_ptr);
     }
 
-  TRACEF ("tracked refs before mark: %lu", scheme_refs.size);
+  GC_TRACEF ("tracked refs before mark: %lu", scheme_refs.size);
 
   /* printf ("malloc_blocks 1: %lu\n", malloc_blocks.size); */
   /* container_delete_if (&malloc_blocks, malloc_block_empty); */
@@ -8872,7 +8877,7 @@ before_scheme_gc (void)
   void *end;
   SET_STACK_TOP_ADDRESS (&end);
   garbage_collect_1 (end);
-  TRACEF ("did garbage_collect_1");
+  GC_TRACEF ("did garbage_collect_1");
 
   for (struct handler *h = handlerlist; h; h = h ->next)
     mark_object_ptr ((Lisp_Object *) &h->continuation);
@@ -8883,7 +8888,7 @@ before_scheme_gc (void)
   visit_kboard_lisp_refs (mark_lisp_refs_fun, NULL);
   visit_fringe_lisp_refs (mark_lisp_refs_fun, NULL);
 
-  TRACEF ("tracked refs after mark: %lu", scheme_refs.size);
+  GC_TRACEF ("tracked refs after mark: %lu", scheme_refs.size);
   FOR_NAMED_CONTAINER (i, scheme_refs)
     {
       NAMED_CONTAINER_REF_VAR (info, scheme_refs, i);
@@ -8895,7 +8900,7 @@ before_scheme_gc (void)
       NAMED_CONTAINER_REF_VAR (info, scheme_refs, i);
       INSPECT_SCHEME_REF_INFO (info, "after uniq");
     }
-  TRACEF ("unique tracked refs after mark: %lu", scheme_refs.size);
+  GC_TRACEF ("unique tracked refs after mark: %lu", scheme_refs.size);
 
   chez_iptr num_refs = scheme_refs.size;
   static chez_iptr prev_num_refs = 0;
@@ -8911,7 +8916,7 @@ before_scheme_gc (void)
     new_gc_vector_size = num_refs * growth_factor;
   if (gc_vector_size != new_gc_vector_size)
     {
-      TRACEF ("re-allocating gc_vector to size %jd", (intmax_t) new_gc_vector_size);
+      GC_TRACEF ("re-allocating gc_vector to size %jd", (intmax_t) new_gc_vector_size);
       chez_unlock_object (gc_vector);
       gc_vector = chez_make_vector (new_gc_vector_size, chez_false);
       chez_lock_object (gc_vector);
@@ -8935,7 +8940,7 @@ before_scheme_gc (void)
       chez_vector_set (gc_vector, i, info->ref);
     }
 
-  TRACEF ("entering scheme gc");
+  GC_TRACEF ("entering scheme gc");
   return true;
 }
 
@@ -8996,7 +9001,7 @@ after_scheme_gc (void)
   container_reset (&scheme_refs);
 
 #if ENABLE_CHECKING
-  TRACEF ("found %lu dead refs", (unsigned long) num_dead_refs);
+  GC_TRACEF ("found %lu dead refs", (unsigned long) num_dead_refs);
   //memgrep (dead_refs, num_dead_refs, 0);
 #endif
 
@@ -9123,12 +9128,14 @@ after_scheme_gc (void)
       ++num_freed;
     }
 
-  TRACEF ("refs moved in gc: %lu", num_moved);
-  TRACEF ("unlinked objects found: %d", unlinked_count);
-  TRACEF ("linked objects found: %d", still_linked_count);
-  TRACEF ("blocks freed: %d", num_freed);
-
-  TRACEF ("*\n* GC %d complete!\n*", gc_count);
+  GC_TRACEF ("refs moved in gc: %lu", num_moved);
+  GC_TRACEF ("unlinked objects found: %d", unlinked_count);
+  GC_TRACEF ("linked objects found: %d", still_linked_count);
+  GC_TRACEF ("blocks freed: %d", num_freed);
+  GC_TRACEF ("*\n* GC %d complete!\n*", gc_count);
+#ifndef NOISY_GC
+  TRACEF ("GC %d complete", gc_count);
+#endif
   gc_running = false;
   --disable_scheme_gc;
 

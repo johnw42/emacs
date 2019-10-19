@@ -4580,33 +4580,42 @@ init_obarray (void)
 void
 defsubr (Lisp_Subr_Init *sname)
 {
-  ENTER_LISP_FRAME ((), sym, tem);
 #ifdef HAVE_CHEZ_SCHEME
+  ENTER_LISP_FRAME ((), sym, tem, proc);
   sym = intern_c_string (sname->symbol_name);
-  struct Lisp_Subr *subr =
-    ALLOCATE_PSEUDOVECTOR (struct Lisp_Subr, function, PVEC_SUBR);
-  tem = subr->header.s.soh.scheme_obj;
-  subr->function.a0 = sname->function.a0;
-  subr->scheme_function = scheme_call3
-    ("wrap-function",
-     chez_fixnum ((chez_iptr) sname->function.a0),
-     chez_fixnum (sname->min_args),
-     chez_fixnum (sname->max_args));
-  SCHEME_ASSERT (40, chez_procedurep (subr->scheme_function));
-  chez_lock_object (subr->scheme_function);
-  subr->min_args = sname->min_args;
-  subr->max_args = sname->max_args;
-  subr->init_symbol_name = sname->symbol_name;
-  subr->symbol = sym;
-  subr->intspec = sname->intspec;
-  subr->doc = 0;
-#else /* not HAVE_CHEZ_SCHEME */
-  sym = intern_c_string (sname->symbol_name);
-  XSETPVECTYPE (sname, PVEC_SUBR);
-  XSETSUBR (tem, sname);
-#endif /* not HAVE_CHEZ_SCHEME */
-  set_symbol_function (sym, tem);
+  proc = UNCHEZ (scheme_call3
+                 ("wrap-function",
+                  chez_fixnum ((chez_iptr) sname->function.a0),
+                  chez_fixnum (sname->min_args),
+                  chez_fixnum (sname->max_args)));
+  SCHEME_ASSERT (40, chez_procedurep (CHEZ (proc)));
+  if (sname->max_args == UNEVALLED)
+    {
+      struct Lisp_Subr *subr =
+        ALLOCATE_PSEUDOVECTOR (struct Lisp_Subr, function, PVEC_SUBR);
+      tem = subr->header.s.soh.scheme_obj;
+      subr->function.a0 = sname->function.a0;
+      subr->scheme_function = CHEZ (proc);
+      subr->min_args = sname->min_args;
+      subr->max_args = sname->max_args;
+      subr->init_symbol_name = sname->symbol_name;
+      subr->symbol = sym;
+      subr->intspec = sname->intspec;
+      subr->doc = 0;
+      set_symbol_function (sym, tem);
+    }
+  else
+    {
+      set_symbol_function (sym, proc);
+    }
   EXIT_LISP_FRAME_VOID ();
+#else /* not HAVE_CHEZ_SCHEME */
+  Lisp_Object sym = intern_c_string (sname->symbol_name);
+  XSETPVECTYPE (sname, PVEC_SUBR);
+  Lisp_Object tem;
+  XSETSUBR (tem, sname);
+  set_symbol_function (sym, tem);
+#endif /* not HAVE_CHEZ_SCHEME */
 }
 
 #ifdef NOTDEF /* Use fset in subr.el now!  */

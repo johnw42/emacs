@@ -12,7 +12,6 @@
 (define (emacs-init)
   (collect-request-handler
    (lambda ()
-     (printf "collect request\n")
      (parameterize ([collect-request-handler
                      (lambda ()
                        (printf "skipping gc from scheme\n"))])

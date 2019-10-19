@@ -288,10 +288,8 @@ init_eval (void)
 static void
 restore_stack_limits (Lisp_Object data)
 {
-  ENTER_LISP_FRAME ((data));
   max_specpdl_size = XINT (XCAR (data));
   max_lisp_eval_depth = XINT (XCDR (data));
-  EXIT_LISP_FRAME_VOID ();
 }
 
 static void grow_specpdl (void);
@@ -505,9 +503,7 @@ usage: (progn BODY...)  */)
 void
 prog_ignore (Lisp_Object body)
 {
-  ENTER_LISP_FRAME ((body));
   Fprogn (body);
-  EXIT_LISP_FRAME_VOID ();
 }
 
 DEFUN ("prog1", Fprog1, Sprog1, 1, UNEVALLED, 0,
@@ -2060,28 +2056,24 @@ signal_or_quit (Lisp_Object error_symbol, Lisp_Object data, bool keyboard_quit)
 void
 xsignal0 (Lisp_Object error_symbol)
 {
-  ENTER_LISP_FRAME ((error_symbol));
   xsignal (error_symbol, Qnil);
 }
 
 void
 xsignal1 (Lisp_Object error_symbol, Lisp_Object arg)
 {
-  ENTER_LISP_FRAME ((error_symbol, arg));
   xsignal (error_symbol, list1 (arg));
 }
 
 void
 xsignal2 (Lisp_Object error_symbol, Lisp_Object arg1, Lisp_Object arg2)
 {
-  ENTER_LISP_FRAME ((error_symbol, arg1, arg2));
   xsignal (error_symbol, list2 (arg1, arg2));
 }
 
 void
 xsignal3 (Lisp_Object error_symbol, Lisp_Object arg1, Lisp_Object arg2, Lisp_Object arg3)
 {
-  ENTER_LISP_FRAME ((error_symbol, arg1, arg2, arg3));
   xsignal (error_symbol, list3 (arg1, arg2, arg3));
 }
 
@@ -2599,7 +2591,7 @@ eval_sub (Lisp_Object form)
   /* At this point, only original_fun and original_args
      have values that will be used below.  */
  retry:
-  IF_SCHEME(eassert (disable_scheme_gc >= 0));
+  SCHEME_ASSERT (45, disable_scheme_gc >= 0);
 
   /* Optimize for no indirection.  */
   fun = original_fun;
@@ -2608,12 +2600,36 @@ eval_sub (Lisp_Object form)
   else if (!NILP (fun) && (fun = XSYMBOL (fun)->u.s.function, SYMBOLP (fun)))
     fun = indirect_function (fun);
 
+#ifdef HAVE_CHEZ_SCHEME
+  if (chez_procedurep (CHEZ (fun)))
+    {
+      // TODO(jrw): This is almost identical to the default SUBRP case
+      // below.
+      args_left = original_args;
+      chez_iptr num_args = XINT (Flength (args_left));
+      LISP_DYNAMIC_ARRAY (vals);
+      SAFE_ALLOCA_LISP (vals, num_args);
+      ptrdiff_t argnum = 0;
+      while (CONSP (args_left) && argnum < num_args)
+        {
+          arg = XCAR (args_left);
+          args_left = XCDR (args_left);
+          vals[argnum++] = eval_sub (arg);
+        }
+
+      chez_initframe (num_args);
+      for (chez_iptr i = 0; i < num_args; i++)
+        chez_put_arg(i + 1, CHEZ (vals[i]));
+      // TODO: Use chez_callN?
+      val = UNCHEZ (chez_call (CHEZ (fun), num_args));
+      SAFE_FREE ();
+    }
+  else
+#endif
   if (SUBRP (fun))
     {
       args_left = original_args;
       numargs = Flength (args_left);
-
-
       check_cons_list ();
 
       if (XINT (numargs) < XSUBR (fun)->min_args
@@ -2633,10 +2649,10 @@ eval_sub (Lisp_Object form)
       else
         {
 	  /* Build array of evaluated arguments.  */
-	  ptrdiff_t argnum = 0;
           chez_iptr num_args = XINT (numargs);
 	  LISP_DYNAMIC_ARRAY (vals);
 	  SAFE_ALLOCA_LISP (vals, num_args);
+	  ptrdiff_t argnum = 0;
 	  while (CONSP (args_left) && argnum < num_args)
 	    {
 	      arg = XCAR (args_left);
@@ -2650,7 +2666,6 @@ eval_sub (Lisp_Object form)
             chez_put_arg(i + 1, CHEZ (vals[i]));
           // TODO: Use chez_callN
           val = UNCHEZ (chez_call (proc, num_args));
-
           SAFE_FREE ();
         }
 #else
@@ -2878,9 +2893,8 @@ usage: (apply FUNCTION &rest ARGUMENTS)  */)
 static Lisp_Object
 funcall_nil (ptrdiff_t nargs, Lisp_Object *args)
 {
-  ENTER_LISP_FRAME_VA (nargs, args, ());
   Ffuncall (nargs, args);
-  EXIT_LISP_FRAME (Qnil);
+  return Qnil;
 }
 
 DEFUN ("run-hooks", Frun_hooks, Srun_hooks, 0, MANY, 0,
@@ -2922,8 +2936,7 @@ Instead, use `add-hook' and specify t for the LOCAL argument.
 usage: (run-hook-with-args HOOK &rest ARGS)  */)
   (ptrdiff_t nargs, Lisp_Object *args)
 {
-  ENTER_LISP_FRAME_VA (nargs, args, ());
-  EXIT_LISP_FRAME (run_hook_with_args (nargs, args, funcall_nil));
+  return run_hook_with_args (nargs, args, funcall_nil);
 }
 
 /* NB this one still documents a specific non-nil return value.
@@ -2944,15 +2957,13 @@ Instead, use `add-hook' and specify t for the LOCAL argument.
 usage: (run-hook-with-args-until-success HOOK &rest ARGS)  */)
   (ptrdiff_t nargs, Lisp_Object *args)
 {
-  ENTER_LISP_FRAME_VA (nargs, args, ());
-  EXIT_LISP_FRAME (run_hook_with_args (nargs, args, Ffuncall));
+  return run_hook_with_args (nargs, args, Ffuncall);
 }
 
 static Lisp_Object
 funcall_not (ptrdiff_t nargs, Lisp_Object *args)
 {
-  ENTER_LISP_FRAME_VA (nargs, args, ());
-  EXIT_LISP_FRAME (NILP (Ffuncall (nargs, args)) ? Qt : Qnil);
+  return NILP (Ffuncall (nargs, args)) ? Qt : Qnil;
 }
 
 DEFUN ("run-hook-with-args-until-failure", Frun_hook_with_args_until_failure,
@@ -2970,8 +2981,7 @@ Instead, use `add-hook' and specify t for the LOCAL argument.
 usage: (run-hook-with-args-until-failure HOOK &rest ARGS)  */)
   (ptrdiff_t nargs, Lisp_Object *args)
 {
-  ENTER_LISP_FRAME_VA (nargs, args, ());
-  EXIT_LISP_FRAME (NILP (run_hook_with_args (nargs, args, funcall_not)) ? Qt : Qnil);
+  return NILP (run_hook_with_args (nargs, args, funcall_not)) ? Qt : Qnil;
 }
 
 static Lisp_Object
@@ -2997,8 +3007,7 @@ aborts and returns that value.
 usage: (run-hook-wrapped HOOK WRAP-FUNCTION &rest ARGS)  */)
      (ptrdiff_t nargs, Lisp_Object *args)
 {
-  ENTER_LISP_FRAME_VA (nargs, args, ());
-  EXIT_LISP_FRAME (run_hook_with_args (nargs, args, run_hook_wrapped_funcall));
+  return run_hook_with_args (nargs, args, run_hook_wrapped_funcall);
 }
 
 /* ARGS[0] should be a hook symbol.
@@ -3078,9 +3087,7 @@ run_hook_with_args (ptrdiff_t nargs, Lisp_Object *args,
 void
 run_hook (Lisp_Object hook)
 {
-  ENTER_LISP_FRAME ((hook));
   Frun_hook_with_args (1, &hook);
-  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Run the hook HOOK, giving each function the two args ARG1 and ARG2.  */
@@ -3088,9 +3095,7 @@ run_hook (Lisp_Object hook)
 void
 run_hook_with_args_2 (Lisp_Object hook, Lisp_Object arg1, Lisp_Object arg2)
 {
-  ENTER_LISP_FRAME ((hook, arg1, arg2));
   CALLN (Frun_hook_with_args, hook, arg1, arg2);
-  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Apply fn to arg.  */
@@ -3105,8 +3110,7 @@ apply1 (Lisp_Object fn, Lisp_Object arg)
 Lisp_Object
 call0 (Lisp_Object fn)
 {
-  ENTER_LISP_FRAME ((fn));
-  EXIT_LISP_FRAME (Ffuncall (1, &fn));
+  return Ffuncall (1, &fn);
 }
 
 /* Call function fn with 1 argument arg1.  */
@@ -3114,8 +3118,7 @@ call0 (Lisp_Object fn)
 Lisp_Object
 call1 (Lisp_Object fn, Lisp_Object arg1)
 {
-  ENTER_LISP_FRAME ((fn, arg1));
-  EXIT_LISP_FRAME (CALLN (Ffuncall, fn, arg1));
+  return CALLN (Ffuncall, fn, arg1);
 }
 
 /* Call function fn with 2 arguments arg1, arg2.  */
@@ -3123,8 +3126,7 @@ call1 (Lisp_Object fn, Lisp_Object arg1)
 Lisp_Object
 call2 (Lisp_Object fn, Lisp_Object arg1, Lisp_Object arg2)
 {
-  ENTER_LISP_FRAME ((fn, arg1, arg2));
-  EXIT_LISP_FRAME (CALLN (Ffuncall, fn, arg1, arg2));
+  return CALLN (Ffuncall, fn, arg1, arg2);
 }
 
 /* Call function fn with 3 arguments arg1, arg2, arg3.  */
@@ -3132,8 +3134,7 @@ call2 (Lisp_Object fn, Lisp_Object arg1, Lisp_Object arg2)
 Lisp_Object
 call3 (Lisp_Object fn, Lisp_Object arg1, Lisp_Object arg2, Lisp_Object arg3)
 {
-  ENTER_LISP_FRAME ((fn, arg1, arg2, arg3));
-  EXIT_LISP_FRAME (CALLN (Ffuncall, fn, arg1, arg2, arg3));
+  return CALLN (Ffuncall, fn, arg1, arg2, arg3);
 }
 
 /* Call function fn with 4 arguments arg1, arg2, arg3, arg4.  */
@@ -3142,8 +3143,7 @@ Lisp_Object
 call4 (Lisp_Object fn, Lisp_Object arg1, Lisp_Object arg2, Lisp_Object arg3,
        Lisp_Object arg4)
 {
-  ENTER_LISP_FRAME ((fn, arg1, arg2, arg3, arg4));
-  EXIT_LISP_FRAME (CALLN (Ffuncall, fn, arg1, arg2, arg3, arg4));
+  return CALLN (Ffuncall, fn, arg1, arg2, arg3, arg4);
 }
 
 /* Call function fn with 5 arguments arg1, arg2, arg3, arg4, arg5.  */
@@ -3152,8 +3152,7 @@ Lisp_Object
 call5 (Lisp_Object fn, Lisp_Object arg1, Lisp_Object arg2, Lisp_Object arg3,
        Lisp_Object arg4, Lisp_Object arg5)
 {
-  ENTER_LISP_FRAME ((fn, arg1, arg2, arg3, arg4, arg5));
-  EXIT_LISP_FRAME (CALLN (Ffuncall, fn, arg1, arg2, arg3, arg4, arg5));
+  return CALLN (Ffuncall, fn, arg1, arg2, arg3, arg4, arg5);
 }
 
 /* Call function fn with 6 arguments arg1, arg2, arg3, arg4, arg5, arg6.  */
@@ -3162,8 +3161,7 @@ Lisp_Object
 call6 (Lisp_Object fn, Lisp_Object arg1, Lisp_Object arg2, Lisp_Object arg3,
        Lisp_Object arg4, Lisp_Object arg5, Lisp_Object arg6)
 {
-  ENTER_LISP_FRAME ((fn, arg1, arg2, arg3, arg4, arg5, arg6));
-  EXIT_LISP_FRAME (CALLN (Ffuncall, fn, arg1, arg2, arg3, arg4, arg5, arg6));
+  return CALLN (Ffuncall, fn, arg1, arg2, arg3, arg4, arg5, arg6);
 }
 
 /* Call function fn with 7 arguments arg1, arg2, arg3, arg4, arg5, arg6, arg7.  */
@@ -3172,8 +3170,7 @@ Lisp_Object
 call7 (Lisp_Object fn, Lisp_Object arg1, Lisp_Object arg2, Lisp_Object arg3,
        Lisp_Object arg4, Lisp_Object arg5, Lisp_Object arg6, Lisp_Object arg7)
 {
-  ENTER_LISP_FRAME ((fn, arg1, arg2, arg3, arg4, arg5, arg6, arg7));
-  EXIT_LISP_FRAME (CALLN (Ffuncall, fn, arg1, arg2, arg3, arg4, arg5, arg6, arg7));
+  return CALLN (Ffuncall, fn, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
 }
 
 /* Call function fn with 8 arguments arg1, arg2, arg3, arg4, arg5,
@@ -3184,19 +3181,16 @@ call8 (Lisp_Object fn, Lisp_Object arg1, Lisp_Object arg2, Lisp_Object arg3,
        Lisp_Object arg4, Lisp_Object arg5, Lisp_Object arg6, Lisp_Object arg7,
        Lisp_Object arg8)
 {
-  ENTER_LISP_FRAME ((fn, arg1, arg2, arg3, arg4, arg5, arg6, arg7,
-                     arg8));
-  EXIT_LISP_FRAME (CALLN (Ffuncall, fn, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8));
+  return CALLN (Ffuncall, fn, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
 }
 
 DEFUN ("functionp", Ffunctionp, Sfunctionp, 1, 1, 0,
        doc: /* Return t if OBJECT is a function.  */)
      (Lisp_Object object)
 {
-  ENTER_LISP_FRAME ((object));
   if (FUNCTIONP (object))
-    EXIT_LISP_FRAME (Qt);
-  EXIT_LISP_FRAME (Qnil);
+    return Qt;
+  return Qnil;
 }
 
 bool
@@ -3218,6 +3212,10 @@ FUNCTIONP (Lisp_Object object)
 	}
     }
 
+#ifdef HAVE_CHEZ_SCHEME
+  if (chez_procedurep (CHEZ (object)))
+    EXIT_LISP_FRAME (true);
+#endif
   if (SUBRP (object))
     EXIT_LISP_FRAME (XSUBR (object)->max_args != UNEVALLED);
   else if (COMPILEDP (object) || MODULE_FUNCTIONP (object))
@@ -3273,6 +3271,16 @@ usage: (funcall FUNCTION &rest ARGUMENTS)  */)
       && (fun = XSYMBOL (fun)->u.s.function, SYMBOLP (fun)))
     fun = indirect_function (fun);
 
+#ifdef HAVE_CHEZ_SCHEME
+  if (chez_procedurep (CHEZ (fun)))
+    {
+      chez_initframe (numargs);
+      for (chez_iptr i = 1; i < nargs; i++)
+        chez_put_arg (i, CHEZ (args[i]));
+      val = UNCHEZ (chez_call (CHEZ (fun), numargs));
+    }
+  else
+#endif
   if (SUBRP (fun))
     val = funcall_subr (XSUBR (fun), numargs, args + 1);
   else if (COMPILEDP (fun) || MODULE_FUNCTIONP (fun))
@@ -4107,8 +4115,8 @@ context where binding is lexical by default.  */)
   (Lisp_Object symbol)
 {
   ENTER_LISP_FRAME ((symbol));
-   CHECK_SYMBOL (symbol);
-   EXIT_LISP_FRAME (XSYMBOL (symbol)->u.s.declared_special ? Qt : Qnil);
+  CHECK_SYMBOL (symbol);
+  EXIT_LISP_FRAME (XSYMBOL (symbol)->u.s.declared_special ? Qt : Qnil);
 }
 
 
