@@ -3074,11 +3074,11 @@ make_uninit_string (EMACS_INT length)
 {
   Lisp_Object val;
 
-  if (length == 0 && FALSEP (empty_unibyte_string))
-    return empty_unibyte_string;
+  /* if (length == 0 && !FALSEP (empty_unibyte_string)) */
+  /*   return empty_unibyte_string; */
   val = make_uninit_multibyte_string (length, length);
-  if (length == 0 && !FALSEP (empty_unibyte_string))
-    empty_unibyte_string = val;
+  /* if (length == 0 && FALSEP (empty_unibyte_string)) */
+  /*   empty_unibyte_string = val; */
   eassert (STRINGP (val));
   STRING_SET_UNIBYTE (val);
   eassert (STRINGP (val));
@@ -3094,8 +3094,8 @@ make_uninit_multibyte_string (EMACS_INT nchars, EMACS_INT nbytes)
 {
   if (nchars < 0)
     emacs_abort ();
-  if (nbytes == 0 && !FALSEP (empty_multibyte_string))
-      return empty_multibyte_string;
+  /* if (nbytes == 0 && !FALSEP (empty_multibyte_string)) */
+  /*     return empty_multibyte_string; */
 
   struct Lisp_String *s = allocate_string ();
   Lisp_Object string;
@@ -3103,8 +3103,8 @@ make_uninit_multibyte_string (EMACS_INT nchars, EMACS_INT nbytes)
   s->u.s.intervals = NULL;
   allocate_string_data (s, nchars, nbytes);
   string_chars_consed += nbytes;
-  if (nbytes == 0 && FALSEP (empty_multibyte_string))
-    empty_multibyte_string = string;
+  /* if (nbytes == 0 && FALSEP (empty_multibyte_string)) */
+  /*   empty_multibyte_string = string; */
   return string;
 }
 
@@ -4217,6 +4217,7 @@ set_symbol_name (Lisp_Object sym, Lisp_Object name)
 void
 init_symbol (Lisp_Object val, Lisp_Object name)
 {
+  abort();
   struct Lisp_Symbol *p = XSYMBOL (val);
   set_symbol_name (val, name);
   set_symbol_plist (val, Qnil);
@@ -8344,11 +8345,14 @@ init_alloc_once (void)
 #ifdef HAVE_CHEZ_SCHEME
   for (chez_iptr i = 0; i < ARRAYELTS (lispsym); i++)
     {
-      lispsym[i] = UNCHEZ (chez_string_to_symbol (defsym_name[i]));
+      if (i == iQnil)
+        lispsym[i] = UNCHEZ (chez_false);
+      else if (i == iQt)
+        lispsym[i] = UNCHEZ (chez_true);
+      else
+        lispsym[i] = UNCHEZ (chez_string_to_symbol (defsym_name[i]));
       XSYMBOL (lispsym[i]);
     }
-  eassert (chez_symbolp (CHEZ (Qnil)));
-  eassert (CHEZ (Qnil) == chez_string_to_symbol ("nil"));
 #endif /* HAVE_CHEZ_SCHEME */
 
 #ifndef NIL_IS_ZERO

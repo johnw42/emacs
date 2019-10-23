@@ -12,8 +12,6 @@
 *** funcall
 *** apply
 *** basic operators and data manipulation
-** Represent t and nil as #t and #f/()
-   Use '() in cdr, #f everywhere else
 ** Represent strings as Scheme strings
 ** Represent Lisp functions as Scheme functions
 ** Represent lisp vectors as scheme vectors
@@ -47,3 +45,5 @@
 ** Reduce re-allocation of gc_vector
 ** Use guardian to free malloc'd memory
 ** Rework GC.  Copy scheme refs to vector before GC, copy out after GC.  Keep vector per object.
+** Represent t and nil as #t and #f/()
+   Use '() in cdr, #f everywhere else

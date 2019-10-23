@@ -64,7 +64,8 @@ unsigned gdb_flags = 0;
 #include "scheme_fptr.h"
 
 
-DEFUN ("scheme-top-level-value", Fscheme_top_level_value, Sscheme_top_level_value, 1, 1, 0,
+DEFUN ("scheme-top-level-value",
+       Fscheme_top_level_value, Sscheme_top_level_value, 1, 1, 0,
        doc: /* Get a Scheme top-level value by name. */)
   (Lisp_Object name)
 {
@@ -72,7 +73,7 @@ DEFUN ("scheme-top-level-value", Fscheme_top_level_value, Sscheme_top_level_valu
 }
 
 void syms_of_scheme_lisp(void) {
-  DEFSYM(Qscheme_apply, "scheme-apply");
+  /* DEFSYM(Qscheme_apply, "scheme-apply"); */
   /* DEFSYM(Qscheme_value_ref_id, "scheme-value-ref-id"); */
   /* DEFSYM(Qensure_scheme_value_ref, "ensure-scheme-value-ref"); */
   /* DEFSYM(Qensure_lisp_object_id, "ensure-lisp-object-id"); */
@@ -326,6 +327,7 @@ scheme_init(void) {
   chez_foreign_symbol("call_many_args_subr", call_many_args_subr);
   chez_foreign_symbol("Fequal", Fequal);
   chez_foreign_symbol("Fsxhash_equal", Fsxhash_equal);
+  chez_foreign_symbol("wrong_type_argument", wrong_type_argument);
   int error = chez_scheme_script(BUILD_ROOT "/scheme/init.ss", 2,
                                  (const char*[]) {NULL, BUILD_ROOT "/scheme"});
   eassert (error == 0);
@@ -422,6 +424,10 @@ to_lisp_string(Lisp_Object arg)
     return arg;
   if (chez_symbolp (CHEZ(arg)))
     arg = UNCHEZ(scheme_call1 ("symbol->string", CHEZ(arg)));
+  if (CHEZ (arg) == chez_false)
+    return make_unibyte_string ("nil", 3);
+  if (CHEZ (arg) == chez_true)
+    return make_unibyte_string ("t", 3);
   SCHEME_ASSERT (10, chez_stringp (CHEZ(arg)));
   chez_iptr n = chez_string_length(CHEZ(arg));
   for (chez_iptr j = 0; j < n; j++)
@@ -471,28 +477,42 @@ make_scheme_string (const char *data, chez_iptr nchars, chez_iptr nbytes, bool m
 
 static int xxx_count = 0;
 
+static struct Lisp_Symbol *true_data, *false_data;
+
 struct Lisp_Symbol *
 ensure_symbol_c_data (Lisp_Object symbol, Lisp_Object name)
 {
-  /* if (++xxx_count == 430847) */
-  /*   gdb_break(); */
-  /* SCHEME_ASSERT (40, chez_symbolp (CHEZ (symbol))); */
-
-  chez_ptr found = SCHEME_FPTR_CALL2 (getprop, CHEZ(symbol), c_data_property_symbol);
-  if (found != chez_false)
+  if (chez_symbolp (CHEZ (symbol)))
     {
-      struct Lisp_Symbol *p = (void *) chez_fixnum_value (found);
-      SCHEME_ASSERT (50, EQ (p->u.s.soh.scheme_obj, symbol));
-      return p;
+      chez_ptr found = SCHEME_FPTR_CALL2 (getprop, CHEZ(symbol), c_data_property_symbol);
+      if (found != chez_false)
+        {
+          struct Lisp_Symbol *p = (void *) chez_fixnum_value (found);
+          SCHEME_ASSERT (50, EQ (p->u.s.soh.scheme_obj, symbol));
+          return p;
+        }
     }
+  else if (CHEZ (symbol) == chez_false && false_data)
+    return false_data;
+  else if (CHEZ (symbol) == chez_true && true_data)
+    return true_data;
 
   if (FALSEP (name))
     name = to_lisp_string (symbol);
   SCHEME_ASSERT (50, STRINGP (name));
 
   struct Lisp_Symbol *p = xzalloc (sizeof (struct Lisp_Symbol));
-  SCHEME_FPTR_CALL3 (putprop, CHEZ(symbol), c_data_property_symbol, chez_fixnum ((chez_uptr) p));
-  SCHEME_ASSERT (30, p == (void *) chez_fixnum_value (SCHEME_FPTR_CALL2 (getprop, CHEZ(symbol), c_data_property_symbol)));
+  if (chez_symbolp (CHEZ (symbol)))
+    {
+      SCHEME_FPTR_CALL3 (putprop, CHEZ(symbol), c_data_property_symbol, chez_fixnum ((chez_uptr) p));
+      SCHEME_ASSERT (30, p == (void *) chez_fixnum_value (SCHEME_FPTR_CALL2 (getprop, CHEZ(symbol), c_data_property_symbol)));
+    }
+  else if (CHEZ (symbol) == chez_false)
+    false_data = p;
+  else if (CHEZ (symbol) == chez_true)
+    true_data = p;
+  else
+    abort();
   schedule_free (symbol, p);
 
   // Can't use init_nil_refs here because of how builtin symbols are
@@ -520,7 +540,7 @@ scheme_make_symbol(Lisp_Object name, int /*enum symbol_interned*/ interned)
 {
   Lisp_Object scheme_symbol = LISP_FALSE;
   if (chez_symbolp (CHEZ (name)))
-      scheme_symbol = name;
+    scheme_symbol = name;
   else
     {
       Lisp_Object scheme_str = to_scheme_string (name);
@@ -666,6 +686,7 @@ void
 schedule_free (Lisp_Object x, void *data)
 {
   INSPECT_SCHEME_REF (x, "schedule_free");
+  INSPECT_MALLOC_PTR (data, "schedule_free");
   chez_call2 (free_guardian, CHEZ (x),
               chez_fixnum ((chez_iptr) data));
 }

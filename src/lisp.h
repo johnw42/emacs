@@ -364,7 +364,7 @@ error !;
 #define lisp_h_SYMBOL_TRAPPED_WRITE_P(sym) (XSYMBOL (sym)->u.s.trapped_write)
 #define lisp_h_SYMBOL_VAL(sym) \
    (eassert ((sym)->u.s.redirect == SYMBOL_PLAINVAL), (sym)->u.s.val.value)
-#define lisp_h_SYMBOLP(x) chez_symbolp (CHEZ (x))
+#define lisp_h_SYMBOLP(x) (chez_symbolp (CHEZ (x)) || chez_booleanp (CHEZ (x)))
 #define lisp_h_VECTORLIKEP(x) SCHEME_VECTORP(x, scheme_vectorlike_symbol)
 #define lisp_h_XCAR(c) (SCHEME_ASSERT (50, chez_pairp (CHEZ (c))), UNCHEZ (chez_car (CHEZ (c))))
 #define lisp_h_XCDR(c) (SCHEME_ASSERT (50, chez_pairp (CHEZ (c))), chez_cdr (CHEZ (c)) == chez_nil ? Qnil : UNCHEZ (chez_cdr (CHEZ (c))))

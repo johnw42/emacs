@@ -5,10 +5,12 @@
 
   (printf "libdir: ~s\n" (source-directories))
   (load "misc.ss")
-  (load "cc-helper.ss"))
+  (load "cc-helper.ss")
+  (load "prims.ss"))
 
 (import (misc))
 (import (cc-helper))
+(import (prims))
 
 ;; Local Variables:
 ;; mode: scheme

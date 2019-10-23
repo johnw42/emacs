@@ -4256,7 +4256,6 @@ intern_c_string_1 (const char *str, ptrdiff_t len)
 
   tem = oblookup (obarray, str, len, len);
 
-
   if (!SYMBOLP (tem))
     {
       /* Creating a non-pure string from a string literal not implemented yet.
@@ -4552,7 +4551,8 @@ init_obarray (void)
     {
       eassert (SYMBOLP (lispsym[i]));
       scheme_oblookup (initial_obarray, lispsym[i], true);
-      eassert (XSYMBOL(lispsym[i])->u.s.interned == SYMBOL_INTERNED_IN_INITIAL_OBARRAY);
+      XSYMBOL(lispsym[i])->u.s.interned = SYMBOL_INTERNED_IN_INITIAL_OBARRAY;
+      /* eassert (XSYMBOL(lispsym[i])->u.s.interned == SYMBOL_INTERNED_IN_INITIAL_OBARRAY); */
     }
 #else /* not HAVE_CHEZ_SCHEME */
   for (int i = 0; i < ARRAYELTS (lispsym); i++)
@@ -4583,11 +4583,18 @@ defsubr (Lisp_Subr_Init *sname)
 #ifdef HAVE_CHEZ_SCHEME
   ENTER_LISP_FRAME ((), sym, tem, proc);
   sym = intern_c_string (sname->symbol_name);
-  proc = UNCHEZ (scheme_call3
-                 ("wrap-function",
-                  chez_fixnum ((chez_iptr) sname->function.a0),
-                  chez_fixnum (sname->min_args),
-                  chez_fixnum (sname->max_args)));
+  const char *prefix = "emacs-";
+  char prefix_name[strlen(sname->symbol_name) + strlen(prefix) + 1];
+  sprintf (prefix_name, "%s%s", prefix, sname->symbol_name);
+  proc = UNCHEZ (chez_top_level_value (chez_string_to_symbol (prefix_name)));
+  if (chez_procedurep (CHEZ (proc)))
+    eassert (sname->max_args != UNEVALLED);
+  else
+    proc = UNCHEZ (scheme_call3
+                   ("wrap-function",
+                    chez_fixnum ((chez_iptr) sname->function.a0),
+                    chez_fixnum (sname->min_args),
+                    chez_fixnum (sname->max_args)));
   SCHEME_ASSERT (40, chez_procedurep (CHEZ (proc)));
   if (sname->max_args == UNEVALLED)
     {

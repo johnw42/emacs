@@ -10,3 +10,4 @@
 # *0xd5fe08 0x443110db = buffer_local_flags
 #0x566a989f = mystery buffer
 #@0x11e4c30 = buffer data
+#@0x1c82360 = bad free

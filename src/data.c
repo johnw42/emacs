@@ -351,7 +351,7 @@ DEFUN ("nlistp", Fnlistp, Snlistp, 1, 1, 0,
   EXIT_LISP_FRAME (Qt);
 }
 
-DEFUN ("symbolp", Fsymbolp, chez_symbolp, 1, 1, 0,
+DEFUN ("symbolp", Fsymbolp, Ssymbolp, 1, 1, 0,
        doc: /* Return t if OBJECT is a symbol.  */
        attributes: const)
   (Lisp_Object object)
@@ -376,7 +376,7 @@ interned in the initial obarray.  */)
   EXIT_LISP_FRAME (Qnil);
 }
 
-DEFUN ("vectorp", Fvectorp, chez_vectorp, 1, 1, 0,
+DEFUN ("vectorp", Fvectorp, Svectorp, 1, 1, 0,
        doc: /* Return t if OBJECT is a vector.  */)
   (Lisp_Object object)
 {
@@ -396,7 +396,7 @@ DEFUN ("recordp", Frecordp, Srecordp, 1, 1, 0,
   EXIT_LISP_FRAME (Qnil);
 }
 
-DEFUN ("stringp", Fstringp, chez_stringp, 1, 1, 0,
+DEFUN ("stringp", Fstringp, Sstringp, 1, 1, 0,
        doc: /* Return t if OBJECT is a string.  */
        attributes: const)
   (Lisp_Object object)
@@ -429,7 +429,7 @@ DEFUN ("char-table-p", Fchar_table_p, Schar_table_p, 1, 1, 0,
 }
 
 DEFUN ("vector-or-char-table-p", Fvector_or_char_table_p,
-       chez_vector_or_char_table_p, 1, 1, 0,
+       Svector_or_char_table_p, 1, 1, 0,
        doc: /* Return t if OBJECT is a char-table or vector.  */)
   (Lisp_Object object)
 {
@@ -685,10 +685,10 @@ DEFUN ("setcar", Fsetcar, Ssetcar, 2, 2, 0,
   (Lisp_Object cell, Lisp_Object newcar)
 {
   ENTER_LISP_FRAME ((cell, newcar));
+  CHECK_CONS (cell);
 #ifdef HAVE_CHEZ_SCHEME
   chez_set_car(CHEZ (cell), CHEZ (newcar));
 #else /* not HAVE_CHEZ_SCHEME */
-  CHECK_CONS (cell);
   CHECK_IMPURE (cell, XCONS (cell));
   XSETCAR (cell, newcar);
 #endif /* not HAVE_CHEZ_SCHEME */
@@ -700,10 +700,10 @@ DEFUN ("setcdr", Fsetcdr, Ssetcdr, 2, 2, 0,
   (Lisp_Object cell, Lisp_Object newcdr)
 {
   ENTER_LISP_FRAME ((cell, newcdr));
-#ifdef HAVE_CHEZ_SCHEME
-  chez_set_cdr (CHEZ (cell), CHEZ (newcdr));
-#else /* not HAVE_CHEZ_SCHEME */
   CHECK_CONS (cell);
+#ifdef HAVE_CHEZ_SCHEME
+  chez_set_cdr (CHEZ (cell), NILP (newcdr) ? chez_nil : CHEZ (newcdr));
+#else /* not HAVE_CHEZ_SCHEME */
   CHECK_IMPURE (cell, XCONS (cell));
   XSETCDR (cell, newcdr);
 #endif /* not HAVE_CHEZ_SCHEME */
@@ -2653,8 +2653,7 @@ DEFUN ("=", Feqlsign, Seqlsign, 1, MANY, 0,
 usage: (= NUMBER-OR-MARKER &rest NUMBERS-OR-MARKERS)  */)
   (ptrdiff_t nargs, Lisp_Object *args)
 {
-  ENTER_LISP_FRAME_VA (nargs, args, ());
-  EXIT_LISP_FRAME (arithcompare_driver (nargs, args, ARITH_EQUAL));
+  return arithcompare_driver (nargs, args, ARITH_EQUAL);
 }
 
 DEFUN ("<", Flss, Slss, 1, MANY, 0,
@@ -2662,8 +2661,7 @@ DEFUN ("<", Flss, Slss, 1, MANY, 0,
 usage: (< NUMBER-OR-MARKER &rest NUMBERS-OR-MARKERS)  */)
   (ptrdiff_t nargs, Lisp_Object *args)
 {
-  ENTER_LISP_FRAME_VA (nargs, args, ());
-  EXIT_LISP_FRAME (arithcompare_driver (nargs, args, ARITH_LESS));
+  return arithcompare_driver (nargs, args, ARITH_LESS);
 }
 
 DEFUN (">", Fgtr, Sgtr, 1, MANY, 0,
@@ -2671,8 +2669,7 @@ DEFUN (">", Fgtr, Sgtr, 1, MANY, 0,
 usage: (> NUMBER-OR-MARKER &rest NUMBERS-OR-MARKERS)  */)
   (ptrdiff_t nargs, Lisp_Object *args)
 {
-  ENTER_LISP_FRAME_VA (nargs, args, ());
-  EXIT_LISP_FRAME (arithcompare_driver (nargs, args, ARITH_GRTR));
+  return arithcompare_driver (nargs, args, ARITH_GRTR);
 }
 
 DEFUN ("<=", Fleq, Sleq, 1, MANY, 0,
@@ -2680,8 +2677,7 @@ DEFUN ("<=", Fleq, Sleq, 1, MANY, 0,
 usage: (<= NUMBER-OR-MARKER &rest NUMBERS-OR-MARKERS)  */)
   (ptrdiff_t nargs, Lisp_Object *args)
 {
-  ENTER_LISP_FRAME_VA (nargs, args, ());
-  EXIT_LISP_FRAME (arithcompare_driver (nargs, args, ARITH_LESS_OR_EQUAL));
+  return arithcompare_driver (nargs, args, ARITH_LESS_OR_EQUAL);
 }
 
 DEFUN (">=", Fgeq, Sgeq, 1, MANY, 0,
@@ -2689,16 +2685,14 @@ DEFUN (">=", Fgeq, Sgeq, 1, MANY, 0,
 usage: (>= NUMBER-OR-MARKER &rest NUMBERS-OR-MARKERS)  */)
   (ptrdiff_t nargs, Lisp_Object *args)
 {
-  ENTER_LISP_FRAME_VA (nargs, args, ());
-  EXIT_LISP_FRAME (arithcompare_driver (nargs, args, ARITH_GRTR_OR_EQUAL));
+  return arithcompare_driver (nargs, args, ARITH_GRTR_OR_EQUAL);
 }
 
 DEFUN ("/=", Fneq, Sneq, 2, 2, 0,
        doc: /* Return t if first arg is not equal to second arg.  Both must be numbers or markers.  */)
   (Lisp_Object num1, Lisp_Object num2)
 {
-  ENTER_LISP_FRAME ((num1, num2));
-  EXIT_LISP_FRAME (arithcompare (num1, num2, ARITH_NOTEQUAL));
+  return arithcompare (num1, num2, ARITH_NOTEQUAL);
 }
 
 /* Convert the integer I to a cons-of-integers, where I is not in
@@ -3056,8 +3050,7 @@ DEFUN ("+", Fplus, Splus, 0, MANY, 0,
 usage: (+ &rest NUMBERS-OR-MARKERS)  */)
   (ptrdiff_t nargs, Lisp_Object *args)
 {
-  ENTER_LISP_FRAME_VA (nargs, args, ());
-  EXIT_LISP_FRAME (arith_driver (Aadd, nargs, args));
+  return arith_driver (Aadd, nargs, args);
 }
 
 DEFUN ("-", Fminus, Sminus, 0, MANY, 0,
@@ -3067,8 +3060,7 @@ subtracts all but the first from the first.
 usage: (- &optional NUMBER-OR-MARKER &rest MORE-NUMBERS-OR-MARKERS)  */)
   (ptrdiff_t nargs, Lisp_Object *args)
 {
-  ENTER_LISP_FRAME_VA (nargs, args, ());
-  EXIT_LISP_FRAME (arith_driver (Asub, nargs, args));
+  return arith_driver (Asub, nargs, args);
 }
 
 DEFUN ("*", Ftimes, Stimes, 0, MANY, 0,
@@ -3076,8 +3068,7 @@ DEFUN ("*", Ftimes, Stimes, 0, MANY, 0,
 usage: (* &rest NUMBERS-OR-MARKERS)  */)
   (ptrdiff_t nargs, Lisp_Object *args)
 {
-  ENTER_LISP_FRAME_VA (nargs, args, ());
-  EXIT_LISP_FRAME (arith_driver (Amult, nargs, args));
+  return arith_driver (Amult, nargs, args);
 }
 
 DEFUN ("/", Fquo, Squo, 1, MANY, 0,
@@ -3171,8 +3162,7 @@ The value is always a number; markers are converted to numbers.
 usage: (max NUMBER-OR-MARKER &rest NUMBERS-OR-MARKERS)  */)
   (ptrdiff_t nargs, Lisp_Object *args)
 {
-  ENTER_LISP_FRAME_VA (nargs, args, ());
-  EXIT_LISP_FRAME (minmax_driver (nargs, args, ARITH_GRTR));
+  return minmax_driver (nargs, args, ARITH_GRTR);
 }
 
 DEFUN ("min", Fmin, Smin, 1, MANY, 0,
@@ -3181,8 +3171,7 @@ The value is always a number; markers are converted to numbers.
 usage: (min NUMBER-OR-MARKER &rest NUMBERS-OR-MARKERS)  */)
   (ptrdiff_t nargs, Lisp_Object *args)
 {
-  ENTER_LISP_FRAME_VA (nargs, args, ());
-  EXIT_LISP_FRAME (minmax_driver (nargs, args, ARITH_LESS));
+  return minmax_driver (nargs, args, ARITH_LESS);
 }
 
 DEFUN ("logand", Flogand, Slogand, 0, MANY, 0,
@@ -3191,8 +3180,7 @@ Arguments may be integers, or markers converted to integers.
 usage: (logand &rest INTS-OR-MARKERS)  */)
   (ptrdiff_t nargs, Lisp_Object *args)
 {
-  ENTER_LISP_FRAME_VA (nargs, args, ());
-  EXIT_LISP_FRAME (arith_driver (Alogand, nargs, args));
+  return arith_driver (Alogand, nargs, args);
 }
 
 DEFUN ("logior", Flogior, Slogior, 0, MANY, 0,
@@ -3201,8 +3189,7 @@ Arguments may be integers, or markers converted to integers.
 usage: (logior &rest INTS-OR-MARKERS)  */)
   (ptrdiff_t nargs, Lisp_Object *args)
 {
-  ENTER_LISP_FRAME_VA (nargs, args, ());
-  EXIT_LISP_FRAME (arith_driver (Alogior, nargs, args));
+  return arith_driver (Alogior, nargs, args);
 }
 
 DEFUN ("logxor", Flogxor, Slogxor, 0, MANY, 0,
@@ -3211,8 +3198,7 @@ Arguments may be integers, or markers converted to integers.
 usage: (logxor &rest INTS-OR-MARKERS)  */)
   (ptrdiff_t nargs, Lisp_Object *args)
 {
-  ENTER_LISP_FRAME_VA (nargs, args, ());
-  EXIT_LISP_FRAME (arith_driver (Alogxor, nargs, args));
+  return arith_driver (Alogxor, nargs, args);
 }
 
 static Lisp_Object
@@ -3244,8 +3230,7 @@ If COUNT is negative, shifting is actually to the right.
 In this case, the sign bit is duplicated.  */)
   (Lisp_Object value, Lisp_Object count)
 {
-  ENTER_LISP_FRAME ((value, count));
-  EXIT_LISP_FRAME (ash_lsh_impl (value, count, false));
+  return ash_lsh_impl (value, count, false);
 }
 
 DEFUN ("lsh", Flsh, Slsh, 2, 2, 0,
@@ -3254,8 +3239,7 @@ If COUNT is negative, shifting is actually to the right.
 In this case, zeros are shifted in on the left.  */)
   (Lisp_Object value, Lisp_Object count)
 {
-  ENTER_LISP_FRAME ((value, count));
-  EXIT_LISP_FRAME (ash_lsh_impl (value, count, true));
+  return ash_lsh_impl (value, count, true);
 }
 
 DEFUN ("1+", Fadd1, Sadd1, 1, 1, 0,
@@ -3566,8 +3550,7 @@ A, B, and C must be bool vectors of the same length.
 Return the destination vector if it changed or nil otherwise.  */)
   (Lisp_Object a, Lisp_Object b, Lisp_Object c)
 {
-  ENTER_LISP_FRAME ((a, b, c));
-  EXIT_LISP_FRAME (bool_vector_binop_driver (a, b, c, bool_vector_union));
+  return bool_vector_binop_driver (a, b, c, bool_vector_union);
 }
 
 DEFUN ("bool-vector-intersection", Fbool_vector_intersection,
@@ -3578,8 +3561,7 @@ A, B, and C must be bool vectors of the same length.
 Return the destination vector if it changed or nil otherwise.  */)
   (Lisp_Object a, Lisp_Object b, Lisp_Object c)
 {
-  ENTER_LISP_FRAME ((a, b, c));
-  EXIT_LISP_FRAME (bool_vector_binop_driver (a, b, c, bool_vector_intersection));
+  return bool_vector_binop_driver (a, b, c, bool_vector_intersection);
 }
 
 DEFUN ("bool-vector-set-difference", Fbool_vector_set_difference,
@@ -3590,8 +3572,7 @@ A, B, and C must be bool vectors of the same length.
 Return the destination vector if it changed or nil otherwise.  */)
   (Lisp_Object a, Lisp_Object b, Lisp_Object c)
 {
-  ENTER_LISP_FRAME ((a, b, c));
-  EXIT_LISP_FRAME (bool_vector_binop_driver (a, b, c, bool_vector_set_difference));
+  return bool_vector_binop_driver (a, b, c, bool_vector_set_difference);
 }
 
 DEFUN ("bool-vector-subsetp", Fbool_vector_subsetp,
@@ -3600,8 +3581,7 @@ DEFUN ("bool-vector-subsetp", Fbool_vector_subsetp,
 A and B must be bool vectors of the same length.  */)
   (Lisp_Object a, Lisp_Object b)
 {
-  ENTER_LISP_FRAME ((a, b));
-  EXIT_LISP_FRAME (bool_vector_binop_driver (a, b, b, bool_vector_subsetp));
+  return bool_vector_binop_driver (a, b, b, bool_vector_subsetp);
 }
 
 DEFUN ("bool-vector-not", Fbool_vector_not,
@@ -3944,14 +3924,14 @@ syms_of_data (void)
   defsubr (&Snumber_or_marker_p);
   defsubr (&Sfloatp);
   defsubr (&Snatnump);
-  defsubr (&chez_symbolp);
+  defsubr (&Ssymbolp);
   defsubr (&Skeywordp);
-  defsubr (&chez_stringp);
+  defsubr (&Sstringp);
   defsubr (&Smultibyte_string_p);
-  defsubr (&chez_vectorp);
+  defsubr (&Svectorp);
   defsubr (&Srecordp);
   defsubr (&Schar_table_p);
-  defsubr (&chez_vector_or_char_table_p);
+  defsubr (&Svector_or_char_table_p);
   defsubr (&Sbool_vector_p);
   defsubr (&Sarrayp);
   defsubr (&Ssequencep);
