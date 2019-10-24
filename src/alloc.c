@@ -2185,7 +2185,8 @@ static void
 init_strings (void)
 {
   REGISTER_LISP_GLOBALS (empty_unibyte_string, empty_multibyte_string);
-  empty_multibyte_string = make_pure_string ("", 0, 0, 1);
+  empty_multibyte_string = make_pure_string ("", 0, 0, true);
+  empty_unibyte_string = make_pure_string ("", 0, 0, false);
 }
 
 
@@ -3074,11 +3075,9 @@ make_uninit_string (EMACS_INT length)
 {
   Lisp_Object val;
 
-  /* if (length == 0 && !FALSEP (empty_unibyte_string)) */
-  /*   return empty_unibyte_string; */
+  if (length == 0)
+    return empty_unibyte_string;
   val = make_uninit_multibyte_string (length, length);
-  /* if (length == 0 && FALSEP (empty_unibyte_string)) */
-  /*   empty_unibyte_string = val; */
   eassert (STRINGP (val));
   STRING_SET_UNIBYTE (val);
   eassert (STRINGP (val));
@@ -3094,8 +3093,8 @@ make_uninit_multibyte_string (EMACS_INT nchars, EMACS_INT nbytes)
 {
   if (nchars < 0)
     emacs_abort ();
-  /* if (nbytes == 0 && !FALSEP (empty_multibyte_string)) */
-  /*     return empty_multibyte_string; */
+  if (nbytes == 0)
+    return empty_multibyte_string;
 
   struct Lisp_String *s = allocate_string ();
   Lisp_Object string;
@@ -3103,8 +3102,6 @@ make_uninit_multibyte_string (EMACS_INT nchars, EMACS_INT nbytes)
   s->u.s.intervals = NULL;
   allocate_string_data (s, nchars, nbytes);
   string_chars_consed += nbytes;
-  /* if (nbytes == 0 && FALSEP (empty_multibyte_string)) */
-  /*   empty_multibyte_string = string; */
   return string;
 }
 
@@ -8838,8 +8835,6 @@ before_scheme_gc (void)
     {
       record_scheme_ref_ptr(&lispsym[i]);
     }
-
-  eassert (STRINGP(empty_unibyte_string));
 
   uint64_t deadface = 0xdeadface0000000f;
   /* memgrep(&deadface, 1, 0xffffffff0000000f); */

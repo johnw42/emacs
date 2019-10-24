@@ -1327,6 +1327,9 @@ find_symbol_value (Lisp_Object symbol)
   CHECK_SYMBOL (symbol);
   sym = XSYMBOL (symbol);
 
+  if (symbol_is (symbol, "t"))
+    gdb_break();
+
  start:
   switch (sym->u.s.redirect)
     {

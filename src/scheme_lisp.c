@@ -544,11 +544,11 @@ scheme_make_symbol(Lisp_Object name, int /*enum symbol_interned*/ interned)
   else
     {
       Lisp_Object scheme_str = to_scheme_string (name);
-      scheme_symbol = UNCHEZ(scheme_call1
-        (interned == SYMBOL_INTERNED_IN_INITIAL_OBARRAY ?
-         "string->symbol" : "gensym",
-         CHEZ(scheme_str)));
-      //scheme_track (scheme_symbol);
+      scheme_symbol = UNCHEZ(scheme_call2
+                             ("make-lisp-symbol",
+                              CHEZ (scheme_str),
+                              interned == SYMBOL_INTERNED_IN_INITIAL_OBARRAY ?
+                              chez_true : chez_false));
       INSPECT_SCHEME_REF (scheme_symbol, "scheme_make_symbol");
     }
 
@@ -807,10 +807,12 @@ gdb_print_lisp(char *buf, Lisp_Object obj)
   buf[n] = '\0';
 }
 
+static chez_ptr true_gcvec = chez_false, false_gcvec = chez_false;
+
 chez_ptr
 scheme_get_gcvec (Lisp_Object obj)
 {
-  if (SYMBOLP (obj))
+  if (chez_symbolp (CHEZ (obj)))
     return SCHEME_FPTR_CALL2 (getprop, CHEZ (obj),
                               gcvec_property_symbol);
   else if (chez_vectorp (CHEZ (obj)) &&
@@ -818,6 +820,8 @@ scheme_get_gcvec (Lisp_Object obj)
             MISCP (obj) ||
             VECTORLIKEP (obj)))
     return SCHEME_PV_GCVEC (CHEZ (obj));
+  else if (chez_booleanp (CHEZ (obj)))
+    return CHEZ (obj) == chez_true ? true_gcvec : false_gcvec;
   else
     return chez_true;
 }
@@ -825,7 +829,7 @@ scheme_get_gcvec (Lisp_Object obj)
 void
 scheme_set_gcvec (Lisp_Object obj, chez_ptr gcvec)
 {
-  if (SYMBOLP (obj))
+  if (chez_symbolp (CHEZ (obj)))
     SCHEME_FPTR_CALL3 (putprop, CHEZ (obj),
                        gcvec_property_symbol, gcvec);
   else if (chez_vectorp (CHEZ (obj)) &&
@@ -833,6 +837,13 @@ scheme_set_gcvec (Lisp_Object obj, chez_ptr gcvec)
             MISCP (obj) ||
             VECTORLIKEP (obj)))
     SCHEME_PV_GCVEC_SET (CHEZ (obj), gcvec);
+  else if (chez_booleanp (CHEZ (obj)))
+    {
+      chez_lock_object (gcvec);
+      chez_ptr *ptr = CHEZ (obj) == chez_true ? &true_gcvec : &false_gcvec;
+      chez_unlock_object (*ptr);
+      *ptr = gcvec;
+    }
   else
     emacs_abort();
 }
@@ -1266,6 +1277,8 @@ init_nil_refs (Lisp_Object obj)
 }
 
 
+// Test whether SYM is a symbol named NAME or a string whose content
+// is NAME.
 bool
 symbol_is(Lisp_Object sym, const char *name)
 {
@@ -1647,16 +1660,16 @@ inspect_scheme_ref (Lisp_Object ref,
                     bool is_valid,
                     const char *label)
 {
-  while (true)
-    {
-      chez_ptr collected = chez_call0 (analyze_guardian);
-      if (collected == chez_false)
-        break;
-      chez_iptr i = chez_fixnum_value(collected);
-      eassert (0 <= i && i < MAX_MAGIC_REFS);
-      TRACEF ("*** collected: %p", (void *) magic_refs[i].addr);
-      magic_refs[i].seen = false;
-    }
+  /* while (true) */
+  /*   { */
+  /*     chez_ptr collected = chez_call0 (analyze_guardian); */
+  /*     if (collected == chez_false) */
+  /*       break; */
+  /*     chez_iptr i = chez_fixnum_value(collected); */
+  /*     eassert (0 <= i && i < MAX_MAGIC_REFS); */
+  /*     TRACEF ("*** collected: %p", (void *) magic_refs[i].addr); */
+  /*     magic_refs[i].seen = false; */
+  /*   } */
 
   if (ptr && !FALSEP (ref))
     ref = *ptr;

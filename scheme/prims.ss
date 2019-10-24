@@ -13,20 +13,20 @@
    )
   (import (chezscheme))
 
-  (define nil 'nil)
-  (define t 't)
+  (define nil #f)
+  (define t #t)
 
   (define emacs-false?
     (lambda (x)
-      (memq x '(#f nil ()))))
+      (not x)))
 
   (define emacs-true?
     (lambda (x)
-      (not (emacs-true? x))))
+      (not (emacs-false? x))))
 
   (define ->emacs-boolean
     (lambda (x)
-      (if x t nil)))
+      (if x #t #f)))
 
   (define wrong-type-argument
     (foreign-procedure "wrong_type_argument"

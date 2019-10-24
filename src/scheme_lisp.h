@@ -25,7 +25,7 @@ extern int scheme_call_count;
 
 bool check_special_case(void);
 
-#if 1
+#if 0
 #define CHEZ_PROLOG
 #define CHEZ_EPILOG
 #else
@@ -481,6 +481,8 @@ void walk_lisp_stack (void (*f)(void *, Lisp_Object *), void *);
 #else
 #define IS_SCHEME_REF(ref, num) false
 #endif
+
+#define TRACE_LOC() TRACEF("%s:%d", __FILE__, __LINE__)
 
 #ifdef ENABLE_CHECKING
 #define TRACEF(fmt, ...) (printf (fmt "\n" __VA_OPT__(, __VA_ARGS__)))

@@ -46,6 +46,7 @@ end
 #   bsave
 # end
 
+break default_abnormal_exit
 break wrong_type_argument
 break _exit
 
@@ -161,6 +162,15 @@ define mg
   pp $mg_tmp
 end
 
+define pop_stack
+  if chez_bp_stack_top == 0
+    echo stack empty\n
+  else
+    set $rbp = chez_bp_stack[--chez_bp_stack_top]
+    bt
+  end
+end
+
 set $first_run = 1
 
 break main
@@ -173,6 +183,13 @@ commands
   set $first_run = 0
   continue
 end
+
+# break syms_of_coding
+# commands
+#   silent
+#   tbreak scheme_oblookup
+#   continue
+# end
 
 run
 

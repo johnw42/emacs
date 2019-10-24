@@ -10934,6 +10934,12 @@ syms_of_coding (void)
   /* Followings are target of code detection.  */
   ASET (Vcoding_category_table, coding_category_iso_7,
 	intern_c_string ("coding-category-iso-7"));
+  Lisp_Object tmp =
+    make_unibyte_string("coding-category-iso-7", strlen("coding-category-iso-7"));
+  SCHEME_ASSERT (40, symbol_is(tmp, "coding-category-iso-7"));
+  tmp = Fintern (tmp, Qnil);
+  SCHEME_ASSERT (40, symbol_is(tmp, "coding-category-iso-7"));
+  SCHEME_ASSERT (40, symbol_is(AREF(Vcoding_category_table, coding_category_iso_7), "coding-category-iso-7"));
   ASET (Vcoding_category_table, coding_category_iso_7_tight,
 	intern_c_string ("coding-category-iso-7-tight"));
   ASET (Vcoding_category_table, coding_category_iso_8_1,

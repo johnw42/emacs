@@ -1159,7 +1159,7 @@ Return t if the file exists and loads successfully.  */)
                     found, efound, hist_file_name, handler, suffixes,
                     tem, msg_file, val);
 
-  Fgarbage_collect(); // XXX
+  //Fgarbage_collect(); // XXX
 
   FILE *stream;
   int fd;
@@ -1191,7 +1191,7 @@ Return t if the file exists and loads successfully.  */)
       file = internal_condition_case_1 (Fsubstitute_in_file_name, file,
 					Qt, load_error_handler);
       if (NILP (file))
-	RETURN_RESUME_GC (Qnil);
+	EXIT_LISP_FRAME (Qnil);
     }
   else
     file = Fsubstitute_in_file_name (file);
@@ -1239,7 +1239,7 @@ Return t if the file exists and loads successfully.  */)
     {
       if (NILP (noerror))
 	report_file_error ("Cannot open load file", file);
-      RETURN_RESUME_GC (Qnil);
+      EXIT_LISP_FRAME (Qnil);
     }
 
   /* Tell startup.el whether or not we found the user's init file.  */
@@ -1259,7 +1259,6 @@ Return t if the file exists and loads successfully.  */)
       if (! NILP (handler))
         {
           val = call5 (handler, Qload, found, noerror, nomessage, Qt);
-          RESUME_GC();
 #ifdef HAVE_CHEZ_SCHEME
           do_scheme_gc();
 #endif
@@ -1291,7 +1290,7 @@ Return t if the file exists and loads successfully.  */)
 
 #ifdef HAVE_MODULES
   if (suffix_p (found, MODULES_SUFFIX))
-    RETURN_RESUME_GC (unbind_to (count, Fmodule_load (found)));
+    EXIT_LISP_FRAME (unbind_to (count, Fmodule_load (found)));
 #endif
 
   /* Check if we're stuck in a recursive load cycle.
@@ -1408,7 +1407,7 @@ Return t if the file exists and loads successfully.  */)
 	  val = call4 (Vload_source_file_function, found, hist_file_name,
 		       NILP (noerror) ? Qnil : Qt,
 		       (NILP (nomessage) || force_load_messages) ? Qnil : Qt);
-	  RETURN_RESUME_GC (unbind_to (count, val));
+	  EXIT_LISP_FRAME (unbind_to (count, val));
 	}
     }
 
@@ -1505,7 +1504,7 @@ Return t if the file exists and loads successfully.  */)
 	message_with_string ("Loading %s...done", file, 1);
     }
 
-  RETURN_RESUME_GC (Qt);
+  EXIT_LISP_FRAME (Qt);
 }
 
 static bool
@@ -4129,12 +4128,12 @@ scheme_oblookup(Lisp_Object obarray, Lisp_Object name, bool add_if_missing)
   lisp_str = to_lisp_string (name);
 
   chez_ptr table = scheme_obarray_table (obarray);
-  eassert (SCHEME_FPTR_CALL1 (hashtablep, table) != chez_false);
-  eassert (STRINGP (lisp_str));
+  SCHEME_ASSERT (40, SCHEME_FPTR_CALL1 (hashtablep, table) != chez_false);
+  SCHEME_ASSERT (40, STRINGP (lisp_str));
   found = UNCHEZ (SCHEME_FPTR_CALL3 (hashtable_ref, table, CHEZ (lisp_str), CHEZ (Qnil)));
 
   if (!NILP (found))
-    eassert (SYMBOLP (found));
+    SCHEME_ASSERT (40, SYMBOLP (found));
   if (!NILP (found) || !add_if_missing)
     EXIT_LISP_FRAME (found);
 
@@ -4554,6 +4553,8 @@ init_obarray (void)
       XSYMBOL(lispsym[i])->u.s.interned = SYMBOL_INTERNED_IN_INITIAL_OBARRAY;
       /* eassert (XSYMBOL(lispsym[i])->u.s.interned == SYMBOL_INTERNED_IN_INITIAL_OBARRAY); */
     }
+  SCHEME_ASSERT (10, CHEZ (Qnil) == chez_false);
+  SCHEME_ASSERT (10, CHEZ (Qt) == chez_true);
 #else /* not HAVE_CHEZ_SCHEME */
   for (int i = 0; i < ARRAYELTS (lispsym); i++)
     define_symbol (builtin_lisp_symbol (i), defsym_name[i]);

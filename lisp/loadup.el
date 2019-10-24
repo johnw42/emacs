@@ -107,8 +107,8 @@
 (load "emacs-lisp/backquote")
 (load "subr")
 
-(if t ;;(fboundp 'scheme-top-level-value)
-    (load "emacs-lisp/scheme-internal"))
+;; (if t ;;(fboundp 'scheme-top-level-value)
+;;     (load "emacs-lisp/scheme-internal"))
 
 ;; Do it after subr, since both after-load-functions and add-hook are
 ;; implemented in subr.el.

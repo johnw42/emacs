@@ -6,6 +6,7 @@
           eq-hash
           print-to-bytevector
           wrap-function
+          make-lisp-symbol
           emacs-init)
   (import (chezscheme))
 
@@ -26,6 +27,14 @@
      (newline)
      (abort))))
 
+(define make-lisp-symbol
+  (lambda (name interned?)
+    (cond
+     ((not interned?) (gensym name))
+     ((equal? name "t") #t)
+     ((equal? name "nil") #f)
+     (else (string->symbol name)))))
+
 (define elisp-do-scheme-gc
   (foreign-procedure "do_scheme_gc" () void))
 
@@ -41,10 +50,13 @@
 (define elisp-sxhash-equal
   (foreign-procedure "Fsxhash_equal" (scheme-object) scheme-object))
 
+(define elisp-null
+  (lambda (x) (not x)))
+
 (define (make-obarray-table)
   (make-hashtable elisp-sxhash-equal
                   (lambda (a b)
-                    (not (eq? 'nil (elisp-equal a b))))))
+                    (not (elisp-null (elisp-equal a b))))))
 
 ;; A hash function for foreign pointers.
 (define pointer-hash
@@ -152,7 +164,7 @@
 
 (meta define subr-max-args 8)
 
-(define nil 'nil)
+(define nil #f)
 
 (define-syntax wrap-function-impl
   (lambda (x)
@@ -226,7 +238,7 @@
                         (scheme-object)
                         scheme-object))
     (else
-     (wrap-function-impl func-ptr min-args max-args)))))
+     (wrap-function-impl func-ptr min-args max-args))))
 
 (assert (= (foreign-sizeof 'scheme-object)
-           (foreign-sizeof 'void*)))
+           (foreign-sizeof 'void*))))
