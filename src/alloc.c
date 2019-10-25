@@ -2350,7 +2350,7 @@ object_pre_gc (struct Scheme_Object_Header *soh)
 {
   Lisp_Object obj = soh->scheme_obj;
   if (INSPECT_SCHEME_REF (obj, "object_pre_gc"))
-    TRACEF ("soh = %p", soh);
+    LOGF (50, "soh = %p", soh);
   chez_ptr gcvec = scheme_get_gcvec (obj);
   if (gcvec == chez_true) return;
   struct object_gc_data data = { .gcvec = gcvec, .num_refs = 0 };
@@ -8558,7 +8558,7 @@ search_in_range (chez_ptr old_val, uintptr_t start, uintptr_t end)
       for (chez_ptr *p = (chez_ptr *)start; p < (chez_ptr *)end; p++)
         {
           if (*p == old_val)
-            TRACEF ("found at %p", p);
+            LOGF (50, "found at %p", p);
         }
     }
   else
@@ -8566,7 +8566,7 @@ search_in_range (chez_ptr old_val, uintptr_t start, uintptr_t end)
       for (chez_ptr *p = (chez_ptr *)start - 1; p >= (chez_ptr *)end; p--)
         {
           if (*p == old_val)
-            TRACEF ("found at %p", p);
+            LOGF (50, "found at %p", p);
         }
     }
 }
@@ -8687,7 +8687,7 @@ try_memgrep1 (size_t start, uint64_t *words, size_t num_words, uint64_t mask, in
         {
           --memgrep_max_hits;
           memgrep_last_found = p;
-          TRACEF ("found 0x%lx at %p", (unsigned long) data, p);
+          LOGF (50, "found 0x%lx at %p", (unsigned long) data, p);
         }
     }
   sigaction(SIGSEGV, &old_act, NULL);
@@ -8744,7 +8744,7 @@ memgrep_max_hits = 1;
 }
 
 #ifdef NOISY_GC
-#define GC_TRACEF(...) TRACEF (__va_args__)
+#define GC_TRACEF(...) LOGF (50, __va_args__)
 #else
 #define GC_TRACEF(...) ((void)0)
 #endif
@@ -8970,7 +8970,7 @@ after_scheme_gc (void)
               INSPECT_SCHEME_REF_MAYBE_INVALID(UNCHEZ(new_ref), NULL) ||
               INSPECT_SCHEME_REF_MAYBE_INVALID(UNCHEZ(*old_ref_ptr), NULL))
             {
-              TRACEF ("*** moved %p => %p at %p",
+              LOGF (50, "*** moved %p => %p at %p",
                       old_ref, new_ref, old_ref_ptr);
               /* FOR_NAMED_CONTAINER (i, malloc_blocks) */
               /*   { */
@@ -9039,7 +9039,7 @@ after_scheme_gc (void)
             }
 #endif
           if (INSPECT_SCHEME_REF_MAYBE_INVALID (soh->scheme_obj, "collected"))
-            TRACEF ("soh = %p", soh);
+            LOGF (50, "soh = %p", soh);
           ++unlinked_count;
         }
       else
@@ -9054,7 +9054,7 @@ after_scheme_gc (void)
                 ++di;
               else
                 {
-                  TRACEF ("missing: {%d, %d}", gc_count, still_linked_count);
+                  LOGF (50, "missing: {%d, %d}", gc_count, still_linked_count);
                   ++missing_count;
                   if (missing_count > 20) abort();
                 }
@@ -9065,10 +9065,10 @@ after_scheme_gc (void)
           Lisp_Object old_ref = soh->scheme_obj;
           Lisp_Object new_ref = UNCHEZ (obj);
           if (INSPECT_SCHEME_REF (new_ref, "weak obj new ref"))
-            TRACEF ("  old was %p", CHEZ(old_ref));
+            LOGF (50, "  old was %p", CHEZ(old_ref));
           else if (!EQ (old_ref, new_ref))
             if (INSPECT_SCHEME_REF_MAYBE_INVALID (old_ref, "weak obj old ref"))
-              TRACEF ("  new is %p", CHEZ(new_ref));
+              LOGF (50, "  new is %p", CHEZ(new_ref));
           soh->scheme_obj = new_ref;
           ++still_linked_count;
           prev_soh_ptr = &soh->next;
@@ -9133,7 +9133,7 @@ after_scheme_gc (void)
   GC_TRACEF ("blocks freed: %d", num_freed);
   GC_TRACEF ("*\n* GC %d complete!\n*", gc_count);
 #ifndef NOISY_GC
-  TRACEF ("GC %d complete", gc_count);
+  LOGF (50, "GC %d complete", gc_count);
 #endif
   gc_running = false;
   --disable_scheme_gc;

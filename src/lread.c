@@ -1858,7 +1858,7 @@ build_load_history (Lisp_Object filename, bool entire)
                              Vload_history);
       if (INSPECT_SCHEME_REF (XCAR(XCAR(Vload_history)), "added file to load-history"))
         {
-          TRACEF ("cell = %p", CHEZ(XCAR(Vload_history)));
+          LOGF (50, "cell = %p", CHEZ(XCAR(Vload_history)));
         }
 
       INSPECT_SCHEME_REF (XCAR(Vload_history), "added list to load-history");

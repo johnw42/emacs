@@ -430,12 +430,12 @@ void walk_lisp_stack (void (*f)(void *, Lisp_Object *), void *);
 #define CHECK_LISP_FRAME_PTR()                         \
   SCHEME_ASSERT (0, lisp_stack_ptr == saved_lisp_stack_ptr)
 /*;                                                                     \
-  TRACEF ("saved frame ptr in %s: %p", __func__, lisp_stack_ptr)*/
+  LOGF (50, "saved frame ptr in %s: %p", __func__, lisp_stack_ptr)*/
 
 #define RESTORE_LISP_FRAME_PTR()                                \
   do                                                            \
     {                                                           \
-  /*TRACEF ("restoring frame ptr in %s: %p -> %p",              \
+  /*LOGF (50, "restoring frame ptr in %s: %p -> %p",              \
               __func__,                                         \
               lisp_stack_ptr,                                   \
               saved_lisp_stack_ptr);*/                          \
@@ -482,10 +482,24 @@ void walk_lisp_stack (void (*f)(void *, Lisp_Object *), void *);
 #define IS_SCHEME_REF(ref, num) false
 #endif
 
-#define TRACE_LOC() TRACEF("%s:%d", __FILE__, __LINE__)
-
+// Define LOGF(level, fmt, ...) to call printf(fmt, ...) with a
+// newline suffix iff ENABLE_CHECKING is defined and level >=
+// LOGF_LEVEL.  By contention, LOGF_LEVEL should be between 1 and 50.
 #ifdef ENABLE_CHECKING
-#define TRACEF(fmt, ...) (printf (fmt "\n" __VA_OPT__(, __VA_ARGS__)))
+#define LOGF_LEVEL 50
+#define LOGF(level, fmt, ...)                           \
+  ((void)((level) < LOGF_LEVEL ? 0 :                    \
+          printf (fmt "\n" __VA_OPT__(, __VA_ARGS__))))
 #else
-#define TRACEF(...) ((void)0)
+#define LOGF(level, fmt, ...) ((void)0)
 #endif
+
+// Define TRACEF as an extension of LOGF that prefixes each message
+// with the source file name and line number.  TRACEF may be called
+// with only a single argument to log the source location and nothing
+// else.
+#define TRACEF(level, ...)                                              \
+  LOGF (level, "%s:%d" __VA_OPT__(": " ARGS_CAR(__VA_ARGS__)),          \
+        __FILE__, __LINE__, ARGS_COMMA_CDR(__VA_ARGS__))
+#define ARGS_CAR(a0, ...) a0
+#define ARGS_COMMA_CDR(a0, ...) __VA_OPT__(, __VA_ARGS__)

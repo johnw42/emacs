@@ -126,7 +126,7 @@ check_special_case(void)
 static void
 scheme_abort (void)
 {
-  TRACEF ("scheme_abort");
+  LOGF (50, "scheme_abort");
   abort();
 }
 
@@ -138,7 +138,7 @@ scheme_sigaction (int sig, siginfo_t *info, void *ucontext)
   sigaddset (&set, sig);
   sigprocmask (SIG_UNBLOCK, &set, (sigset_t *) 0);
 
-  TRACEF ("called scheme_sigaction");
+  LOGF (50, "called scheme_sigaction");
 
   // Both versions seem to have the same effect.
   if (chez_bp_stack_top)
@@ -1667,7 +1667,7 @@ inspect_scheme_ref (Lisp_Object ref,
   /*       break; */
   /*     chez_iptr i = chez_fixnum_value(collected); */
   /*     eassert (0 <= i && i < MAX_MAGIC_REFS); */
-  /*     TRACEF ("*** collected: %p", (void *) magic_refs[i].addr); */
+  /*     LOGF (50, "*** collected: %p", (void *) magic_refs[i].addr); */
   /*     magic_refs[i].seen = false; */
   /*   } */
 
@@ -1699,10 +1699,10 @@ inspect_scheme_ref (Lisp_Object ref,
   if (label)
     {
       if (ptr)
-        TRACEF ("*** %s: ref %p (%s; %s) at %p",
+        LOGF (50, "*** %s: ref %p (%s; %s) at %p",
                 label, CHEZ(ref), magic_refs[i].comment, desc, ptr);
       else
-        TRACEF ("*** %s: ref %p (%s; %s)",
+        LOGF (50, "*** %s: ref %p (%s; %s)",
                 label, CHEZ(ref), magic_refs[i].comment, desc);
       if (ptr)
         gdb_found_ref_ptr(ptr);
@@ -1721,7 +1721,7 @@ inspect_malloc_ptr (void *ptr, const char *label)
       if (magic_refs[i].type == MRT_MALLOC_PTR &&
           ptr == (void *) magic_refs[i].addr)
         {
-          TRACEF ("*** %s: (void *) %p (%s)",
+          LOGF (50, "*** %s: (void *) %p (%s)",
                   label, ptr, magic_refs[i].comment);
           gdb_found_malloc();
           return true;
