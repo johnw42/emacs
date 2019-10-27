@@ -3775,7 +3775,7 @@ struct handler
   chez_ptr continuation;
   int handler_index;
   int disable_scheme_gc;
-#ifdef CHEZ_DEBUG_STACK
+#ifdef SCHEME_DEBUG_STACK
   size_t lisp_stack_size;
 #else
   struct Lisp_Frame_Record *lisp_stack_ptr;

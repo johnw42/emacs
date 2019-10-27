@@ -1,4 +1,4 @@
-(library (misc)
+(library (elisp misc)
   (export make-obarray-table
           pointer-hash
           pointer-table
@@ -9,7 +9,7 @@
           make-lisp-symbol
           emacs-init)
   (import (chezscheme))
-  (import (prims))
+  (import (prefix (elisp prims) emacs-))
 
 (define (emacs-init)
   (collect-request-handler

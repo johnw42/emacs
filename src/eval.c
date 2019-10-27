@@ -1247,7 +1247,7 @@ unwind_to_catch (struct handler *catch, Lisp_Object value)
 #ifdef HAVE_CHEZ_SCHEME
   eassert (disable_scheme_gc >= catch->disable_scheme_gc);
   disable_scheme_gc = catch->disable_scheme_gc;
-#ifdef CHEZ_DEBUG_STACK
+#ifdef SCHEME_DEBUG_STACK
   lisp_stack_size = catch->lisp_stack_size;
 #else
   lisp_stack_ptr = catch->lisp_stack_ptr;
@@ -1855,7 +1855,7 @@ push_handler_nosignal (Lisp_Object tag_ch_val, enum handlertype handlertype)
   c->continuation = chez_false;
   c->handler_index = -1;
   c->disable_scheme_gc = disable_scheme_gc;
-#ifdef CHEZ_DEBUG_STACK
+#ifdef SCHEME_DEBUG_STACK
   c->lisp_stack_size = lisp_stack_size;
 #else
   c->lisp_stack_ptr = lisp_stack_ptr;
@@ -2544,6 +2544,9 @@ int gdb_hit_count = 0;
 Lisp_Object
 eval_sub (Lisp_Object form)
 {
+#if defined(HAVE_CHEZ_SCHEME) && defined(SCHEME_EVAL_SUB)
+  return UNCHEZ (scheme_call1 ("eval-lisp-sub", CHEZ (form)));
+#else
   ENTER_LISP_FRAME ((form), fun, val, original_fun, original_args,
                     funcar, lex_binding, exp, arg, args_left, numargs);
   ptrdiff_t count;
@@ -2789,12 +2792,6 @@ eval_sub (Lisp_Object form)
 	}
       if (EQ (funcar, Qmacro))
 	{
-/* #ifdef HAVE_CHEZ_SCHEME */
-/*           if (CONSP(form) && */
-/*               symbol_is (XCAR(form), "define-obsolete-function-alias")) */
-/*             gdb_break(); */
-/* #endif */
-
           ptrdiff_t count1 = SPECPDL_INDEX ();
 	  /* Bind lexical-binding during expansion of the macro, so the
 	     macro can know reliably if the code it outputs will be
@@ -2822,6 +2819,7 @@ eval_sub (Lisp_Object form)
   specpdl_ptr--;
 
   EXIT_LISP_FRAME (val);
+#endif
 }
 
 DEFUN ("apply", Fapply, Sapply, 1, MANY, 0,

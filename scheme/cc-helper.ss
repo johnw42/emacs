@@ -1,4 +1,4 @@
-(library (cc-helper)
+(library (elisp cc-helper)
   (export lisp-condition-case-helper
           condition-case-helper
           catch-helper

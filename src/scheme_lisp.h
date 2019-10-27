@@ -2,6 +2,9 @@
 
 #include "pp_foldmap.h"
 
+//#define SCHEME_EVAL_SUB
+//#define SCHEME_DEBUG_STACK
+
 void gdb_break(void);
 
 #if defined(HAVE_CHEZ_SCHEME) && defined(ENABLE_CHECKING)
@@ -344,8 +347,7 @@ bool may_be_valid (chez_ptr x);
 void walk_lisp_stack (void (*f)(void *, Lisp_Object *), void *);
 void ensure_lisp_stack_capacity (size_t entries_to_add);
 
-//#define CHEZ_DEBUG_STACK
-#ifdef CHEZ_DEBUG_STACK
+#ifdef SCHEME_DEBUG_STACK
 
 struct Lisp_Var_Record {
   const char *func;
@@ -415,7 +417,7 @@ extern size_t lisp_stack_capacity;
   while (0)
 
 
-#else  // not CHEZ_DEBUG_STACK
+#else  // not SCHEME_DEBUG_STACK
 struct Lisp_Frame_Layout {
 #ifdef ENABLE_CHECKING
   const char *func_name;
@@ -522,7 +524,7 @@ extern struct Lisp_Frame_Record *lisp_stack_ptr;
       lisp_stack_ptr = saved_lisp_stack_ptr;                    \
     }                                                           \
   while (0)
-#endif  // not CHEZ_DEBUG_STACK
+#endif  // not SCHEME_DEBUG_STACK
 
 #define REGISTER_LISP_GLOBALS(...) \
   do { __VA_OPT__ (PP_MAP (REGISTER_LISP_GLOBAL, __VA_ARGS__)) } while (0)
