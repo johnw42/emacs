@@ -2392,7 +2392,7 @@ object_was_collected (Lisp_Object obj)
   struct Scheme_Object_Header *soh = get_scheme_object_header (obj);
   if (soh == NULL) return;
   INSPECT_SCHEME_REF (obj, "collected");
-  soh->scheme_obj = LISP_FALSE;
+  soh->scheme_obj = SCHEME_FALSE;
 }
 
 static void *
@@ -3653,7 +3653,7 @@ init_vectors (void)
 {
   REGISTER_LISP_GLOBALS (zero_vector);
 #ifdef HAVE_CHEZ_SCHEME
-  zero_vector = LISP_FALSE;
+  zero_vector = SCHEME_FALSE;
   zero_vector = scheme_make_pure (Fmake_vector (make_number(0), Qnil));
 #else /* not HAVE_CHEZ_SCHEME */
   zero_vector = make_pure_vector (0);
@@ -8343,9 +8343,9 @@ init_alloc_once (void)
   for (chez_iptr i = 0; i < ARRAYELTS (lispsym); i++)
     {
       if (i == iQnil)
-        lispsym[i] = UNCHEZ (chez_false);
+        lispsym[i] = SCHEME_NIL;
       else if (i == iQt)
-        lispsym[i] = UNCHEZ (chez_true);
+        lispsym[i] = SCHEME_T;
       else
         lispsym[i] = UNCHEZ (chez_string_to_symbol (defsym_name[i]));
       XSYMBOL (lispsym[i]);

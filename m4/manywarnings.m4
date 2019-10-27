@@ -126,7 +126,6 @@ m4_defun([gl_MANYWARN_ALL_GCC(C)],
     -Wbuiltin-macro-redefined \
     -Wcast-align \
     -Wchar-subscripts \
-    -Wchkp \
     -Wclobbered \
     -Wcomment \
     -Wcomments \

@@ -1877,7 +1877,8 @@ merge_vectors (Lisp_Object pred,
 	       ptrdiff_t blen, Lisp_Object const b[VLA_ELEMS (blen)],
 	       Lisp_Object dest[VLA_ELEMS (alen + blen)])
 {
-  ENTER_LISP_FRAME ((pred, dest));
+  ASSERT_GC_SUSPENDED ();
+
   eassume (0 < alen && 0 < blen);
   Lisp_Object const *alim = a + alen;
   Lisp_Object const *blim = b + blen;
@@ -1891,7 +1892,7 @@ merge_vectors (Lisp_Object pred,
 	    {
 	      if (dest != b)
 		memcpy (dest, b, (blim - b) * sizeof *dest);
-	      EXIT_LISP_FRAME_VOID ();
+	      return;
 	    }
 	}
       else
@@ -1900,11 +1901,10 @@ merge_vectors (Lisp_Object pred,
 	  if (b == blim)
 	    {
 	      memcpy (dest, a, (alim - a) * sizeof *dest);
-	      EXIT_LISP_FRAME_VOID ();
+	      return;
 	    }
 	}
     }
-  EXIT_LISP_FRAME_VOID ();
 }
 
 /* Using PRED to compare, sort LEN-length VEC in place, using TMP for
@@ -1914,14 +1914,14 @@ sort_vector_inplace (Lisp_Object pred, ptrdiff_t len,
 		     Lisp_Object vec[restrict VLA_ELEMS (len)],
 		     Lisp_Object tmp[restrict VLA_ELEMS (len >> 1)])
 {
-  ENTER_LISP_FRAME ((pred, vec, tmp));
+  SUSPEND_GC ();
   eassume (2 <= len);
   ptrdiff_t halflen = len >> 1;
   sort_vector_copy (pred, halflen, vec, tmp);
   if (1 < len - halflen)
     sort_vector_inplace (pred, len - halflen, vec + halflen, vec);
   merge_vectors (pred, halflen, tmp, len - halflen, vec + halflen, vec);
-  EXIT_LISP_FRAME_VOID ();
+  RESUME_GC ();
 }
 
 /* Using PRED to compare, sort from LEN-length SRC into DST.
@@ -1931,7 +1931,7 @@ sort_vector_copy (Lisp_Object pred, ptrdiff_t len,
 		  Lisp_Object src[restrict VLA_ELEMS (len)],
 		  Lisp_Object dest[restrict VLA_ELEMS (len)])
 {
-  ENTER_LISP_FRAME ((pred, src, dest));
+  SUSPEND_GC ();
   eassume (0 < len);
   ptrdiff_t halflen = len >> 1;
   if (halflen < 1)
@@ -1944,7 +1944,7 @@ sort_vector_copy (Lisp_Object pred, ptrdiff_t len,
 	sort_vector_inplace (pred, len - halflen, src + halflen, dest);
       merge_vectors (pred, halflen, src, len - halflen, src + halflen, dest);
     }
-  EXIT_LISP_FRAME_VOID ();
+  RESUME_GC ();
 }
 
 /* Sort VECTOR in place using PREDICATE, preserving original order of

@@ -46,6 +46,7 @@ chez_ptr scheme_misc_symbol = chez_false;
 chez_ptr scheme_string_symbol = chez_false;
 chez_ptr c_data_property_symbol = chez_false;
 chez_ptr gcvec_property_symbol = chez_false;
+chez_ptr error_result_symbol = chez_false;
 chez_iptr scheme_greatest_fixnum;
 chez_iptr scheme_least_fixnum;
 chez_iptr scheme_fixnum_width;
@@ -69,7 +70,8 @@ DEFUN ("scheme-top-level-value",
        doc: /* Get a Scheme top-level value by name. */)
   (Lisp_Object name)
 {
-  abort();
+  SCHEME_ASSERT (0, false);
+  return Qnil;
 }
 
 void syms_of_scheme_lisp(void) {
@@ -345,6 +347,7 @@ scheme_init(void) {
   scheme_string_symbol = make_gensym("emacs-string");
   c_data_property_symbol = make_gensym("c-data-property");
   gcvec_property_symbol = make_gensym("gcvec-property");
+  error_result_symbol = make_gensym("error-result");
 
   scheme_object_list = chez_cons (chez_false, chez_nil);
   chez_lock_object (scheme_object_list);
@@ -424,9 +427,9 @@ to_lisp_string(Lisp_Object arg)
     return arg;
   if (chez_symbolp (CHEZ(arg)))
     arg = UNCHEZ(scheme_call1 ("symbol->string", CHEZ(arg)));
-  if (CHEZ (arg) == chez_false)
+  if (SCHEME_NIL_P (arg))
     return make_unibyte_string ("nil", 3);
-  if (CHEZ (arg) == chez_true)
+  if (SCHEME_T_P (arg))
     return make_unibyte_string ("t", 3);
   SCHEME_ASSERT (10, chez_stringp (CHEZ(arg)));
   chez_iptr n = chez_string_length(CHEZ(arg));
@@ -477,7 +480,7 @@ make_scheme_string (const char *data, chez_iptr nchars, chez_iptr nbytes, bool m
 
 static int xxx_count = 0;
 
-static struct Lisp_Symbol *true_data, *false_data;
+static struct Lisp_Symbol *data_t, *data_nil;
 
 struct Lisp_Symbol *
 ensure_symbol_c_data (Lisp_Object symbol, Lisp_Object name)
@@ -492,12 +495,12 @@ ensure_symbol_c_data (Lisp_Object symbol, Lisp_Object name)
           return p;
         }
     }
-  else if (CHEZ (symbol) == chez_false && false_data)
-    return false_data;
-  else if (CHEZ (symbol) == chez_true && true_data)
-    return true_data;
+  else if (SCHEME_NIL_P (symbol) && data_nil)
+    return data_nil;
+  else if (SCHEME_T_P (symbol) && data_t)
+    return data_t;
 
-  if (FALSEP (name))
+  if (SCHEME_FALSE_P (name))
     name = to_lisp_string (symbol);
   SCHEME_ASSERT (50, STRINGP (name));
 
@@ -507,10 +510,10 @@ ensure_symbol_c_data (Lisp_Object symbol, Lisp_Object name)
       SCHEME_FPTR_CALL3 (putprop, CHEZ(symbol), c_data_property_symbol, chez_fixnum ((chez_uptr) p));
       SCHEME_ASSERT (30, p == (void *) chez_fixnum_value (SCHEME_FPTR_CALL2 (getprop, CHEZ(symbol), c_data_property_symbol)));
     }
-  else if (CHEZ (symbol) == chez_false)
-    false_data = p;
-  else if (CHEZ (symbol) == chez_true)
-    true_data = p;
+  else if (SCHEME_NIL_P (symbol))
+    data_nil = p;
+  else if (SCHEME_T_P (symbol))
+    data_t = p;
   else
     abort();
   schedule_free (symbol, p);
@@ -538,7 +541,7 @@ ensure_symbol_c_data (Lisp_Object symbol, Lisp_Object name)
 struct Lisp_Symbol *
 scheme_make_symbol(Lisp_Object name, int /*enum symbol_interned*/ interned)
 {
-  Lisp_Object scheme_symbol = LISP_FALSE;
+  Lisp_Object scheme_symbol = SCHEME_FALSE;
   if (chez_symbolp (CHEZ (name)))
     scheme_symbol = name;
   else
@@ -1522,6 +1525,8 @@ may_be_valid (chez_ptr x)
   /*   return false; */
 
   if (x == chez_false ||
+      x == chez_nil ||
+      x == chez_true ||
       chez_pairp(x) ||
       chez_symbolp(x) ||
       chez_bignump(x) ||
@@ -1557,6 +1562,35 @@ may_be_valid (chez_ptr x)
   return false;
 }
 
+#ifdef CHEZ_DEBUG_STACK
+struct Lisp_Var_Record *lisp_stack;
+size_t lisp_stack_size = 0;
+size_t lisp_stack_capacity = 0;
+
+void
+ensure_lisp_stack_capacity (size_t entries_to_add)
+{
+  size_t cap_needed = lisp_stack_size + entries_to_add;
+  if (cap_needed > lisp_stack_capacity)
+    {
+      lisp_stack = reallocarray (lisp_stack, cap_needed, sizeof (struct Lisp_Var_Record));
+      SCHEME_ASSERT (0, lisp_stack);
+      lisp_stack_capacity = cap_needed;
+    }
+}
+
+void
+walk_lisp_stack (void (*f)(void *, Lisp_Object *), void *data)
+{
+  for (size_t i = 0; i < lisp_stack_size; i++)
+    {
+      struct Lisp_Var_Record *record = lisp_stack + i;
+      for (size_t j = 0; j < record->size; j++)
+        f (data, record->data + j);
+    }
+}
+
+#else
 struct Lisp_Frame_Record *lisp_stack_ptr = NULL;
 
 void
@@ -1575,6 +1609,7 @@ walk_lisp_stack (void (*f)(void *, Lisp_Object *), void *data)
             f (data, &ar->data[i]);
     }
 }
+#endif
 
 #ifdef ENABLE_CHECKING
 static int ptr_cmp (const void *p, const void *q)
@@ -1671,7 +1706,7 @@ inspect_scheme_ref (Lisp_Object ref,
   /*     magic_refs[i].seen = false; */
   /*   } */
 
-  if (ptr && !FALSEP (ref))
+  if (ptr && !SCHEME_FALSE_P (ref))
     ref = *ptr;
   const char *desc = "may be invalid";
   if (is_valid)
@@ -1698,7 +1733,10 @@ inspect_scheme_ref (Lisp_Object ref,
  found:
   if (label)
     {
-      if (ptr)
+      if (ptr && SCHEME_FALSE_P (ref))
+        LOGF (50, "*** %s: ref (%s) at %p",
+                label, magic_refs[i].comment, ptr);
+      else if (ptr)
         LOGF (50, "*** %s: ref %p (%s; %s) at %p",
                 label, CHEZ(ref), magic_refs[i].comment, desc, ptr);
       else

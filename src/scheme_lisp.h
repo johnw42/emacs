@@ -14,8 +14,14 @@ void gdb_break(void);
 
 #ifdef HAVE_CHEZ_SCHEME
 
-#define FALSEP(obj) (CHEZ (obj) == chez_false)
-#define LISP_FALSE UNCHEZ (chez_false)
+#define SCHEME_FALSE_P(obj) (CHEZ (obj) == chez_false)
+#define SCHEME_FALSE UNCHEZ (chez_false)
+
+#define SCHEME_NIL UNCHEZ (chez_nil)
+#define SCHEME_T   UNCHEZ (chez_true)
+
+#define SCHEME_NIL_P(x) EQ (SCHEME_NIL, x)
+#define SCHEME_T_P(x) EQ (SCHEME_T, x)
 
 #define CHEZ_BP_STACK_SIZE 1024
 extern void *chez_bp_stack[CHEZ_BP_STACK_SIZE];
@@ -67,7 +73,7 @@ struct xmalloc_header {
 
 #if defined(HAVE_CHEZ_SCHEME) && defined(ENABLE_CHECKING)
 #define INSPECT_SCHEME_REF(ref, label) inspect_scheme_ref(ref, NULL, true, label)
-#define INSPECT_SCHEME_REF_PTR(ptr, label) inspect_scheme_ref(LISP_FALSE, ptr, true, label)
+#define INSPECT_SCHEME_REF_PTR(ptr, label) inspect_scheme_ref(SCHEME_FALSE, ptr, true, label)
 #define INSPECT_SCHEME_REF_MAYBE_INVALID(ref, label) inspect_scheme_ref(ref, NULL, false, label)
 #define INSPECT_SCHEME_REF_INFO(info, label) inspect_scheme_ref(UNCHEZ ((info)->ref), (Lisp_Object *) (info)->ref_ptr, true, label)
 #define INSPECT_MALLOC_PTR(ptr, label) inspect_malloc_ptr(ptr, label)
@@ -137,6 +143,7 @@ extern int gdb_hit_count;
 extern chez_ptr scheme_vectorlike_symbol;
 extern chez_ptr scheme_misc_symbol;
 extern chez_ptr scheme_string_symbol;
+extern chez_ptr error_result_symbol;
 extern chez_iptr scheme_greatest_fixnum;
 extern chez_iptr scheme_least_fixnum;
 extern chez_iptr scheme_fixnum_width;
@@ -310,6 +317,7 @@ bool may_be_valid (chez_ptr x);
 #define SUSPEND_GC()
 #define RESUME_GC()
 #define RETURN_RESUME_GC(...) return __VA_ARGS__
+#define ASSERT_GC_SUSPENDED()
 
 #define ENTER_LISP_FRAME(...)                    \
   ENTER_LISP_FRAME_T(Lisp_Object, __VA_ARGS__)
@@ -331,7 +339,83 @@ bool may_be_valid (chez_ptr x);
     }                                                           \
   while (0)
 
+
 #ifdef HAVE_CHEZ_SCHEME
+void walk_lisp_stack (void (*f)(void *, Lisp_Object *), void *);
+void ensure_lisp_stack_capacity (size_t entries_to_add);
+
+//#define CHEZ_DEBUG_STACK
+#ifdef CHEZ_DEBUG_STACK
+
+struct Lisp_Var_Record {
+  const char *func;
+  Lisp_Object *data;
+  size_t size;
+};
+
+extern struct Lisp_Var_Record *lisp_stack;
+extern size_t lisp_stack_size;
+extern size_t lisp_stack_capacity;
+
+#define ENTER_LISP_FRAME_T(type, params, ...)                           \
+  size_t this_old_lisp_stack_size = lisp_stack_size;                    \
+  ensure_lisp_stack_capacity (PP_NARGS params + PP_NARGS (__VA_ARGS__)); \
+  typedef type this_lisp_frame_type;                                    \
+  (void) (this_lisp_frame_type *) 0;                                    \
+  PP_MAP(LISP_LOCAL_VAR, __VA_ARGS__)                                   \
+  LISP_LOCAL_MAP_ADDR params;                                           \
+  LISP_LOCAL_MAP_ADDR(__VA_ARGS__)
+#define LISP_LOCAL_ARRAY(name, size_)                                   \
+  Lisp_Object name[size_];                                              \
+  set_nil (name, size_);                                                \
+  LISP_ARRAY_PARAM (name, size_)
+#define LISP_DYNAMIC_ARRAY(name)                                        \
+  Lisp_Object *name = NULL;                                             \
+  USE_SAFE_ALLOCA
+#define LISP_ARRAY_PARAM(name, size_)                                   \
+  ensure_lisp_stack_capacity (1);                                       \
+  lisp_stack[lisp_stack_size].func = __func__;                          \
+  lisp_stack[lisp_stack_size].size = size_;                             \
+  lisp_stack[lisp_stack_size].data = name;                              \
+  lisp_stack_size++
+#define UPDATE_LISP_DYNAMIC_ARRAY(name, size_)                          \
+  do                                                                    \
+    {                                                                   \
+      set_nil (name, size_);                                            \
+      LISP_ARRAY_PARAM (name, size_);                                   \
+    }                                                                   \
+  while (0)
+#define ENTER_LISP_FRAME_VA_T(type, nargs, args, ...)                   \
+  ENTER_LISP_FRAME_T (type __VA_OPT__(, __VA_ARGS__));                  \
+  LISP_ARRAY_PARAM (args, nargs)
+#define LISP_LOCAL_VAR(name) Lisp_Object name = Qnil;
+#define LISP_LOCAL_ADDR(var)                                            \
+  lisp_stack[lisp_stack_size].func = __func__;                          \
+  lisp_stack[lisp_stack_size].size = 1;                                 \
+  lisp_stack[lisp_stack_size].data = &var;                              \
+  lisp_stack_size++;
+#define LISP_LOCAL_MAP_ADDR(...)                        \
+  __VA_OPT__(PP_MAP(LISP_LOCAL_ADDR, __VA_ARGS__))
+#define EXIT_LISP_FRAME_NO_RETURN()                     \
+  (lisp_stack_size = this_old_lisp_stack_size)
+#define SAVE_LISP_FRAME_PTR()                                           \
+  size_t saved_lisp_stack_size = lisp_stack_size
+#define CHECK_LISP_FRAME_PTR()                                          \
+  do                                                                    \
+    {                                                                   \
+      SCHEME_ASSERT (0, lisp_stack_size == saved_lisp_stack_size);      \
+    }                                                                   \
+  while (0)
+
+#define RESTORE_LISP_FRAME_PTR()                                \
+  do                                                            \
+    {                                                           \
+      lisp_stack_size = saved_lisp_stack_size;                  \
+    }                                                           \
+  while (0)
+
+
+#else  // not CHEZ_DEBUG_STACK
 struct Lisp_Frame_Layout {
 #ifdef ENABLE_CHECKING
   const char *func_name;
@@ -363,8 +447,6 @@ extern struct Lisp_Frame_Record *lisp_stack_ptr;
 #else
 #define LISP_FRAME_INFO_FUNC
 #endif
-
-void walk_lisp_stack (void (*f)(void *, Lisp_Object *), void *);
 
 #define ENTER_LISP_FRAME_T(type, params, ...)                           \
   static bool is_this_lisp_frame_layout_init = false;                   \
@@ -427,21 +509,20 @@ void walk_lisp_stack (void (*f)(void *, Lisp_Object *), void *);
   (lisp_stack_ptr = this_lisp_frame_record.prev)
 #define SAVE_LISP_FRAME_PTR()                                           \
   struct Lisp_Frame_Record *saved_lisp_stack_ptr = lisp_stack_ptr
-#define CHECK_LISP_FRAME_PTR()                         \
-  SCHEME_ASSERT (0, lisp_stack_ptr == saved_lisp_stack_ptr)
-/*;                                                                     \
-  LOGF (50, "saved frame ptr in %s: %p", __func__, lisp_stack_ptr)*/
+#define CHECK_LISP_FRAME_PTR()                                          \
+  do                                                                    \
+    {                                                                   \
+      SCHEME_ASSERT (0, lisp_stack_ptr == saved_lisp_stack_ptr);        \
+    }                                                                   \
+  while (0)
 
 #define RESTORE_LISP_FRAME_PTR()                                \
   do                                                            \
     {                                                           \
-  /*LOGF (50, "restoring frame ptr in %s: %p -> %p",              \
-              __func__,                                         \
-              lisp_stack_ptr,                                   \
-              saved_lisp_stack_ptr);*/                          \
       lisp_stack_ptr = saved_lisp_stack_ptr;                    \
     }                                                           \
   while (0)
+#endif  // not CHEZ_DEBUG_STACK
 
 #define REGISTER_LISP_GLOBALS(...) \
   do { __VA_OPT__ (PP_MAP (REGISTER_LISP_GLOBAL, __VA_ARGS__)) } while (0)
@@ -500,6 +581,6 @@ void walk_lisp_stack (void (*f)(void *, Lisp_Object *), void *);
 // else.
 #define TRACEF(level, ...)                                              \
   LOGF (level, "%s:%d" __VA_OPT__(": " ARGS_CAR(__VA_ARGS__)),          \
-        __FILE__, __LINE__, ARGS_COMMA_CDR(__VA_ARGS__))
+        __FILE__, __LINE__ ARGS_COMMA_CDR(__VA_ARGS__))
 #define ARGS_CAR(a0, ...) a0
 #define ARGS_COMMA_CDR(a0, ...) __VA_OPT__(, __VA_ARGS__)

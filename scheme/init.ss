@@ -4,16 +4,10 @@
   (source-directories (cons libdir (source-directories)))
 
   (printf "libdir: ~s\n" (source-directories))
+  (load "prims.ss")
   (load "misc.ss")
-  (load "cc-helper.ss")
-  (load "prims.ss"))
+  (load "cc-helper.ss"))
 
+(import (prims))
 (import (misc))
 (import (cc-helper))
-(import (prims))
-
-;; Local Variables:
-;; mode: scheme
-;; eval: (put 'module 'scheme-indent-function 1)
-;; eval: (put 'with-mutex 'scheme-indent-function 1)
-;; End:

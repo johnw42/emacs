@@ -355,7 +355,7 @@ error !;
 #define lisp_h_INTEGERP(x) chez_fixnump (CHEZ(x))
 #define lisp_h_MARKERP(x) (MISCP (x) && XMISCTYPE (x) == Lisp_Misc_Marker)
 #define lisp_h_MISCP(x) SCHEME_VECTORP(x, scheme_misc_symbol)
-#define lisp_h_NILP(x) EQ (x, Qnil)
+#define lisp_h_NILP(x) SCHEME_NIL_P (x)
 #define lisp_h_SET_SYMBOL_VAL(sym, v) \
    (eassert ((sym)->u.s.redirect == SYMBOL_PLAINVAL), \
     (sym)->u.s.val.value = (v))
@@ -365,7 +365,7 @@ error !;
 
 #define lisp_h_SYMBOL_VAL(sym)                                          \
    (eassert ((sym)->u.s.redirect == SYMBOL_PLAINVAL), (sym)->u.s.val.value)
-#define lisp_h_SYMBOLP(x) (chez_symbolp (CHEZ (x)) || chez_booleanp (CHEZ (x)))
+#define lisp_h_SYMBOLP(x) (chez_symbolp (CHEZ (x)) || SCHEME_NIL_P (x) || SCHEME_T_P (x))
 #define lisp_h_VECTORLIKEP(x) SCHEME_VECTORP(x, scheme_vectorlike_symbol)
 #define lisp_h_XCAR(c) (SCHEME_ASSERT (50, chez_pairp (CHEZ (c))), UNCHEZ (chez_car (CHEZ (c))))
 #define lisp_h_XCDR(c) (SCHEME_ASSERT (50, chez_pairp (CHEZ (c))), chez_cdr (CHEZ (c)) == chez_nil ? Qnil : UNCHEZ (chez_cdr (CHEZ (c))))
@@ -986,7 +986,7 @@ INLINE bool
 INLINE struct Lisp_Symbol *
 (XSYMBOL) (Lisp_Object a)
 {
-  struct Lisp_Symbol *p = ensure_symbol_c_data (a, LISP_FALSE);
+  struct Lisp_Symbol *p = ensure_symbol_c_data (a, SCHEME_FALSE);
   SCHEME_ASSERT (50, EQ (p->u.s.soh.scheme_obj, a));
   return p;
 }
@@ -3775,7 +3775,11 @@ struct handler
   chez_ptr continuation;
   int handler_index;
   int disable_scheme_gc;
+#ifdef CHEZ_DEBUG_STACK
+  size_t lisp_stack_size;
+#else
   struct Lisp_Frame_Record *lisp_stack_ptr;
+#endif
 #endif
 };
 

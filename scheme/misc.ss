@@ -9,6 +9,7 @@
           make-lisp-symbol
           emacs-init)
   (import (chezscheme))
+  (import (prims))
 
 (define (emacs-init)
   (collect-request-handler
@@ -31,8 +32,8 @@
   (lambda (name interned?)
     (cond
      ((not interned?) (gensym name))
-     ((equal? name "t") #t)
-     ((equal? name "nil") #f)
+     ((equal? name "t") emacs-t)
+     ((equal? name "nil") emacs-nil)
      (else (string->symbol name)))))
 
 (define elisp-do-scheme-gc
@@ -50,13 +51,10 @@
 (define elisp-sxhash-equal
   (foreign-procedure "Fsxhash_equal" (scheme-object) scheme-object))
 
-(define elisp-null
-  (lambda (x) (not x)))
-
 (define (make-obarray-table)
   (make-hashtable elisp-sxhash-equal
                   (lambda (a b)
-                    (not (elisp-null (elisp-equal a b))))))
+                    (emacs-truthy? (elisp-equal a b)))))
 
 ;; A hash function for foreign pointers.
 (define pointer-hash
@@ -164,8 +162,6 @@
 
 (meta define subr-max-args 8)
 
-(define nil #f)
-
 (define-syntax wrap-function-impl
   (lambda (x)
     (syntax-case x ()
@@ -175,7 +171,7 @@
                  (let ([params (generate-temporaries
                                 (iota num-args))]
                        [filler (make-list (- max-args num-args)
-                                          #'nil)])
+                                          #'emacs-nil)])
                    #`[#,params
                       (proc #,@params #,@filler)]))]
               [lambda-cases

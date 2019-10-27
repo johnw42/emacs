@@ -4553,8 +4553,8 @@ init_obarray (void)
       XSYMBOL(lispsym[i])->u.s.interned = SYMBOL_INTERNED_IN_INITIAL_OBARRAY;
       /* eassert (XSYMBOL(lispsym[i])->u.s.interned == SYMBOL_INTERNED_IN_INITIAL_OBARRAY); */
     }
-  SCHEME_ASSERT (10, CHEZ (Qnil) == chez_false);
-  SCHEME_ASSERT (10, CHEZ (Qt) == chez_true);
+  SCHEME_ASSERT (10, SCHEME_NIL_P (Qnil));
+  SCHEME_ASSERT (10, SCHEME_T_P (Qt));
 #else /* not HAVE_CHEZ_SCHEME */
   for (int i = 0; i < ARRAYELTS (lispsym); i++)
     define_symbol (builtin_lisp_symbol (i), defsym_name[i]);

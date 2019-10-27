@@ -1247,7 +1247,11 @@ unwind_to_catch (struct handler *catch, Lisp_Object value)
 #ifdef HAVE_CHEZ_SCHEME
   eassert (disable_scheme_gc >= catch->disable_scheme_gc);
   disable_scheme_gc = catch->disable_scheme_gc;
+#ifdef CHEZ_DEBUG_STACK
+  lisp_stack_size = catch->lisp_stack_size;
+#else
   lisp_stack_ptr = catch->lisp_stack_ptr;
+#endif
 #endif
 
   do
@@ -1851,7 +1855,11 @@ push_handler_nosignal (Lisp_Object tag_ch_val, enum handlertype handlertype)
   c->continuation = chez_false;
   c->handler_index = -1;
   c->disable_scheme_gc = disable_scheme_gc;
+#ifdef CHEZ_DEBUG_STACK
+  c->lisp_stack_size = lisp_stack_size;
+#else
   c->lisp_stack_ptr = lisp_stack_ptr;
+#endif
 #endif
   handlerlist = c;
   EXIT_LISP_FRAME (c);
