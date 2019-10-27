@@ -56,6 +56,7 @@ chez_ptr free_guardian;
 chez_ptr buffer_guardian;
 struct Scheme_Object_Header *first_scheme_object_header = NULL;
 chez_ptr scheme_object_list = chez_nil;
+chez_ptr scheme_intervals_map = chez_false;
 
 uint64_t gdb_misc_val = 0;
 unsigned gdb_flags = 0;

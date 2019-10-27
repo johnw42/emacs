@@ -2,8 +2,11 @@
 
 #include "pp_foldmap.h"
 
+#ifdef HAVE_CHEZ_SCHEME
 //#define SCHEME_EVAL_SUB
 //#define SCHEME_DEBUG_STACK
+//#define SCHEME_STRINGS
+#endif
 
 void gdb_break(void);
 
@@ -156,6 +159,7 @@ extern chez_ptr free_guardian;
 extern chez_ptr buffer_guardian;
 extern struct Scheme_Object_Header *first_scheme_object_header;
 extern chez_ptr scheme_object_list;
+extern chez_ptr scheme_intervals_map;
 
 void link_scheme_obj (struct Scheme_Object_Header *soh, Lisp_Object val);
 

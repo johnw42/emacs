@@ -1531,6 +1531,7 @@ CDR_SAFE (Lisp_Object c)
 
 /* In a string or vector, the sign bit of u.s.size is the gc mark bit.  */
 
+#ifndef SCHEME_STRINGS
 struct Lisp_String
 {
   union
@@ -1555,15 +1556,20 @@ struct Lisp_String
 #ifndef HAVE_CHEZ_SCHEME
 verify (alignof (struct Lisp_String) % GCALIGNMENT == 0);
 #endif /* not HAVE_CHEZ_SCHEME */
+#endif
 
 INLINE bool
 STRINGP (Lisp_Object x)
 {
+#ifdef SCHEME_STRINGS
+  return chez_stringp (CHEZ (x)) || chez_bytevectorp (CHEZ (x));
+#else
 #ifdef HAVE_CHEZ_SCHEME
   return SCHEME_VECTORP (x, scheme_string_symbol);
 #else /* not HAVE_CHEZ_SCHEME */
   return XTYPE (x) == Lisp_String;
 #endif /* not HAVE_CHEZ_SCHEME */
+#endif
 }
 
 INLINE void
@@ -1572,6 +1578,7 @@ CHECK_STRING (Lisp_Object x)
   CHECK_TYPE (STRINGP (x), Qstringp, x);
 }
 
+#ifndef SCHEME_STRINGS
 INLINE struct Lisp_String *
 XSTRING (Lisp_Object a)
 {
@@ -1585,12 +1592,18 @@ XSTRING (Lisp_Object a)
   return XUNTAG (a, Lisp_String);
 #endif /* not HAVE_CHEZ_SCHEME */
 }
+#endif
 
 /* True if STR is a multibyte string.  */
 INLINE bool
 STRING_MULTIBYTE (Lisp_Object str)
 {
+#ifdef SCHEME_STRINGS
+  SCHEME_ASSERT (45, STRINGP (str));
+  return chez_stringp (CHEZ (str));
+#else
   return 0 <= XSTRING (str)->u.s.size_byte;
+#endif
 }
 
 /* An upper bound on the number of bytes in a Lisp string, not
@@ -1609,6 +1622,7 @@ STRING_MULTIBYTE (Lisp_Object str)
 #define STRING_BYTES_BOUND  \
   ((ptrdiff_t) min (MOST_POSITIVE_FIXNUM, min (SIZE_MAX, PTRDIFF_MAX) - 1))
 
+#ifndef SCHEME_STRINGS
 /* Mark STR as a unibyte string.  */
 #define STRING_SET_UNIBYTE(STR)				\
   do {							\
@@ -1641,6 +1655,7 @@ SSDATA (Lisp_Object string)
   /* Avoid "differ in sign" warnings.  */
   return (char *) SDATA (string);
 }
+
 INLINE unsigned char
 SREF (Lisp_Object string, ptrdiff_t index)
 {
@@ -1651,15 +1666,28 @@ SSET (Lisp_Object string, ptrdiff_t index, unsigned char new)
 {
   SDATA (string)[index] = new;
 }
+#endif
 
 INLINE ptrdiff_t
 SCHARS (Lisp_Object string)
 {
+#ifdef SCHEME_STRINGS
+  ptrdiff_t nchars;
+  if (chez_stringp (CHEZ (string)))
+    nchars = chez_string_length (CHEZ (string));
+  else
+    {
+      SCHEME_ASSERT (45, chez_bytevectorp (CHEZ (string)));
+      nchars = chez_bytevector_length (CHEZ (string));
+    }
+#else
   ptrdiff_t nchars = XSTRING (string)->u.s.size;
+#endif
   eassume (0 <= nchars);
   return nchars;
 }
 
+#ifndef SCHEME_STRINGS
 #ifdef GC_CHECK_STRING_BYTES
 extern ptrdiff_t string_bytes (struct Lisp_String *);
 #endif
@@ -1691,6 +1719,7 @@ STRING_SET_CHARS (Lisp_Object string, ptrdiff_t newsize)
 	   : newsize == SCHARS (string));
   XSTRING (string)->u.s.size = newsize;
 }
+#endif
 
 /* A regular vector is just a header plus an array of Lisp_Objects.  */
 
@@ -3888,7 +3917,7 @@ set_overlay_plist (Lisp_Object overlay, Lisp_Object plist)
 INLINE INTERVAL
 string_intervals (Lisp_Object s)
 {
-  return  XSTRING (s)->u.s.intervals;
+  return XSTRING (s)->u.s.intervals;
 }
 
 /* Set text properties of S to I.  */
