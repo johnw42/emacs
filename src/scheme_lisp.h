@@ -3,6 +3,7 @@
 #include "pp_foldmap.h"
 
 #ifdef HAVE_CHEZ_SCHEME
+//#define PARANOID_XMALLOC
 //#define SCHEME_EVAL_SUB
 //#define SCHEME_DEBUG_STACK
 //#define SCHEME_STRINGS
@@ -26,8 +27,8 @@ void gdb_break(void);
 #define SCHEME_NIL UNCHEZ (chez_nil)
 #define SCHEME_T   UNCHEZ (chez_true)
 
-#define SCHEME_NIL_P(x) EQ (SCHEME_NIL, x)
-#define SCHEME_T_P(x) EQ (SCHEME_T, x)
+#define SCHEME_NIL_P(x) (CHEZ(x) == chez_nil)
+#define SCHEME_T_P(x) (CHEZ(x) == chez_true)
 
 #define CHEZ_BP_STACK_SIZE 1024
 extern void *chez_bp_stack[CHEZ_BP_STACK_SIZE];

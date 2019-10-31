@@ -431,7 +431,7 @@ to_lisp_string(Lisp_Object arg)
   if (SCHEME_NIL_P (arg))
     return make_unibyte_string ("nil", 3);
   if (SCHEME_T_P (arg))
-    return make_unibyte_string ("t", 3);
+    return make_unibyte_string ("t", 1);
   SCHEME_ASSERT (10, chez_stringp (CHEZ(arg)));
   chez_iptr n = chez_string_length(CHEZ(arg));
   for (chez_iptr j = 0; j < n; j++)

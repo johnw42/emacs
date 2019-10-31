@@ -1,5 +1,7 @@
 * Critical path
 
+** Generalize free_guardian to hold destructor functions
+** Fix memory management for intervals
 ** Compile to machine code:
 *** Translate macro-expanded Lisp code to Scheme code
 *** Translate bytecode to Scheme code
@@ -25,6 +27,10 @@
 
 * Nonesstential but possibly helpful
 
+** Refector into separate files:
+*** Containers
+*** Scheme GC
+*** Magic refs
 ** Check Scheme build for errors at build time
 ** Implement interpreter with Scheme code
 ** Define Emacs Scheme dialect (extension .es?)

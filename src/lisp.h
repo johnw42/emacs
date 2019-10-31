@@ -987,7 +987,7 @@ INLINE struct Lisp_Symbol *
 (XSYMBOL) (Lisp_Object a)
 {
   struct Lisp_Symbol *p = ensure_symbol_c_data (a, SCHEME_FALSE);
-  SCHEME_ASSERT (50, EQ (p->u.s.soh.scheme_obj, a));
+  SCHEME_ASSERT (50, lisp_h_EQ (p->u.s.soh.scheme_obj, a));
   return p;
 }
 #else /* not HAVE_CHEZ_SCHEME */

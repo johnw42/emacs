@@ -2899,26 +2899,31 @@ read1 (Lisp_Object readcharfun, int *pch, bool first_in_list)
 		  if (chartab_size[depth] != size - 2)
 		    error ("Invalid size in sub char-table");
 #ifndef HAVE_CHEZ_SCHEME
-		  cell = XCONS (tmp), tmp = XCDR (tmp), size--;
+		  cell = XCONS (tmp);
 		  free_cons (cell);
 #endif /* not HAVE_CHEZ_SCHEME */
+                  tmp = XCDR (tmp);
+                  size--;
 
 		  if (! RANGED_INTEGERP (0, XCAR (tmp), MAX_CHAR))
 		    error ("Invalid minimum character in sub-char-table");
 		  min_char = XINT (XCAR (tmp));
 #ifndef HAVE_CHEZ_SCHEME
-		  cell = XCONS (tmp), tmp = XCDR (tmp), size--;
+		  cell = XCONS (tmp);
 		  free_cons (cell);
 #endif /* not HAVE_CHEZ_SCHEME */
+		  tmp = XCDR (tmp);
+                  size--;
 
 		  tbl = make_uninit_sub_char_table (depth, min_char);
 		  for (i = 0; i < size; i++)
 		    {
 		      XSUB_CHAR_TABLE (tbl)->contents[i] = XCAR (tmp);
 #ifndef HAVE_CHEZ_SCHEME
-		      cell = XCONS (tmp), tmp = XCDR (tmp);
+		      cell = XCONS (tmp);
 		      free_cons (cell);
 #endif /* not HAVE_CHEZ_SCHEME */
+                      tmp = XCDR (tmp);
 		    }
 		  EXIT_LISP_FRAME (tbl);
 		}
