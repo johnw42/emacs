@@ -346,6 +346,8 @@ bool may_be_valid (chez_ptr x);
       return;                                                   \
     }                                                           \
   while (0)
+#define LISP_ARRAY_PARAM(name, size_)                   \
+  LISP_ARRAY_MISC(name, size_, array_param_record)
 
 
 #ifdef HAVE_CHEZ_SCHEME
@@ -379,7 +381,7 @@ extern size_t lisp_stack_capacity;
 #define LISP_DYNAMIC_ARRAY(name)                                        \
   Lisp_Object *name = NULL;                                             \
   USE_SAFE_ALLOCA
-#define LISP_ARRAY_PARAM(name, size_)                                   \
+#define LISP_ARRAY_MISC(name, size_, record_name)                       \
   ensure_lisp_stack_capacity (1);                                       \
   lisp_stack[lisp_stack_size].func = __func__;                          \
   lisp_stack[lisp_stack_size].size = size_;                             \
@@ -477,6 +479,9 @@ extern struct Lisp_Frame_Record *lisp_stack_ptr;
       LISP_LOCAL_MAP_ADDR(__VA_ARGS__);                                 \
     }                                                                   \
   lisp_stack_ptr = &this_lisp_frame_record
+
+// Declare a local array of Lisp_Object values of a given size.
+// The contents of the array are initalized to Qnil.
 #define LISP_LOCAL_ARRAY(name, size_)                                   \
   Lisp_Object name[size_];                                              \
   set_nil (name, size_);                                                \
@@ -484,17 +489,27 @@ extern struct Lisp_Frame_Record *lisp_stack_ptr;
     {.prev = this_lisp_frame_record.arrays,                             \
      .data = name, .size = size_};                                      \
   this_lisp_frame_record.arrays = &name##_array_record;
+
+// Declare a pointer that will be used to hold a local array
+// of Lisp_Object values.  The pointer is initalized to NULL.
 #define LISP_DYNAMIC_ARRAY(name)                                        \
   Lisp_Object *name = NULL;                                             \
   struct Lisp_Array_Record name##_array_record =                        \
     {.prev = this_lisp_frame_record.arrays, .size = 0};                 \
   this_lisp_frame_record.arrays = &name##_array_record;                 \
   USE_SAFE_ALLOCA
-#define LISP_ARRAY_PARAM(name, size_)                                   \
-  struct Lisp_Array_Record args_array_record =                          \
+
+// Register previously declared and initialized array of Lisp_Object
+// values.
+#define LISP_ARRAY_MISC(name, size_, record_name)                       \
+  struct Lisp_Array_Record record_name =                                \
     {.prev = this_lisp_frame_record.arrays,                             \
      .data = name, .size = size_};                                      \
-  this_lisp_frame_record.arrays = &args_array_record
+  this_lisp_frame_record.arrays = &record_name
+
+// Record the size of a dynamic array previously declared with
+// LISP_DYNAMIC_ARRAY, and initialize all members to the array to
+// Qnil.  (Probably should only be used from SAFE_ALLOCA_LISP.)
 #define UPDATE_LISP_DYNAMIC_ARRAY(name, size_)                          \
   do                                                                    \
     {                                                                   \
@@ -503,6 +518,7 @@ extern struct Lisp_Frame_Record *lisp_stack_ptr;
       set_nil (name##_array_record.data, name##_array_record.size);     \
     }                                                                   \
   while (0)
+
 #define ENTER_LISP_FRAME_VA_T(type, nargs, args, ...)                   \
   ENTER_LISP_FRAME_T (type __VA_OPT__(, __VA_ARGS__));                  \
   LISP_ARRAY_PARAM (args, nargs)
@@ -557,7 +573,7 @@ extern struct Lisp_Frame_Record *lisp_stack_ptr;
 #define LISP_DYNAMIC_ARRAY(name)                                        \
   Lisp_Object *name = NULL;                                             \
   USE_SAFE_ALLOCA
-#define LISP_ARRAY_PARAM(name, size_) ((void)0)
+#define LISP_ARRAY_MISC(name, size_, record_name) ((void)0)
 #define UPDATE_LISP_DYNAMIC_ARRAY(name, size_) ((void)0)
 #define REGISTER_LISP_GLOBALS(...) ((void)0)
 #define REGISTER_LISP_GLOBAL_ARRAY(...) ((void)0)

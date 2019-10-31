@@ -37,12 +37,10 @@ struct casing_context
 {
   /* A char-table with title-case character mappings or nil.  Non-nil implies
      flag is CASE_CAPITALIZE or CASE_CAPITALIZE_UP.  */
-  // TODO
   Lisp_Object titlecase_char_table;
 
   /* The unconditional special-casing Unicode property char tables for upper
      casing, lower casing and title casing respectively.  */
-  // TODO
   Lisp_Object specialcase_char_tables[3];
 
   /* User-requested action.  */
@@ -57,6 +55,17 @@ struct casing_context
   /* Whether the context is within a word.  */
   bool inword;
 };
+
+#ifdef HAVE_CHEZ_SCHEME
+#define DECLARE_CASING_CONTEXT(ctx)                                     \
+  struct casing_context ctx;                                            \
+  ctx.titlecase_char_table = Qnil;                                      \
+  set_nil (ctx.specialcase_char_tables, 3);                             \
+  LISP_ARRAY_MISC (&ctx.titlecase_char_table, 1, titlecase_char_table_record); \
+  LISP_ARRAY_MISC (ctx.specialcase_char_tables, 3, specialcase_char_tables_record)
+#else
+#define DECLARE_CASING_CONTEXT(ctx) struct casing_context ctx
+#endif
 
 /* Initialize CTX structure for casing characters.  */
 static void
@@ -322,7 +331,12 @@ static Lisp_Object
 casify_object (enum case_action flag, Lisp_Object obj)
 {
   ENTER_LISP_FRAME ((obj));
-  struct casing_context ctx;
+  /* struct casing_context ctx; */
+  /* ctx.titlecase_char_table = Qnil; */
+  /* set_nil (ctx.specialcase_char_tables, 3); */
+  /* LISP_ARRAY_PARAM (&ctx.titlecase_char_table, 1); */
+  /* LISP_ARRAY_PARAM (ctx.specialcase_char_tables, 3); */
+  DECLARE_CASING_CONTEXT(ctx);
   prepare_casing_context (&ctx, flag, false);
 
   if (NATNUMP (obj))
@@ -493,7 +507,7 @@ casify_region (enum case_action flag, Lisp_Object b, Lisp_Object e)
 {
   ENTER_LISP_FRAME_T (ptrdiff_t, (b, e));
   ptrdiff_t added;
-  struct casing_context ctx;
+  DECLARE_CASING_CONTEXT(ctx);
 
   validate_region (&b, &e);
   ptrdiff_t start = XFASTINT (b);
