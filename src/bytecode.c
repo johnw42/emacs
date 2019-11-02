@@ -401,7 +401,7 @@ exec_byte_code (Lisp_Object bytestr, Lisp_Object vector, Lisp_Object maxdepth,
     }
 
 
-#ifdef HAVE_CHEZ_SCHEME
+#if defined(HAVE_CHEZ_SCHEME) && defined(SCHEME_SUBRS)
 #pragma GCC diagnostic ignored "-Wtrampolines"
   void inner_loop(chez_ptr continuation) {
     if (continuation != chez_false)
@@ -749,7 +749,7 @@ exec_byte_code (Lisp_Object bytestr, Lisp_Object vector, Lisp_Object maxdepth,
 	  NEXT;
 
 	CASE (Breturn):
-#ifdef HAVE_CHEZ_SCHEME
+#if defined(HAVE_CHEZ_SCHEME) && defined(SCHEME_SUBRS)
           return;
 #else
 	  goto exit;
@@ -809,7 +809,7 @@ exec_byte_code (Lisp_Object bytestr, Lisp_Object vector, Lisp_Object maxdepth,
 
             SCHEME_ASSERT (25, c == handlerlist);
             SAVE_LISP_FRAME_PTR();
-#ifdef HAVE_CHEZ_SCHEME
+#if defined(HAVE_CHEZ_SCHEME) && defined(SCHEME_SUBRS)
             // This call doesn't return until an error is signalled
             // (using unwind_to_catch) or the code in the
             // condition-case exits normally by executing a POPHANDLER
@@ -837,7 +837,7 @@ exec_byte_code (Lisp_Object bytestr, Lisp_Object vector, Lisp_Object maxdepth,
 
 	CASE (Bpophandler):	/* New in 24.4.  */
 	  handlerlist = handlerlist->next;
-#ifdef HAVE_CHEZ_SCHEME
+#if defined(HAVE_CHEZ_SCHEME) && defined(SCHEME_SUBRS)
           return;
 #else
 	  NEXT;
@@ -1542,7 +1542,7 @@ exec_byte_code (Lisp_Object bytestr, Lisp_Object vector, Lisp_Object maxdepth,
 	}
     }
 
-#ifdef HAVE_CHEZ_SCHEME
+#if defined(HAVE_CHEZ_SCHEME) && defined(SCHEME_SUBRS)
   }  // inner_loop
   inner_loop(chez_false);
 #else

@@ -3,6 +3,7 @@
 #include "pp_foldmap.h"
 
 #ifdef HAVE_CHEZ_SCHEME
+//#define SCHEME_SUBRS
 //#define PARANOID_XMALLOC
 //#define SCHEME_EVAL_SUB
 //#define SCHEME_DEBUG_STACK

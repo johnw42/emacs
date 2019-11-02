@@ -4586,7 +4586,7 @@ init_obarray (void)
 void
 defsubr (Lisp_Subr_Init *sname)
 {
-#ifdef HAVE_CHEZ_SCHEME
+#if defined(HAVE_CHEZ_SCHEME) && defined(SCHEME_SUBRS)
   ENTER_LISP_FRAME ((), sym, tem, proc);
   sym = intern_c_string (sname->symbol_name);
   const char *prefix = "emacs-";
@@ -4621,6 +4621,21 @@ defsubr (Lisp_Subr_Init *sname)
     {
       set_symbol_function (sym, proc);
     }
+  EXIT_LISP_FRAME_VOID ();
+#elif defined(HAVE_CHEZ_SCHEME)
+  ENTER_LISP_FRAME ((), sym, tem, proc);
+  sym = intern_c_string (sname->init_symbol_name);
+  struct Lisp_Subr *subr =
+    ALLOCATE_PSEUDOVECTOR (struct Lisp_Subr, function, PVEC_SUBR);
+  tem = subr->header.s.soh.scheme_obj;
+  subr->function = sname->function;
+  subr->min_args = sname->min_args;
+  subr->max_args = sname->max_args;
+  subr->init_symbol_name = sname->init_symbol_name;
+  subr->symbol = sym;
+  subr->intspec = sname->intspec;
+  subr->doc = sname->doc;
+  set_symbol_function (sym, tem);
   EXIT_LISP_FRAME_VOID ();
 #else /* not HAVE_CHEZ_SCHEME */
   Lisp_Object sym = intern_c_string (sname->symbol_name);
