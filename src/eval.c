@@ -1851,9 +1851,11 @@ push_handler_nosignal (Lisp_Object tag_ch_val, enum handlertype handlertype)
   c->pdlcount = SPECPDL_INDEX ();
   c->poll_suppress_count = poll_suppress_count;
   c->interrupt_input_blocked = interrupt_input_blocked;
-#if defined(HAVE_CHEZ_SCHEME) && defined(SCHEME_SUBRS)
+#if defined(HAVE_CHEZ_SCHEME)
+#if defined(SCHEME_SUBRS)
   c->continuation = chez_false;
   c->handler_index = -1;
+#endif
   c->disable_scheme_gc = disable_scheme_gc;
 #ifdef SCHEME_DEBUG_STACK
   c->lisp_stack_size = lisp_stack_size;
