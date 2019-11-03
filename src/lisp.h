@@ -1562,15 +1562,13 @@ verify (alignof (struct Lisp_String) % GCALIGNMENT == 0);
 INLINE bool
 STRINGP (Lisp_Object x)
 {
-#ifdef SCHEME_STRINGS
+#if defined(HAVE_CHEZ_SCHEME) && defined(SCHEME_STRINGS)
   return chez_stringp (CHEZ (x)) || chez_bytevectorp (CHEZ (x));
-#else
-#ifdef HAVE_CHEZ_SCHEME
+#elif defined(HAVE_CHEZ_SCHEME)
   return SCHEME_VECTORP (x, scheme_string_symbol);
 #else /* not HAVE_CHEZ_SCHEME */
   return XTYPE (x) == Lisp_String;
 #endif /* not HAVE_CHEZ_SCHEME */
-#endif
 }
 
 INLINE void

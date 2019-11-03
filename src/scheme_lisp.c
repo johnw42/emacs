@@ -337,12 +337,10 @@ scheme_init(void) {
   scheme_##c_name = scheme_toplevel_func(scheme_name)
 #include "scheme_fptr.h"
 
-  /* c_data_table = UNCHEZ(scheme_call0 ("make-eq-hashtable")); */
-  /* scheme_track (c_data_table); */
-
   scheme_special_vector_symbol = make_gensym("v");
-  scheme_misc_symbol = chez_string_to_symbol("emacs-misc");
-  scheme_string_symbol = chez_string_to_symbol("emacs-string");
+  scheme_vectorlike_symbol = locked(chez_string_to_symbol("vectorlike"));
+  scheme_misc_symbol = locked(chez_string_to_symbol("misc"));
+  scheme_string_symbol = locked(chez_string_to_symbol("str"));
   c_data_property_symbol = make_gensym("c-data-property");
   gcvec_property_symbol = make_gensym("gcvec-property");
   error_result_symbol = make_gensym("error-result");

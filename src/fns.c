@@ -447,16 +447,14 @@ static Lisp_Object concat (ptrdiff_t nargs, Lisp_Object *args,
 Lisp_Object
 concat2 (Lisp_Object s1, Lisp_Object s2)
 {
-  ENTER_LISP_FRAME ((s1, s2));
-  EXIT_LISP_FRAME (concat (2, ((Lisp_Object []) {s1, s2}), Lisp_String, 0));
+  return concat (2, ((Lisp_Object []) {s1, s2}), Lisp_String, 0);
 }
 
 /* ARGSUSED */
 Lisp_Object
 concat3 (Lisp_Object s1, Lisp_Object s2, Lisp_Object s3)
 {
-  ENTER_LISP_FRAME ((s1, s2, s3));
-  EXIT_LISP_FRAME (concat (3, ((Lisp_Object []) {s1, s2, s3}), Lisp_String, 0));
+  return concat (3, ((Lisp_Object []) {s1, s2, s3}), Lisp_String, 0);
 }
 
 DEFUN ("append", Fappend, Sappend, 0, MANY, 0,
@@ -467,8 +465,7 @@ The last argument is not copied, just used as the tail of the new list.
 usage: (append &rest SEQUENCES)  */)
   (ptrdiff_t nargs, Lisp_Object *args)
 {
-  ENTER_LISP_FRAME_VA (nargs, args, ());
-  EXIT_LISP_FRAME (concat (nargs, args, Lisp_Cons, 1));
+  return concat (nargs, args, Lisp_Cons, 1);
 }
 
 DEFUN ("concat", Fconcat, Sconcat, 0, MANY, 0,
