@@ -7823,6 +7823,7 @@ sweep_floats (void)
   total_floats = num_used;
   total_free_floats = num_free;
 }
+#endif /* not HAVE_CHEZ_SCHEME */
 
 NO_INLINE /* For better stack traces */
 static void
@@ -7875,6 +7876,7 @@ sweep_intervals (void)
   total_free_intervals = num_free;
 }
 
+#ifndef HAVE_CHEZ_SCHEME
 NO_INLINE /* For better stack traces */
 static void
 sweep_symbols (void)
@@ -8952,7 +8954,6 @@ after_scheme_gc (void)
   load_magic_refs();
   size_t num_moved = 0;
 
-
   uint64_t *dead_refs = alloca (sizeof (uint64_t) * scheme_refs.size);
   size_t num_dead_refs = 0;
 
@@ -9031,6 +9032,7 @@ after_scheme_gc (void)
       chez_ptr obj = chez_car (cell);
       if (chez_bwp_objectp (obj))
         {
+          // The object was collected by the Scheme GC.
           *prev_soh_ptr = soh->next;
           chez_set_cdr (prev_cell, chez_cdr (cell));
 #if SCHEME_PARANOIA >= 50
@@ -9047,6 +9049,7 @@ after_scheme_gc (void)
         }
       else
         {
+          // The object is still alive.
 #ifdef ENABLE_MEM_DUMP
           if (make_mem_dump)
             fprintf(dump_file, "{%d, %d},\n", gc_count, still_linked_count);
@@ -9073,6 +9076,16 @@ after_scheme_gc (void)
             if (INSPECT_SCHEME_REF_MAYBE_INVALID (old_ref, "weak obj old ref"))
               LOGF (50, "  new is %p", CHEZ(new_ref));
           soh->scheme_obj = new_ref;
+
+          if (BUFFERP (new_ref))
+            {
+              struct buffer *buf = XBUFFER (new_ref);
+              if (buf->text)
+                MARK_INTERVAL_TREE (buffer_intervals (buf));
+            }
+          else if (STRINGP (new_ref))
+            MARK_INTERVAL_TREE (XSTRING(new_ref)->u.s.intervals);
+
           ++still_linked_count;
           prev_soh_ptr = &soh->next;
           prev_cell = cell;
@@ -9129,6 +9142,8 @@ after_scheme_gc (void)
       xfree (ptr);
       ++num_freed;
     }
+
+  sweep_intervals();
 
   GC_TRACEF ("refs moved in gc: %lu", num_moved);
   GC_TRACEF ("unlinked objects found: %d", unlinked_count);

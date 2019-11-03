@@ -591,7 +591,7 @@ extern struct Lisp_Frame_Record *lisp_stack_ptr;
 #endif
 
 // Define LOGF(level, fmt, ...) to call printf(fmt, ...) with a
-// newline suffix iff ENABLE_CHECKING is defined and level >=
+// newline suffix iff ENABLE_CHECKING is defined and level <
 // LOGF_LEVEL.  By contention, LOGF_LEVEL should be between 1 and 50.
 #ifdef ENABLE_CHECKING
 #define LOGF_LEVEL 50
