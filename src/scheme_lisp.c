@@ -1085,11 +1085,7 @@ visit_lisp_refs(Lisp_Object obj, lisp_ref_visitor_fun fun, void *data)
       visit_symbol_lisp_refs(obj, fun, data);
       break;
     case Lisp_String:
-      {
-        struct Lisp_String *s = XSTRING (obj);
-        fun (data, &s->u.s.soh.scheme_obj, 1);
-        visit_interval_tree_lisp_refs (s->u.s.intervals, fun, data);
-      }
+      visit_interval_tree_lisp_refs (string_intervals (obj), fun, data);
       break;
     case Lisp_Misc:
       {
@@ -1282,8 +1278,18 @@ symbol_is(Lisp_Object sym, const char *name)
   if (chez_symbolp (CHEZ(sym)) ||
       chez_stringp (CHEZ(sym)))
     return SCHEME_FPTR_CALL2 (object_is_str, CHEZ (sym), chez_fixnum ((chez_uptr) name)) != chez_false;
+#ifdef SCHEME_STRINGS
+  if (chez_bytevectorp (CHEZ (sym)))
+    {
+      chez_iptr len = chez_bytevector_length (CHEZ (sym));
+      return
+        len == strlen (name) + 1 &&
+        memcmp (chez_bytevector_data (CHEZ (sym)), name, len) == 0;
+    }
+#else
   if (STRINGP (sym))
     return strncmp(SSDATA(sym), name, SCHARS(sym)) == 0;
+#endif
   return false;
 }
 

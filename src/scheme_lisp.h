@@ -7,8 +7,10 @@
 //#define PARANOID_XMALLOC
 //#define SCHEME_EVAL_SUB
 //#define SCHEME_DEBUG_STACK
-//#define SCHEME_STRINGS
+#define SCHEME_STRINGS
 #endif
+
+#define SCHEME_TODO(...) (abort() __VA_OPT__(, __VA_ARGS__))
 
 void gdb_break(void);
 

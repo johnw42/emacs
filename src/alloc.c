@@ -9077,14 +9077,16 @@ after_scheme_gc (void)
               LOGF (50, "  new is %p", CHEZ(new_ref));
           soh->scheme_obj = new_ref;
 
+          INTERVAL intervals = NULL;
           if (BUFFERP (new_ref))
             {
               struct buffer *buf = XBUFFER (new_ref);
               if (buf->text)
-                MARK_INTERVAL_TREE (buffer_intervals (buf));
+                intervals = buffer_intervals (buf);
             }
           else if (STRINGP (new_ref))
-            MARK_INTERVAL_TREE (XSTRING(new_ref)->u.s.intervals);
+            intervals = string_intervals (new_ref);
+          MARK_INTERVAL_TREE (intervals);
 
           ++still_linked_count;
           prev_soh_ptr = &soh->next;

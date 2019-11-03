@@ -1667,6 +1667,7 @@ SSET (Lisp_Object string, ptrdiff_t index, unsigned char new)
 }
 #endif
 
+// Get the number of code points in a string.
 INLINE ptrdiff_t
 SCHARS (Lisp_Object string)
 {
@@ -1677,7 +1678,7 @@ SCHARS (Lisp_Object string)
   else
     {
       SCHEME_ASSERT (45, chez_bytevectorp (CHEZ (string)));
-      nchars = chez_bytevector_length (CHEZ (string));
+      nchars = chez_bytevector_length (CHEZ (string)) - 1;
     }
 #else
   ptrdiff_t nchars = XSTRING (string)->u.s.size;
@@ -3932,7 +3933,16 @@ set_overlay_plist (Lisp_Object overlay, Lisp_Object plist)
 INLINE INTERVAL
 string_intervals (Lisp_Object s)
 {
+#if defined(HAVE_CHEZ_SCHEME) && defined(SCHEME_STRINGS)
+  chez_ptr found = SCHEME_FPTR_CALL2
+    (generic_get, CHEZ (s), CHEZ (Qintervals));
+  if (found == chez_false)
+    return NULL;
+  SCHEME_ASSERT (45, chez_fixnump (found));
+  return (INTERVAL) chez_fixnum_value (found);
+#else
   return XSTRING (s)->u.s.intervals;
+#endif
 }
 
 /* Set text properties of S to I.  */
@@ -3940,7 +3950,13 @@ string_intervals (Lisp_Object s)
 INLINE void
 set_string_intervals (Lisp_Object s, INTERVAL i)
 {
+#if defined(HAVE_CHEZ_SCHEME) && defined(SCHEME_STRINGS)
+  chez_ptr value = i == NULL ? chez_false : chez_fixnum((chez_iptr) i);
+  SCHEME_FPTR_CALL3
+    (generic_put, CHEZ (s), CHEZ (Qintervals), value);
+#else
   XSTRING (s)->u.s.intervals = i;
+#endif
 }
 
 /* Set a Lisp slot in TABLE to VAL.  Most code should use this instead
@@ -4224,7 +4240,9 @@ extern void parse_str_as_multibyte (const unsigned char *, ptrdiff_t,
 extern void *my_heap_start (void);
 extern void check_pure_size (void);
 extern void free_misc (Lisp_Object);
+#if !defined(HAVE_CHEZ_SCHEME) || !defined(SCHEME_STRINGS)
 extern void allocate_string_data (struct Lisp_String *, EMACS_INT, EMACS_INT);
+#endif
 extern void malloc_warning (const char *);
 extern _Noreturn void memory_full (size_t);
 extern _Noreturn void buffer_memory_full (ptrdiff_t);
@@ -5171,8 +5189,25 @@ Lisp_Object *xnalloc (size_t size);
 INLINE char *
 lispstpcpy (char *dest, Lisp_Object string)
 {
+#if defined(HAVE_CHEZ_SCHEME) && defined(SCHEME_STRINGS)
+  ptrdiff_t len;
+  if (chez_bytevectorp (CHEZ (string)))
+    {
+      len = chez_bytevector_length (CHEZ (string)) - 1;
+      memcpy (dest, chez_bytevector_data (CHEZ (string)), len + 1);
+    }
+  else
+    {
+      SCHEME_ASSERT (45, chez_stringp (CHEZ (string)));
+      chez_ptr bytes = SCHEME_FPTR_CALL1(string_to_utf8, CHEZ (string));
+      len = chez_bytevector_length (bytes);
+      memcpy (dest, chez_bytevector_data (bytes), len);
+      dest[len] = '\0';
+    }
+#else
   ptrdiff_t len = SBYTES (string);
   memcpy (dest, SDATA (string), len + 1);
+#endif
   return dest + len;
 }
 
