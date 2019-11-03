@@ -1158,9 +1158,6 @@ Return t if the file exists and loads successfully.  */)
   ENTER_LISP_FRAME ((file, noerror, nomessage, nosuffix, must_suffix),
                     found, efound, hist_file_name, handler, suffixes,
                     tem, msg_file, val);
-
-  //Fgarbage_collect(); // XXX
-
   FILE *stream;
   int fd;
   int fd_index UNINIT;

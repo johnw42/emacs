@@ -357,7 +357,6 @@ scheme_init(void) {
   run_init_checks();
 #endif
 
-  //atexit(scheme_deinit);
   scheme_initialized = true;
 }
 

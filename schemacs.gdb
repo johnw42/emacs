@@ -8,7 +8,6 @@ set height 0
 
 #set prompt \033[1;31m(gdb) \033[m
 
-
 set print thread-events off
 set print inferior-events off
 set print frame-arguments none
@@ -29,6 +28,8 @@ define qq
 end
 
 del
+
+start
 
 define bsave
   save breakpoints .breakpoints.gdb
@@ -191,8 +192,8 @@ end
 #   continue
 # end
 
-run
-
+eval "source %s/gdb_ext.py", $top_dir
+continue
 
 # define hook-run
 #   eval "shell %s/run-schemacs --just-make", $top_dir

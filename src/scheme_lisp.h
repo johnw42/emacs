@@ -3,7 +3,7 @@
 #include "pp_foldmap.h"
 
 #ifdef HAVE_CHEZ_SCHEME
-//#define SCHEME_SUBRS
+#define SCHEME_SUBRS
 //#define PARANOID_XMALLOC
 //#define SCHEME_EVAL_SUB
 //#define SCHEME_DEBUG_STACK
@@ -39,7 +39,7 @@ extern int scheme_call_count;
 
 bool check_special_case(void);
 
-#if 0
+#if 1
 #define CHEZ_PROLOG
 #define CHEZ_EPILOG
 #else
