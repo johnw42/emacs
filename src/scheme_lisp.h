@@ -148,6 +148,7 @@ extern int gdb_hit_count;
 #define SCHEME_FPTR_CALL2(c_name, a1, a2) chez_call2 (scheme_##c_name, a1, a2)
 #define SCHEME_FPTR_CALL3(c_name, a1, a2, a3) chez_call3 (scheme_##c_name, a1, a2, a3)
 
+extern chez_ptr scheme_special_vector_symbol;
 extern chez_ptr scheme_vectorlike_symbol;
 extern chez_ptr scheme_misc_symbol;
 extern chez_ptr scheme_string_symbol;
@@ -166,12 +167,14 @@ extern chez_ptr scheme_intervals_map;
 void link_scheme_obj (struct Scheme_Object_Header *soh, Lisp_Object val);
 
 #define SCHEME_PV_TAG(pv) chez_vector_ref(pv, 0)
-#define SCHEME_PV_ADDR(pv) chez_vector_ref(pv, 1)
-#define SCHEME_PV_GCVEC(pv) chez_vector_ref(pv, 2)
+#define SCHEME_PV_SUBTAG(pv) chez_vector_ref(pv, 1)
+#define SCHEME_PV_ADDR(pv) chez_vector_ref(pv, 2)
+#define SCHEME_PV_GCVEC(pv) chez_vector_ref(pv, 3)
 #define SCHEME_PV_TAG_SET(pv, x) chez_vector_set(pv, 0, x)
-#define SCHEME_PV_ADDR_SET(pv, x) chez_vector_set(pv, 1, x)
-#define SCHEME_PV_GCVEC_SET(pv, x) chez_vector_set(pv, 2, x)
-#define SCHEME_PV_LENGTH 3
+#define SCHEME_PV_SUBTAG_SET(pv, x) chez_vector_set(pv, 1, x)
+#define SCHEME_PV_ADDR_SET(pv, x) chez_vector_set(pv, 2, x)
+#define SCHEME_PV_GCVEC_SET(pv, x) chez_vector_set(pv, 3, x)
+#define SCHEME_PV_LENGTH 4
 
 // Gets GC vector.  Returns chez_false if the object could have a
 // vector but doesn't, and chez_true if it cannot have a vector.

@@ -338,10 +338,11 @@ error !;
 
 #ifdef HAVE_CHEZ_SCHEME
 
-#define SCHEME_VECTORP(x, tag)                          \
-  (chez_vectorp(CHECK_NOT_ZERO(CHEZ(x))) &&             \
-   chez_vector_length(CHEZ(x)) == SCHEME_PV_LENGTH &&   \
-   SCHEME_PV_TAG(CHEZ(x)) == tag)
+#define SCHEME_VECTORP(x, tag)                                  \
+  (chez_vectorp(CHECK_NOT_ZERO(CHEZ(x))) &&                     \
+   chez_vector_length(CHEZ(x)) == SCHEME_PV_LENGTH &&           \
+   SCHEME_PV_TAG(CHEZ(x)) == scheme_special_vector_symbol &&    \
+   SCHEME_PV_SUBTAG(CHEZ(x)) == tag)
 
 #define lisp_h_XLI(o) ((EMACS_INT) CHEZ (o))
 #define lisp_h_XIL(i) UNCHEZ ((chez_ptr) (i))

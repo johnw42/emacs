@@ -2411,7 +2411,8 @@ scheme_allocate_vector (ptrdiff_t nbytes,
   INSPECT_SCHEME_REF (UNCHEZ (vec), "scheme_allocate_vector");
   schedule_free (UNCHEZ (vec), data);
 
-  SCHEME_PV_TAG_SET (vec, sym);
+  SCHEME_PV_TAG_SET (vec, scheme_special_vector_symbol);
+  SCHEME_PV_SUBTAG_SET (vec, sym);
   SCHEME_PV_ADDR_SET (vec, CHEZ (addr));
 
   struct Scheme_Object_Header *soh =

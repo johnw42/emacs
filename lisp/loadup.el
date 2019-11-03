@@ -180,8 +180,6 @@
 
 (load "help")
 
-(load "emacs-lisp/cl-generic") ;; XXX
-
 (load "jka-cmpr-hook")
 (load "epa-hook")
 ;; Any Emacs Lisp source file (*.el) loaded here after can contain

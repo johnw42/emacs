@@ -41,6 +41,7 @@ static void run_init_checks(void);
 static bool scheme_initialized = false;
 /* static Lisp_Object c_data_table; */
 
+chez_ptr scheme_special_vector_symbol = chez_false;
 chez_ptr scheme_vectorlike_symbol = chez_false;
 chez_ptr scheme_misc_symbol = chez_false;
 chez_ptr scheme_string_symbol = chez_false;
@@ -75,6 +76,13 @@ DEFUN ("scheme-top-level-value",
   return Qnil;
 }
 
+inline static chez_ptr
+locked(chez_ptr obj)
+{
+  chez_lock_object(obj);
+  return obj;
+}
+
 void syms_of_scheme_lisp(void) {
   /* DEFSYM(Qscheme_apply, "scheme-apply"); */
   /* DEFSYM(Qscheme_value_ref_id, "scheme-value-ref-id"); */
@@ -98,9 +106,8 @@ get_scheme_func(const char *name)
 {
   chez_ptr sym = chez_string_to_symbol (name);
   SCHEME_ASSERT (50, chez_symbolp (sym));
-  chez_ptr code = chez_top_level_value (sym);
+  chez_ptr code = locked(chez_top_level_value (sym));
   SCHEME_ASSERT (50, (chez_uptr) code >= 0x1000);
-  chez_lock_object (code);
   return chez_foreign_callable_entry_point (code);
 }
 
@@ -159,9 +166,7 @@ scheme_sigaction (int sig, siginfo_t *info, void *ucontext)
 static chez_ptr
 make_gensym (const char *name)
 {
-  chez_ptr sym = scheme_call1 ("gensym", chez_string(name));
-  chez_lock_object (sym);
-  return sym;
+  return locked(scheme_call1 ("gensym", chez_string(name)));
 }
 
 static chez_ptr
@@ -175,9 +180,8 @@ scheme_toplevel_func (const char *name)
     }
   chez_ptr sym = chez_string_to_symbol (name);
   SCHEME_ASSERT (50, chez_symbolp (sym));
-  chez_ptr fun = chez_top_level_value (sym);
+  chez_ptr fun = locked(chez_top_level_value (sym));
   SCHEME_ASSERT (10, chez_procedurep (fun));
-  chez_lock_object (fun);
   return fun;
 }
 
@@ -312,17 +316,10 @@ scheme_init(void) {
   scheme_least_fixnum = chez_fixnum_value(scheme_call0 ("least-fixnum"));
   scheme_fixnum_width = chez_fixnum_value(scheme_call0 ("fixnum-width"));
 
-  scheme_guardian = scheme_call0 ("make-guardian");
-  chez_lock_object (scheme_guardian);
-
-  analyze_guardian = scheme_call0 ("make-guardian");
-  chez_lock_object (analyze_guardian);
-
-  free_guardian = scheme_call0 ("make-guardian");
-  chez_lock_object (free_guardian);
-
-  buffer_guardian = scheme_call0 ("make-guardian");
-  chez_lock_object (buffer_guardian);
+  scheme_guardian = locked(scheme_call0 ("make-guardian"));
+  analyze_guardian = locked(scheme_call0 ("make-guardian"));
+  free_guardian = locked(scheme_call0 ("make-guardian"));
+  buffer_guardian = locked(scheme_call0 ("make-guardian"));
 
   chez_foreign_symbol("do_scheme_gc", do_scheme_gc);
   chez_foreign_symbol("before_scheme_gc", before_scheme_gc);
@@ -343,15 +340,14 @@ scheme_init(void) {
   /* c_data_table = UNCHEZ(scheme_call0 ("make-eq-hashtable")); */
   /* scheme_track (c_data_table); */
 
-  scheme_vectorlike_symbol = make_gensym("emacs-vectorlike");
-  scheme_misc_symbol = make_gensym("emacs-misc");
-  scheme_string_symbol = make_gensym("emacs-string");
+  scheme_special_vector_symbol = make_gensym("v");
+  scheme_misc_symbol = chez_string_to_symbol("emacs-misc");
+  scheme_string_symbol = chez_string_to_symbol("emacs-string");
   c_data_property_symbol = make_gensym("c-data-property");
   gcvec_property_symbol = make_gensym("gcvec-property");
   error_result_symbol = make_gensym("error-result");
 
-  scheme_object_list = chez_cons (chez_false, chez_nil);
-  chez_lock_object (scheme_object_list);
+  scheme_object_list = locked(chez_cons (chez_false, chez_nil));
 
 #ifdef ENABLE_CHECKING
   run_init_checks();
@@ -736,7 +732,7 @@ gdb_lisp_refs(chez_ptr obj)
 #include <unistd.h>
 #include <sys/wait.h>
 
-#define DEBUG_BUF_SIZE 4096
+#define DEBUG_BUF_SIZE 8192
 
 static const char *
 gdb_write (void (*fun)(char *buf, Lisp_Object obj), chez_ptr obj)
@@ -781,8 +777,8 @@ gdb_print_scheme(char *buf, Lisp_Object obj)
   suspend_scheme_gc();
   /* if (STRINGP (obj)) */
   /*   obj = to_scheme_string (obj); */
-  chez_ptr bvec = SCHEME_FPTR_CALL1 (print_to_bytevector, CHEZ (obj));
-  chez_lock_object (bvec);
+  chez_ptr bvec = locked
+    (SCHEME_FPTR_CALL1 (print_to_bytevector, CHEZ (obj)));
   SCHEME_ASSERT (0, chez_bytevectorp (bvec));
   chez_iptr n = chez_bytevector_length(bvec);
   n = min (n, DEBUG_BUF_SIZE - 1);

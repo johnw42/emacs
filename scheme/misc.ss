@@ -7,7 +7,9 @@
           print-to-bytevector
           wrap-function
           make-lisp-symbol
-          emacs-init)
+          emacs-init
+          generic-get
+          generic-put!)
   (import (chezscheme))
   (import (prefix (elisp prims) emacs-))
 
@@ -143,22 +145,10 @@
    (string->utf8
     (call-with-string-output-port
      (lambda (port)
-       (parameterize ([print-graph #t])
-         (put-datum port obj)
+       (parameterize ([print-graph #t]
+                      [print-gensym 'pretty])
+         (pretty-print obj port)
          (put-char port #\x00)))))))
-
-;; (define-syntax subr-invoker
-;;   (lambda (x)
-;;     (syntax-case x ()
-;;       [(_ f max-args)
-;;        (subr-invoker f )
-;;        ])))
-
-;; (define-syntax wrap-function-cases
-;;   (lambda (x)
-;;     (syntax-case x ()
-;;       [(x f ...)
-;;        (cond)])))
 
 (meta define subr-max-args 8)
 
@@ -235,6 +225,40 @@
                         scheme-object))
     (else
      (wrap-function-impl func-ptr min-args max-args))))
+
+(define generic-properties
+  (make-ephemeron-eq-hashtable))
+
+(define generic-get
+  (case-lambda
+   [(obj key)
+    (generic-get obj key #f)]
+   [(obj key default)
+    (let loop ([plist (hashtable-ref generic-properties obj '())])
+      (cond
+       [(null? plist)
+        default]
+       [(eq? key (car plist))
+        (cadr plist)]
+       [else
+        (loop (cddr plist))]))]))
+
+(define generic-put!
+  (lambda (obj key value)
+    (hashtable-update!
+     generic-properties obj
+     (lambda (plist)
+       (let ([without-key (let loop ([plist plist])
+                            (cond
+                             [(null? plist) '()]
+                             [(eq? key (car plist))
+                              (cddr plist)]
+                             [else
+                              (loop (cddr plist))]))])
+         (if value
+             (cons* key value without-key)
+             without-key)))
+     '())))
 
 (assert (= (foreign-sizeof 'scheme-object)
            (foreign-sizeof 'void*))))

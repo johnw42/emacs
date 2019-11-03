@@ -6,4 +6,6 @@ SCHEME_FPTR_DEF("print-to-bytevector", print_to_bytevector);
 SCHEME_FPTR_DEF("object-is-str?", object_is_str);
 SCHEME_FPTR_DEF("getprop", getprop);
 SCHEME_FPTR_DEF("putprop", putprop);
+SCHEME_FPTR_DEF("generic-get", generic_get);
+SCHEME_FPTR_DEF("generic-put!", generic_put);
 #undef SCHEME_FPTR_DEF
