@@ -394,11 +394,16 @@ lisp_string_width (Lisp_Object string, ptrdiff_t precision,
 {
   ENTER_LISP_FRAME_T (ptrdiff_t, (string), val);
   ptrdiff_t len = SCHARS (string);
+#ifdef HAVE_CHEZ_SCHEME_STRINGS
+  GET_SDATA (str, str_nbytes, string);
+  bool multibyte = len < str_nbytes;
+#else
   /* This set multibyte to 0 even if STRING is multibyte when it
      contains only ascii and eight-bit-graphic, but that's
      intentional.  */
   bool multibyte = len < SBYTES (string);
   unsigned char *str = SDATA (string);
+#endif
   ptrdiff_t i = 0, i_byte = 0;
   ptrdiff_t width = 0;
   struct Lisp_Char_Table *dp = buffer_display_table ();
@@ -753,9 +758,9 @@ string_count_byte8 (Lisp_Object string)
 {
   ENTER_LISP_FRAME_T (ptrdiff_t, (string));
   bool multibyte = STRING_MULTIBYTE (string);
-  ptrdiff_t nbytes = SBYTES (string);
-  unsigned char *p = SDATA (string);
-  unsigned char *pend = p + nbytes;
+  GET_SDATA (p0, nbytes, string);
+  const unsigned char *p = p0;
+  const unsigned char *pend = p + nbytes;
   ptrdiff_t count = 0;
   int c, len;
 
@@ -775,6 +780,7 @@ string_count_byte8 (Lisp_Object string)
 	if (*p++ >= 0x80)
 	  count++;
       }
+  FREE_SDATA (p0);
   EXIT_LISP_FRAME (count);
 }
 

@@ -1532,7 +1532,7 @@ CDR_SAFE (Lisp_Object c)
 
 /* In a string or vector, the sign bit of u.s.size is the gc mark bit.  */
 
-#ifndef SCHEME_STRINGS
+#ifndef HAVE_CHEZ_SCHEME_STRINGS
 struct Lisp_String
 {
   union
@@ -1562,8 +1562,8 @@ verify (alignof (struct Lisp_String) % GCALIGNMENT == 0);
 INLINE bool
 STRINGP (Lisp_Object x)
 {
-#if defined(HAVE_CHEZ_SCHEME) && defined(SCHEME_STRINGS)
-  return chez_stringp (CHEZ (x)) || chez_bytevectorp (CHEZ (x));
+#ifdef HAVE_CHEZ_SCHEME_STRINGS
+  return chez_stringp (CHEZ (x));
 #elif defined(HAVE_CHEZ_SCHEME)
   return SCHEME_VECTORP (x, scheme_string_symbol);
 #else /* not HAVE_CHEZ_SCHEME */
@@ -1577,7 +1577,7 @@ CHECK_STRING (Lisp_Object x)
   CHECK_TYPE (STRINGP (x), Qstringp, x);
 }
 
-#ifndef SCHEME_STRINGS
+#ifndef HAVE_CHEZ_SCHEME_STRINGS
 INLINE struct Lisp_String *
 XSTRING (Lisp_Object a)
 {
@@ -1597,9 +1597,8 @@ XSTRING (Lisp_Object a)
 INLINE bool
 STRING_MULTIBYTE (Lisp_Object str)
 {
-#ifdef SCHEME_STRINGS
-  SCHEME_ASSERT (45, STRINGP (str));
-  return chez_stringp (CHEZ (str));
+#ifdef HAVE_CHEZ_SCHEME_STRINGS
+  return true;
 #else
   return 0 <= XSTRING (str)->u.s.size_byte;
 #endif
@@ -1621,7 +1620,7 @@ STRING_MULTIBYTE (Lisp_Object str)
 #define STRING_BYTES_BOUND  \
   ((ptrdiff_t) min (MOST_POSITIVE_FIXNUM, min (SIZE_MAX, PTRDIFF_MAX) - 1))
 
-#ifndef SCHEME_STRINGS
+#ifndef HAVE_CHEZ_SCHEME_STRINGS
 /* Mark STR as a unibyte string.  */
 #define STRING_SET_UNIBYTE(STR)				\
   do {							\
@@ -1671,15 +1670,10 @@ SSET (Lisp_Object string, ptrdiff_t index, unsigned char new)
 INLINE ptrdiff_t
 SCHARS (Lisp_Object string)
 {
-#ifdef SCHEME_STRINGS
+#ifdef HAVE_CHEZ_SCHEME_STRINGS
   ptrdiff_t nchars;
-  if (chez_stringp (CHEZ (string)))
-    nchars = chez_string_length (CHEZ (string));
-  else
-    {
-      SCHEME_ASSERT (45, chez_bytevectorp (CHEZ (string)));
-      nchars = chez_bytevector_length (CHEZ (string)) - 1;
-    }
+  SCHEME_ASSERT (45, chez_stringp (CHEZ (string)));
+  nchars = chez_string_length (CHEZ (string));
 #else
   ptrdiff_t nchars = XSTRING (string)->u.s.size;
 #endif
@@ -1687,7 +1681,7 @@ SCHARS (Lisp_Object string)
   return nchars;
 }
 
-#ifndef SCHEME_STRINGS
+#ifndef HAVE_CHEZ_SCHEME_STRINGS
 #ifdef GC_CHECK_STRING_BYTES
 extern ptrdiff_t string_bytes (struct Lisp_String *);
 #endif
@@ -3933,7 +3927,7 @@ set_overlay_plist (Lisp_Object overlay, Lisp_Object plist)
 INLINE INTERVAL
 string_intervals (Lisp_Object s)
 {
-#if defined(HAVE_CHEZ_SCHEME) && defined(SCHEME_STRINGS)
+#ifdef HAVE_CHEZ_SCHEME_STRINGS
   chez_ptr found = SCHEME_FPTR_CALL2
     (generic_get, CHEZ (s), CHEZ (Qintervals));
   if (found == chez_false)
@@ -3950,7 +3944,7 @@ string_intervals (Lisp_Object s)
 INLINE void
 set_string_intervals (Lisp_Object s, INTERVAL i)
 {
-#if defined(HAVE_CHEZ_SCHEME) && defined(SCHEME_STRINGS)
+#ifdef HAVE_CHEZ_SCHEME_STRINGS
   chez_ptr value = i == NULL ? chez_false : chez_fixnum((chez_iptr) i);
   SCHEME_FPTR_CALL3
     (generic_put, CHEZ (s), CHEZ (Qintervals), value);
@@ -4240,7 +4234,7 @@ extern void parse_str_as_multibyte (const unsigned char *, ptrdiff_t,
 extern void *my_heap_start (void);
 extern void check_pure_size (void);
 extern void free_misc (Lisp_Object);
-#if !defined(HAVE_CHEZ_SCHEME) || !defined(SCHEME_STRINGS)
+#ifndef HAVE_CHEZ_SCHEME_STRINGS
 extern void allocate_string_data (struct Lisp_String *, EMACS_INT, EMACS_INT);
 #endif
 extern void malloc_warning (const char *);
@@ -5189,21 +5183,12 @@ Lisp_Object *xnalloc (size_t size);
 INLINE char *
 lispstpcpy (char *dest, Lisp_Object string)
 {
-#if defined(HAVE_CHEZ_SCHEME) && defined(SCHEME_STRINGS)
-  ptrdiff_t len;
-  if (chez_bytevectorp (CHEZ (string)))
-    {
-      len = chez_bytevector_length (CHEZ (string)) - 1;
-      memcpy (dest, chez_bytevector_data (CHEZ (string)), len + 1);
-    }
-  else
-    {
-      SCHEME_ASSERT (45, chez_stringp (CHEZ (string)));
-      chez_ptr bytes = SCHEME_FPTR_CALL1(string_to_utf8, CHEZ (string));
-      len = chez_bytevector_length (bytes);
-      memcpy (dest, chez_bytevector_data (bytes), len);
-      dest[len] = '\0';
-    }
+#ifdef HAVE_CHEZ_SCHEME_STRINGS
+  SCHEME_ASSERT (45, chez_stringp (CHEZ (string)));
+  chez_ptr bytes = SCHEME_FPTR_CALL1(string_to_utf8, CHEZ (string));
+  ptrdiff_t len = chez_bytevector_length (bytes);
+  memcpy (dest, chez_bytevector_data (bytes), len);
+  dest[len] = '\0';
 #else
   ptrdiff_t len = SBYTES (string);
   memcpy (dest, SDATA (string), len + 1);

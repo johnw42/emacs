@@ -1367,7 +1367,11 @@ Optional third argument DEUNIFY, if non-nil, means to de-unify CHARSET.  */)
     {
       if (CHARSET_METHOD (cs) != CHARSET_METHOD_OFFSET
 	  || CHARSET_CODE_OFFSET (cs) < 0x110000)
+#ifdef HAVE_CHEZ_SCHEME_STRINGS
+        SCHEME_TODO();
+#else
 	error ("Can't unify charset: %s", SDATA (SYMBOL_NAME (charset)));
+#endif
       if (NILP (unify_map))
 	unify_map = CHARSET_UNIFY_MAP (cs);
       else
@@ -1480,6 +1484,14 @@ int
 string_xstring_p (Lisp_Object string)
 {
   ENTER_LISP_FRAME_T (int, (string));
+#ifdef HAVE_CHEZ_SCHEME_STRINGS
+  /* SCHEME_ASSERT (45, chez_stringp (CHEZ (string))); */
+  /* chez_iptr len = chez_string_length (CHEZ (string)); */
+  /* for (chez_iptr i = 0; i < len; i++) */
+  /*   { */
+  /*   } */
+  SCHEME_TODO();
+#else
   const unsigned char *p = SDATA (string);
   const unsigned char *endp = p + SBYTES (string);
 
@@ -1494,6 +1506,7 @@ string_xstring_p (Lisp_Object string)
 	EXIT_LISP_FRAME (2);
     }
   EXIT_LISP_FRAME (1);
+#endif
 }
 
 
@@ -1611,9 +1624,17 @@ only `ascii', `eight-bit-control', and `eight-bit-graphic'. */)
   CHECK_STRING (str);
 
   charsets = Fmake_vector (make_number (charset_table_used), Qnil);
-  find_charsets_in_text (SDATA (str), SCHARS (str), SBYTES (str),
+  GET_SDATA (bytes, bytes_len, str);
+  find_charsets_in_text (bytes, SCHARS (str), bytes_len,
 			 charsets, table,
-			 STRING_MULTIBYTE (str));
+#ifdef HAVE_CHEZ_SCHEME_STRINGS
+                         true
+#else
+			 STRING_MULTIBYTE (str)
+#endif
+                         );
+  FREE_SDATA (bytes);
+
   val = Qnil;
   for (i = charset_table_used - 1; i >= 0; i--)
     if (!NILP (AREF (charsets, i)))
@@ -2308,13 +2329,15 @@ init_charset (void)
       /* This used to be non-fatal (dir_warning), but it should not
          happen, and if it does sooner or later it will cause some
          obscure problem (eg bug#6401), so better abort.  */
+      GET_SDATA (tempdir_bytes, tempdir_len, tempdir);
       fprintf (stderr, "Error: charsets directory not found:\n\
 %s\n\
 Emacs will not function correctly without the character map files.\n%s\
 Please check your installation!\n",
-               SDATA (tempdir),
+               tempdir_bytes,
                egetenv("EMACSDATA") ? "The EMACSDATA environment \
 variable is set, maybe it has the wrong value?\n" : "");
+      FREE_SDATA (tempdir_bytes);
       exit (1);
     }
 

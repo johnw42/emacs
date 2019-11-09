@@ -1278,15 +1278,7 @@ symbol_is(Lisp_Object sym, const char *name)
   if (chez_symbolp (CHEZ(sym)) ||
       chez_stringp (CHEZ(sym)))
     return SCHEME_FPTR_CALL2 (object_is_str, CHEZ (sym), chez_fixnum ((chez_uptr) name)) != chez_false;
-#ifdef SCHEME_STRINGS
-  if (chez_bytevectorp (CHEZ (sym)))
-    {
-      chez_iptr len = chez_bytevector_length (CHEZ (sym));
-      return
-        len == strlen (name) + 1 &&
-        memcmp (chez_bytevector_data (CHEZ (sym)), name, len) == 0;
-    }
-#else
+#ifndef HAVE_CHEZ_SCHEME_STRINGS
   if (STRINGP (sym))
     return strncmp(SSDATA(sym), name, SCHARS(sym)) == 0;
 #endif

@@ -2048,7 +2048,7 @@ usage: (ccl-execute-on-string CCL-PROGRAM STATUS STRING &optional CONTINUE UNIBY
   struct ccl_program ccl;
   int i;
   ptrdiff_t outbufsize;
-  unsigned char *outbuf, *outp;
+  unsigned char *str_data, *outbuf, *outp;
   ptrdiff_t str_chars, str_bytes;
 #define CCL_EXECUTE_BUF_SIZE 1024
   int source[CCL_EXECUTE_BUF_SIZE], destination[CCL_EXECUTE_BUF_SIZE];
@@ -2063,8 +2063,17 @@ usage: (ccl-execute-on-string CCL-PROGRAM STATUS STRING &optional CONTINUE UNIBY
     error ("Length of vector STATUS is not 9");
   CHECK_STRING (str);
 
+#ifdef HAVE_CHEZ_SCHEME_STRINGS
+  str_chars = chez_string_length (CHEZ (str));
+  chez_ptr bvec = SCHEME_FPTR_CALL1(string_to_utf8, CHEZ (str));
+  chez_lock_object (bvec);
+  str_bytes = chez_bytevector_length (bvec);
+  str_data = chez_bytevector_data (bvec);
+#else
   str_chars = SCHARS (str);
   str_bytes = SBYTES (str);
+  str_data = SDATA (str);
+#endif
 
   for (i = 0; i < 8; i++)
     {
@@ -2091,8 +2100,8 @@ usage: (ccl-execute-on-string CCL-PROGRAM STATUS STRING &optional CONTINUE UNIBY
   produced_chars = 0;
   while (1)
     {
-      const unsigned char *p = SDATA (str) + consumed_bytes;
-      const unsigned char *endp = SDATA (str) + str_bytes;
+      const unsigned char *p = str_data + consumed_bytes;
+      const unsigned char *endp = str_data + str_bytes;
       int j = 0;
       int *src, src_size;
 
@@ -2103,7 +2112,7 @@ usage: (ccl-execute-on-string CCL-PROGRAM STATUS STRING &optional CONTINUE UNIBY
 	while (j < CCL_EXECUTE_BUF_SIZE && p < endp)
 	  source[j++] = STRING_CHAR_ADVANCE (p);
       consumed_chars += j;
-      consumed_bytes = p - SDATA (str);
+      consumed_bytes = p - str_data;
 
       if (consumed_bytes == str_bytes)
 	ccl.last_block = NILP (contin);
@@ -2157,6 +2166,9 @@ usage: (ccl-execute-on-string CCL-PROGRAM STATUS STRING &optional CONTINUE UNIBY
 			       outp - outbuf, NILP (unibyte_p));
   xfree (outbuf);
 
+#ifdef HAVE_CHEZ_SCHEME_STRINGS
+  chez_unlock_object (bvec);
+#endif
   EXIT_LISP_FRAME (val);
 }
 

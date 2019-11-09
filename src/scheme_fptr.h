@@ -8,5 +8,6 @@ SCHEME_FPTR_DEF("getprop", getprop);
 SCHEME_FPTR_DEF("putprop", putprop);
 SCHEME_FPTR_DEF("generic-get", generic_get);
 SCHEME_FPTR_DEF("generic-put!", generic_put);
+SCHEME_FPTR_DEF("utf8->string", utf8_to_string);
 SCHEME_FPTR_DEF("string->utf8", string_to_utf8);
 #undef SCHEME_FPTR_DEF

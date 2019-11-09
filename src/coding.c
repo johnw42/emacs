@@ -935,6 +935,7 @@ record_conversion_result (struct coding_system *coding,
 static void
 coding_set_source (struct coding_system *coding)
 {
+  SCHEME_TODO();
   if (BUFFERP (coding->src_object))
     {
       struct buffer *buf = XBUFFER (coding->src_object);
@@ -946,7 +947,8 @@ coding_set_source (struct coding_system *coding)
     }
   else if (STRINGP (coding->src_object))
     {
-      coding->source = SDATA (coding->src_object) + coding->src_pos_byte;
+      GET_SDATA (sdata, sdata_len, coding->src_object);
+      coding->source = sdata + coding->src_pos_byte;
     }
   else
     {
@@ -962,6 +964,8 @@ coding_set_source (struct coding_system *coding)
 static ptrdiff_t
 coding_change_source (struct coding_system *coding)
 {
+  SCHEME_TODO();
+  SCHEME_ASSERT (40, BUFFERP (coding->src_object));
   const unsigned char *orig = coding->source;
   coding_set_source (coding);
   return coding->source - orig;
@@ -2890,6 +2894,9 @@ static enum iso_code_class_type iso_code_class[256];
 static void
 setup_iso_safe_charsets (Lisp_Object attrs)
 {
+#ifdef HAVE_CHEZ_SCHEME
+  SCHEME_TODO();
+#else
   ENTER_LISP_FRAME ((attrs), charset_list, safe_charsets, request,
                     reg_usage, tail, id, reg);
   EMACS_INT reg94, reg96;
@@ -2945,6 +2952,7 @@ setup_iso_safe_charsets (Lisp_Object attrs)
     }
   ASET (attrs, coding_attr_safe_charsets, safe_charsets);
   EXIT_LISP_FRAME_VOID ();
+#endif
 }
 
 
@@ -2956,6 +2964,9 @@ static bool
 detect_coding_iso_2022 (struct coding_system *coding,
 			struct coding_detection_info *detect_info)
 {
+#ifdef HAVE_CHEZ_SCHEME_STRINGS
+  SCHEME_TODO();
+#else
   ENTER_LISP_FRAME_T (bool, (), attrs, val);
   const unsigned char *src = coding->source, *src_base = src;
   const unsigned char *src_end = coding->source + coding->src_bytes;
@@ -3211,6 +3222,7 @@ detect_coding_iso_2022 (struct coding_system *coding,
   detect_info->rejected |= rejected;
   detect_info->found |= (found & ~rejected);
   EXIT_LISP_FRAME (1);
+#endif
 }
 
 
@@ -3481,6 +3493,9 @@ finish_composition (int *charbuf, struct composition_status *cmp_status)
 static void
 decode_coding_iso_2022 (struct coding_system *coding)
 {
+#ifdef HAVE_CHEZ_SCHEME_STRINGS
+  SCHEME_TODO();
+#else
   ENTER_LISP_FRAME ((), attrs);
   const unsigned char *src = coding->source + coding->consumed;
   const unsigned char *src_end = coding->source + coding->src_bytes;
@@ -4011,6 +4026,7 @@ decode_coding_iso_2022 (struct coding_system *coding)
   coding->consumed = src_base - coding->source;
   coding->charbuf_used = charbuf - coding->charbuf;
   EXIT_LISP_FRAME_VOID ();
+#endif
 }
 
 

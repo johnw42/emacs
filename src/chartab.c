@@ -76,9 +76,15 @@ static uniprop_decoder_t uniprop_get_decoder (Lisp_Object);
    succeeding characters (the bottom level of a char-table) by a
    compressed format.  We are sure that no property value has a string
    starting with '\001' nor '\002'.  */
+#ifdef HAVE_CHEZ_SCHEME_STRINGS
+#define UNIPROP_COMPRESSED_FORM_P(OBJ)	\
+  (STRINGP (OBJ) && SCHARS (OBJ) > 0	\
+   && ((chez_string_ref (CHEZ (OBJ), 0) == 1 || (chez_string_ref (CHEZ (OBJ), 0) == 2))))
+#else
 #define UNIPROP_COMPRESSED_FORM_P(OBJ)	\
   (STRINGP (OBJ) && SCHARS (OBJ) > 0	\
    && ((SREF (OBJ, 0) == 1 || (SREF (OBJ, 0) == 2))))
+#endif
 
 static void
 CHECK_CHAR_TABLE (Lisp_Object x)
@@ -1164,7 +1170,8 @@ uniprop_table_uncompress (Lisp_Object table, int idx)
   const unsigned char *p, *pend;
 
   set_sub_char_table_contents (table, idx, sub);
-  p = SDATA (val), pend = p + SBYTES (val);
+  GET_SDATA (sdata, sdata_len, val);
+  p = sdata, pend = p + sdata_len;
   if (*p == 1)
     {
       /* SIMPLE TABLE */
@@ -1210,6 +1217,7 @@ uniprop_table_uncompress (Lisp_Object table, int idx)
       /* WORD-LIST TABLE */
     }
 #endif
+  FREE_SDATA (p);
   EXIT_LISP_FRAME (sub);
 }
 

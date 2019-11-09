@@ -99,13 +99,21 @@ those categories.  */)
   CHECK_STRING (categories);
   val = MAKE_CATEGORY_SET;
 
+#ifndef HAVE_CHEZ_SCHEME_STRINGS
   if (STRING_MULTIBYTE (categories))
     error ("Multibyte string in `make-category-set'");
+#endif
 
   len = SCHARS (categories);
   while (--len >= 0)
     {
+#ifdef HAVE_CHEZ_SCHEME_STRINGS
+      string_char code_point = chez_string_ref (CHEZ (categories), len);
+      unsigned char cat = (unsigned char) code_point;
+      SCHEME_ASSERT (45, cat == code_point);
+#else
       unsigned char cat = SREF (categories, len);
+#endif
       category = make_number (cat);
 
 

@@ -1277,6 +1277,9 @@ bidi_fetch_char (ptrdiff_t charpos, ptrdiff_t bytepos, ptrdiff_t *disp_pos,
 		 struct window *w,
 		 bool frame_window_p, ptrdiff_t *ch_len, ptrdiff_t *nchars)
 {
+#ifdef HAVE_CHEZ_SCHEME
+  SCHEME_TODO();
+#else
   int ch;
   ptrdiff_t endpos
     = (string->s || STRINGP (string->lstring)) ? string->schars : ZV;
@@ -1398,6 +1401,7 @@ bidi_fetch_char (ptrdiff_t charpos, ptrdiff_t bytepos, ptrdiff_t *disp_pos,
     }
 
   return ch;
+#endif
 }
 
 /* Like bidi_fetch_char, but ignore any text between an isolate
@@ -1671,6 +1675,9 @@ find_first_strong_char (ptrdiff_t pos, ptrdiff_t bytepos, ptrdiff_t end,
 void
 bidi_paragraph_init (bidi_dir_t dir, struct bidi_it *bidi_it, bool no_default_p)
 {
+#ifdef HAVE_CHEZ_SCHEME_STRINGS
+  SCHEME_TODO();
+#else
   ptrdiff_t bytepos = bidi_it->bytepos;
   bool string_p = bidi_it->string.s || STRINGP (bidi_it->string.lstring);
   ptrdiff_t pstartbyte;
@@ -1798,6 +1805,7 @@ bidi_paragraph_init (bidi_dir_t dir, struct bidi_it *bidi_it, bool no_default_p)
     bidi_it->level_stack[0].level = 0;
 
   bidi_line_init (bidi_it);
+#endif
 }
 
 
@@ -1832,6 +1840,9 @@ bidi_explicit_dir_char (int ch)
 static int
 bidi_resolve_explicit (struct bidi_it *bidi_it)
 {
+#ifdef HAVE_CHEZ_SCHEME_STRINGS
+  SCHEME_TODO();
+#else
   int curchar;
   bidi_type_t type, typ1, prev_type = UNKNOWN_BT;
   int current_level;
@@ -2174,6 +2185,7 @@ bidi_resolve_explicit (struct bidi_it *bidi_it)
 
   eassert (bidi_it->resolved_level >= 0);
   return bidi_it->resolved_level;
+#endif
 }
 
 /* Advance in the buffer/string, resolve weak types and return the
@@ -2181,6 +2193,9 @@ bidi_resolve_explicit (struct bidi_it *bidi_it)
 static bidi_type_t
 bidi_resolve_weak (struct bidi_it *bidi_it)
 {
+#ifdef HAVE_CHEZ_SCHEME_STRINGS
+  SCHEME_TODO();
+#else
   bidi_type_t type;
   bidi_dir_t override;
   int prev_level = bidi_it->level_stack[bidi_it->stack_idx].level;
@@ -2452,6 +2467,7 @@ bidi_resolve_weak (struct bidi_it *bidi_it)
   bidi_it->type = type;
   bidi_check_type (bidi_it->type);
   return type;
+#endif
 }
 
 /* Resolve the type of a neutral character according to the type of
@@ -2561,6 +2577,9 @@ enum { MAX_BPA_STACK = max (1, ((MAX_ALLOCA - 2 * sizeof (struct bidi_it))
 static bool
 bidi_find_bracket_pairs (struct bidi_it *bidi_it)
 {
+#ifdef HAVE_CHEZ_SCHEME_STRINGS
+  SCHEME_TODO();
+#else
   bidi_bracket_type_t btype;
   bidi_type_t type = bidi_it->type;
   bool retval = false;
@@ -2792,6 +2811,7 @@ bidi_find_bracket_pairs (struct bidi_it *bidi_it)
 
  give_up:
   return retval;
+#endif
 }
 
 static void
@@ -2819,6 +2839,9 @@ bidi_record_type_for_neutral (struct bidi_saved_info *info, int level,
 static bidi_type_t
 bidi_resolve_brackets (struct bidi_it *bidi_it)
 {
+#ifdef HAVE_CHEZ_SCHEME_STRINGS
+  SCHEME_TODO();
+#else
   int prev_level = bidi_it->level_stack[bidi_it->stack_idx].level;
   bool resolve_bracket = false;
   bidi_type_t type = UNKNOWN_BT;
@@ -2961,6 +2984,7 @@ bidi_resolve_brackets (struct bidi_it *bidi_it)
     }
 
   return type;
+#endif
 }
 
 static bidi_type_t
@@ -3183,6 +3207,9 @@ bidi_type_of_next_char (struct bidi_it *bidi_it)
 static int
 bidi_level_of_next_char (struct bidi_it *bidi_it)
 {
+#ifdef HAVE_CHEZ_SCHEME_STRINGS
+  SCHEME_TODO();
+#else
   bidi_type_t type = UNKNOWN_BT;
   int level;
   ptrdiff_t next_char_pos = -2;
@@ -3321,6 +3348,7 @@ bidi_level_of_next_char (struct bidi_it *bidi_it)
 
   bidi_it->resolved_level = level;
   return level;
+#endif
 }
 
 /* Move to the other edge of a level given by LEVEL.  If END_FLAG,
@@ -3397,6 +3425,9 @@ bidi_find_other_level_edge (struct bidi_it *bidi_it, int level, bool end_flag)
 void
 bidi_move_to_visually_next (struct bidi_it *bidi_it)
 {
+#ifdef HAVE_CHEZ_SCHEME_STRINGS
+  SCHEME_TODO();
+#else
   int old_level, new_level, next_level;
   struct bidi_it sentinel;
 
@@ -3559,6 +3590,7 @@ bidi_move_to_visually_next (struct bidi_it *bidi_it)
 
   eassert (bidi_it->resolved_level >= 0
 	   && bidi_it->resolved_level <= BIDI_MAXDEPTH + 2);
+#endif
 }
 
 /* Utility function for looking for strong directional characters

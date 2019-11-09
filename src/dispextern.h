@@ -1938,7 +1938,9 @@ struct bidi_stack {
 
 /* Data type for storing information about a string being iterated on.  */
 struct bidi_string_data {
+#ifndef HAVE_CHEZ_SCHEME
   Lisp_Object lstring;		/* Lisp string to reorder, or nil */
+#endif
   const unsigned char *s;	/* string data, or NULL if reordering buffer */
   ptrdiff_t schars;		/* the number of characters in the string,
 				   excluding the terminating null */

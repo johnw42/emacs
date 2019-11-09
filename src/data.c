@@ -2478,6 +2478,9 @@ bool-vector.  IDX starts at 0.  */)
       CHECK_CHARACTER (newelt);
       c = XFASTINT (newelt);
 
+#ifdef HAVE_CHEZ_SCHEME_STRINGS
+      chez_string_set (CHEZ (array), idxval, c);
+#else
       if (STRING_MULTIBYTE (array))
 	{
 	  ptrdiff_t idxval_byte, nbytes;
@@ -2525,6 +2528,7 @@ bool-vector.  IDX starts at 0.  */)
 	    }
 	  SSET (array, idxval, c);
 	}
+#endif
     }
 
   EXIT_LISP_FRAME (newelt);

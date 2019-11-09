@@ -3236,6 +3236,9 @@ in_ellipses_for_invisible_text_p (struct display_pos *pos, struct window *w)
 static bool
 init_from_display_pos (struct it *it, struct window *w, struct display_pos *pos)
 {
+#ifdef HAVE_CHEZ_SCHEME
+  SCHEME_TODO();
+#else
   ptrdiff_t charpos = CHARPOS (pos->pos), bytepos = BYTEPOS (pos->pos);
   int i;
   bool overlay_strings_with_newlines = false;
@@ -3374,6 +3377,7 @@ init_from_display_pos (struct it *it, struct window *w, struct display_pos *pos)
 
   CHECK_IT (it);
   return !overlay_strings_with_newlines;
+#endif
 }
 
 
@@ -3726,6 +3730,9 @@ compute_display_string_pos (struct text_pos *position,
 			    struct window *w,
 			    bool frame_window_p, int *disp_prop)
 {
+#ifdef HAVE_CHEZ_SCHEME_STRINGS
+  SCHEME_TODO();
+#else
   ENTER_LISP_FRAME_T (ptrdiff_t, (), object, object1, pos, spec,
                       limpos);
   /* OBJECT = nil means current buffer.  */
@@ -3807,6 +3814,7 @@ compute_display_string_pos (struct text_pos *position,
     *disp_prop = 2;
 
   EXIT_LISP_FRAME (CHARPOS (tpos));
+#endif
 }
 
 /* Return the character position of the end of the display string that
@@ -3817,6 +3825,9 @@ compute_display_string_pos (struct text_pos *position,
 ptrdiff_t
 compute_display_string_end (ptrdiff_t charpos, struct bidi_string_data *string)
 {
+#ifdef HAVE_CHEZ_SCHEME_STRINGS
+  SCHEME_TODO();
+#else
   ENTER_LISP_FRAME_T (ptrdiff_t, (), object, pos);
   /* OBJECT = nil means current buffer.  */
   object = (string && STRINGP (string->lstring)) ? string->lstring : Qnil;
@@ -3851,6 +3862,7 @@ compute_display_string_end (ptrdiff_t charpos, struct bidi_string_data *string)
   pos = Fnext_single_char_property_change (pos, Qdisplay, object, Qnil);
 
   EXIT_LISP_FRAME (XFASTINT (pos));
+#endif
 }
 
 
@@ -4937,6 +4949,9 @@ handle_single_display_spec (struct it *it, Lisp_Object spec, Lisp_Object object,
 			    ptrdiff_t bufpos, int display_replaced,
 			    bool frame_window_p, bool enable_eval_p)
 {
+#ifdef HAVE_CHEZ_SCHEME_STRINGS
+  SCHEME_TODO();
+#else
   ENTER_LISP_FRAME_T (int, (spec, object, overlay), form, location,
                       value, height, tem, face_name);
   struct text_pos start_pos = *position;
@@ -5400,6 +5415,7 @@ handle_single_display_spec (struct it *it, Lisp_Object spec, Lisp_Object object,
      POSITION to what it was before.  */
   *position = start_pos;
   EXIT_LISP_FRAME (0);
+#endif
 }
 
 /* Check if PROP is a display property value whose text should be
@@ -5685,6 +5701,9 @@ handle_overlay_change (struct it *it)
 static void
 next_overlay_string (struct it *it)
 {
+#ifdef HAVE_CHEZ_SCHEME_STRINGS
+  SCHEME_TODO();
+#else
   ++it->current.overlay_string_index;
   if (it->current.overlay_string_index == it->n_overlay_strings)
     {
@@ -5776,6 +5795,7 @@ next_overlay_string (struct it *it)
     }
 
   CHECK_IT (it);
+#endif
 }
 
 
@@ -6006,6 +6026,9 @@ load_overlay_strings (struct it *it, ptrdiff_t charpos)
 static bool
 get_overlay_strings_1 (struct it *it, ptrdiff_t charpos, bool compute_stop_p)
 {
+#ifdef HAVE_CHEZ_SCHEME_STRINGS
+  SCHEME_TODO();
+#else
   /* Get the first OVERLAY_STRING_CHUNK_SIZE overlay strings to
      process.  This fills IT->overlay_strings with strings, and sets
      IT->n_overlay_strings to the total number of strings to process.
@@ -6085,6 +6108,7 @@ get_overlay_strings_1 (struct it *it, ptrdiff_t charpos, bool compute_stop_p)
 
   it->current.overlay_string_index = -1;
   return false;
+#endif
 }
 
 static bool
@@ -6742,7 +6766,9 @@ reseat_1 (struct it *it, struct text_pos pos, bool set_stop_p)
       bidi_unshelve_cache (NULL, false);
       it->bidi_it.paragraph_dir = NEUTRAL_DIR;
       it->bidi_it.string.s = NULL;
+#ifndef HAVE_CHEZ_SCHEME_STRINGS
       it->bidi_it.string.lstring = Qnil;
+#endif
       it->bidi_it.string.bufpos = 0;
       it->bidi_it.string.from_disp_str = false;
       it->bidi_it.string.unibyte = false;
@@ -6816,7 +6842,11 @@ reseat_to_string (struct it *it, const char *s, Lisp_Object string,
 
       if (it->bidi_p)
 	{
+#ifdef HAVE_CHEZ_SCHEME_STRINGS
+          SCHEME_TODO();
+#else
 	  it->bidi_it.string.lstring = string;
+#endif
 	  it->bidi_it.string.s = NULL;
 	  it->bidi_it.string.schars = it->end_charpos;
 	  it->bidi_it.string.bufpos = 0;
@@ -6848,7 +6878,9 @@ reseat_to_string (struct it *it, const char *s, Lisp_Object string,
 
       if (it->bidi_p)
 	{
+#ifndef HAVE_CHEZ_SCHEME_STRINGS
 	  it->bidi_it.string.lstring = Qnil;
+#endif
 	  it->bidi_it.string.s = (const unsigned char *) s;
 	  it->bidi_it.string.schars = it->end_charpos;
 	  it->bidi_it.string.bufpos = 0;
@@ -8057,6 +8089,9 @@ get_visually_first_element (struct it *it)
 static bool
 next_element_from_string (struct it *it)
 {
+#ifdef HAVE_CHEZ_SCHEME_STRINGS
+  SCHEME_TODO();
+#else
   struct text_pos position;
 
   eassert (STRINGP (it->string));
@@ -8210,6 +8245,7 @@ next_element_from_string (struct it *it)
   it->object = it->string;
   it->position = position;
   return true;
+#endif
 }
 
 
@@ -8424,9 +8460,11 @@ next_element_from_buffer (struct it *it)
 
   eassert (IT_CHARPOS (*it) >= BEGV);
   eassert (NILP (it->string) && !it->s);
+#ifndef HAVE_CHEZ_SCHEME_STRINGS
   eassert (!it->bidi_p
 	   || (EQ (it->bidi_it.string.lstring, Qnil)
 	       && it->bidi_it.string.s == NULL));
+#endif
 
   /* With bidi reordering, the character to display might not be the
      character at IT_CHARPOS.  BIDI_IT.FIRST_ELT means that
@@ -20769,6 +20807,9 @@ cursor_row_p (struct glyph_row *row)
 static bool
 push_prefix_prop (struct it *it, Lisp_Object prop)
 {
+#ifdef HAVE_CHEZ_SCHEME_STRINGS
+  SCHEME_TODO();
+#else
   ENTER_LISP_FRAME_T (bool, (prop));
   struct text_pos pos =
     STRINGP (it->string) ? it->current.string_pos : it->current.pos;
@@ -20844,6 +20885,7 @@ push_prefix_prop (struct it *it, Lisp_Object prop)
     }
 
   EXIT_LISP_FRAME (true);
+#endif
 }
 
 /* Return the character-property PROP at the current position in IT.  */
@@ -22457,7 +22499,9 @@ See also `bidi-paragraph-direction'.  */)
       bidi_init_it (pos, bytepos, FRAME_WINDOW_P (SELECTED_FRAME ()), &itb);
       itb.paragraph_dir = NEUTRAL_DIR;
       itb.string.s = NULL;
+#ifndef HAVE_CHEZ_SCHEME_STRINGS
       itb.string.lstring = Qnil;
+#endif
       itb.string.bufpos = 0;
       itb.string.from_disp_str = false;
       itb.string.unibyte = false;
@@ -22535,6 +22579,7 @@ the `bidi-class' property of a character.  */)
 
   if (STRINGP (object))
     {
+
       /* Characters in unibyte strings are always treated by bidi.c as
 	 strong LTR.  */
       if (!STRING_MULTIBYTE (object)
@@ -22551,7 +22596,11 @@ the `bidi-class' property of a character.  */)
       /* Set up the bidi iterator.  */
       itb_data = bidi_shelve_cache ();
       itb.paragraph_dir = NEUTRAL_DIR;
+#ifdef HAVE_CHEZ_SCHEME_STRINGS
+      SCHEME_TODO();
+#else
       itb.string.lstring = object;
+#endif
       itb.string.s = NULL;
       itb.string.schars = SCHARS (object);
       itb.string.bufpos = 0;
@@ -22597,7 +22646,9 @@ the `bidi-class' property of a character.  */)
 					    -1, &itb.bytepos);
       itb.paragraph_dir = NEUTRAL_DIR;
       itb.string.s = NULL;
+#ifndef HAVE_CHEZ_SCHEME_STRINGS
       itb.string.lstring = Qnil;
+#endif
       itb.string.bufpos = 0;
       itb.string.from_disp_str = false;
       itb.string.unibyte = false;

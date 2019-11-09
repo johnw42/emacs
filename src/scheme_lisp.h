@@ -7,7 +7,9 @@
 //#define PARANOID_XMALLOC
 //#define SCHEME_EVAL_SUB
 //#define SCHEME_DEBUG_STACK
-#define SCHEME_STRINGS
+#define HAVE_CHEZ_SCHEME_STRINGS
+
+#pragma GCC diagnostic ignored "-Wsuggest-attribute=noreturn"
 #endif
 
 #define SCHEME_TODO(...) (abort() __VA_OPT__(, __VA_ARGS__))
@@ -56,6 +58,34 @@ bool check_special_case(void);
 
 #include "chez_scheme.h"
 #endif
+
+#ifdef HAVE_CHEZ_SCHEME_STRINGS
+INLINE void *
+scheme_get_bvec_sdata (chez_ptr bvec, ptrdiff_t len)
+{
+  char *buf = malloc (len + 1);
+  memcpy (chez_bytevector_data (bvec), buf, len);
+  buf[len] = '\0';
+  return buf;
+}
+
+#define GET_SDATA_T(ctype, ptr_var, len_var, obj)               \
+  chez_ptr const ptr_var ## _bvec =                             \
+    SCHEME_FPTR_CALL1(string_to_utf8, CHEZ (obj));              \
+  ptrdiff_t const len_var =                                     \
+    chez_bytevector_length (ptr_var ## _bvec);                  \
+  ctype const *const ptr_var =                                  \
+    scheme_get_bvec_sdata (ptr_var ## _bvec, len_var)
+#define FREE_SDATA(ptr_var) xfree((void *) ptr_var)
+#else
+#define GET_SDATA_T(ctype, ptr_var, len_var, obj)       \
+  ptrdiff_t const len_var = SBYTES (obj);               \
+  ctype const *const ptr_var = (ctype *) SDATA (obj)
+#define FREE_SDATA(ptr_var) ((void)0)
+#endif
+
+#define GET_SDATA(ptr_var, len_var, obj) GET_SDATA_T(unsigned char, ptr_var, len_var, obj)
+#define GET_SSDATA(ptr_var, len_var, obj) GET_SDATA_T(char, ptr_var, len_var, obj)
 
 #ifdef PARANOID_XMALLOC
 #define CHECK_ALLOC(p) do { KILROY_WAS_HERE; check_alloc(p); } while (0)

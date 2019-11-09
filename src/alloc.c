@@ -2498,6 +2498,7 @@ allocate_string (void)
    end of S->u.s.data.  Set S->u.s.size to NCHARS and S->u.s.size_byte
    to NBYTES.  Free S->u.s.data if it was initially non-null.  */
 
+#ifndef HAVE_CHEZ_SCHEME_STRINGS
 void
 allocate_string_data (struct Lisp_String *s,
 		      EMACS_INT nchars, EMACS_INT nbytes)
@@ -2606,6 +2607,7 @@ allocate_string_data (struct Lisp_String *s,
   consing_since_gc += needed;
 #endif /* not HAVE_CHEZ_SCHEME */
 }
+#endif
 
 
 /* Sweep and compact strings.  */
@@ -3074,6 +3076,9 @@ make_specified_string (const char *contents,
 Lisp_Object
 make_uninit_string (EMACS_INT length)
 {
+#ifdef HAVE_CHEZ_SCHEME_STRINGS
+  return UNCHEZ (chez_make_string (length, 0));
+#else
   Lisp_Object val;
 
   if (length == 0)
@@ -3083,6 +3088,7 @@ make_uninit_string (EMACS_INT length)
   STRING_SET_UNIBYTE (val);
   eassert (STRINGP (val));
   return val;
+#endif
 }
 
 
@@ -3092,6 +3098,9 @@ make_uninit_string (EMACS_INT length)
 Lisp_Object
 make_uninit_multibyte_string (EMACS_INT nchars, EMACS_INT nbytes)
 {
+#ifdef HAVE_CHEZ_SCHEME_STRINGS
+  return UNCHEZ (chez_make_uninitialized_string (nchars));
+#else
   if (nchars < 0)
     emacs_abort ();
   if (nbytes == 0)
@@ -3104,6 +3113,7 @@ make_uninit_multibyte_string (EMACS_INT nchars, EMACS_INT nbytes)
   allocate_string_data (s, nchars, nbytes);
   string_chars_consed += nbytes;
   return string;
+#endif
 }
 
 /* Print arguments to BUF according to a FORMAT, then return
@@ -6193,7 +6203,13 @@ Lisp_Object
 make_pure_string (const char *data,
 		  ptrdiff_t nchars, ptrdiff_t nbytes, bool multibyte)
 {
-#ifdef HAVE_CHEZ_SCHEME
+#ifdef HAVE_CHEZ_SCHEME_STRINGS
+  chez_ptr bvec = chez_make_bytevector (nbytes, 0);
+  memcpy (chez_bytevector_data (bvec), data, nbytes);
+  chez_ptr str = SCHEME_FPTR_CALL1 (utf8_to_string, bvec);
+  SCHEME_ASSERT (40, chez_string_length (str) == nchars);
+  return UNCHEZ (str);
+#elif defined(HAVE_CHEZ_SCHEME)
   Lisp_Object p;
   if (nchars == 0)
     {
