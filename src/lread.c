@@ -4583,7 +4583,7 @@ init_obarray (void)
 void
 defsubr (Lisp_Subr_Init *sname)
 {
-#if defined(HAVE_CHEZ_SCHEME) && defined(SCHEME_SUBRS)
+#ifdef HAVE_CHEZ_SCHEME_SUBRS
   ENTER_LISP_FRAME ((), sym, tem, proc);
   sym = intern_c_string (sname->symbol_name);
   const char *prefix = "emacs-";

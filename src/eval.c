@@ -1151,7 +1151,7 @@ usage: (catch TAG BODY...)  */)
 #define clobbered_eassert(E) verify (sizeof (E) != 0)
 
 
-#if defined(HAVE_CHEZ_SCHEME) && defined(SCHEME_SUBRS)
+#ifdef HAVE_CHEZ_SCHEME_SUBRS
 static Lisp_Object
 scheme_catch_trampoline (Lisp_Object (*func) (Lisp_Object),
                          Lisp_Object arg,
@@ -1171,7 +1171,7 @@ Lisp_Object
 internal_catch (Lisp_Object tag,
 		Lisp_Object (*func) (Lisp_Object), Lisp_Object arg)
 {
-#if defined(HAVE_CHEZ_SCHEME) && defined(SCHEME_SUBRS)
+#ifdef HAVE_CHEZ_SCHEME_SUBRS
   ENTER_LISP_FRAME ((tag, arg), val);
 
   /* This structure is made part of the chain `catchlist'.  */
@@ -1247,7 +1247,7 @@ unwind_to_catch (struct handler *catch, Lisp_Object value)
 #ifdef HAVE_CHEZ_SCHEME
   eassert (disable_scheme_gc >= catch->disable_scheme_gc);
   disable_scheme_gc = catch->disable_scheme_gc;
-#ifdef SCHEME_DEBUG_STACK
+#ifdef HAVE_CHEZ_SCHEME_DEBUG_STACK
   lisp_stack_size = catch->lisp_stack_size;
 #else
   lisp_stack_ptr = catch->lisp_stack_ptr;
@@ -1269,7 +1269,7 @@ unwind_to_catch (struct handler *catch, Lisp_Object value)
 
   lisp_eval_depth = catch->f_lisp_eval_depth;
 
-#if defined(HAVE_CHEZ_SCHEME) && defined(SCHEME_SUBRS)
+#ifdef HAVE_CHEZ_SCHEME_SUBRS
   chez_ptr k = catch->continuation;
   SCHEME_ASSERT (40, chez_procedurep (k));
   chez_call1 (k, chez_cons (chez_true, chez_fixnum (catch->handler_index)));
@@ -1355,7 +1355,7 @@ usage: (condition-case VAR BODYFORM &rest HANDLERS)  */)
   EXIT_LISP_FRAME (internal_lisp_condition_case (var, bodyform, handlers));
 }
 
-#if defined(HAVE_CHEZ_SCHEME) && defined(SCHEME_SUBRS)
+#ifdef HAVE_CHEZ_SCHEME_SUBRS
 static Lisp_Object
 scheme_lisp_condition_case_trampoline (Lisp_Object bodyform,
                                        chez_iptr num_handlers,
@@ -1375,7 +1375,7 @@ Lisp_Object
 internal_lisp_condition_case (Lisp_Object var, Lisp_Object bodyform,
 			      Lisp_Object handlers)
 {
-#if defined(HAVE_CHEZ_SCHEME) && defined(SCHEME_SUBRS)
+#ifdef HAVE_CHEZ_SCHEME_SUBRS
   ENTER_LISP_FRAME ((var, bodyform, handlers), tail, tem, clause,
                     condition, val, handler_body,
                     handler_var, result);
@@ -1540,7 +1540,7 @@ internal_lisp_condition_case (Lisp_Object var, Lisp_Object bodyform,
 #endif
 }
 
-#if defined(HAVE_CHEZ_SCHEME) && defined(SCHEME_SUBRS)
+#ifdef HAVE_CHEZ_SCHEME_SUBRS
 static Lisp_Object
 scheme_condition_case_trampoline (Lisp_Object (*bfun) (void),
                                   chez_ptr k)
@@ -1564,7 +1564,7 @@ Lisp_Object
 internal_condition_case (Lisp_Object (*bfun) (void), Lisp_Object handlers,
 			 Lisp_Object (*hfun) (Lisp_Object))
 {
-#if defined(HAVE_CHEZ_SCHEME) && defined(SCHEME_SUBRS)
+#ifdef HAVE_CHEZ_SCHEME_SUBRS
   ENTER_LISP_FRAME ((handlers), val);
   struct handler *c = push_handler (handlers, CONDITION_CASE);
   SAVE_LISP_FRAME_PTR();
@@ -1611,7 +1611,7 @@ internal_condition_case (Lisp_Object (*bfun) (void), Lisp_Object handlers,
 }
 
 
-#if defined(HAVE_CHEZ_SCHEME) && defined(SCHEME_SUBRS)
+#ifdef HAVE_CHEZ_SCHEME_SUBRS
 static Lisp_Object
 scheme_condition_case_1_trampoline (Lisp_Object (*bfun) (Lisp_Object),
                                     Lisp_Object arg,
@@ -1629,7 +1629,7 @@ internal_condition_case_1 (Lisp_Object (*bfun) (Lisp_Object), Lisp_Object arg,
 			   Lisp_Object handlers,
 			   Lisp_Object (*hfun) (Lisp_Object))
 {
-#if defined(HAVE_CHEZ_SCHEME) && defined(SCHEME_SUBRS)
+#ifdef HAVE_CHEZ_SCHEME_SUBRS
   ENTER_LISP_FRAME ((arg, handlers), val);
   struct handler *c = push_handler (handlers, CONDITION_CASE);
   SAVE_LISP_FRAME_PTR();
@@ -1676,7 +1676,7 @@ internal_condition_case_1 (Lisp_Object (*bfun) (Lisp_Object), Lisp_Object arg,
 #endif
 }
 
-#if defined(HAVE_CHEZ_SCHEME) && defined(SCHEME_SUBRS)
+#ifdef HAVE_CHEZ_SCHEME_SUBRS
 static Lisp_Object
 scheme_condition_case_2_trampoline (Lisp_Object (*bfun) (Lisp_Object, Lisp_Object),
                                     Lisp_Object arg1, Lisp_Object arg2,
@@ -1697,7 +1697,7 @@ internal_condition_case_2 (Lisp_Object (*bfun) (Lisp_Object, Lisp_Object),
 			   Lisp_Object handlers,
 			   Lisp_Object (*hfun) (Lisp_Object))
 {
-#if defined(HAVE_CHEZ_SCHEME) && defined(SCHEME_SUBRS)
+#ifdef HAVE_CHEZ_SCHEME_SUBRS
   ENTER_LISP_FRAME ((arg1, arg2, handlers), val);
   struct handler *c = push_handler (handlers, CONDITION_CASE);
   SAVE_LISP_FRAME_PTR();
@@ -1746,7 +1746,7 @@ internal_condition_case_2 (Lisp_Object (*bfun) (Lisp_Object, Lisp_Object),
 #endif
 }
 
-#if defined(HAVE_CHEZ_SCHEME) && defined(SCHEME_SUBRS)
+#ifdef HAVE_CHEZ_SCHEME_SUBRS
 static Lisp_Object
 scheme_condition_case_n_trampoline (Lisp_Object (*bfun) (ptrdiff_t, Lisp_Object *),
                                     ptrdiff_t nargs,
@@ -1771,7 +1771,7 @@ internal_condition_case_n (Lisp_Object (*bfun) (ptrdiff_t, Lisp_Object *),
 						ptrdiff_t nargs,
 						Lisp_Object *args))
 {
-#if defined(HAVE_CHEZ_SCHEME) && defined(SCHEME_SUBRS)
+#ifdef HAVE_CHEZ_SCHEME_SUBRS
   ENTER_LISP_FRAME_VA (nargs, args, (handlers), val);
   struct handler *c = push_handler (handlers, CONDITION_CASE);
   SAVE_LISP_FRAME_PTR();
@@ -1851,13 +1851,13 @@ push_handler_nosignal (Lisp_Object tag_ch_val, enum handlertype handlertype)
   c->pdlcount = SPECPDL_INDEX ();
   c->poll_suppress_count = poll_suppress_count;
   c->interrupt_input_blocked = interrupt_input_blocked;
-#if defined(HAVE_CHEZ_SCHEME)
-#if defined(SCHEME_SUBRS)
+#ifdef HAVE_CHEZ_SCHEME
+#ifdef HAVE_CHEZ_SCHEME_SUBRS
   c->continuation = chez_false;
   c->handler_index = -1;
 #endif
   c->disable_scheme_gc = disable_scheme_gc;
-#ifdef SCHEME_DEBUG_STACK
+#ifdef HAVE_CHEZ_SCHEME_DEBUG_STACK
   c->lisp_stack_size = lisp_stack_size;
 #else
   c->lisp_stack_ptr = lisp_stack_ptr;
@@ -2546,7 +2546,7 @@ int gdb_hit_count = 0;
 Lisp_Object
 eval_sub (Lisp_Object form)
 {
-#if defined(HAVE_CHEZ_SCHEME) && defined(SCHEME_EVAL_SUB)
+#ifdef HAVE_CHEZ_SCHEME_EVAL_SUB
   return UNCHEZ (scheme_call1 ("eval-lisp-sub", CHEZ (form)));
 #else
   ENTER_LISP_FRAME ((form), fun, val, original_fun, original_args,
@@ -2613,7 +2613,7 @@ eval_sub (Lisp_Object form)
   else if (!NILP (fun) && (fun = XSYMBOL (fun)->u.s.function, SYMBOLP (fun)))
     fun = indirect_function (fun);
 
-#if defined(HAVE_CHEZ_SCHEME) && defined(SCHEME_SUBRS)
+#ifdef HAVE_CHEZ_SCHEME_SUBRS
   if (chez_procedurep (CHEZ (fun)))
     {
       // TODO(jrw): This is almost identical to the default SUBRP case
@@ -2652,13 +2652,13 @@ eval_sub (Lisp_Object form)
 
       else if (XSUBR (fun)->max_args == UNEVALLED)
         {
-#if defined(HAVE_CHEZ_SCHEME) && defined(SCHEME_SUBRS)
+#ifdef HAVE_CHEZ_SCHEME_SUBRS
           val = UNCHEZ (chez_call1 (XSUBR (fun)->scheme_function, CHEZ (args_left)));
 #else
           val = (XSUBR (fun)->function.aUNEVALLED) (args_left);
 #endif
         }
-#if defined(HAVE_CHEZ_SCHEME) && defined(SCHEME_SUBRS)
+#ifdef HAVE_CHEZ_SCHEME_SUBRS
       else
         {
 	  /* Build array of evaluated arguments.  */
@@ -3220,7 +3220,7 @@ FUNCTIONP (Lisp_Object object)
 	}
     }
 
-#if defined(HAVE_CHEZ_SCHEME) && defined(SCHEME_SUBRS)
+#ifdef HAVE_CHEZ_SCHEME_SUBRS
   if (chez_procedurep (CHEZ (object)))
     EXIT_LISP_FRAME (true);
 #endif
@@ -3279,7 +3279,7 @@ usage: (funcall FUNCTION &rest ARGUMENTS)  */)
       && (fun = XSYMBOL (fun)->u.s.function, SYMBOLP (fun)))
     fun = indirect_function (fun);
 
-#if defined(HAVE_CHEZ_SCHEME) && defined(SCHEME_SUBRS)
+#ifdef HAVE_CHEZ_SCHEME_SUBRS
   if (chez_procedurep (CHEZ (fun)))
     {
       chez_initframe (numargs);
@@ -3330,7 +3330,7 @@ Lisp_Object
 funcall_subr (struct Lisp_Subr *subr, ptrdiff_t numargs, Lisp_Object *args)
 {
   ENTER_LISP_FRAME_VA (numargs, args, (), result, fun);
-#if !defined(HAVE_CHEZ_SCHEME) || !defined(SCHEME_SUBRS)
+#ifdef HAVE_CHEZ_SCHEME_SUBRS
   LISP_LOCAL_ARRAY (internal_argbuf, 8);
 #endif
   result = Qnil;
@@ -3350,7 +3350,7 @@ funcall_subr (struct Lisp_Subr *subr, ptrdiff_t numargs, Lisp_Object *args)
       xsignal1 (Qinvalid_function, fun);
     }
 
-#if defined(HAVE_CHEZ_SCHEME) && defined(SCHEME_SUBRS)
+#ifdef HAVE_CHEZ_SCHEME_SUBRS
   else
     {
       chez_ptr proc = subr->scheme_function;

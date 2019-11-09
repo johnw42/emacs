@@ -2422,7 +2422,7 @@ syms_of_xmenu (void)
   defsubr (&Sx_menu_bar_open_internal);
   // XXX: Why is this needed?
 #ifdef HAVE_CHEZ_SCHEME
-#ifdef SCHEME_SUBRS
+#ifdef HAVE_CHEZ_SCHEME_SUBRS
   Ffset (intern_c_string ("accelerate-menu"),
 	 intern_c_string (Sx_menu_bar_open_internal.symbol_name));
 #else

@@ -3,11 +3,11 @@
 #include "pp_foldmap.h"
 
 #ifdef HAVE_CHEZ_SCHEME
-#define SCHEME_SUBRS
+#define HAVE_CHEZ_SCHEME_SUBRS
 //#define PARANOID_XMALLOC
-//#define SCHEME_EVAL_SUB
-//#define SCHEME_DEBUG_STACK
-#define HAVE_CHEZ_SCHEME_STRINGS
+//#define HAVE_CHEZ_SCHEME_EVAL_SUB
+//#define HAVE_CHEZ_SCHEME_DEBUG_STACK
+//#define HAVE_CHEZ_SCHEME_STRINGS
 
 #pragma GCC diagnostic ignored "-Wsuggest-attribute=noreturn"
 #endif
@@ -88,7 +88,7 @@ scheme_get_bvec_sdata (chez_ptr bvec, ptrdiff_t len)
 #define GET_SSDATA(ptr_var, len_var, obj) GET_SDATA_T(char, ptr_var, len_var, obj)
 
 #ifdef PARANOID_XMALLOC
-#define CHECK_ALLOC(p) do { KILROY_WAS_HERE; check_alloc(p); } while (0)
+#define CHECK_ALLOC(p) do { check_alloc(p); } while (0)
 void check_alloc (void *);
 
 struct xmalloc_header {
@@ -390,7 +390,7 @@ bool may_be_valid (chez_ptr x);
 void walk_lisp_stack (void (*f)(void *, Lisp_Object *), void *);
 void ensure_lisp_stack_capacity (size_t entries_to_add);
 
-#ifdef SCHEME_DEBUG_STACK
+#ifdef HAVE_CHEZ_SCHEME_DEBUG_STACK
 
 struct Lisp_Var_Record {
   const char *func;
@@ -460,7 +460,7 @@ extern size_t lisp_stack_capacity;
   while (0)
 
 
-#else  // not SCHEME_DEBUG_STACK
+#else  // not HAVE_CHEZ_SCHEME_DEBUG_STACK
 struct Lisp_Frame_Layout {
 #ifdef ENABLE_CHECKING
   const char *func_name;
@@ -581,7 +581,7 @@ extern struct Lisp_Frame_Record *lisp_stack_ptr;
       lisp_stack_ptr = saved_lisp_stack_ptr;                    \
     }                                                           \
   while (0)
-#endif  // not SCHEME_DEBUG_STACK
+#endif  // not HAVE_CHEZ_SCHEME_DEBUG_STACK
 
 #define REGISTER_LISP_GLOBALS(...) \
   do { __VA_OPT__ (PP_MAP (REGISTER_LISP_GLOBAL, __VA_ARGS__)) } while (0)

@@ -1554,7 +1554,7 @@ may_be_valid (chez_ptr x)
   return false;
 }
 
-#ifdef SCHEME_DEBUG_STACK
+#ifdef HAVE_CHEZ_SCHEME_DEBUG_STACK
 struct Lisp_Var_Record *lisp_stack;
 size_t lisp_stack_size = 0;
 size_t lisp_stack_capacity = 0;

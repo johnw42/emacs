@@ -1097,8 +1097,6 @@ static void *lmalloc (size_t) ATTRIBUTE_MALLOC_SIZE ((1));
 static void *lrealloc (void *, size_t);
 
 /* Like malloc but check for no memory and block interrupt input.  */
-const char *kilroy_file = NULL;
-int kilroy_line = 0;
 
 #ifdef PARANOID_XMALLOC
 #define XMALLOC_EXTRA_SIZE (sizeof (struct xmalloc_header) + 4 * sizeof (uintptr_t))
@@ -1145,9 +1143,6 @@ check_alloc (void *p)
       eassert (header->signature[i] == 0xa5a5a5a5a5a5a5a5UL);
       eassert (footer[i] == (0xa5a5a5a5a5a5a5a5UL ^ size));
     }
-  header->file = kilroy_file;
-  header->line = kilroy_line;
-  kilroy_file = NULL;
 }
 #endif
 
@@ -8897,7 +8892,7 @@ before_scheme_gc (void)
   garbage_collect_1 (end);
   GC_TRACEF ("did garbage_collect_1");
 
-#ifdef SCHEME_SUBRS
+#ifdef HAVE_CHEZ_SCHEME_SUBRS
   for (struct handler *h = handlerlist; h; h = h ->next)
     mark_object_ptr ((Lisp_Object *) &h->continuation);
 #endif
