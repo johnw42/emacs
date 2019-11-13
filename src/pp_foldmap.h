@@ -8,38 +8,39 @@
 // macro F and combines the results with two-argument macro G.  With a
 // single vararg A, expands to f(A), and with no varargs, expands to Z.
 #define PP_FOLDMAP(G, F, Z, ...) \
-  PP_CAT(PP_FOLDMAP_, PP_NARGS(__VA_ARGS__)) (G, F, Z __VA_OPT__(, __VA_ARGS__))
+  PP_CAT(PP_FOLDMAP_, PP_NARGS(__VA_ARGS__)) (G, F, Z, __VA_ARGS__)
 
 // Expands to F(A_1) F(A_2) ... F(A_n) for each of the n varargs A_i.
 // With no varargs, the expansion is empty.
 #define PP_MAP(F, ...) \
-  __VA_OPT__(PP_FOLDMAP(PP_JUXT, F, , __VA_ARGS__))
+  PP_FOLDMAP(PP_JUXT, F, PP_EMPTY, ## __VA_ARGS__)
+
+#define PP_EMPTY
 
 // Expands to F(A_1), F(A_2), ..., F(A_n) for each of the n varargs A_i.
 // With no varargs, the expansion is empty.
-/* #define PP_MAP_COMMA(F, ...) \ */
-/*   __VA_OPT__(PP_FOLDMAP(PP_COMMA, F, , __VA_ARGS__)) */
+#define PP_MAP_COMMA(F, ...) \
+  PP_FOLDMAP(PP_COMMA, F, , __VA_ARGS__)
 
 // Expands to G(A_1, G(A_2, G(... G(A_n-1, A_n)))) for each of the n
 // varargs A_i.  If n = 1, expands to A_1.  If n = 0, expands to Z.
 #define PP_FOLDR(G, Z, ...)                              \
-  PP_FOLDMAP(G, PP_ARG, Z __VA_OPT__(, __VA_ARGS__))
+  PP_FOLDMAP(G, PP_ARG, Z , ## __VA_ARGS__)
 
 // =================
 //   Helper Macros
 // =================
 
 // A macro that returns the number of arguments it is given.
-#define PP_NARGS(...)                     \
-  PP_NARGS_HELPER(__VA_ARGS__             \
-           __VA_OPT__(,) 63,62,61,60,     \
-           59,58,57,56,55,54,53,52,51,50, \
-           49,48,47,46,45,44,43,42,41,40, \
-           39,38,37,36,35,34,33,32,31,30, \
-           29,28,27,26,25,24,23,22,21,20, \
-           19,18,17,16,15,14,13,12,11,10, \
-           9,8,7,6,5,4,3,2,1,0)
-#define PP_NARGS_HELPER(                          \
+#define PP_NARGS(...)                                   \
+  PP_NARGS_HELPER(, ## __VA_ARGS__,63,62,61,60,            \
+                  59,58,57,56,55,54,53,52,51,50,        \
+                  49,48,47,46,45,44,43,42,41,40,        \
+                  39,38,37,36,35,34,33,32,31,30,        \
+                  29,28,27,26,25,24,23,22,21,20,        \
+                  19,18,17,16,15,14,13,12,11,10,        \
+                  9,8,7,6,5,4,3,2,1,0)
+#define PP_NARGS_HELPER(_0,                       \
           _1, _2, _3, _4, _5, _6, _7, _8, _9,_10, \
          _11,_12,_13,_14,_15,_16,_17,_18,_19,_20, \
          _21,_22,_23,_24,_25,_26,_27,_28,_29,_30, \
@@ -48,7 +49,7 @@
          _51,_52,_53,_54,_55,_56,_57,_58,_59,_60, \
          _61,_62,_63,N,...) N
 
-#define PP_FOLDMAP_0(G, F, Z) Z
+#define PP_FOLDMAP_0(G, F, Z, dummy) Z
 #define PP_FOLDMAP_1(G, F, Z, a1) F(a1)
 #define PP_FOLDMAP_2(G, F, Z, a1, a2) G(F(a1), F(a2))
 #define PP_FOLDMAP_3(G, F, Z, a1, ...) G(F(a1), PP_FOLDMAP_2(G, F, Z, __VA_ARGS__))
@@ -118,20 +119,7 @@
 #define PP_CAT_HELPER(A, B) A ## B
 
 #define PP_ARG(x) x
-/* #define PP_COMMA_BETWEEN(x, y) x, y */
-/* #define PP_COMMA_BEFORE(x) , x */
-/* #define PP_COMMA_AFTER(x) x */
 #define PP_JUXT(x, y) x y
-
-/* #define PP_COMMAS_BEFORE(...) __VA_OPT__(PP_MAP (PP_COMMA_BEFORE, __VA_ARGS__)) */
-/* #define PP_ADDR(x) , &x */
-/* #define PP_MAP_ADDR(...) __VA_OPT__(PP_MAP(PP_ADDR, __VA_ARGS__)) */
-
-/* #define BAD(x, ...) bad(PP_NARGS x, PP_NARGS(__VA_ARGS__) PP_MAP_ADDR x PP_MAP_ADDR (__VA_ARGS__))) */
-
-/* BAD(()); */
-/* BAD((a)); */
-/* BAD((), x); */
-/* BAD((a, b, c), x, y); */
+#define PP_COMMA(x, y) x, y
 
 #endif

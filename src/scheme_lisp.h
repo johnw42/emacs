@@ -12,7 +12,7 @@
 #pragma GCC diagnostic ignored "-Wsuggest-attribute=noreturn"
 #endif
 
-#define SCHEME_TODO(...) (abort() __VA_OPT__(, __VA_ARGS__))
+#define SCHEME_TODO(...) (abort(), ## __VA_ARGS__)
 
 void gdb_break(void);
 
@@ -431,7 +431,7 @@ extern size_t lisp_stack_capacity;
     }                                                                   \
   while (0)
 #define ENTER_LISP_FRAME_VA_T(type, nargs, args, ...)                   \
-  ENTER_LISP_FRAME_T (type __VA_OPT__(, __VA_ARGS__));                  \
+  ENTER_LISP_FRAME_T (type, ## __VA_ARGS__);                            \
   LISP_ARRAY_PARAM (args, nargs)
 #define LISP_LOCAL_VAR(name) Lisp_Object name = Qnil;
 #define LISP_LOCAL_ADDR(var)                                            \
@@ -440,7 +440,7 @@ extern size_t lisp_stack_capacity;
   lisp_stack[lisp_stack_size].data = &var;                              \
   lisp_stack_size++;
 #define LISP_LOCAL_MAP_ADDR(...)                        \
-  __VA_OPT__(PP_MAP(LISP_LOCAL_ADDR, __VA_ARGS__))
+  PP_MAP(LISP_LOCAL_ADDR, __VA_ARGS__)
 #define EXIT_LISP_FRAME_NO_RETURN()                     \
   (lisp_stack_size = this_old_lisp_stack_size)
 #define SAVE_LISP_FRAME_PTR()                                           \
@@ -496,14 +496,14 @@ extern struct Lisp_Frame_Record *lisp_stack_ptr;
 #define ENTER_LISP_FRAME_T(type, params, ...)                           \
   static bool is_this_lisp_frame_layout_init = false;                   \
   static ptrdiff_t this_lisp_offset_array                               \
-  [PP_NARGS params + PP_NARGS (__VA_ARGS__)];                           \
+  [PP_NARGS params + PP_NARGS (dummy, ## __VA_ARGS__)];                 \
   static struct Lisp_Frame_Layout this_lisp_frame_layout =              \
     {LISP_FRAME_INFO_FUNC \
-     .num_locals = PP_NARGS params + PP_NARGS (__VA_ARGS__),            \
+     .num_locals = PP_NARGS params + PP_NARGS (dummy, ## __VA_ARGS__),     \
      .offsets = this_lisp_offset_array};                                \
   typedef type this_lisp_frame_type;                                    \
   (void) (this_lisp_frame_type *) 0;                                    \
-  PP_MAP(LISP_LOCAL_VAR, __VA_ARGS__)                                   \
+  PP_MAP(LISP_LOCAL_VAR, ## __VA_ARGS__)                                \
   struct Lisp_Frame_Record this_lisp_frame_record =                     \
     {LISP_FRAME_INFO_FUNC .prev = lisp_stack_ptr,                       \
      .layout = &this_lisp_frame_layout, .arrays = NULL};                \
@@ -556,14 +556,14 @@ extern struct Lisp_Frame_Record *lisp_stack_ptr;
   while (0)
 
 #define ENTER_LISP_FRAME_VA_T(type, nargs, args, ...)                   \
-  ENTER_LISP_FRAME_T (type __VA_OPT__(, __VA_ARGS__));                  \
+  ENTER_LISP_FRAME_T (type, ## __VA_ARGS__);                            \
   LISP_ARRAY_PARAM (args, nargs)
 #define LISP_LOCAL_VAR(name) Lisp_Object name = Qnil;
 #define LISP_LOCAL_ADDR(var)                             \
   this_lisp_offset_array[offset_index++] =               \
     (char *) &var - (char *) &this_lisp_frame_record;
 #define LISP_LOCAL_MAP_ADDR(...) \
-  __VA_OPT__(PP_MAP(LISP_LOCAL_ADDR, __VA_ARGS__))
+  PP_MAP(LISP_LOCAL_ADDR, __VA_ARGS__)
 #define EXIT_LISP_FRAME_NO_RETURN()                     \
   (lisp_stack_ptr = this_lisp_frame_record.prev)
 #define SAVE_LISP_FRAME_PTR()                                           \
@@ -584,7 +584,7 @@ extern struct Lisp_Frame_Record *lisp_stack_ptr;
 #endif  // not HAVE_CHEZ_SCHEME_DEBUG_STACK
 
 #define REGISTER_LISP_GLOBALS(...) \
-  do { __VA_OPT__ (PP_MAP (REGISTER_LISP_GLOBAL, __VA_ARGS__)) } while (0)
+  do { PP_MAP (REGISTER_LISP_GLOBAL, __VA_ARGS__) } while (0)
 
 #define REGISTER_LISP_GLOBAL_ARRAY(name) \
   scheme_register_globals (name, ARRAYELTS(name))
@@ -594,12 +594,12 @@ extern struct Lisp_Frame_Record *lisp_stack_ptr;
 
 #else /* not HAVE_CHEZ_SCHEME */
 
-#define ENTER_LISP_FRAME_T(type, params, ...)       \
-  __VA_OPT__(Lisp_Object __VA_ARGS__;)              \
-    typedef type this_lisp_frame_type;              \
+#define ENTER_LISP_FRAME_T(type, params, ...)         \
+  Lisp_Object _unused_arg, ## __VA_ARGS__;            \
+  typedef type this_lisp_frame_type;                  \
   (void) (this_lisp_frame_type *) 0
 #define ENTER_LISP_FRAME_VA_T(type, nargs, args, params, ...)   \
-  ENTER_LISP_FRAME_T(type, params __VA_OPT__(,  __VA_ARGS__))
+  ENTER_LISP_FRAME_T(type, params,  ## __VA_ARGS__)
 #define EXIT_LISP_FRAME_NO_RETURN() ((void)0)
 #define SAVE_LISP_FRAME_PTR() ((void)0)
 #define RESTORE_LISP_FRAME_PTR() ((void)0)
@@ -629,17 +629,13 @@ extern struct Lisp_Frame_Record *lisp_stack_ptr;
 #define LOGF_LEVEL 50
 #define LOGF(level, fmt, ...)                           \
   ((void)((level) < LOGF_LEVEL ? 0 :                    \
-          printf (fmt "\n" __VA_OPT__(, __VA_ARGS__))))
+          printf (fmt "\n", ## __VA_ARGS__)))
 #else
 #define LOGF(level, fmt, ...) ((void)0)
 #endif
 
 // Define TRACEF as an extension of LOGF that prefixes each message
-// with the source file name and line number.  TRACEF may be called
-// with only a single argument to log the source location and nothing
-// else.
-#define TRACEF(level, ...)                                              \
-  LOGF (level, "%s:%d" __VA_OPT__(": " ARGS_CAR(__VA_ARGS__)),          \
-        __FILE__, __LINE__ ARGS_COMMA_CDR(__VA_ARGS__))
-#define ARGS_CAR(a0, ...) a0
-#define ARGS_COMMA_CDR(a0, ...) __VA_OPT__(, __VA_ARGS__)
+// with the source file name and line number.
+#define TRACEF(level, fmt, ...)                                         \
+  LOGF (level, "%s:%d: " fmt,                                           \
+        __FILE__, __LINE__, ## __VA_ARGS__)
